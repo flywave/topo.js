@@ -1,0 +1,531 @@
+cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
+
+set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/adm/cmake")
+
+set (CMAKE_SUPPRESS_REGENERATION TRUE)
+
+set (CMAKE_CONFIGURATION_TYPES Release Debug RelWithDebInfo CACHE INTERNAL "" FORCE)
+
+# set using C++ standard
+set (BUILD_CPP_STANDARD "C++11" CACHE STRING "Select using c++ standard.")
+set_property(CACHE BUILD_CPP_STANDARD PROPERTY STRINGS "C++11" "C++14" "C++17" "C++20" "C++23")
+
+IF (WIN32)
+  INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../libxml/win32
+                                    ${CMAKE_CURRENT_SOURCE_DIR}/../libxml/win32/include")
+ENDIF()
+
+IF(APPLE)
+  INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../libxml/mac
+                                    ${CMAKE_CURRENT_SOURCE_DIR}/../libxml/mac/include")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-enum-constexpr-conversion")
+ENDIF()
+
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../libxml/linux
+                                    ${CMAKE_CURRENT_SOURCE_DIR}/../libxml/linux/include")
+ENDIF()
+
+INCLUDE_DIRECTORIES(
+    "${CMAKE_CURRENT_SOURCE_DIR}/../libxml/src/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../zlib"
+    "${CMAKE_CURRENT_BINARY_DIR}/../zlib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../fontconfig/src/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../freetype2/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../icu/source/common/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../icu/source/i18n/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../rapidjson/include/"
+)
+
+# Set desired C++ standard
+if     ("${BUILD_CPP_STANDARD}" STREQUAL "C++11")
+  set (CMAKE_CXX_STANDARD 11)
+elseif ("${BUILD_CPP_STANDARD}" STREQUAL "C++14")
+  set (CMAKE_CXX_STANDARD 14)
+elseif ("${BUILD_CPP_STANDARD}" STREQUAL "C++17")
+  set (CMAKE_CXX_STANDARD 17)
+elseif ("${BUILD_CPP_STANDARD}" STREQUAL "C++20")
+  set (CMAKE_CXX_STANDARD 20)
+elseif ("${BUILD_CPP_STANDARD}" STREQUAL "C++23")
+  set (CMAKE_CXX_STANDARD 23)
+else ()
+  message (FATAL_ERROR, "misprint in c++ standard name")
+endif()
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CURRENT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
+# macro: include patched file if it exists
+macro (OCCT_INCLUDE_CMAKE_FILE BEING_INCLUDED_FILE)
+  if (BUILD_PATCH AND EXISTS "${BUILD_PATCH}/${BEING_INCLUDED_FILE}.cmake")
+    include (${BUILD_PATCH}/${BEING_INCLUDED_FILE}.cmake)
+  else()
+    include (${CURRENT_PATH}/${BEING_INCLUDED_FILE}.cmake)
+  endif()
+endmacro()
+
+# include variable description
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/vardescr")
+
+set(BUILD_LIBRARY_TYPE STATIC)
+unset (BUILD_SHARED_LIBS)
+unset (BUILD_SHARED_LIBRARY_NAME_POSTFIX)
+
+if (WIN32)
+  add_definitions(-DUNICODE)
+  add_definitions(-D_UNICODE)
+endif()
+
+# include occt macros
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_macros")
+
+# Solution folder property
+set_property (GLOBAL PROPERTY USE_FOLDERS ON)
+
+# get current OCCT version
+OCC_VERSION (OCC_VERSION_MAJOR OCC_VERSION_MINOR OCC_VERSION_MAINTENANCE OCC_VERSION_DEVELOPMENT OCC_VERSION_STRING_EXT)
+
+set_property (GLOBAL PROPERTY OCC_VERSION_MAJOR ${OCC_VERSION_MAJOR})
+set_property (GLOBAL PROPERTY OCC_VERSION_MINOR ${OCC_VERSION_MINOR})
+set_property (GLOBAL PROPERTY OCC_VERSION_MAINTENANCE ${OCC_VERSION_MAINTENANCE})
+
+# set soversion variable determining compatibility version on platforms with symlinks
+# 0 - for empty, 1 - for major, 2 - for major.minor, 3 - for major.minor.maintenance
+if (NOT BUILD_SOVERSION_NUMBERS)
+  set (BUILD_SOVERSION_NUMBERS "0" CACHE STRING "${BUILD_SOVERSION_NUMBERS_DESCR}" FORCE)
+  SET_PROPERTY(CACHE BUILD_SOVERSION_NUMBERS PROPERTY STRINGS 0 1 2 3)
+
+  # update default state of soversion on different platforms
+  if (WIN32 OR ANDROID OR EMSCRIPTEN)
+    set (BUILD_SOVERSION_NUMBERS 0)
+  else()
+    set (BUILD_SOVERSION_NUMBERS 2)
+  endif()
+endif()
+
+# Regeneration of OCCT resource files
+set (BUILD_RESOURCES OFF CACHE BOOL "${BUILD_RESOURCES_DESCR}")
+
+# single-configuration generator
+set (SINGLE_GENERATOR OFF)
+if (DEFINED CMAKE_BUILD_TYPE)
+  set (SINGLE_GENERATOR ON)
+endif()
+
+# a single-configuration generator like the Makefile generator defines CMAKE_BUILD_TYPE variable
+# check this variable and set if it's required
+if (DEFINED CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE) # single-configuration generator.
+  set (CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
+
+# enable extended messages of many OCCT algorithms
+if (((SINGLE_GENERATOR AND "${CMAKE_BUILD_TYPE}" STREQUAL "Debug") OR NOT SINGLE_GENERATOR) AND (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore"))
+  if (NOT BUILD_WITH_DEBUG)
+    set (BUILD_WITH_DEBUG OFF CACHE BOOL "${BUILD_WITH_DEBUG_DESCR}")
+  endif()
+else()
+  OCCT_CHECK_AND_UNSET (BUILD_WITH_DEBUG)
+endif()
+
+if (BUILD_WITH_DEBUG)
+  set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DEBUG>:OCCT_DEBUG>)
+endif()
+
+# option disabling OCCT exceptions in Release builds (No_Exception)
+if (NOT DEFINED BUILD_RELEASE_DISABLE_EXCEPTIONS)
+  set (BUILD_RELEASE_DISABLE_EXCEPTIONS ON CACHE BOOL "${BUILD_RELEASE_DISABLE_EXCEPTIONS_DESCR}")
+endif()
+
+if (MSVC)
+  set (BUILD_FORCE_RelWithDebInfo OFF CACHE BOOL "${BUILD_FORCE_RelWithDebInfo_DESCR}")
+else()
+  set (BUILD_FORCE_RelWithDebInfo OFF)
+endif()
+
+if (BUILD_FORCE_RelWithDebInfo)
+  set (CMAKE_CONFIGURATION_TYPES Release Debug CACHE INTERNAL "" FORCE)
+endif()
+
+# option to enable or disable use of precompiled headers
+if (NOT DEFINED BUILD_USE_PCH)
+  set (BUILD_USE_PCH OFF CACHE BOOL "${BUILD_USE_PCH_DESCR}")
+endif()
+
+if (BUILD_USE_PCH)
+
+  # Load Cotire tool for accelerating build procedure
+  include(cotire)
+
+  # Set Cotire to ignore lxx, pxx, gxx
+  set (COTIRE_ADDITIONAL_PREFIX_HEADER_IGNORE_EXTENSIONS "lxx;pxx;gxx" CACHE STRING "Set Cotire to ignore OCCT specific files that can be #included" FORCE)
+
+  # Set priority for inclusion of system headers in PCH to reduce problems
+  # due to incomplete inclusion or wrong order.
+  if (WIN32)
+    # on Windows, assume that SDK (windows.h) is in default location
+    set(ProgramFilesX86 "ProgramFiles(x86)")
+    file(TO_CMAKE_PATH "$ENV{${ProgramFilesX86}}" ProgramFilesX86)
+    set_property (DIRECTORY PROPERTY COTIRE_PREFIX_HEADER_INCLUDE_PRIORITY_PATH "${ProgramFilesX86}")
+    unset(ProgramFilesX86)
+  endif()
+
+endif()
+
+set (CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/" CACHE INTERNAL "" FORCE)
+
+# Get all used variables: OS_WITH_BIT, COMPILER
+OCCT_MAKE_OS_WITH_BITNESS()
+OCCT_MAKE_COMPILER_SHORT_NAME()
+
+# include occt macros
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_resources")
+
+# a directory recognized as a 'patch' for OCCT
+set (BUILD_PATCH "" CACHE PATH "${BUILD_PATCH_DESCR}")
+
+# the list of being built toolkits
+set (BUILD_ADDITIONAL_TOOLKITS "" CACHE STRING "${BUILD_ADDITIONAL_TOOLKITS_DESCR}")
+separate_arguments (BUILD_ADDITIONAL_TOOLKITS)
+
+if (MSVC)
+  set (BUILD_SAMPLES_MFC OFF CACHE BOOL "${BUILD_SAMPLES_MFC_DESCR}")
+endif()
+set (BUILD_SAMPLES_QT OFF CACHE BOOL "${BUILD_SAMPLES_QT_DESCR}")
+
+set (BUILD_Inspector OFF CACHE BOOL "${BUILD_Inspector_DESCR}")
+
+# uwp sample
+if (MSVC)
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
+    set (BUILD_MODULE_UwpSample OFF CACHE BOOL "${BUILD_MODULE_UwpSample_DESCR}")
+  else()
+    unset (BUILD_MODULE_UwpSample)
+  endif()
+endif()
+
+# whether use optional 3rdparty or not
+set (USE_TK        OFF CACHE BOOL "${USE_TK_DESCR}")
+set (USE_FREETYPE  ON CACHE BOOL "${USE_FREETYPE_DESCR}")
+set (USE_FREEIMAGE OFF CACHE BOOL "${USE_FREEIMAGE_DESCR}")
+set (USE_FFMPEG    OFF CACHE BOOL "${USE_FFMPEG_DESCR}")
+set (USE_OPENVR    OFF CACHE BOOL "${USE_OPENVR_DESCR}")
+set (USE_RAPIDJSON ON CACHE BOOL "${USE_RAPIDJSON_DESCR}")
+set (USE_DRACO     OFF CACHE BOOL "${USE_DRACO_DESCR}")
+set (USE_TBB       OFF CACHE BOOL "${USE_TBB_DESCR}")
+set (USE_EIGEN     OFF CACHE BOOL "${USE_EIGEN_DESCR}")
+set (USE_XLIB      OFF CACHE BOOL "${USE_XLIB_DESCR}")
+set (USE_D3D       OFF CACHE BOOL "${USE_D3D_DESCR}")
+set (USE_OPENGL    ON CACHE BOOL "${USE_OPENGL_DESCR}")
+set (USE_GLES2     OFF CACHE BOOL "${USE_GLES2_DESCR}")
+set (BUILD_MODULE_Draw OFF CACHE BOOL "${BUILD_MODULE_Draw_DESCR}" FORCE)
+
+
+# include the patched or original list of modules
+# list <MODULENAME>_TOOLKITS is created foreach module and contains its toolkits
+# list <OCCT_MODULES> will contain all modules
+OCCT_MODULES_AND_TOOLKITS (MODULES "TOOLKITS" OCCT_MODULES)
+
+foreach (OCCT_MODULE ${OCCT_MODULES})
+  BUILD_MODULE (${OCCT_MODULE})
+endforeach()
+
+# accumulate used toolkits (first level) in BUILD_TOOLKITS variable
+list (APPEND BUILD_TOOLKITS ${BUILD_ADDITIONAL_TOOLKITS})
+
+foreach (OCCT_MODULE ${OCCT_MODULES})
+  if (BUILD_MODULE_${OCCT_MODULE})
+    list (APPEND BUILD_TOOLKITS ${${OCCT_MODULE}_TOOLKITS})
+  endif()
+endforeach()
+
+# accumulate all used toolkits
+list (REMOVE_DUPLICATES BUILD_TOOLKITS)
+set (RAW_BUILD_TOOLKITS)
+foreach (BUILD_TOOLKIT ${BUILD_TOOLKITS})
+  OCCT_TOOLKIT_FULL_DEP (${BUILD_TOOLKIT} TOOLKIT_FULL_DEPS)
+  list (APPEND RAW_BUILD_TOOLKITS ${BUILD_TOOLKIT} ${TOOLKIT_FULL_DEPS})
+endforeach()
+
+list (REMOVE_DUPLICATES RAW_BUILD_TOOLKITS)
+set (BUILD_TOOLKITS ${RAW_BUILD_TOOLKITS})
+
+message (STATUS "Info. ${BUILD_TOOLKITS}")
+
+# include the patched or original list of definitions and flags
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_defs_flags")
+
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/3rdparty_macro")
+
+OCCT_CHECK_AND_UNSET (USE_VTK)
+
+
+# Rebuild *.yacc and *.lex files that are contained by TKMath toolkit
+list (FIND BUILD_TOOLKITS TKMath   CAN_REBUILD_PDC_FOR_TKMATH)
+list (FIND BUILD_TOOLKITS StepFile CAN_REBUILD_PDC_FOR_STEPFILE)
+
+if (NOT ${CAN_REBUILD_PDC_FOR_TKMATH} EQUAL -1 OR NOT ${CAN_REBUILD_PDC_FOR_STEPFILE} EQUAL -1)
+  set (BUILD_YACCLEX OFF CACHE BOOL "${BUILD_YACCLEX_DESCR}")
+else()
+  OCCT_CHECK_AND_UNSET (BUILD_YACCLEX)
+endif()
+
+if (NOT DEFINED 3RDPARTY_DIR)
+  set (3RDPARTY_DIR "" CACHE PATH ${3RDPARTY_DIR_DESCR})
+  get_filename_component (3RDPARTY_DIR "${3RDPARTY_DIR}" ABSOLUTE)
+else()
+  file (TO_CMAKE_PATH "${3RDPARTY_DIR}" 3RDPARTY_DIR)
+  set (3RDPARTY_DIR "${3RDPARTY_DIR}" CACHE PATH "${3RDPARTY_DIR_DESCR}" FORCE)
+endif()
+
+# search for CSF variable in EXTERNLIB of each being used toolkit
+OCCT_IS_PRODUCT_REQUIRED (CSF_FreeImagePlus CAN_USE_FREEIMAGE)
+OCCT_IS_PRODUCT_REQUIRED (CSF_TclLibs USE_TCL)
+OCCT_IS_PRODUCT_REQUIRED (CSF_TclTkLibs CAN_USE_TK)
+OCCT_IS_PRODUCT_REQUIRED (CSF_XwLibs CAN_USE_XLIB)
+OCCT_IS_PRODUCT_REQUIRED (CSF_FREETYPE CAN_USE_FREETYPE)
+OCCT_IS_PRODUCT_REQUIRED (CSF_OpenGlLibs CAN_USE_OPENGL)
+OCCT_IS_PRODUCT_REQUIRED (CSF_OpenGlesLibs CAN_USE_GLES2)
+OCCT_IS_PRODUCT_REQUIRED (CSF_TBB CAN_USE_TBB)
+OCCT_IS_PRODUCT_REQUIRED (CSF_EIGEN CAN_USE_EIGEN)
+
+if (CAN_USE_FREETYPE)
+ add_definitions (-DHAVE_FREETYPE)
+endif()
+if (USE_RAPIDJSON)
+ add_definitions (-DHAVE_RAPIDJSON)
+endif()
+
+# define CSF variable
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_csf")
+
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_TCL")
+OCCT_CHECK_AND_UNSET ("INSTALL_TCL")
+OCCT_CHECK_AND_UNSET ("USE_TK")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_TK")
+OCCT_CHECK_AND_UNSET ("INSTALL_TK")
+OCCT_CHECK_AND_UNSET ("USE_XLIB")
+OCCT_CHECK_AND_UNSET ("USE_FREEIMAGE")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FREEIMAGE")
+OCCT_CHECK_AND_UNSET ("INSTALL_FREEIMAGE")
+OCCT_CHECK_AND_UNSET ("USE_OPENVR")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_OPENVR")
+OCCT_CHECK_AND_UNSET ("INSTALL_OPENVR")
+OCCT_CHECK_AND_UNSET ("USE_FFMPEG")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FFMPEG")
+OCCT_CHECK_AND_UNSET ("INSTALL_FFMPEG")
+OCCT_CHECK_AND_UNSET ("USE_OPENGL")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_EGL")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_GLES2")
+OCCT_CHECK_AND_UNSET ("INSTALL_EGL")
+OCCT_CHECK_AND_UNSET ("INSTALL_GLES2")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_TBB")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_TBBMALLOC")
+OCCT_CHECK_AND_UNSET ("INSTALL_TBB")
+OCCT_CHECK_AND_UNSET ("USE_DRACO")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_DRACO")
+OCCT_CHECK_AND_UNSET ("INSTALL_DRACO")
+OCCT_CHECK_AND_UNSET ("USE_EIGEN")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_EIGEN")
+OCCT_CHECK_AND_UNSET ("INSTALL_EIGEN")
+OCCT_CHECK_AND_UNSET ("INSTALL_DOC_Overview")
+OCCT_CHECK_AND_UNSET ("3RDPARTY_DOXYGEN_EXECUTABLE")
+OCCT_CHECK_AND_UNSET ("3RDPARTY_DOT_EXECUTABLE")
+OCCT_CHECK_AND_UNSET ("3RDPARTY_BISON_EXECUTABLE")
+OCCT_CHECK_AND_UNSET ("3RDPARTY_FLEX_EXECUTABLE")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_QT")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_TQTMALLOC")
+OCCT_CHECK_AND_UNSET ("INSTALL_QT")
+OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_VTK")
+
+list (REMOVE_ITEM BUILD_TOOLKITS TKOpenGles)
+list (REMOVE_ITEM BUILD_TOOLKITS TKOpenGlesTest)
+list (REMOVE_ITEM BUILD_TOOLKITS TKOpenGl)
+list (REMOVE_ITEM BUILD_TOOLKITS TKOpenGlTest)
+list (REMOVE_ITEM BUILD_TOOLKITS TKIVtk)
+list (REMOVE_ITEM BUILD_TOOLKITS TKIVtkDraw)
+list (REMOVE_ITEM BUILD_TOOLKITS TKD3DHost)
+list (REMOVE_ITEM BUILD_TOOLKITS TKD3DHostTest)
+
+
+# check all 3rdparty include paths
+string (REGEX REPLACE ";" " " 3RDPARTY_NOT_INCLUDED "${3RDPARTY_NOT_INCLUDED}")
+if (3RDPARTY_NOT_INCLUDED)
+  message (FATAL_ERROR "Could not find headers of used third-party products: ${3RDPARTY_NOT_INCLUDED}" )
+endif()
+
+if (3RDPARTY_INCLUDE_DIRS)
+  list (REMOVE_DUPLICATES 3RDPARTY_INCLUDE_DIRS)
+  string (REGEX REPLACE ";" "\n\t" 3RDPARTY_INCLUDE_DIRS_WITH_ENDS "${3RDPARTY_INCLUDE_DIRS}")
+  message (STATUS "Info: The directories of 3rdparty headers: \n\t${3RDPARTY_INCLUDE_DIRS_WITH_ENDS}")
+  include_directories (${3RDPARTY_INCLUDE_DIRS})
+endif()
+
+set (INSTALL_DIR_INCLUDE "include/opencascade" CACHE PATH "${INSTALL_DIR_INCLUDE_DESCR}")
+
+# include <cmake binary folder>/inc
+include_directories (${CMAKE_CURRENT_BINARY_DIR}/${INSTALL_DIR_INCLUDE})
+
+# check all 3rdparty library paths
+string (REGEX REPLACE ";" " " 3RDPARTY_NO_LIBS "${3RDPARTY_NO_LIBS}")
+if (3RDPARTY_NO_LIBS)
+  if (BUILD_SHARED_LIBS)
+    message (SEND_ERROR "Could not find libraries of used third-party products: ${3RDPARTY_NO_LIBS}" )
+  else()
+    message (WARNING "Could not find libraries of used third-party products: ${3RDPARTY_NO_LIBS}" )
+  endif()
+endif()
+if (3RDPARTY_LIBRARY_DIRS)
+  list (REMOVE_DUPLICATES 3RDPARTY_LIBRARY_DIRS)
+  string (REGEX REPLACE ";" "\n\t" 3RDPARTY_LIBRARY_DIRS_WITH_ENDS "${3RDPARTY_LIBRARY_DIRS}")
+  message (STATUS "Info: The directories of 3rdparty libraries: \n\t${3RDPARTY_LIBRARY_DIRS_WITH_ENDS}")
+  link_directories (${3RDPARTY_LIBRARY_DIRS})
+endif()
+
+# report not found 3rdparty dll paths
+string (REGEX REPLACE ";" " " 3RDPARTY_NO_DLLS "${3RDPARTY_NO_DLLS}")
+if (3RDPARTY_NO_DLLS)
+  message (WARNING "Could not find DLLs of used third-party products: ${3RDPARTY_NO_DLLS}" )
+endif()
+
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/lib")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/bin")
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/lib")
+
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/libi")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/bini")
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/libi")
+
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/libd")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/bind")
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/libd")
+
+if (WIN32)
+  set (CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE        "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/bin")
+  set (CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/bini")
+  set (CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG          "${CMAKE_CURRENT_BINARY_DIR}/${OS_WITH_BIT}/${COMPILER}/bind")
+endif()
+
+string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
+message (STATUS "\nInfo: \(${CURRENT_TIME}\) Start collecting all OCCT header files into ${CMAKE_CURRENT_BINARY_DIR}/inc ...")
+
+# collect all the headers to <binary dir>/inc folder
+COLLECT_AND_INSTALL_OCCT_HEADER_FILES ("${CMAKE_CURRENT_BINARY_DIR}" "${BUILD_TOOLKITS}" "${CMAKE_CURRENT_SOURCE_DIR}/src" "${INSTALL_DIR_INCLUDE}")
+
+string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
+message (STATUS "Info: \(${CURRENT_TIME}\) End the collecting")
+
+list (FIND BUILD_TOOLKITS DRAWEXE DRAWEXE_INDEX)
+if (${DRAWEXE_INDEX} GREATER -1)
+  OCCT_INSTALL_FILE_OR_DIR ("data/" "${INSTALL_DIR_DATA}")
+  OCCT_INSTALL_FILE_OR_DIR ("samples/tcl" "${INSTALL_DIR_SAMPLES}")
+endif()
+
+if (WIN32)
+  set (SCRIPT_EXT bat)
+else()
+  set (SCRIPT_EXT sh)
+endif()
+
+
+set (SUB_CUSTOM_NAME "custom_${COMPILER}_${COMPILER_BITNESS}.${SCRIPT_EXT}")
+
+if (WIN32)
+  set (ADDITIONAL_CUSTOM_CONTENT "\nif exist \"%~dp0${SUB_CUSTOM_NAME}\" (\n  call \"%~dp0${SUB_CUSTOM_NAME}\" %1 %2 %3 \n)")
+else()
+  set (ADDITIONAL_CUSTOM_CONTENT "\nif [ -e \"\${aScriptPath}/${SUB_CUSTOM_NAME}\" ]; then\n  source \"\${aScriptPath}/${SUB_CUSTOM_NAME}\" \"\$1\" \"\$2\" \nfi")
+endif()
+
+if (WIN32)
+  set (THIRDPARTY_DIR_REPLACE "%THIRDPARTY_DIR%")
+else()
+  set (THIRDPARTY_DIR_REPLACE "\${THIRDPARTY_DIR}")
+endif()
+get_cmake_property(USED_3RDPARTY_CACHE_VARIABLES VARIABLES)
+string (REGEX MATCHALL "(^|;)USED_3RDPARTY_[^;]+_DIR[^;]*" USED_3RDPARTY_CACHE_VARIABLES "${USED_3RDPARTY_CACHE_VARIABLES}")
+file (TO_CMAKE_PATH "${3RDPARTY_DIR}" 3RDPARTY_DIR)
+foreach (USED_3RDPARTY_CACHE_VARIABLE ${USED_3RDPARTY_CACHE_VARIABLES})
+   file (TO_CMAKE_PATH "${${USED_3RDPARTY_CACHE_VARIABLE}}" ${USED_3RDPARTY_CACHE_VARIABLE})
+   string (REPLACE "${3RDPARTY_DIR}" "${THIRDPARTY_DIR_REPLACE}" ${USED_3RDPARTY_CACHE_VARIABLE} "${${USED_3RDPARTY_CACHE_VARIABLE}}")
+   if (NOT WIN32)
+     string (REGEX REPLACE ";" ":" ${USED_3RDPARTY_CACHE_VARIABLE} "${${USED_3RDPARTY_CACHE_VARIABLE}}")
+   endif()
+endforeach()
+
+# copy DrawAppliInit from OCCT source to build directory
+if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/DrawAppliInit")
+  OCCT_COPY_FILE_OR_DIR (DrawAppliInit "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+# patch installed DrawDefault file if BUILD_SHARED_LIBRARY_NAME_POSTFIX is changed
+if (NOT "${BUILD_SHARED_LIBRARY_NAME_POSTFIX}" STREQUAL "")
+  OCCT_UPDATE_DRAW_DEFAULT_FILE()
+endif()
+
+# include patched toolkit projects or original ones
+foreach (BUILD_TOOLKIT ${BUILD_TOOLKITS})
+  OCCT_ADD_SUBDIRECTORY ("src/${BUILD_TOOLKIT}")
+endforeach()
+
+if (BUILD_DOC_Overview)
+  OCCT_ADD_SUBDIRECTORY (dox)
+endif()
+
+# Prepare variables for configuration of OpenCASCADE cmake config file
+set (OCCT_MODULES_ENABLED)
+set (OCCT_LIBRARIES)
+set (SET_OpenCASCADE_MODULES_TOOLKITS "\n# List of available OpenCASCADE libraries for each module\n")
+set (OCCT_COMPILE_DEFINITIONS)
+
+foreach (OCCT_TOOLKIT ${BUILD_TOOLKITS})
+  if (TARGET ${OCCT_TOOLKIT})
+
+    # get all libraries
+    get_target_property (${OCCT_TOOLKIT}_TYPE ${OCCT_TOOLKIT} "TYPE")
+    if ("${${OCCT_TOOLKIT}_TYPE}" STREQUAL "STATIC_LIBRARY" OR "${${OCCT_TOOLKIT}_TYPE}" STREQUAL "SHARED_LIBRARY" )
+      list (APPEND OCCT_LIBRARIES ${OCCT_TOOLKIT})
+
+      # get all modules
+      get_target_property (${OCCT_TOOLKIT}_MODULE ${OCCT_TOOLKIT} "MODULE")
+      list (APPEND OCCT_MODULES_ENABLED ${${OCCT_TOOLKIT}_MODULE})
+      list (APPEND OpenCASCADE_${${OCCT_TOOLKIT}_MODULE}_TOOLKITS ${OCCT_TOOLKIT})
+
+      # get compile definitions of target directory
+      get_directory_property (COMPILE_DEFINITIONS DIRECTORY "${${OCCT_TOOLKIT}_SOURCE_DIR}" "COMPILE_DEFINITIONS")
+      list (APPEND OCCT_COMPILE_DEFINITIONS ${COMPILE_DEFINITIONS})
+    endif()
+  endif()
+endforeach()
+list (REMOVE_DUPLICATES OCCT_MODULES_ENABLED)
+list (REMOVE_DUPLICATES OCCT_COMPILE_DEFINITIONS)
+# these macros are defined for specific tookits, not globalwise
+list (REMOVE_ITEM OCCT_COMPILE_DEFINITIONS HAVE_OPENGL)
+list (REMOVE_ITEM OCCT_COMPILE_DEFINITIONS HAVE_GLES2)
+
+# export compile definitions and C/C++ flags for each configuration to OpenCASCADE config files
+foreach (OCCT_CONFIGURATION ${CMAKE_CONFIGURATION_TYPES})
+  set (SET_OpenCASCADE_COMPILE_DEFINITIONS)
+  string (TOUPPER "${OCCT_CONFIGURATION}" OCCT_CONFIGURATION_UPPER)
+  string (TOLOWER "${OCCT_CONFIGURATION}" OCCT_CONFIGURATION_LOWER)
+  foreach(COMPILE_DEFINITION ${OCCT_COMPILE_DEFINITIONS})
+    string(REPLACE "(" "\\(" COMPILE_DEFINITION "${COMPILE_DEFINITION}")
+    string(REPLACE ")" "\\)" COMPILE_DEFINITION "${COMPILE_DEFINITION}")
+    set (SET_OpenCASCADE_COMPILE_DEFINITIONS "${SET_OpenCASCADE_COMPILE_DEFINITIONS}set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:${OCCT_CONFIGURATION}>:${COMPILE_DEFINITION}>)\n")
+  endforeach()
+  set (SET_OpenCASCADE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS_${OCCT_CONFIGURATION_UPPER}}")
+  set (SET_OpenCASCADE_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_${OCCT_CONFIGURATION_UPPER}}")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/adm/templates/OpenCASCADECompileDefinitionsAndFlags.cmake.in" "OpenCASCADECompileDefinitionsAndFlags-${OCCT_CONFIGURATION_LOWER}.cmake" @ONLY)
+endforeach()
+
+foreach (OCCT_MODULE ${OCCT_MODULES})
+  if (BUILD_MODULE_${OCCT_MODULE})
+    set (SET_OpenCASCADE_MODULES_TOOLKITS "${SET_OpenCASCADE_MODULES_TOOLKITS}set (OpenCASCADE_${OCCT_MODULE}_LIBRARIES ${OpenCASCADE_${OCCT_MODULE}_TOOLKITS})\n")
+  endif()
+
+  # sort enabled modules for correct work of OpenCASCADE config file
+  list(FIND OCCT_MODULES_ENABLED "${OCCT_MODULE}" OCCT_MODULE_INDEX)
+  if (NOT ${OCCT_MODULE_INDEX} EQUAL -1)
+    list (APPEND OCCT_MODULES_ENABLED_SORTED ${OCCT_MODULE})
+  endif()
+endforeach()
+set (OCCT_MODULES_ENABLED ${OCCT_MODULES_ENABLED_SORTED})
+

@@ -1,0 +1,11 @@
+mainBuild:
+  name: topo.full.js
+
+additionalCppCode: |
+  typedef Handle(IMeshTools_Context) Handle_IMeshTools_Context;
+  class TopoJS {
+  public:
+    static Standard_Failure* getStandard_FailureData(intptr_t exceptionPtr) {
+      return reinterpret_cast<Standard_Failure*>(exceptionPtr);
+    }
+  };
