@@ -1,0 +1,13 @@
+{
+    "name": "topo.js",
+    "version": "1.0.0",
+    "description": "Port of the OpenCascade library And Topo to JavaScript and WebAssembly via Emscripten.",
+    "main": "dist/index.js",
+    "author": "Sebastian Alff <donalffons@gmail.com>",
+    "repository": "github:flywave/topo.js",
+    "types": "dist/index.d.ts",
+    "peerDependencies": {
+      "ws": "^8.5.0"
+    },
+    "type": "module"
+  }
