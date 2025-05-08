@@ -40,21 +40,35 @@ public:
 
   // Provide access to methods of protected base class BOPAlgo_Options
   // (inherited as protected to avoid problems with SWIG wrapper)
-  using BOPAlgo_Options::Clear;
-  using BOPAlgo_Options::SetRunParallel;
-  using BOPAlgo_Options::RunParallel;
-  using BOPAlgo_Options::SetFuzzyValue;
-  using BOPAlgo_Options::FuzzyValue;
-  using BOPAlgo_Options::HasErrors;
-  using BOPAlgo_Options::HasWarnings;
-  using BOPAlgo_Options::HasError;
-  using BOPAlgo_Options::HasWarning;
-  using BOPAlgo_Options::DumpErrors;
-  using BOPAlgo_Options::DumpWarnings;
-  using BOPAlgo_Options::ClearWarnings;
-  using BOPAlgo_Options::GetReport;
-  using BOPAlgo_Options::SetUseOBB;
-
+   // using BOPAlgo_Options::Clear;
+   // using BOPAlgo_Options::SetRunParallel;
+   // using BOPAlgo_Options::RunParallel;
+   // using BOPAlgo_Options::SetFuzzyValue;
+   // using BOPAlgo_Options::FuzzyValue;
+   // using BOPAlgo_Options::HasErrors;
+   // using BOPAlgo_Options::HasWarnings;
+   // using BOPAlgo_Options::HasError;
+   // using BOPAlgo_Options::HasWarning;
+   // using BOPAlgo_Options::DumpErrors;
+   // using BOPAlgo_Options::DumpWarnings;
+   // using BOPAlgo_Options::ClearWarnings;
+   // using BOPAlgo_Options::GetReport;
+   // using BOPAlgo_Options::SetUseOBB;
+   void Clear() override { BOPAlgo_Options::Clear(); }
+   void SetRunParallel(const Standard_Boolean theFlag) { BOPAlgo_Options::SetRunParallel(theFlag); }
+   Standard_Boolean RunParallel() const { return BOPAlgo_Options::RunParallel(); }
+   void SetFuzzyValue(const Standard_Real theFuzz) { BOPAlgo_Options::SetFuzzyValue(theFuzz); }
+   Standard_Real FuzzyValue() const { return BOPAlgo_Options::FuzzyValue(); }
+   Standard_Boolean HasErrors() const { return BOPAlgo_Options::HasErrors(); }
+   Standard_Boolean HasWarnings() const { return BOPAlgo_Options::HasWarnings(); }
+   Standard_Boolean HasError (const Handle(Standard_Type)& theType) const { return BOPAlgo_Options::HasError(theType); }
+   Standard_Boolean HasWarning (const Handle(Standard_Type)& theType) const { return BOPAlgo_Options::HasWarning(theType); }
+   void DumpErrors(Standard_OStream& theOS) const { BOPAlgo_Options::DumpErrors(theOS); }
+   void DumpWarnings(Standard_OStream& theOS) const { BOPAlgo_Options::DumpWarnings(theOS); }
+   void ClearWarnings() { BOPAlgo_Options::ClearWarnings(); }
+   const Handle(Message_Report)& GetReport () const { return BOPAlgo_Options::GetReport(); }
+   void SetUseOBB(const Standard_Boolean theUseOBB) { BOPAlgo_Options::SetUseOBB(theUseOBB); }
+ 
 protected:
 
   //! Empty constructor

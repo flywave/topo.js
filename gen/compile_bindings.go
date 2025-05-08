@@ -5,15 +5,11 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-)
-
-var (
-	ocIncludePaths         = []string{"/path/to/oc/include1", "/path/to/oc/include2"}
-	additionalIncludePaths = []string{"/path/to/additional/include1"}
 )
 
 type ExportItem struct {
@@ -21,7 +17,9 @@ type ExportItem struct {
 	Kind string
 }
 
-func CompileCustomCodeBindings(args map[string]string) error {
+func CompileCustomCodeBindings(workDir string, args map[string]string) error {
+	libraryBasePath := path.Join(workDir, "src/bindings")
+
 	dir := filepath.Join(libraryBasePath, "myMain.h")
 	var filesToBuild []string
 
@@ -52,7 +50,7 @@ func CompileCustomCodeBindings(args map[string]string) error {
 		go func() {
 			defer wg.Done()
 			for file := range jobs {
-				if err := buildOneFile(args, file); err != nil {
+				if err := buildOneFile(workDir, args, file); err != nil {
 					errs <- err
 				}
 			}
@@ -81,7 +79,7 @@ func CompileCustomCodeBindings(args map[string]string) error {
 	return firstErr
 }
 
-func buildOneFile(args map[string]string, item string) error {
+func buildOneFile(workDir string, args map[string]string, item string) error {
 	objFile := item + ".o"
 	if _, err := os.Stat(objFile); err == nil {
 		fmt.Printf("file %s already exists, skipping\n", objFile)
@@ -101,14 +99,13 @@ func buildOneFile(args map[string]string, item string) error {
 		"-frtti",
 		"-DHAVE_RAPIDJSON",
 		"-Os",
-		// "-g3",
-		// "-gsource-map",
-		// "--source-map-base=http://localhost:8080",
 	}
 
 	if args["threading"] == "multi-threaded" {
 		command = append(command, "-pthread")
 	}
+
+	ocIncludePaths, additionalIncludePaths := GetGlobalIncludes(workDir)
 
 	// Add include paths
 	for _, inc := range append(ocIncludePaths, additionalIncludePaths...) {

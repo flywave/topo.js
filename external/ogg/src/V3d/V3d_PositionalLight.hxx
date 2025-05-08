@@ -35,8 +35,12 @@ public:
   Standard_EXPORT V3d_PositionalLight (const gp_Pnt& thePos,
                                        const Quantity_Color& theColor = Quantity_NOC_WHITE);
 
-  using Graphic3d_CLight::Position;
-  using Graphic3d_CLight::SetPosition;
+  //using Graphic3d_CLight::Position;
+  //using Graphic3d_CLight::SetPosition;
+  const gp_Pnt& Position() const { return Graphic3d_CLight::Position(); }
+  void Position (Standard_Real& theX, Standard_Real& theY, Standard_Real& theZ) const { Graphic3d_CLight::Position(theX, theY, theZ); }
+  void SetPosition (const gp_Pnt& thePosition) { Graphic3d_CLight::SetPosition(thePosition); }
+  void SetPosition (Standard_Real theX, Standard_Real theY, Standard_Real theZ) { Graphic3d_CLight::SetPosition(theX, theY, theZ); }
 
 //! @name hidden properties not applicable to positional light
 private:

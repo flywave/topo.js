@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -36,9 +37,7 @@ type TypescriptDef struct {
 	Exports []string `json:"exports"`
 }
 
-func RunBuild(filename string) error {
-	libraryBasePath := "/opencascade.js/build"
-
+func RunBuild(workDir string, filename string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -49,19 +48,18 @@ func RunBuild(filename string) error {
 		return err
 	}
 
-	// 验证schema (Go中没有直接对应的cerberus库，需要自定义验证逻辑)
-	// 这里省略schema验证部分
+	libraryBasePath := path.Join(workDir, "src")
 
 	if err := os.RemoveAll(libraryBasePath + "/bindings/myMain.h"); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	if err := GenerateCustomCodeBindings(buildConfig.AdditionalCppCode); err != nil {
+	if err := GenerateCustomCodeBindings(workDir, buildConfig.AdditionalCppCode); err != nil {
 		return err
 	}
 
 	threading := os.Getenv("threading")
-	if err := CompileCustomCodeBindings(map[string]string{"threading": threading}); err != nil {
+	if err := CompileCustomCodeBindings(workDir, map[string]string{"threading": threading}); err != nil {
 		return err
 	}
 
@@ -80,12 +78,12 @@ func RunBuild(filename string) error {
 		return err
 	}
 
-	if err := runBuild(buildConfig.MainBuild, libraryBasePath); err != nil {
+	if err := runBuild(workDir, buildConfig.MainBuild, libraryBasePath); err != nil {
 		return err
 	}
 
 	for _, extraBuild := range buildConfig.ExtraBuilds {
-		if err := runBuild(extraBuild, libraryBasePath); err != nil {
+		if err := runBuild(workDir, extraBuild, libraryBasePath); err != nil {
 			return err
 		}
 	}
@@ -167,8 +165,8 @@ func collectTypescriptDefs(buildConfig BuildConfig, libraryBasePath string) ([]T
 	return typescriptDefinitions, err
 }
 
-func runBuild(build BuildSpec, libraryBasePath string) error {
-	additionalBindCodeO, err := getAdditionalBindCodeO(build, libraryBasePath)
+func runBuild(workDir string, build BuildSpec, libraryBasePath string) error {
+	additionalBindCodeO, err := getAdditionalBindCodeO(workDir, build, libraryBasePath)
 	if err != nil {
 		return err
 	}
@@ -206,7 +204,7 @@ func runBuild(build BuildSpec, libraryBasePath string) error {
 	return nil
 }
 
-func getAdditionalBindCodeO(build BuildSpec, libraryBasePath string) (string, error) {
+func getAdditionalBindCodeO(workDir string, build BuildSpec, libraryBasePath string) (string, error) {
 	if build.AdditionalBindCode == "" {
 		return "", nil
 	}
@@ -222,6 +220,8 @@ func getAdditionalBindCodeO(build BuildSpec, libraryBasePath string) (string, er
 	}
 
 	fmt.Println("building " + additionalBindCodeFileName)
+
+	ocIncludePaths, additionalIncludePaths := GetGlobalIncludes(workDir)
 
 	args := []string{
 		"-flto",

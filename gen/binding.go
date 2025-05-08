@@ -2,6 +2,7 @@ package gen
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 
@@ -96,7 +97,7 @@ func isCString(typ clang.Type) bool {
 }
 
 func getClassTypeName(theClass clang.Cursor, templateDecl clang.Cursor) string {
-	if templateDecl.IsNull() {
+	if !templateDecl.IsNull() {
 		return templateDecl.Spelling()
 	}
 	return theClass.Spelling()
@@ -114,13 +115,15 @@ type Bindings struct {
 	typedefs         []clang.Cursor
 	templateTypedefs []clang.Cursor
 	translationUnit  clang.TranslationUnit
+	workDir          string
 }
 
-func NewBindings(typedefs, templateTypedefs []clang.Cursor, tu clang.TranslationUnit) *Bindings {
+func NewBindings(workDir string, typedefs, templateTypedefs []clang.Cursor, tu clang.TranslationUnit) *Bindings {
 	return &Bindings{
 		typedefs:         typedefs,
 		templateTypedefs: templateTypedefs,
 		translationUnit:  tu,
+		workDir:          workDir,
 	}
 }
 
@@ -129,7 +132,8 @@ func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templat
 		for _, typedef := range b.typedefs {
 			loc := typedef.Location()
 			file, _, _, _ := loc.FileLocation()
-			if strings.HasPrefix(file.Name(), occtBasePath) &&
+			spath := path.Join(b.workDir, sourceBasePath)
+			if strings.HasPrefix(file.Name(), spath) &&
 				typedef.TypedefDeclUnderlyingType().Spelling() == typeSpelling {
 				return typedef.Spelling()
 			}
@@ -202,9 +206,9 @@ type EmbindBindings struct {
 	*Bindings
 }
 
-func NewEmbindBindings(typedefs, templateTypedefs []clang.Cursor, tu clang.TranslationUnit) *EmbindBindings {
+func NewEmbindBindings(workDir string, typedefs, templateTypedefs []clang.Cursor, tu clang.TranslationUnit) *EmbindBindings {
 	bd := &EmbindBindings{
-		Bindings: NewBindings(typedefs, templateTypedefs, tu),
+		Bindings: NewBindings(workDir, typedefs, templateTypedefs, tu),
 	}
 	bd.iface = bd
 	return bd
@@ -299,10 +303,11 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	}
 
 	var argTypes []string
-	standardConstructor.Visit(func(arg, parent clang.Cursor) clang.ChildVisitResult {
+
+	for i := 0; int32(i) < standardConstructor.NumArguments(); i++ {
+		arg := standardConstructor.Argument(uint32(i))
 		argTypes = append(argTypes, arg.Type().Spelling())
-		return clang.ChildVisit_Continue
-	})
+	}
 	argTypesBindings := strings.Join(argTypes, ", ")
 
 	output += "    .constructor<" + argTypesBindings + ">()\n"
@@ -426,6 +431,8 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 		}
 		returnNeedsWrapper := needsWrapper(method.ResultType())
 
+		var functionBinding strings.Builder
+
 		if anyTrue(argsNeedingWrapper) || returnNeedsWrapper {
 			// Helper functions for wrapper generation
 			replaceTemplateArgs := func(i int) string {
@@ -476,8 +483,6 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			if returnNeedsWrapper {
 				resultTypeSpelling = "emscripten::val"
 			}
-
-			var functionBinding strings.Builder
 
 			// Function binding head
 			functionBinding.WriteString("\n")
@@ -598,18 +603,10 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			functionBinding.WriteString(indent(2))
 			functionBinding.WriteString(")")
 
-			output.WriteString(indent(2))
-			if method.CXXMethod_IsStatic() {
-				output.WriteString(".class_function(")
-			} else {
-				output.WriteString(".function(")
-			}
-			output.WriteString(fmt.Sprintf("\"%s%s\",%s, allow_raw_pointers())\n",
-				method.Spelling(), overloadPostfix, functionBinding.String()))
 		} else {
 			// Simple case - no wrapper needed
 			if numOverloads == 1 {
-				output.WriteString(fmt.Sprintf("%s.&%s::%s\n", indent(2), className, method.Spelling()))
+				functionBinding.WriteString(fmt.Sprintf("%s.&%s::%s\n", indent(2), className, method.Spelling()))
 			} else {
 				var params []string
 				for _, arg := range args {
@@ -629,10 +626,18 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 					overloadSpec += fmt.Sprintf(", %s", getClassTypeName(theClass, templateDecl))
 				}
 
-				output.WriteString(fmt.Sprintf("%s.select_overload%s(&%s::%s)\n",
+				functionBinding.WriteString(fmt.Sprintf("%s.select_overload%s(&%s::%s)\n",
 					indent(2), overloadSpec, className, method.Spelling()))
 			}
 		}
+
+		if method.CXXMethod_IsStatic() {
+			output.WriteString(".class_function(")
+		} else {
+			output.WriteString(".function(")
+		}
+		output.WriteString(fmt.Sprintf("\"%s%s\",%s, allow_raw_pointers())\n",
+			method.Spelling(), overloadPostfix, functionBinding.String()))
 	}
 
 	// Process public fields
@@ -766,9 +771,9 @@ type TypescriptBindings struct {
 	exports []string
 }
 
-func NewTypescriptBindings(typedefs, templateTypedefs []clang.Cursor, tu clang.TranslationUnit) *TypescriptBindings {
+func NewTypescriptBindings(workDir string, typedefs, templateTypedefs []clang.Cursor, tu clang.TranslationUnit) *TypescriptBindings {
 	bd := &TypescriptBindings{
-		Bindings: NewBindings(typedefs, templateTypedefs, tu),
+		Bindings: NewBindings(workDir, typedefs, templateTypedefs, tu),
 		imports:  make(map[string]bool),
 		exports:  []string{},
 	}

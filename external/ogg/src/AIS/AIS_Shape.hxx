@@ -171,7 +171,8 @@ public:
   
   //! AIS_InteractiveObject defines another virtual method BoundingBox,
   //! which is not the same as above; keep it visible.
-  using AIS_InteractiveObject::BoundingBox;
+  //using AIS_InteractiveObject::BoundingBox;
+  void BoundingBox (Bnd_Box& theBndBox) override { AIS_InteractiveObject::BoundingBox(theBndBox); }
 
   //! Returns the Color attributes of the shape accordingly to
   //! the current facing model;

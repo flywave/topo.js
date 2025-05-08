@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 )
 
 const llvmConfigPath = "/opt/homebrew/opt/llvm@15/bin/llvm-config"
 
-func GetGlobalIncludes() ([]string, []string) {
+func GetGlobalIncludes(workDir string) ([]string, []string) {
 	var includeFiles []string
 	var additionalIncludePaths []string
 
 	// Walk OCCT directory to collect include files and paths
-	err := filepath.Walk(occtBasePath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path.Join(workDir, sourceBasePath), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

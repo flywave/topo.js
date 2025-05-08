@@ -45,8 +45,9 @@ public:
   //! False otherwise.
   Standard_EXPORT Standard_Boolean Derivatives (const math_Vector& X, math_Matrix& D) Standard_OVERRIDE;
   
-  using Blend_FuncInv::Set;
-  
+  // using Blend_FuncInv::Set;
+  void Set (const Standard_Boolean OnFirst, const Handle(Adaptor2d_Curve2d)& COnSurf) override { BlendFunc_GenChamfInv::Set(OnFirst, COnSurf); }
+   
   Standard_EXPORT virtual void Set (const Standard_Real theThroat,
                                     const Standard_Real,
                                     const Standard_Integer Choix) Standard_OVERRIDE;

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -14,16 +15,9 @@ import (
 	"github.com/go-clang/clang-v15/clang"
 )
 
-const (
-	libraryBasePath = "/opencascade.js/build/bindings"
-	buildDirectory  = "/opencascade.js/build"
-	occtBasePath    = "/occt/src/"
-)
-
 var (
-	ocIncludeFiles      []string
-	includePathArgs     []string
 	ocIncludeStatements string
+	includePathArgs     []string
 )
 
 type SkipException struct {
@@ -39,7 +33,8 @@ type Batch struct {
 }
 
 func init() {
-	// Initialize ocIncludeStatements
+	ocIncludeFiles, additionalIncludePaths := GetGlobalIncludes("")
+	includePathArgs = additionalIncludePaths
 	var includes []string
 	for _, file := range ocIncludeFiles {
 		includes = append(includes, fmt.Sprintf("#include \"%s\"", filepath.Base(file)))
@@ -51,18 +46,18 @@ func mkdirp(name string) error {
 	return os.MkdirAll(name, 0755)
 }
 
-func filterClasses(child clang.Cursor, customBuild bool) bool {
+func filterClasses(workDir string, child clang.Cursor, customBuild bool) bool {
 	file, _, _, _ := child.Location().FileLocation()
 	if customBuild {
 		return file.Name() == "myMain.h" && shouldProcessClass(child)
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
-	return strings.HasPrefix(sfile.Name(), occtBasePath) &&
+	return strings.HasPrefix(sfile.Name(), path.Join(workDir, sourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		shouldProcessClass(child)
 }
 
-func filterTemplates(child clang.Cursor, customBuild bool) bool {
+func filterTemplates(workDir string, child clang.Cursor, customBuild bool) bool {
 	file, _, _, _ := child.Location().FileLocation()
 
 	if customBuild {
@@ -72,26 +67,26 @@ func filterTemplates(child clang.Cursor, customBuild bool) bool {
 				child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed)
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
-	return strings.HasPrefix(sfile.Name(), occtBasePath) &&
+	return strings.HasPrefix(sfile.Name(), path.Join(workDir, sourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		child.Kind() == clang.Cursor_TypedefDecl &&
 		(child.TypedefDeclUnderlyingType().Kind() == clang.Type_Elaborated ||
 			child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed)
 }
 
-func filterEnums(child clang.Cursor, customBuild bool) bool {
+func filterEnums(workDir string, child clang.Cursor, customBuild bool) bool {
 	file, _, _, _ := child.Location().FileLocation()
 	if customBuild {
 		return file.Name() == "myMain.h"
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
-	return strings.HasPrefix(sfile.Name(), occtBasePath) &&
+	return strings.HasPrefix(sfile.Name(), path.Join(workDir, sourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		child.Kind() == clang.Cursor_EnumDecl
 }
 
-func processChildBatch(customCode string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
-	filterFunc func(clang.Cursor, bool) bool, processFunc func(clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
+func processChildBatch(workDir string, customCode string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
+	filterFunc func(string, clang.Cursor, bool) bool, processFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
 	typedefGen, templateTypedefGen func(clang.TranslationUnit) []clang.Cursor, preamble string, customBuild bool, batch Batch, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -100,20 +95,21 @@ func processChildBatch(customCode string, generator func(clang.TranslationUnit) 
 	if batch.stop > len(children) {
 		batch.stop = len(children)
 	}
+	bulidPath := filepath.Join(workDir, "/build")
 
 	for _, child := range children[batch.start:batch.stop] {
-		if !filterFunc(child, customBuild) || child.Spelling() == "" {
+		if !filterFunc(workDir, child, customBuild) || child.Spelling() == "" {
 			continue
 		}
 		sfile, _, _, _ := child.Extent().Start().FileLocation()
-		relOcFileName := strings.Replace(sfile.Name(), occtBasePath, "", 1)
-		dirPath := filepath.Join(buildDirectory, buildType, filepath.Dir(relOcFileName))
+		relOcFileName := strings.Replace(sfile.Name(), path.Join(workDir, sourceBasePath), "", 1)
+		dirPath := filepath.Join(bulidPath, buildType, filepath.Dir(relOcFileName))
 		if err := mkdirp(dirPath); err != nil {
 			fmt.Printf("Error creating directory %s: %v\n", dirPath, err)
 			continue
 		}
 
-		filename := filepath.Join(buildDirectory, buildType, relOcFileName)
+		filename := filepath.Join(bulidPath, buildType, relOcFileName)
 		if err := mkdirp(filename); err != nil {
 			fmt.Printf("Error creating directory %s: %v\n", filename, err)
 			continue
@@ -127,7 +123,7 @@ func processChildBatch(customCode string, generator func(clang.TranslationUnit) 
 
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			fmt.Printf("Processing %s\n", child.Spelling())
-			output, err := processFunc(tu, preamble, child, typedefGen(tu), templateTypedefGen(tu))
+			output, err := processFunc(workDir, tu, preamble, child, typedefGen(tu), templateTypedefGen(tu))
 			if err != nil {
 				if _, ok := err.(SkipException); ok {
 					fmt.Println(err.Error())
@@ -158,8 +154,8 @@ func split(a []clang.Cursor, n int) []Batch {
 	return batches
 }
 
-func processChildren(generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
-	filterFunc func(clang.Cursor, bool) bool, processFunc func(clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
+func processChildren(workDir string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
+	filterFunc func(string, clang.Cursor, bool) bool, processFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
 	typedefGen, templateTypedefGen func(clang.TranslationUnit) []clang.Cursor, preamble, customCode string, customBuild bool) {
 
 	tu := parse(customCode)
@@ -173,12 +169,12 @@ func processChildren(generator func(clang.TranslationUnit) []clang.Cursor, build
 
 		for _, batch := range batches {
 			wg.Add(1)
-			go processChildBatch(customCode, generator, buildType, extension, filterFunc, processFunc,
+			go processChildBatch(workDir, customCode, generator, buildType, extension, filterFunc, processFunc,
 				typedefGen, templateTypedefGen, preamble, customBuild, batch, &wg)
 		}
 	} else {
 		wg.Add(1)
-		processChildBatch(customCode, generator, buildType, extension, filterFunc, processFunc,
+		processChildBatch(workDir, customCode, generator, buildType, extension, filterFunc, processFunc,
 			typedefGen, templateTypedefGen, preamble, customBuild, Batch{0, len(children)}, &wg)
 	}
 
@@ -229,25 +225,25 @@ func processTemplate(child clang.Cursor) (clang.Cursor, map[string]clang.Type, e
 	return templateClass, templateArgs, nil
 }
 
-func embindGenerationFuncClasses(tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
-	embindings := NewEmbindBindings(typedefs, templateTypedefs, tu)
+func embindGenerationFuncClasses(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
+	embindings := NewEmbindBindings(workDir, typedefs, templateTypedefs, tu)
 	output := embindings.processClass(child, clang.NewNullCursor(), nil)
 	return preamble + output, nil
 }
 
-func embindGenerationFuncTemplates(tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
+func embindGenerationFuncTemplates(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
 	templateClass, templateArgs, err := processTemplate(child)
 	if err != nil {
 		return "", err
 	}
 
-	embindings := NewEmbindBindings(typedefs, templateTypedefs, tu)
+	embindings := NewEmbindBindings(workDir, typedefs, templateTypedefs, tu)
 	output := embindings.processClass(templateClass, child, templateArgs)
 	return preamble + output, nil
 }
 
-func embindGenerationFuncEnums(tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
-	embindings := NewEmbindBindings(typedefs, templateTypedefs, tu)
+func embindGenerationFuncEnums(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
+	embindings := NewEmbindBindings(workDir, typedefs, templateTypedefs, tu)
 	output := embindings.processEnum(child)
 	return preamble + output, nil
 }
@@ -255,13 +251,14 @@ func embindGenerationFuncEnums(tu clang.TranslationUnit, preamble string, child 
 func templateTypedefGenerator(tu clang.TranslationUnit) []clang.Cursor {
 	var result []clang.Cursor
 	tu.TranslationUnitCursor().Visit(func(child, parent clang.Cursor) clang.ChildVisitResult {
-		if child.Kind() == clang.Cursor_TypedefDecl &&
-			!child.Definition().IsNull() &&
-			child.Equal(child.Definition()) &&
-			filter.FilterTypedef(child, nil) &&
-			child.Type().NumTemplateArguments() != -1 &&
-			!wasm.IgnoreDuplicateTypedef(child) {
-			result = append(result, child)
+		if child.Kind() == clang.Cursor_TypedefDecl {
+			def := child.Definition()
+			if !def.IsNull() && child.Equal(def) &&
+				filter.FilterTypedef(child, nil) &&
+				child.Type().NumTemplateArguments() != -1 &&
+				!wasm.IgnoreDuplicateTypedef(child) {
+				result = append(result, child)
+			}
 		}
 		return clang.ChildVisit_Continue
 	})
@@ -307,15 +304,15 @@ func enumGenerator(tu clang.TranslationUnit) []clang.Cursor {
 	return result
 }
 
-func process(extension string, classFunc, templateFunc, enumFunc func(clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
+func process(workDir string, extension string, classFunc, templateFunc, enumFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
 	preamble, customCode string, customBuild bool) {
-	processChildren(allChildrenGenerator, "bindings", extension, filterClasses, classFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
-	processChildren(templateTypedefGenerator, "bindings", extension, filterTemplates, templateFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
-	processChildren(enumGenerator, "bindings", extension, filterEnums, enumFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
+	processChildren(workDir, allChildrenGenerator, "bindings", extension, filterClasses, classFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
+	processChildren(workDir, templateTypedefGenerator, "bindings", extension, filterTemplates, templateFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
+	processChildren(workDir, enumGenerator, "bindings", extension, filterEnums, enumFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
 }
 
-func typescriptGenerationFuncClasses(tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
-	typescript := NewTypescriptBindings(typedefs, templateTypedefs, tu)
+func typescriptGenerationFuncClasses(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
+	typescript := NewTypescriptBindings(workDir, typedefs, templateTypedefs, tu)
 	output := typescript.processClass(child, clang.NewNullCursor(), nil)
 
 	data := map[string]interface{}{
@@ -331,13 +328,13 @@ func typescriptGenerationFuncClasses(tu clang.TranslationUnit, preamble string, 
 	return string(jsonData), nil
 }
 
-func typescriptGenerationFuncTemplates(tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
+func typescriptGenerationFuncTemplates(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
 	templateClass, templateArgs, err := processTemplate(child)
 	if err != nil {
 		return "", err
 	}
 
-	typescript := NewTypescriptBindings(typedefs, templateTypedefs, tu)
+	typescript := NewTypescriptBindings(workDir, typedefs, templateTypedefs, tu)
 	output := typescript.processClass(templateClass, child, templateArgs)
 
 	data := map[string]interface{}{
@@ -353,8 +350,8 @@ func typescriptGenerationFuncTemplates(tu clang.TranslationUnit, preamble string
 	return string(jsonData), nil
 }
 
-func typescriptGenerationFuncEnums(tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
-	typescript := NewTypescriptBindings(typedefs, templateTypedefs, tu)
+func typescriptGenerationFuncEnums(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
+	typescript := NewTypescriptBindings(workDir, typedefs, templateTypedefs, tu)
 	output := typescript.processEnum(child)
 
 	data := map[string]interface{}{
@@ -418,14 +415,9 @@ void updateReferenceValue(emscripten::val& v, T& val) {
 }
 `
 
-func GenerateCustomCodeBindings(customCode string) error {
-	if err := os.MkdirAll(libraryBasePath, 0755); err != nil {
-		return err
-	}
-
+func GenerateCustomCodeBindings(workDir string, customCode string) error {
 	embindPreamble := ocIncludeStatements + "\n" + referenceTypeTemplateDefs + "\n" + customCode
-
-	process(".cpp", embindGenerationFuncClasses, embindGenerationFuncTemplates, embindGenerationFuncEnums, embindPreamble, customCode, true)
-	process(".d.ts.json", typescriptGenerationFuncClasses, typescriptGenerationFuncTemplates, typescriptGenerationFuncEnums, "", customCode, true)
+	process(workDir, ".cpp", embindGenerationFuncClasses, embindGenerationFuncTemplates, embindGenerationFuncEnums, embindPreamble, customCode, true)
+	process(workDir, ".d.ts.json", typescriptGenerationFuncClasses, typescriptGenerationFuncTemplates, typescriptGenerationFuncEnums, "", customCode, true)
 	return nil
 }

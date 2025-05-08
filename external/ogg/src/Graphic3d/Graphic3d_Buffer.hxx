@@ -184,9 +184,11 @@ public:
 //! @name general accessors
 public:
 
-  using NCollection_Buffer::Data;
-  using NCollection_Buffer::ChangeData;
-
+  // using NCollection_Buffer::Data;
+  // using NCollection_Buffer::ChangeData;
+  const Standard_Byte* Data() const { return NCollection_Buffer::Data(); }
+  Standard_Byte* ChangeData() { return NCollection_Buffer::ChangeData(); }
+ 
   //! Return the attribute data with stride size specific to this attribute.
   //! @param theAttrib       attribute to find
   //! @param theAttribIndex  index of found attribute

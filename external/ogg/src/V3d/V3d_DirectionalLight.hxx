@@ -38,7 +38,9 @@ public:
 
   //! Defines the direction of the light source by a predefined orientation.
   Standard_EXPORT void SetDirection (V3d_TypeOfOrientation theDirection);
-  using Graphic3d_CLight::SetDirection;
+  // using Graphic3d_CLight::SetDirection;
+  void SetDirection (const gp_Dir& theDir) { Graphic3d_CLight::SetDirection(theDir); }
+  void SetDirection (Standard_Real theVx, Standard_Real theVy, Standard_Real theVz) { Graphic3d_CLight::SetDirection(theVx, theVy, theVz); }
 
 //! @name hidden properties not applicable to directional light
 private:

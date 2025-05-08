@@ -9,10 +9,10 @@ import (
 )
 
 // ApplyPatches 遍历指定目录中的所有 .patch 文件并尝试打补丁
-func ApplyPatches(patchDir string) error {
+func ApplyPatches(workDir string, patchDir string) error {
 	// 切换到根目录
-	if err := os.Chdir("/"); err != nil {
-		return fmt.Errorf("failed to change directory to /: %v", err)
+	if err := os.Chdir(workDir); err != nil {
+		return fmt.Errorf("failed to change directory to %s: %v", workDir, err)
 	}
 
 	// 遍历 patch 目录

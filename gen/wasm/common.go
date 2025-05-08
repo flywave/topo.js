@@ -88,7 +88,7 @@ func IsAbstractClass(theClass clang.Cursor, tu clang.TranslationUnit) bool {
 }
 
 func ShouldProcessClass(child clang.Cursor, headerFiles []string, filterClass func(clang.Cursor) bool) bool {
-	if !child.Definition().IsNull() || !child.Equal(child.Definition()) {
+	if child.Definition().IsNull() || !child.Equal(child.Definition()) {
 		return false
 	}
 

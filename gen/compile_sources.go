@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -13,14 +14,14 @@ import (
 )
 
 const (
-	sourceBasePath = "/occt/src/"
+	sourceBasePath = "/external/ogg/src/"
 )
 
 var (
 	includePaths = []string{
-		"/rapidjson/include",
-		"/freetype/include/freetype",
-		"/freetype/include",
+		"/external/rapidjson/include",
+		"/external/freetype2/include/freetype",
+		"/external/freetype2/include",
 	}
 	allModules = make(map[string][]string)
 )
@@ -67,8 +68,8 @@ func getModuleNameByPackageName(pkgName string) string {
 	return ""
 }
 
-func collectIncludePaths() error {
-	return filepath.WalkDir(sourceBasePath, func(path string, d fs.DirEntry, err error) error {
+func collectIncludePaths(workDir string) error {
+	return filepath.WalkDir(path.Join(workDir, sourceBasePath), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -79,8 +80,8 @@ func collectIncludePaths() error {
 	})
 }
 
-func collectPackages() error {
-	return filepath.WalkDir(sourceBasePath, func(path string, d fs.DirEntry, err error) error {
+func collectPackages(workDir string) error {
+	return filepath.WalkDir(path.Join(workDir, sourceBasePath), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -109,10 +110,10 @@ func collectPackages() error {
 	})
 }
 
-func collectFilesToBuild() ([]string, error) {
+func collectFilesToBuild(workDir string) ([]string, error) {
 	var files []string
 
-	err := filepath.WalkDir(sourceBasePath, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(path.Join(workDir, sourceBasePath), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -145,10 +146,12 @@ func collectFilesToBuild() ([]string, error) {
 	return files, err
 }
 
-func BuildObjectFile(args map[string]string, srcFile string, wg *sync.WaitGroup, errChan chan<- error) {
+func BuildObjectFile(workDir string, args map[string]string, srcFile string, wg *sync.WaitGroup, errChan chan<- error) {
 	defer wg.Done()
 
-	relFile := strings.TrimPrefix(srcFile, sourceBasePath)
+	libraryBasePath := path.Join(workDir, "build/bindings")
+
+	relFile := strings.TrimPrefix(srcFile, path.Join(workDir, path.Join(workDir, sourceBasePath)))
 	objFile := filepath.Join(libraryBasePath, relFile+".o")
 
 	if _, err := os.Stat(objFile); err == nil {
@@ -190,16 +193,16 @@ func BuildObjectFile(args map[string]string, srcFile string, wg *sync.WaitGroup,
 	}
 }
 
-func BuildSource(args map[string]string) {
-	if err := collectIncludePaths(); err != nil {
+func BuildSource(workDir string, args map[string]string) {
+	if err := collectIncludePaths(workDir); err != nil {
 		panic(err)
 	}
 
-	if err := collectPackages(); err != nil {
+	if err := collectPackages(workDir); err != nil {
 		panic(err)
 	}
 
-	filesToBuild, err := collectFilesToBuild()
+	filesToBuild, err := collectFilesToBuild(workDir)
 	if err != nil {
 		panic(err)
 	}
@@ -215,7 +218,7 @@ func BuildSource(args map[string]string) {
 		go func() {
 			defer wg.Done()
 			for file := range filesToBuildChan {
-				BuildObjectFile(args, file, &wg, errChan)
+				BuildObjectFile(workDir, args, file, &wg, errChan)
 			}
 		}()
 	}

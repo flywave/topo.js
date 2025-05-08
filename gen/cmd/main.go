@@ -9,17 +9,21 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	dirPath string
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate bindings for OpenCASCADE",
 	Run: func(cmd *cobra.Command, args []string) {
-		gen.GenerateCustomCodeBindings("")
+		gen.GenerateCustomCodeBindings(dirPath, "")
 	},
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	// 这里可以添加命令行flag
+	rootCmd.PersistentFlags().StringVar(&dirPath, "dir", "", "directory path for generated files")
 }
 
 func initConfig() {
