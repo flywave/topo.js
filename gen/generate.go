@@ -360,7 +360,6 @@ func parse(additionalCppCode string, includePathArgs []string, includeStatements
 
 	args := []string{
 		"-x", "c++",
-		"-stdlib=libc++",
 		"-D__EMSCRIPTEN__",
 		"-nostdinc++",
 	}

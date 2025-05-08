@@ -179,10 +179,18 @@ func BuildSource(workDir string, args map[string]string) {
 		panic(err)
 	}
 
-	// 设置Emscripten缓存目录
-	if err := os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache"); err != nil {
-		fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
-		return
+	if runtime.GOOS == "darwin" {
+		// 设置Emscripten缓存目录
+		if err := os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache"); err != nil {
+			fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
+			return
+		}
+	} else {
+		// 设置Emscripten缓存目录
+		if err := os.Setenv("EM_CACHE", "/usr/share/emscripten/cache"); err != nil {
+			fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
+			return
+		}
 	}
 
 	// 使用带缓冲的通道和context控制并发

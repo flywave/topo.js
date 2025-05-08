@@ -606,7 +606,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			}
 
 			functionBinding.WriteString(indent(3))
-			functionBinding.WriteString("}\n")
+			functionBinding.WriteString("}}\n")
 			functionBinding.WriteString(indent(2))
 			functionBinding.WriteString(")")
 

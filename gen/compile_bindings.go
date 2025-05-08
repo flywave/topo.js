@@ -20,7 +20,19 @@ type ExportItem struct {
 func CompileCustomCodeBindings(workDir string, args map[string]string) error {
 	dir := path.Join(workDir, "build/bindings")
 
-	os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache")
+	if runtime.GOOS == "darwin" {
+		// 设置Emscripten缓存目录
+		if err := os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache"); err != nil {
+			fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
+			return err
+		}
+	} else {
+		// 设置Emscripten缓存目录
+		if err := os.Setenv("EM_CACHE", "/usr/share/emscripten/cache"); err != nil {
+			fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
+			return err
+		}
+	}
 
 	var filesToBuild []string
 

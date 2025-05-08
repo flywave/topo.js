@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 
 	"github.com/flywave/jstopo/gen/filter"
 )
@@ -66,11 +67,18 @@ func GenerateIncludeArgs(workDir string, ocIncludePaths []string) ([]string, err
 		args = append(args, "-I"+p)
 	}
 
-	args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1")
-	args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/include")
-	args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include")
-	args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include")
-	args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks")
+	if runtime.GOOS == "darwin" {
+		args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1")
+		args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/include")
+		args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include")
+		args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include")
+		args = append(args, "-isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks")
+	} else if runtime.GOOS == "linux" {
+		args = append(args, "-I/usr/share/emscripten/system/include")
+		args = append(args, "-I/usr/share/emscripten/system/lib/libcxx/include")
+		args = append(args, "-I/usr/share/emscripten/system/lib/libcxx/include/__support/newlib/")
+		args = append(args, "-I/usr/lib/llvm-15/include/clang")
+	}
 
 	// Step 1: Add unique ocIncludePaths
 	uniqueOCPaths := uniqueStrings(ocIncludePaths)
