@@ -355,7 +355,7 @@ func typescriptGenerationFuncEnums(workDir string, tu clang.TranslationUnit, pre
 }
 
 func parse(additionalCppCode string, includePathArgs []string, includeStatements string) clang.TranslationUnit {
-	index := clang.NewIndex(0, 0)
+	index := clang.NewIndex(1, 1)
 	defer index.Dispose()
 
 	args := []string{

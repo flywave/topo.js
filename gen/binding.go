@@ -517,7 +517,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			// Lambda start
 			functionBinding.WriteString("[](")
 			functionBinding.WriteString(strings.Join(wrappedParamTypesAndNames, ", "))
-			functionBinding.WriteString(") -> {resultTypeSpelling} {{\n")
+			functionBinding.WriteString(fmt.Sprintf(") -> %s {{\n", resultTypeSpelling))
 
 			// Generate reference values
 			for i, needsWrap := range argsNeedingWrapper {

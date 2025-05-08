@@ -84,5 +84,23 @@ func FilterIncludeFile(filename string) bool {
 		return false
 	}
 
+	if filename == "NCollection_Haft.h" {
+		return false
+	}
+
+	if filename == "exptocas.tab.hxx" ||
+		filename == "step.tab.hxx" ||
+		filename == "ExprIntrp.tab.h" {
+		return false
+	}
+
+	if filename == "igesread.h" {
+		return false
+	}
+
+	if filename == "ExprIntrp.tab.h" {
+		return false
+	}
+
 	return true
 }
