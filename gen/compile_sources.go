@@ -2,6 +2,7 @@ package gen
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/flywave/jstopo/gen/filter"
 )
 
 const (
@@ -18,44 +21,9 @@ const (
 )
 
 var (
-	includePaths = []string{
-		"/external/rapidjson/include",
-		"/external/freetype2/include/freetype",
-		"/external/freetype2/include",
-	}
-	allModules = make(map[string][]string)
+	includePaths = []string{}
+	allModules   = make(map[string][]string)
 )
-
-func filterPackages(name string) bool {
-	// 示例：屏蔽某些包
-	blocked := map[string]bool{
-		"AdvApp2Var":   true,
-		"BRepGProp":    true,
-		"BRepMesh":     true,
-		"BSplSLib":     true,
-		"CPnts":        true,
-		"DDF":          true,
-		"Draw":         true,
-		"Graphic3d":    true,
-		"IFSelect":     true,
-		"Interface":    true,
-		"MoniTool":     true,
-		"NCollection":  true,
-		"OpenGl":       true,
-		"OSD":          true,
-		"ShapeProcess": true,
-		"Standard":     true,
-		"StdObjMgt":    true,
-		"TDF":          true,
-	}
-
-	return !blocked[name]
-}
-
-func filterSourceFile(file string) bool {
-	// 示例：只允许 .cxx 文件
-	return strings.HasSuffix(file, ".cxx")
-}
 
 func getModuleNameByPackageName(pkgName string) string {
 	for moduleName, packages := range allModules {
@@ -69,6 +37,12 @@ func getModuleNameByPackageName(pkgName string) string {
 }
 
 func collectIncludePaths(workDir string) error {
+	includePaths = []string{
+		path.Join(workDir, "external/rapidjson/include"),
+		path.Join(workDir, "external/freetype2/include/freetype"),
+		path.Join(workDir, "external/freetype2/include"),
+	}
+
 	return filepath.WalkDir(path.Join(workDir, sourceBasePath), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -120,7 +94,7 @@ func collectFilesToBuild(workDir string) ([]string, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if !filterSourceFile(path) {
+		if !filter.FilterSourceFile(path) {
 			return nil
 		}
 
@@ -135,7 +109,7 @@ func collectFilesToBuild(workDir string) ([]string, error) {
 			}
 		}
 
-		if !filterPackages(dirBase) || !filterPackages(getModuleNameByPackageName(dirBase)) {
+		if !filter.FilterPackages(dirBase) || !filter.FilterPackages(getModuleNameByPackageName(dirBase)) {
 			return nil
 		}
 
@@ -146,12 +120,10 @@ func collectFilesToBuild(workDir string) ([]string, error) {
 	return files, err
 }
 
-func BuildObjectFile(workDir string, args map[string]string, srcFile string, wg *sync.WaitGroup, errChan chan<- error) {
-	defer wg.Done()
+func BuildObjectFile(workDir string, args map[string]string, srcFile string, errChan chan<- error) {
+	libraryBasePath := path.Join(workDir, "build/occt")
 
-	libraryBasePath := path.Join(workDir, "build/bindings")
-
-	relFile := strings.TrimPrefix(srcFile, path.Join(workDir, path.Join(workDir, sourceBasePath)))
+	relFile := strings.TrimPrefix(srcFile, path.Join(workDir, sourceBasePath))
 	objFile := filepath.Join(libraryBasePath, relFile+".o")
 
 	if _, err := os.Stat(objFile); err == nil {
@@ -207,33 +179,71 @@ func BuildSource(workDir string, args map[string]string) {
 		panic(err)
 	}
 
+	// 设置Emscripten缓存目录
+	if err := os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache"); err != nil {
+		fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
+		return
+	}
+
+	// 使用带缓冲的通道和context控制并发
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(filesToBuild))
+	fileChan := make(chan string, len(filesToBuild))
 
-	filesToBuildChan := make(chan string, len(filesToBuild))
-
-	concurrency := runtime.NumCPU()
-	for i := 0; i < concurrency; i++ {
+	// 启动worker协程
+	workerCount := runtime.NumCPU()
+	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for file := range filesToBuildChan {
-				BuildObjectFile(workDir, args, file, &wg, errChan)
+			for file := range fileChan {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					BuildObjectFile(workDir, args, file, errChan)
+				}
 			}
 		}()
 	}
 
-	for _, f := range filesToBuild {
-		filesToBuildChan <- f
-	}
-	close(filesToBuildChan)
+	// 分发任务
+	go func() {
+		for _, file := range filesToBuild {
+			select {
+			case fileChan <- file:
+			case <-ctx.Done():
+				return
+			}
+		}
+		close(fileChan)
+	}()
 
+	// 等待完成并处理错误
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// 所有任务完成
+	case err := <-errChan:
+		// 遇到错误，取消所有任务
+		fmt.Fprintf(os.Stderr, "构建过程中出错: %v\n", err)
+		cancel()
+	}
+
+	// 确保所有worker完成
 	wg.Wait()
 	close(errChan)
 
+	// 输出所有错误
 	for err := range errChan {
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 }

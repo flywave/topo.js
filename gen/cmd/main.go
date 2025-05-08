@@ -15,7 +15,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Generate bindings for OpenCASCADE",
+	Short: "Generate bindings for topo.js",
 	Run: func(cmd *cobra.Command, args []string) {
 		gen.GenerateCustomCodeBindings(dirPath, "")
 	},

@@ -39,6 +39,7 @@ func FilterPackages(packageName string) bool {
 		"QADraw",
 		"QANCollection",
 		"XDEDRAW",
+		"OpenGl",
 
 		// Partial Module Visualization
 		"D3DHost",

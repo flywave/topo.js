@@ -15,11 +15,6 @@ import (
 	"github.com/go-clang/clang-v15/clang"
 )
 
-var (
-	ocIncludeStatements string
-	includePathArgs     []string
-)
-
 type SkipException struct {
 	message string
 }
@@ -30,16 +25,6 @@ func (e SkipException) Error() string {
 
 type Batch struct {
 	start, stop int
-}
-
-func init() {
-	ocIncludeFiles, additionalIncludePaths := GetGlobalIncludes("")
-	includePathArgs = additionalIncludePaths
-	var includes []string
-	for _, file := range ocIncludeFiles {
-		includes = append(includes, fmt.Sprintf("#include \"%s\"", filepath.Base(file)))
-	}
-	ocIncludeStatements = strings.Join(includes, "\n")
 }
 
 func mkdirp(name string) error {
@@ -77,6 +62,8 @@ func filterTemplates(workDir string, child clang.Cursor, customBuild bool) bool 
 func filterEnums(workDir string, child clang.Cursor, customBuild bool) bool {
 	file, _, _, _ := child.Location().FileLocation()
 	if customBuild {
+		name := file.Name()
+		print(name)
 		return file.Name() == "myMain.h"
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
@@ -85,12 +72,12 @@ func filterEnums(workDir string, child clang.Cursor, customBuild bool) bool {
 		child.Kind() == clang.Cursor_EnumDecl
 }
 
-func processChildBatch(workDir string, customCode string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
+func processChildBatch(workDir string, includePathArgs []string, includeStatements string, customCode string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
 	filterFunc func(string, clang.Cursor, bool) bool, processFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
 	typedefGen, templateTypedefGen func(clang.TranslationUnit) []clang.Cursor, preamble string, customBuild bool, batch Batch, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	tu := parse(customCode)
+	tu := parse(customCode, includePathArgs, includeStatements)
 	children := generator(tu)
 	if batch.stop > len(children) {
 		batch.stop = len(children)
@@ -98,7 +85,7 @@ func processChildBatch(workDir string, customCode string, generator func(clang.T
 	bulidPath := filepath.Join(workDir, "/build")
 
 	for _, child := range children[batch.start:batch.stop] {
-		if !filterFunc(workDir, child, customBuild) || child.Spelling() == "" {
+		if !filterFunc(workDir, child, customBuild) {
 			continue
 		}
 		sfile, _, _, _ := child.Extent().Start().FileLocation()
@@ -154,11 +141,11 @@ func split(a []clang.Cursor, n int) []Batch {
 	return batches
 }
 
-func processChildren(workDir string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
+func processChildren(workDir string, includePathArgs []string, includeStatements string, generator func(clang.TranslationUnit) []clang.Cursor, buildType, extension string,
 	filterFunc func(string, clang.Cursor, bool) bool, processFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
 	typedefGen, templateTypedefGen func(clang.TranslationUnit) []clang.Cursor, preamble, customCode string, customBuild bool) {
 
-	tu := parse(customCode)
+	tu := parse(customCode, includePathArgs, includeStatements)
 	children := generator(tu)
 
 	var wg sync.WaitGroup
@@ -169,12 +156,12 @@ func processChildren(workDir string, generator func(clang.TranslationUnit) []cla
 
 		for _, batch := range batches {
 			wg.Add(1)
-			go processChildBatch(workDir, customCode, generator, buildType, extension, filterFunc, processFunc,
+			go processChildBatch(workDir, includePathArgs, includeStatements, customCode, generator, buildType, extension, filterFunc, processFunc,
 				typedefGen, templateTypedefGen, preamble, customBuild, batch, &wg)
 		}
 	} else {
 		wg.Add(1)
-		processChildBatch(workDir, customCode, generator, buildType, extension, filterFunc, processFunc,
+		processChildBatch(workDir, includePathArgs, includeStatements, customCode, generator, buildType, extension, filterFunc, processFunc,
 			typedefGen, templateTypedefGen, preamble, customBuild, Batch{0, len(children)}, &wg)
 	}
 
@@ -304,11 +291,11 @@ func enumGenerator(tu clang.TranslationUnit) []clang.Cursor {
 	return result
 }
 
-func process(workDir string, extension string, classFunc, templateFunc, enumFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
+func process(workDir string, includePathArgs []string, includeStatements string, extension string, classFunc, templateFunc, enumFunc func(string, clang.TranslationUnit, string, clang.Cursor, []clang.Cursor, []clang.Cursor) (string, error),
 	preamble, customCode string, customBuild bool) {
-	processChildren(workDir, allChildrenGenerator, "bindings", extension, filterClasses, classFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
-	processChildren(workDir, templateTypedefGenerator, "bindings", extension, filterTemplates, templateFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
-	processChildren(workDir, enumGenerator, "bindings", extension, filterEnums, enumFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
+	processChildren(workDir, includePathArgs, includeStatements, allChildrenGenerator, "bindings", extension, filterClasses, classFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
+	processChildren(workDir, includePathArgs, includeStatements, templateTypedefGenerator, "bindings", extension, filterTemplates, templateFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
+	processChildren(workDir, includePathArgs, includeStatements, enumGenerator, "bindings", extension, filterEnums, enumFunc, typedefGenerator, templateTypedefGenerator, preamble, customCode, customBuild)
 }
 
 func typescriptGenerationFuncClasses(workDir string, tu clang.TranslationUnit, preamble string, child clang.Cursor, typedefs, templateTypedefs []clang.Cursor) (string, error) {
@@ -367,7 +354,7 @@ func typescriptGenerationFuncEnums(workDir string, tu clang.TranslationUnit, pre
 	return string(jsonData), nil
 }
 
-func parse(additionalCppCode string) clang.TranslationUnit {
+func parse(additionalCppCode string, includePathArgs []string, includeStatements string) clang.TranslationUnit {
 	index := clang.NewIndex(0, 0)
 	defer index.Dispose()
 
@@ -375,11 +362,12 @@ func parse(additionalCppCode string) clang.TranslationUnit {
 		"-x", "c++",
 		"-stdlib=libc++",
 		"-D__EMSCRIPTEN__",
+		"-nostdinc++",
 	}
 	args = append(args, includePathArgs...)
 
 	tu := index.ParseTranslationUnit("myMain.h", args, []clang.UnsavedFile{
-		clang.NewUnsavedFile("myMain.h", ocIncludeStatements+"\n"+additionalCppCode),
+		clang.NewUnsavedFile("myMain.h", includeStatements+"\n"+additionalCppCode),
 	}, 0)
 
 	if len(tu.Diagnostics()) > 0 {
@@ -393,6 +381,10 @@ func parse(additionalCppCode string) clang.TranslationUnit {
 }
 
 const referenceTypeTemplateDefs = `
+#ifdef CONSTRUCTOR
+#undef CONSTRUCTOR
+#endif
+
 #include <emscripten/bind.h>
 using namespace emscripten;
 #include <functional>
@@ -416,8 +408,16 @@ void updateReferenceValue(emscripten::val& v, T& val) {
 `
 
 func GenerateCustomCodeBindings(workDir string, customCode string) error {
+	ocIncludeFiles, additionalIncludePaths := GetGlobalIncludes(workDir)
+	var includes []string
+	for _, file := range ocIncludeFiles {
+		includes = append(includes, fmt.Sprintf("#include \"%s\"", filepath.Base(file)))
+	}
+	ocIncludeStatements := strings.Join(includes, "\n")
+	includePathArgs, _ := GenerateIncludeArgs(workDir, additionalIncludePaths)
+
 	embindPreamble := ocIncludeStatements + "\n" + referenceTypeTemplateDefs + "\n" + customCode
-	process(workDir, ".cpp", embindGenerationFuncClasses, embindGenerationFuncTemplates, embindGenerationFuncEnums, embindPreamble, customCode, true)
-	process(workDir, ".d.ts.json", typescriptGenerationFuncClasses, typescriptGenerationFuncTemplates, typescriptGenerationFuncEnums, "", customCode, true)
+	process(workDir, includePathArgs, ocIncludeStatements, ".cpp", embindGenerationFuncClasses, embindGenerationFuncTemplates, embindGenerationFuncEnums, embindPreamble, customCode, true)
+	process(workDir, includePathArgs, ocIncludeStatements, ".d.ts.json", typescriptGenerationFuncClasses, typescriptGenerationFuncTemplates, typescriptGenerationFuncEnums, "", customCode, true)
 	return nil
 }

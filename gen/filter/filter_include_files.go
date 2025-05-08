@@ -4,7 +4,11 @@ import "strings"
 
 func FilterIncludeFile(filename string) bool {
 	// Only process .hxx files
-	if !strings.HasSuffix(filename, ".hxx") {
+	if !strings.HasSuffix(filename, ".hxx") && !strings.HasSuffix(filename, ".h") {
+		return false
+	}
+
+	if strings.HasPrefix(filename, "OpenGl_") {
 		return false
 	}
 

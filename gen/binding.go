@@ -278,6 +278,13 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	constructors := []clang.Cursor{}
 	publicConstructors := []clang.Cursor{}
 
+	// 添加模板类处理
+	if theClass.Kind() == clang.Cursor_ClassTemplate {
+		className := theClass.Spelling()
+		output += fmt.Sprintf("    .constructor<const %s*>()\n", className)
+		return output
+	}
+
 	theClass.Visit(func(child, parent clang.Cursor) clang.ChildVisitResult {
 		if child.Kind() == clang.Cursor_Constructor {
 			constructors = append(constructors, child)
@@ -606,7 +613,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 		} else {
 			// Simple case - no wrapper needed
 			if numOverloads == 1 {
-				functionBinding.WriteString(fmt.Sprintf("%s.&%s::%s\n", indent(2), className, method.Spelling()))
+				functionBinding.WriteString(fmt.Sprintf("%s&%s::%s\n", indent(2), className, method.Spelling()))
 			} else {
 				var params []string
 				for _, arg := range args {

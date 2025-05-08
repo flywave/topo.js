@@ -18,9 +18,10 @@ type ExportItem struct {
 }
 
 func CompileCustomCodeBindings(workDir string, args map[string]string) error {
-	libraryBasePath := path.Join(workDir, "src/bindings")
+	dir := path.Join(workDir, "build/bindings")
 
-	dir := filepath.Join(libraryBasePath, "myMain.h")
+	os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache")
+
 	var filesToBuild []string
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -105,11 +106,15 @@ func buildOneFile(workDir string, args map[string]string, item string) error {
 		command = append(command, "-pthread")
 	}
 
-	ocIncludePaths, additionalIncludePaths := GetGlobalIncludes(workDir)
+	_, ocIncludePaths := GetGlobalIncludes(workDir)
 
 	// Add include paths
-	for _, inc := range append(ocIncludePaths, additionalIncludePaths...) {
+	for _, inc := range ocIncludePaths {
 		command = append(command, "-I"+inc)
+	}
+
+	for _, inc := range additionalIncludePaths {
+		command = append(command, "-I"+path.Join(workDir, inc))
 	}
 
 	// Compile command
