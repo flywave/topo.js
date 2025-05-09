@@ -65,6 +65,11 @@ func FilterTypedef(typedef clang.Cursor, additionalInfo interface{}) bool {
 		return false
 	}
 
+	// Skip iterator typedefs
+	if strings.Contains(underlyingType, "::Iterator") {
+		return false
+	}
+
 	// Whitelist certain patterns
 	if fileName == "myMain.h" ||
 		strings.HasPrefix(underlyingType, "opencascade::handle") ||
