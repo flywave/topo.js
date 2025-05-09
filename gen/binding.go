@@ -79,6 +79,11 @@ var builtInTypes = map[string]bool{
 	"float": true, "double": true, "long double": true,
 }
 
+var occtEnumTypes = map[string]bool{
+	"Quantity_NameOfColor": true,
+	"Aspect_TypeOfLine":    true,
+}
+
 var cStringTypes = []string{
 	"const char *",
 	"const char *const",
@@ -140,14 +145,17 @@ func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templat
 		}
 	} else {
 		templateType := b.replaceTemplateArgs(typeSpelling, templateArgs)
-		rawTemplateType := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(templateType, "&", ""), "const", ""))
+
+		rawTemplateType := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(templateType, "*", ""), "&", ""), "const", ""))
 
 		for _, typedef := range b.templateTypedefs {
 			underlying := typedef.TypedefDeclUnderlyingType().Spelling()
 			if underlying == rawTemplateType || underlying == "opencascade::"+rawTemplateType {
-				return strings.Replace(templateType, rawTemplateType, typedef.Spelling(), 1)
+				tp := strings.Replace(templateType, rawTemplateType, typedef.Spelling(), 1)
+				return tp
 			}
 		}
+		return templateType
 	}
 	return typeSpelling
 }
@@ -278,13 +286,6 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	constructors := []clang.Cursor{}
 	publicConstructors := []clang.Cursor{}
 
-	// 添加模板类处理
-	if theClass.Kind() == clang.Cursor_ClassTemplate {
-		className := theClass.Spelling()
-		output += fmt.Sprintf("    .constructor<const %s*>()\n", className)
-		return output
-	}
-
 	theClass.Visit(func(child, parent clang.Cursor) clang.ChildVisitResult {
 		if child.Kind() == clang.Cursor_Constructor {
 			constructors = append(constructors, child)
@@ -338,7 +339,7 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 		tu := arg.TranslationUnit()
 		tokens := tu.Tokenize(argRange)
 		for _, token := range tokens {
-			if token.Kind().Spelling() == "=" {
+			if tu.TokenSpelling(token) == "=" {
 				hasDefaultValue = true
 				break
 			}
@@ -363,13 +364,14 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 				childRange := argChildren[1].Extent()
 				childTokens := tu.Tokenize(childRange)
 				if len(childTokens) > 0 {
-					arrayCount = childTokens[0].Kind().Spelling()
+					arrayCount = tu.TokenSpelling(childTokens[0])
 				}
 			}
 			argBinding = constStr + argChildren[0].Type().Spelling() + " (&" + pick(argNames, arg.Spelling(), "") + ")[" + arrayCount + "]"
 			changed = true
 		} else {
 			typename := e.getTypedefedTemplateTypeAsString(arg.Type().Spelling(), templateDecl, templateArgs)
+
 			if arg.Type().Kind() == clang.Type_LValueReference {
 				isConstRef := arg.Type().IsConstQualifiedType()
 				if !isConstRef {
@@ -415,6 +417,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			if typ.Kind() == clang.Type_LValueReference {
 				pointee := typ.PointeeType()
 				if builtInTypes[pointee.CanonicalType().Spelling()] ||
+					occtEnumTypes[pointee.CanonicalType().Spelling()] ||
 					pointee.Kind() == clang.Type_Enum ||
 					pointee.Kind() == clang.Type_Pointer {
 					return true
@@ -516,6 +519,12 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 
 			// Lambda start
 			functionBinding.WriteString("[](")
+			if !method.CXXMethod_IsStatic() {
+				functionBinding.WriteString(fmt.Sprintf("%s& that", className))
+				if len(wrappedParamTypesAndNames) > 0 {
+					functionBinding.WriteString(", ")
+				}
+			}
 			functionBinding.WriteString(strings.Join(wrappedParamTypesAndNames, ", "))
 			functionBinding.WriteString(fmt.Sprintf(") -> %s {{\n", resultTypeSpelling))
 
@@ -633,11 +642,14 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 					overloadSpec += fmt.Sprintf(", %s", getClassTypeName(theClass, templateDecl))
 				}
 
-				functionBinding.WriteString(fmt.Sprintf("%s.select_overload%s(&%s::%s)\n",
+				overloadSpec += ">"
+
+				functionBinding.WriteString(fmt.Sprintf("%sselect_overload%s(&%s::%s)\n",
 					indent(2), overloadSpec, className, method.Spelling()))
 			}
 		}
 
+		output.WriteString(indent(2))
 		if method.CXXMethod_IsStatic() {
 			output.WriteString(".class_function(")
 		} else {
@@ -732,6 +744,10 @@ func (e *EmbindBindings) processOverloadedConstructors(theClass clang.Cursor, te
 				argNames = append(argNames, arg.Spelling())
 				binding, _ = e.getSingleArgumentBinding(false, true, templateDecl, templateArgs)(arg)
 				argTypes = append(argTypes, binding)
+
+				if strings.HasPrefix(binding, "const T *") {
+					print(fmt.Sprintf("Warning: const pointer passed to constructor %s::%s\n", theClass.Spelling(), constructor.Spelling()))
+				}
 			}
 		}
 

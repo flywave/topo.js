@@ -104,6 +104,7 @@ func buildOneFile(workDir string, args map[string]string, item string) error {
 	// Prepare command line arguments
 	command := []string{
 		"emcc",
+		"-w", // 添加这个参数关闭所有警告
 		"-flto",
 		"-fexceptions",
 		"-sDISABLE_EXCEPTION_CATCHING=0",
