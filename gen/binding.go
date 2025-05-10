@@ -119,6 +119,11 @@ var occtEnumTypes = map[string]bool{
 	"XCAFDimTolObjects_DimensionQualifier":     true,
 	"XCAFDimTolObjects_GeomToleranceTypeValue": true,
 	"StepData_Logical":                         true,
+	"TopAbs_ShapeEnum":                         true,
+	"TopOpeBRepDS_Kind":                        true,
+	"TopOpeBRepDS_TKI":                         true,
+	"V3d_TypeOfOrientation":                    true,
+	"XCAFDimTolObjects_DimensionGrade":         true,
 }
 
 var cStringTypes = []string{
