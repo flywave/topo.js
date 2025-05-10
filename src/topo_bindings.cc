@@ -113,6 +113,24 @@ EMSCRIPTEN_BINDINGS(Topo) {
   register_optional<compound>("OptionalCompound");
   register_optional<comp_solid>("OptionalCompSolid");
 
+  emscripten::enum_<geometry_object_type>("GeometryObjectType")
+      .value("Solid", geometry_object_type::SolidType)
+      .value("Shell", geometry_object_type::ShellType)
+      .value("Face", geometry_object_type::FaceType)
+      .value("Edge", geometry_object_type::EdgeType)
+      .value("Vertex", geometry_object_type::VertexType)
+      .value("Wire", geometry_object_type::WireType)
+      .value("Compound", geometry_object_type::CompoundType)
+      .value("CompSolid", geometry_object_type::CompSolidType)
+      .value("Shape", geometry_object_type::ShapeType);
+
+  emscripten::enum_<orientation>("Orientation")
+      .value("FORWARD", orientation::FORWARD)
+      .value("REVERSED", orientation::REVERSED)
+      .value("INTERNAL", orientation::INTERNAL)
+      .value("EXTERNAL", orientation::EXTERNAL)
+      .value("UNKNOW", orientation::UNKNOW);
+
   // 绑定topo_bbox类
   class_<topo_bbox>("BBox")
       .constructor<>()
@@ -163,7 +181,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("dividedBy", &topo_location::operator/)
       .function("multipliedBy", &topo_location::operator*)
       .function("pow", &topo_location::pow)
-      .function("toVector", &topo_location::to_vector)
       .function("toTuple", &topo_location::to_tuple)
       // 转换操作符
       .function("toTopLocLocation",
@@ -188,11 +205,8 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("transposedList", &topo_matrix::transposed_list)
       .function("toString", &topo_matrix::to_string)
       // Operators
-      .function("getValue",
-                emscripten::select_overload<const gp_GTrsf &() const>(
-                    &topo_matrix::get_value))
-      .function("getMutableValue", emscripten::select_overload<gp_GTrsf &()>(
-                                       &topo_matrix::get_value))
+      .function("getValue", emscripten::select_overload<gp_GTrsf &()>(
+                                &topo_matrix::get_value))
       // Conversion
       .function("toGTrsf", &topo_matrix::operator gp_GTrsf);
 
@@ -228,10 +242,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "toWorldCoords",
           emscripten::select_overload<topo_vector(const topo_vector &) const>(
               &topo_plane::to_world_coords))
+      .function("toWorldCoords",
+                emscripten::select_overload<shape(const shape &) const>(
+                    &topo_plane::to_world_coords))
       .function(
           "toLocalCoords",
           emscripten::select_overload<topo_vector(const topo_vector &) const>(
               &topo_plane::to_local_coords))
+      .function("toLocalCoords",
+                emscripten::select_overload<shape(const shape &) const>(
+                    &topo_plane::to_local_coords))
       .function("location", &topo_plane::location)
       .function("setOrigin", &topo_plane::set_origin)
       .function("setOrigin2d", &topo_plane::set_origin2d)
@@ -244,6 +264,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .constructor<>()
       .constructor<double, double, double>()
       .constructor<std::array<double, 3>>()
+      .constructor<const gp_Vec &>()
+      .constructor<const gp_Pnt &>()
+      .constructor<const gp_Dir &>()
+      .constructor<const gp_XYZ &>()
       // Properties
       .property("x", &topo_vector::x, &topo_vector::set_x)
       .property("y", &topo_vector::y, &topo_vector::set_y)
@@ -282,20 +306,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
 
   function("multiplyScalarVector", &operator* <double, topo_vector>);
 
-  class_<emscripten_mesh_receiver>("MeshReceiver")
-      .constructor<val>()
-      .function("begin", &emscripten_mesh_receiver::begin)
-      .function("end", &emscripten_mesh_receiver::end)
-      .function("appendFace", &emscripten_mesh_receiver::append_face)
-      .function("appendNode", select_overload<void(int, gp_Pnt)>(
-                                  &emscripten_mesh_receiver::append_node))
-      .function("appendNodeWithNormal",
-                select_overload<void(int, gp_Pnt, gp_Pnt)>(
-                    &emscripten_mesh_receiver::append_node))
-      .function("appendNodeWithNormalAndUV",
-                select_overload<void(int, gp_Pnt, gp_Pnt, gp_Pnt2d)>(
-                    &emscripten_mesh_receiver::append_node))
-      .function("appendTriangle", &emscripten_mesh_receiver::append_triangle);
+  class_<emscripten_mesh_receiver>("MeshReceiver").constructor<val>();
 
   emscripten::class_<geometry_object>("GeometryObject")
       .smart_ptr<std::shared_ptr<geometry_object>>("GeometryObject")
@@ -313,6 +324,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .value("NORMAL", texture_normal)
       .value("NORMAL_AUTO_SCALE", texture_normal_auto_scale);
 
+  // 添加shape_geom_type枚举绑定
+  emscripten::enum_<shape_geom_type>("ShapeGeomType")
+      .value("NULL", shape_geom_null)
+      .value("VERTEX", shape_geom_vertex)
+      .value("WIRE", shape_geom_wire)
+      .value("SHELL", shape_geom_shell)
+      .value("SOLID", shape_geom_solid)
+      .value("COMPSOLID", shape_geom_compsolid)
+      .value("COMPOUND", shape_geom_compound)
+      .value("LINE", shape_geom_line)
+      .value("CIRCLE", shape_geom_circle)
+      .value("HYPERBOLA", shape_geom_hyperbola)
+      .value("PARABOLA", shape_geom_parabola)
+      .value("ELLIPSE", shape_geom_ellipse)
+      .value("BEZIER_CURVE", shape_geom_bezier_curve)
+      .value("BSPLINE_CURVE", shape_geom_bspline_curve)
+      .value("OFFSET_CURVE", shape_geom_offset_curve)
+      .value("OTHER_CURVE", shape_geom_other_curve)
+      .value("PLANE", shape_geom_plane)
+      .value("CYLINDER", shape_geom_cylinder)
+      .value("CONE", shape_geom_cone)
+      .value("SPHERE", shape_geom_sphere)
+      .value("TORUS", shape_geom_torus)
+      .value("BEZIER_SURFACE", shape_geom_bezier_surface)
+      .value("BSPLINE_SURFACE", shape_geom_bspline_surface)
+      .value("OFFSET_SURFACE", shape_geom_offset_surface)
+      .value("OTHER_SURFACE", shape_geom_other_surface)
+      .value("REVOLVED_SURFACE", shape_geom_revolved_surface)
+      .value("EXTRUDED_SURFACE", shape_geom_extruded_surface);
+
   // 绑定shape类基础部分
   class_<shape, base<geometry_object>>("Shape")
       .smart_ptr<std::shared_ptr<shape>>("Shape")
@@ -325,6 +366,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .class_function("combinedCenter", &shape::combined_center)
       .class_function("combinedCenterOfBoundingBox",
                       &shape::combined_center_of_bounding_box)
+      .class_function("filter", &shape::filter)
       // 基础方法
       .function("isNull", &shape::is_null)
       .function("isValid", &shape::is_valid)
@@ -498,7 +540,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("writeTriangulation", &shape::write_triangulation)
       .function("mesh", &shape::mesh)
       // 选择器相关功能
-      .function("filter", &shape::filter)
       .function("vertices",
                 emscripten::select_overload<shape(selector *) const>(
                     &shape::vertices))
@@ -682,6 +723,100 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeEdge",
           emscripten::select_overload<edge(const gp_Elips &, const vertex &,
                                            const vertex &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Hypr &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Hypr &, Standard_Real,
+                                           Standard_Real)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Hypr &, const gp_Pnt &,
+                                           const gp_Pnt &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Hypr &, const vertex &,
+                                           const vertex &)>(&edge::make_edge))
+      // 抛物线创建方法
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Parab &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Parab &, Standard_Real,
+                                           Standard_Real)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Parab &, const gp_Pnt &,
+                                           const gp_Pnt &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const gp_Parab &, const vertex &,
+                                           const vertex &)>(&edge::make_edge))
+      // 通用曲线创建方法
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const Handle(Geom_Curve) &)>(
+              &edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const Handle(Geom_Curve) &,
+                                           Standard_Real, Standard_Real)>(
+              &edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const Handle(Geom_Curve) &,
+                                           const gp_Pnt &, const gp_Pnt &)>(
+              &edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const Handle(Geom_Curve) &,
+                                           const vertex &, const vertex &)>(
+              &edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom_Curve) &, const gp_Pnt &, const gp_Pnt &,
+              Standard_Real, Standard_Real)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom_Curve) &, const vertex &, const vertex &,
+              Standard_Real, Standard_Real)>(&edge::make_edge))
+      // 2D曲线创建方法
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
+                                           const Handle(Geom_Surface) &)>(
+              &edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
+              Standard_Real, Standard_Real)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
+              const gp_Pnt &, const gp_Pnt &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
+              const vertex &, const vertex &)>(&edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
+              const gp_Pnt &, const gp_Pnt &, Standard_Real, Standard_Real)>(
+              &edge::make_edge))
+      .class_function(
+          "makeEdge",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
+              const vertex &, const vertex &, Standard_Real, Standard_Real)>(
+              &edge::make_edge))
       // 值访问
       .function("value",
                 emscripten::select_overload<TopoDS_Edge &()>(&edge::value))
@@ -789,6 +924,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeEdge2d",
           emscripten::select_overload<edge(const gp_Parab2d &, const vertex &,
                                            const vertex &)>(&edge::make_edge2d))
+      // 2D曲线创建方法
+      .class_function(
+          "makeEdge2d",
+          emscripten::select_overload<edge(const Handle(Geom2d_Curve) &)>(
+              &edge::make_edge2d))
+      .class_function(
+          "makeEdge2d",
+          emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
+                                           Standard_Real, Standard_Real)>(
+              &edge::make_edge2d))
+      .class_function(
+          "makeEdge2d",
+          emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
+                                           const gp_Pnt2d &, const gp_Pnt2d &)>(
+              &edge::make_edge2d))
+      .class_function(
+          "makeEdge2d",
+          emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
+                                           const vertex &, const vertex &)>(
+              &edge::make_edge2d))
+      .class_function(
+          "makeEdge2d",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const gp_Pnt2d &, const gp_Pnt2d &,
+              Standard_Real, Standard_Real)>(&edge::make_edge2d))
+      .class_function(
+          "makeEdge2d",
+          emscripten::select_overload<edge(
+              const Handle(Geom2d_Curve) &, const vertex &, const vertex &,
+              Standard_Real, Standard_Real)>(&edge::make_edge2d))
       // 多边形创建方法
       .class_function("makePolygon",
                       emscripten::select_overload<edge()>(&edge::make_polygon))
@@ -833,6 +998,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .class_function("makePolygon", emscripten::select_overload<edge(
                                          std::initializer_list<gp_Pnt>, bool)>(
                                          &edge::make_polygon))
+      .class_function("makeRect", &edge::make_rect)
       // 样条曲线创建方法
       .class_function(
           "makeSpline",
@@ -851,6 +1017,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
                    bool, const std::vector<double> *, bool, double)>(
               &edge::make_spline))
       .class_function("makeSplineApprox", &edge::make_spline_approx)
+      // 圆形创建方法
+      .class_function("makeCircle", &edge::make_circle)
+      // 椭圆创建方法
+      .class_function("makeEllipse", &edge::make_ellipse)
+      // 三点圆弧创建方法
+      .class_function("makeThreePointArc", &edge::make_three_point_arc)
+      // 切线圆弧创建方法
+      .class_function("makeTangentArc", &edge::make_tangent_arc)
+      // 贝塞尔曲线创建方法
+      .class_function("makeBezier", &edge::make_bezier)
       // 几何操作
       .function("close", &edge::close)
       .function("arcCenter", &edge::arc_center)
@@ -989,6 +1165,12 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .constructor<shape &>()
       .function("reset", &wire_iterator::reset)
       .function("next", &wire_iterator::next);
+
+  // 添加bool_op_type枚举绑定
+  emscripten::enum_<bool_op_type>("BooleanOperationType")
+      .value("FUSE", bool_op_type::BOOL_FUSE)
+      .value("CUT", bool_op_type::BOOL_CUT)
+      .value("COMMON", bool_op_type::BOOL_COMMON);
 
   // 绑定face类，继承自shape
   emscripten::class_<face, emscripten::base<shape>>("Face")
@@ -1168,6 +1350,240 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("type", &face::type)
       .function("copy", &face::copy);
 
+  // Bind Shell class
+  emscripten::class_<shell, emscripten::base<shape>>("Shell")
+      .constructor<>()
+      .constructor<TopoDS_Shape, bool>()
+      // Surface creation methods
+      .class_function("makeShell", emscripten::select_overload<shell(
+                                       const Handle(Geom_Surface) &, bool)>(
+                                       &shell::make_shell))
+      .class_function(
+          "makeShell",
+          emscripten::select_overload<shell(
+              const Handle(Geom_Surface) &, Standard_Real, Standard_Real,
+              Standard_Real, Standard_Real, bool)>(&shell::make_shell))
+      // Box creation methods
+      .class_function("makeShellFromBox",
+                      emscripten::select_overload<shell(
+                          Standard_Real, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_box))
+      .class_function(
+          "makeShellFromBox",
+          emscripten::select_overload<shell(const gp_Pnt &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_box))
+      .class_function(
+          "makeShellFromBox",
+          emscripten::select_overload<shell(const gp_Pnt &, const gp_Pnt &)>(
+              &shell::make_shell_from_box))
+      .class_function(
+          "makeShellFromBox",
+          emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_box))
+      // Cylinder creation methods
+      .class_function(
+          "makeShellFromCylinder",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_cylinder))
+      .class_function("makeShellFromCylinder",
+                      emscripten::select_overload<shell(
+                          Standard_Real, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_cylinder))
+      .class_function("makeShellFromCylinder",
+                      emscripten::select_overload<shell(
+                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_cylinder))
+      .class_function(
+          "makeShellFromCylinder",
+          emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_cylinder))
+      // Cone creation methods
+      .class_function("makeShellFromCone",
+                      emscripten::select_overload<shell(
+                          Standard_Real, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_cone))
+      .class_function(
+          "makeShellFromCone",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_cone))
+      .class_function(
+          "makeShellFromCone",
+          emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_cone))
+      .class_function(
+          "makeShellFromCone",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_cone))
+      // Revolution creation methods
+      .class_function(
+          "makeShellFromRevolution",
+          emscripten::select_overload<shell(const Handle(Geom_Curve) &)>(
+              &shell::make_shell_from_revolution))
+      .class_function("makeShellFromRevolution",
+                      emscripten::select_overload<shell(
+                          const Handle(Geom_Curve) &, Standard_Real)>(
+                          &shell::make_shell_from_revolution))
+      .class_function(
+          "makeShellFromRevolution",
+          emscripten::select_overload<shell(const Handle(Geom_Curve) &,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_revolution))
+      .class_function(
+          "makeShellFromRevolution",
+          emscripten::select_overload<shell(
+              const Handle(Geom_Curve) &, Standard_Real, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_revolution))
+      .class_function("makeShellFromRevolution",
+                      emscripten::select_overload<shell(
+                          const gp_Ax2 &, const Handle(Geom_Curve) &)>(
+                          &shell::make_shell_from_revolution))
+      .class_function(
+          "makeShellFromRevolution",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, const Handle(Geom_Curve) &, Standard_Real)>(
+              &shell::make_shell_from_revolution))
+      .class_function(
+          "makeShellFromRevolution",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, const Handle(Geom_Curve) &, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_revolution))
+      .class_function("makeShellFromRevolution",
+                      emscripten::select_overload<shell(
+                          const gp_Ax2 &, const Handle(Geom_Curve) &,
+                          Standard_Real, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_revolution))
+      // Sphere creation methods
+      .class_function("makeShellFromSphere",
+                      emscripten::select_overload<shell(Standard_Real)>(
+                          &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_sphere))
+      .class_function("makeShellFromSphere",
+                      emscripten::select_overload<shell(
+                          Standard_Real, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(const gp_Pnt &, Standard_Real)>(
+              &shell::make_shell_from_sphere))
+      .class_function("makeShellFromSphere",
+                      emscripten::select_overload<shell(
+                          const gp_Pnt &, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(const gp_Pnt &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(
+              const gp_Pnt &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real)>(
+              &shell::make_shell_from_sphere))
+      .class_function("makeShellFromSphere",
+                      emscripten::select_overload<shell(
+                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_sphere))
+      .class_function(
+          "makeShellFromSphere",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_sphere))
+      // Torus creation methods
+      .class_function(
+          "makeShellFromTorus",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_torus))
+      .class_function("makeShellFromTorus",
+                      emscripten::select_overload<shell(
+                          Standard_Real, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_torus))
+      .class_function(
+          "makeShellFromTorus",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_torus))
+      .class_function("makeShellFromTorus",
+                      emscripten::select_overload<shell(
+                          Standard_Real, Standard_Real, Standard_Real,
+                          Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_torus))
+      .class_function("makeShellFromTorus",
+                      emscripten::select_overload<shell(
+                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
+                          &shell::make_shell_from_torus))
+      .class_function(
+          "makeShellFromTorus",
+          emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_torus))
+      .class_function(
+          "makeShellFromTorus",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_torus))
+      .class_function(
+          "makeShellFromTorus",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real, Standard_Real)>(&shell::make_shell_from_torus))
+      // Wedge creation methods
+      .class_function(
+          "makeShellFromWedge",
+          emscripten::select_overload<shell(Standard_Real, Standard_Real,
+                                            Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_wedge))
+      .class_function(
+          "makeShellFromWedge",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real)>(&shell::make_shell_from_wedge))
+      .class_function(
+          "makeShellFromWedge",
+          emscripten::select_overload<
+              shell(Standard_Real, Standard_Real, Standard_Real, Standard_Real,
+                    Standard_Real, Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_wedge))
+      .class_function(
+          "makeShellFromWedge",
+          emscripten::select_overload<shell(
+              const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
+              Standard_Real, Standard_Real, Standard_Real, Standard_Real)>(
+              &shell::make_shell_from_wedge))
+      // Other methods
+      .function("sweep", &shell::sweep)
+      .function("value", &shell::value)
+      .function("type", &shell::type)
+      .function("copy", &shell::copy);
+
+  // Bind ShellIterator
+  emscripten::class_<shell_iterator>("ShellIterator")
+      .constructor<shape &>()
+      .function("reset", &shell_iterator::reset)
+      .function("next", &shell_iterator::next);
+
   // 绑定face_iterator类
   emscripten::class_<face_iterator>("FaceIterator")
       .constructor<shape &>()
@@ -1181,6 +1597,24 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .constructor<const shape &, TopoDS_Shape>()
       // 几何判断方法
       .function("isInside", &shape3d::is_inside);
+
+  emscripten::class_<solid::SweepMode>("SweepMode")
+      .constructor<>()
+      .constructor<gp_Vec>()
+      .constructor<TopoDS_Wire>()
+      .constructor<TopoDS_Edge>()
+      .function("isVector", &solid::SweepMode::is<gp_Vec>)
+      .function("isWire", &solid::SweepMode::is<TopoDS_Wire>)
+      .function("isEdge", &solid::SweepMode::is<TopoDS_Edge>)
+      .function("getVector",
+                emscripten::select_overload<const gp_Vec &() const>(
+                    &solid::SweepMode::get<gp_Vec>))
+      .function("getWire",
+                emscripten::select_overload<const TopoDS_Wire &() const>(
+                    &solid::SweepMode::get<TopoDS_Wire>))
+      .function("getEdge",
+                emscripten::select_overload<const TopoDS_Edge &() const>(
+                    &solid::SweepMode::get<TopoDS_Edge>));
 
   // 绑定solid类，继承自shape3d
   emscripten::class_<solid, emscripten::base<shape3d>>("Solid")
@@ -1444,26 +1878,145 @@ EMSCRIPTEN_BINDINGS(Topo) {
               const gp_Ax2 &, const Standard_Real, const Standard_Real,
               const Standard_Real, const Standard_Real, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_wedge))
+      .class_function(
+          "makeSolidFromLoft",
+          emscripten::select_overload<solid(const std::vector<wire> &, bool)>(
+              &solid::make_solid_from_loft))
+      // 外壳访问方法
+      .function("outerShell", &solid::outer_shell)
+      .function("innerShells", &solid::inner_shells)
       // 几何操作方法
-      .function("extrude", &solid::extrude)
-      .function("revolve", &solid::revolve)
-      .function("sweep", &solid::sweep)
+      .function("extrudeWithRotation",
+                emscripten::select_overload<int(
+                    const wire &, const std::vector<wire> &, const gp_Pnt &,
+                    const gp_Vec &, double)>(&solid::extrude_with_rotation))
+      .function("extrudeWithRotation",
+                emscripten::select_overload<int(const face &, const gp_Pnt &,
+                                                const gp_Vec &, double)>(
+                    &solid::extrude_with_rotation))
+      .function(
+          "extrude",
+          emscripten::select_overload<int(
+              const wire &, const std::vector<wire> &, const gp_Vec &, double)>(
+              &solid::extrude))
+      .function("extrude",
+                emscripten::select_overload<int(const face &, gp_Pnt, gp_Pnt)>(
+                    &solid::extrude))
+      .function("extrude",
+                emscripten::select_overload<int(const face &, gp_Vec, double)>(
+                    &solid::extrude))
+      .function("revolve",
+                emscripten::select_overload<int(const face &, gp_Pnt, gp_Pnt,
+                                                double)>(&solid::revolve))
+      .function("revolve",
+                emscripten::select_overload<int(
+                    const wire &, const std::vector<wire> &, double,
+                    const gp_Pnt &, const gp_Pnt &)>(&solid::revolve))
+      .function(
+          "revolve",
+          emscripten::select_overload<int(const face &, double, const gp_Pnt &,
+                                          const gp_Pnt &)>(&solid::revolve))
       .function("loft", &solid::loft)
+      .function("pipe", &solid::pipe)
+      .function("sweep",
+                emscripten::select_overload<int(
+                    const wire &, std::vector<solid::sweep_profile> &, int)>(
+                    &solid::sweep))
+      .function("sweep",
+                emscripten::select_overload<int(
+                    const wire &, std::vector<shape> &, int)>(&solid::sweep))
+      .function(
+          "sweep",
+          emscripten::select_overload<int(
+              const wire &, const std::vector<wire> &, const TopoDS_Shape &,
+              bool, bool, const boost::optional<solid::SweepMode> &,
+              const std::string &)>(&solid::sweep))
+      .function(
+          "sweep",
+          emscripten::select_overload<int(
+              const face &, const TopoDS_Shape &, bool, bool,
+              const boost::optional<solid::SweepMode> &, const std::string &)>(
+              &solid::sweep))
+      .class_function(
+          "sweepMulti",
+          emscripten::select_overload<int(
+              const std::vector<boost::variant<wire, face>> &,
+              const TopoDS_Shape &, bool, bool,
+              const boost::optional<SweepMode> &)>(&solid::sweep_multi))
+      // 布尔运算和特征操作
+      .function("split", &solid::split)
+      .function("fillet", &solid::fillet)
+      .function("chamfer", &solid::chamfer)
+      .function("shelling", &solid::shelling)
+      .function("offset", &solid::offset)
+      .function("draft", &solid::draft)
+      .function("evolved",
+                emscripten::select_overload<int(const face &, const wire &)>(
+                    &solid::evolved))
+      .function("evolved",
+                emscripten::select_overload<int(const wire &, const wire &)>(
+                    &solid::evolved))
+      // 特征操作
+      .function(
+          "featPrism",
+          emscripten::select_overload<int(const face &, gp_Dir, double, bool)>(
+              &solid::feat_prism))
+      .function("featPrism",
+                emscripten::select_overload<int(
+                    const face &, gp_Dir, const face &, const face &, bool)>(
+                    &solid::feat_prism))
+      .function("featPrism", emscripten::select_overload<int(
+                                 const face &, gp_Dir, const face &, bool)>(
+                                 &solid::feat_prism))
+      .function(
+          "featDraftPrism",
+          emscripten::select_overload<int(const face &, double, double, bool)>(
+              &solid::feat_draft_prism))
+      .function("featDraftPrism",
+                emscripten::select_overload<int(
+                    const face &, double, const face &, const face &, bool)>(
+                    &solid::feat_draft_prism))
+      .function(
+          "featDraftPrism",
+          emscripten::select_overload<int(const face &, double, const face &,
+                                          bool)>(&solid::feat_draft_prism))
+      .function(
+          "featRevol",
+          emscripten::select_overload<int(const face &, const gp_Ax1 &,
+                                          const face &, const face &, bool)>(
+              &solid::feat_revol))
+      .function("featRevol",
+                emscripten::select_overload<int(const face &, const gp_Ax1 &,
+                                                const face &, bool)>(
+                    &solid::feat_revol))
+      .function(
+          "featPipe",
+          emscripten::select_overload<int(const face &, const wire &,
+                                          const face &, const face &, bool)>(
+              &solid::feat_pipe))
+      .function("featPipe",
+                emscripten::select_overload<int(const face &, const wire &,
+                                                const face &, bool)>(
+                    &solid::feat_pipe))
+      // 线性形式和旋转形式
+      .function("linearForm", &solid::linear_form)
+      .function("revolutionForm", &solid::revolution_form)
       // 布尔运算方法
       .function("boolean", &solid::boolean)
       .function("union", &solid::boolean_union)
       .function("subtract", &solid::boolean_subtract)
       .function("intersect", &solid::boolean_intersect)
       // 几何属性方法
+      .function("area", &solid::area)
       .function("volume", &solid::volume)
+      .function("inertia", &solid::inertia)
       .function("centerOfMass", &solid::center_of_mass)
       .function("boundingBox", &solid::bounding_box)
+      .function("section", &solid::section)
+      .function("convertToNurbs", &solid::convert_to_nurbs)
       // 值访问方法
       .function("value",
                 emscripten::select_overload<TopoDS_Solid &()>(&solid::value))
-      .function("value",
-                emscripten::select_overload<const TopoDS_Solid &() const>(
-                    &solid::value))
       // 类型方法
       .function("type", &solid::type)
       .function("copy", &solid::copy);
@@ -1642,4 +2195,176 @@ EMSCRIPTEN_BINDINGS(Topo) {
   // 绑定字符串语法选择器
   emscripten::class_<string_syntax_selector, selector>("StringSyntaxSelector")
       .constructor<const std::string &>();
+
+  EMSCRIPTEN_BINDINGS(ShapeOps) {
+    // 布尔运算封装
+    function("fuse", &flywave::topo::fuse);
+
+    function("cut", emscripten::select_overload<boost::optional<shape>(
+                        const shape &, const shape &, double, bool)>(
+                        &flywave::topo::cut));
+
+    function("cut",
+             emscripten::select_overload<boost::optional<shape>(
+                 const shape &, const std::vector<shape> &, double, bool)>(
+                 &flywave::topo::cut));
+
+    function("intersect", emscripten::select_overload<boost::optional<shape>(
+                              const shape &, const shape &, double, bool)>(
+                              &flywave::topo::intersect));
+
+    function("intersect",
+             emscripten::select_overload<boost::optional<shape>(
+                 const shape &, const std::vector<shape> &, double, bool)>(
+                 &flywave::topo::intersect));
+
+    // 枚举类型绑定
+    enum_<flywave::topo::intersection_direction>("IntersectionDirection")
+        .value("None", flywave::topo::intersection_direction::None)
+        .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
+        .value("Opposite", flywave::topo::intersection_direction::Opposite);
+
+    // Split operations
+    function("split", emscripten::select_overload<boost::optional<shape>(
+                          const shape &, const std::vector<shape> &, double)>(
+                          &flywave::topo::split));
+    function("split",
+             emscripten::select_overload<boost::optional<shape>(
+                 const shape &, const shape &, double)>(&flywave::topo::split));
+
+    // Intersection operations
+    enum_<flywave::topo::intersection_direction>("IntersectionDirection")
+        .value("None", flywave::topo::intersection_direction::None)
+        .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
+        .value("Opposite", flywave::topo::intersection_direction::Opposite);
+
+    function("facesIntersectedByLine",
+             &flywave::topo::faces_intersected_by_line);
+
+    // Filling and shell operations
+    function("fill", &flywave::topo::fill);
+    function("shelling", &flywave::topo::shelling);
+
+    // Edge operations
+    function("fillet", &flywave::topo::fillet);
+    function("chamfer", &flywave::topo::chamfer);
+
+    // Extrusion operations
+    function("extrude", &flywave::topo::extrude);
+    function(
+        "extrudeLinear",
+        emscripten::select_overload<boost::optional<shape>(
+            const wire &, const std::vector<wire> &, const gp_Vec &, double)>(
+            &flywave::topo::extrude_linear));
+
+    // Extrusion operations
+    function("extrudeLinear",
+             emscripten::select_overload<boost::optional<shape>(
+                 const face &, const gp_Vec &, double)>(
+                 &flywave::topo::extrude_linear));
+
+    function("extrudeLinearWithRotation",
+             emscripten::select_overload<boost::optional<shape>(
+                 const wire &, const std::vector<wire> &, const gp_Pnt &,
+                 const gp_Vec &, double)>(
+                 &flywave::topo::extrude_linear_with_rotation));
+
+    function("extrudeLinearWithRotation",
+             emscripten::select_overload<boost::optional<shape>(
+                 const face &, const gp_Pnt &, const gp_Vec &, double)>(
+                 &flywave::topo::extrude_linear_with_rotation));
+
+    // Revolution operations
+    function("revolve",
+             emscripten::select_overload<boost::optional<shape>(
+                 const shape &, const gp_Pnt &, const gp_Dir &, double)>(
+                 &flywave::topo::revolve));
+
+    function("revolve",
+             emscripten::select_overload<boost::optional<shape>(
+                 const wire &, const std::vector<wire> &, double,
+                 const gp_Pnt &, const gp_Pnt &)>(&flywave::topo::revolve));
+
+    function("revolve",
+             emscripten::select_overload<boost::optional<shape>(
+                 const face &, double, const gp_Pnt &, const gp_Pnt &)>(
+                 &flywave::topo::revolve));
+
+    // Offset operation
+    function("offset", &flywave::topo::offset);
+
+    // Sweep operations
+    enum_<flywave::topo::transition_mode>("TransitionMode")
+        .value("TRANSFORMED", flywave::topo::transition_mode::TRANSFORMED)
+        .value("ROUND", flywave::topo::transition_mode::ROUND)
+        .value("RIGHT", flywave::topo::transition_mode::RIGHT);
+
+    function("sweep",
+             emscripten::select_overload<boost::optional<shape>(
+                 const wire &, const std::vector<wire> &, const shape &, bool,
+                 bool, const shape *, flywave::topo::transition_mode)>(
+                 &flywave::topo::sweep));
+
+    function("sweep",
+             emscripten::select_overload<boost::optional<shape>(
+                 const face &, const shape &, bool, bool, const shape *,
+                 flywave::topo::transition_mode)>(&flywave::topo::sweep));
+
+    function("sweepMulti", &flywave::topo::sweep_multi);
+
+    // Loft operations
+    function("loft",
+             emscripten::select_overload<boost::optional<shape>(
+                 const std::vector<shape> &, bool, bool, const std::string &,
+                 const std::string &, int, bool, bool,
+                 const std::array<double, 3> &)>(&flywave::topo::loft));
+
+    function("loft", emscripten::select_overload<boost::optional<shape>(
+                         const std::vector<face> &, const std::string &)>(
+                         &flywave::topo::loft));
+
+    // DPrism operations
+    function("dprism",
+             emscripten::select_overload<boost::optional<shape>(
+                 const shape &, const std::shared_ptr<face> &,
+                 const std::vector<wire> &, const boost::optional<double> &,
+                 double, const face *, bool, bool)>(&flywave::topo::dprism));
+
+    function("dprism",
+             emscripten::select_overload<boost::optional<shape>(
+                 const shape &, const std::shared_ptr<face> &,
+                 const std::vector<face> &, const boost::optional<double> &,
+                 double, const face *, bool, bool)>(&flywave::topo::dprism));
+
+    // Other operations
+    function("imprint", &flywave::topo::imprint);
+    function("clean", &flywave::topo::clean);
+    function("check", &flywave::topo::check);
+    function("closest", &flywave::topo::closest);
+    function("combinedCenter", &flywave::topo::combined_center);
+    function("combinedCenterOfBoundBox",
+             &flywave::topo::combined_center_of_bound_box);
+    function("readShapeFromStep", &flywave::topo::read_shape_from_step);
+
+    // Wire sample point struct binding
+    value_object<flywave::topo::wire_sample_point>("WireSamplePoint")
+        .field("position", &flywave::topo::wire_sample_point::position)
+        .field("tangent", &flywave::topo::wire_sample_point::tangent)
+        .field("edge", &flywave::topo::wire_sample_point::edge);
+
+    // Profile projection struct binding
+    value_object<flywave::topo::profile_projection>("ProfileProjection")
+        .field("axes", &flywave::topo::profile_projection::axes)
+        .field("trsf", &flywave::topo::profile_projection::trsf)
+        .field("tangent", &flywave::topo::profile_projection::tangent)
+        .field("position", &flywave::topo::profile_projection::position);
+
+    // Wire operations
+    function("sampleWireAtDistances", &flywave::topo::sample_wire_at_distances);
+    function("clipWireBetweenDistances",
+             &flywave::topo::clip_wire_between_distances);
+    function("calcProfileProjection", &flywave::topo::cacl_profile_projection);
+    function("profileProjectPoint", &flywave::topo::profile_project_point);
+    function("wireLength", &flywave::topo::wrie_length);
+  }
 }

@@ -1,5 +1,72 @@
 declare module 'topo' {
 
+    // 向量类型声明
+    type VectorShape = Shape[];
+    type VectorVertex = Vertex[];
+    type VectorEdge = Edge[];
+    type VectorWire = Wire[];
+    type VectorFace = Face[];
+    type VectorShell = Shell[];
+    type VectorSolid = Solid[];
+    type VectorCompound = Compound[];
+    type VectorCompSolid = CompSolid[];
+    type VectorVectorShape = Shape[][];
+
+    // 可选类型声明
+    interface OptionalShape {
+        is_initialized(): boolean;
+        get(): Shape | undefined;
+        set(value: Shape): void;
+    }
+
+    interface OptionalVertex {
+        is_initialized(): boolean;
+        get(): Vertex | undefined;
+        set(value: Vertex): void;
+    }
+
+    interface OptionalEdge {
+        is_initialized(): boolean;
+        get(): Edge | undefined;
+        set(value: Edge): void;
+    }
+
+    interface OptionalWire {
+        is_initialized(): boolean;
+        get(): Wire | undefined;
+        set(value: Wire): void;
+    }
+
+    interface OptionalFace {
+        is_initialized(): boolean;
+        get(): Face | undefined;
+        set(value: Face): void;
+    }
+
+    interface OptionalShell {
+        is_initialized(): boolean;
+        get(): Shell | undefined;
+        set(value: Shell): void;
+    }
+
+    interface OptionalSolid {
+        is_initialized(): boolean;
+        get(): Solid | undefined;
+        set(value: Solid): void;
+    }
+
+    interface OptionalCompound {
+        is_initialized(): boolean;
+        get(): Compound | undefined;
+        set(value: Compound): void;
+    }
+
+    interface OptionalCompSolid {
+        is_initialized(): boolean;
+        get(): CompSolid | undefined;
+        set(value: CompSolid): void;
+    }
+
     class BBox {
         constructor();
         constructor(box: Bnd_Box);
@@ -26,12 +93,12 @@ declare module 'topo' {
         // 操作方法
         add(point: Vector, tolerance?: number): BBox;
         add(other: BBox, tolerance?: number): BBox;
-        isInside(point: Vector): boolean;
-        enlarge(tolerance: number): void;
+        isInside(other: BBox, tolerance?: number): boolean;
+        enlarge(tolerance?: number): void;
 
         // 静态方法
-        static findOutsideBox2d(boxes: BBox[]): BBox;
-        static fromShape(shape: Shape): BBox;
+        static findOutsideBox2d(bb1: BBox, bb2: BBox, tolerance?: number): BBox;
+        static fromShape(shape: Shape, tolerance?: number, optimal?: boolean): BBox;
 
         // 底层访问
         getValue(): Bnd_Box;
@@ -44,13 +111,13 @@ declare module 'topo' {
         constructor(loc: TopLoc_Location);
 
         // 静态构造方法
-        static fromPnt(pnt: Point): Location;
-        static fromVec(vec: Vector): Location;
-        static fromVecRotation(vec: Vector, rx: number, ry: number, rz: number): Location;
-        static fromPln(pln: Plane): Location;
-        static fromPlnPos(pln: Plane, pos: Point): Location;
-        static fromVecAxisAngle(vec: Vector, axis: Vector, angle: number): Location;
-        static fromTopoVector(vec: Vector): Location;
+        static fromPnt(pnt: gp_Pnt): Location;
+        static fromVec(vec: gp_Vec): Location;
+        static fromVecRotation(vec: gp_Vec, rx: number, ry: number, rz: number): Location;
+        static fromPln(pln: gp_Pln): Location;
+        static fromPlnPos(pln: gp_Pln, pos: gp_Pnt): Location;
+        static fromVecAxisAngle(vec: gp_Vec, axis: gp_Vec, angle: number): Location;
+        static fromTopoVector(vec: gp_Vec): Location;
 
         // 操作方法
         hashCode(): number;
@@ -58,7 +125,6 @@ declare module 'topo' {
         dividedBy(other: Location): Location;
         multipliedBy(other: Location): Location;
         pow(exp: number): Location;
-        toVector(): Vector;
         toTuple(): [number, number, number, number, number, number];
 
         // 转换方法
@@ -91,7 +157,6 @@ declare module 'topo' {
 
         // 转换方法
         getValue(): gp_GTrsf;
-        getMutableValue(): gp_GTrsf;
         toGTrsf(): gp_GTrsf;
     }
 
@@ -101,10 +166,10 @@ declare module 'topo' {
     class Plane {
         constructor();
         constructor(pln: gp_Pln);
-        constructor(origin: Vector, xDir: Vector, yDir: Vector);
+        constructor(origin: Vector, xDir: Vector, normal: Vector);
 
         // 静态工厂方法
-        static named(name: string): Plane;
+        static named(name: string, origin?: Vector): Plane;
         static xy(): Plane;
         static yz(): Plane;
         static zx(): Plane;
@@ -127,6 +192,8 @@ declare module 'topo' {
         // 坐标转换方法
         toWorldCoords(localVec: Vector): Vector;
         toLocalCoords(worldVec: Vector): Vector;
+        toWorldCoords(localShp: Shape): Shape;
+        toLocalCoords(worldShp: Shape): Shape;
         location(): Location;
 
         // 设置方法
@@ -143,8 +210,12 @@ declare module 'topo' {
 
     class Vector {
         constructor();
-        constructor(x: number, y: number, z: number);
+        constructor(x: number, y: number, z?: number);
         constructor(arr: [number, number, number]);
+        constructor(vec: gp_Vec);
+        constructor(pnt: gp_Pnt);
+        constructor(dir: gp_Dir);
+        constructor(xyz: gp_XYZ);
 
         // 属性
         x: number;
@@ -166,15 +237,15 @@ declare module 'topo' {
         getAngle(other: Vector): number;
         getSignedAngle(other: Vector, normal: Vector): number;
         projectToLine(lineVec: Vector): Vector;
-        projectToPlane(planeNormal: Vector): Vector;
+        projectToPlane(planeNormal: Plane): Vector;
         transform(mat: Matrix): Vector;
         isEqual(other: Vector, tol?: number): boolean;
 
         // 转换方法
         toTuple(): [number, number, number];
-        toPnt(): Point;
-        toDir(): Direction;
-        toVec(): Vector;
+        toPnt(): gp_Pnt;
+        toDir(): gp_Dir;
+        toVec(): gp_Vec;
         toString(): string;
         toArray(): [number, number, number];
 
@@ -191,32 +262,49 @@ declare module 'topo' {
     // 全局运算符
     function multiplyScalarVector(scalar: number, vec: Vector): Vector;
 
-
-    class MeshReceiver {
-        constructor(callback: any); // val 类型对应 Emscripten 的 JS 回调
-
-        // 网格操作
+    interface MeshCallback {
         begin(): void;
         end(): void;
+        appendFace(r: number, g: number, b: number): number;
+        appendNode(faceIndex: number, x: number, y: number, z: number): void;
+        appendNodeWithNormal(
+            faceIndex: number,
+            x: number, y: number, z: number,
+            nx: number, ny: number, nz: number
+        ): void;
+        appendNodeWithNormalAndUV(
+            faceIndex: number,
+            x: number, y: number, z: number,
+            nx: number, ny: number, nz: number,
+            u: number, v: number
+        ): void;
+        appendTriangle(faceIndex: number, indices: [number, number, number]): void;
+    }
 
-        // 节点添加方法
-        appendNode(index: number, point: Point): void;
-        appendNodeWithNormal(index: number, point: Point, normal: Point): void;
-        appendNodeWithNormalAndUV(index: number, point: Point, normal: Point, uv: [number, number]): void;
+    class MeshReceiver {
+        constructor(callback: MeshCallback);
+    }
 
-        // 面片添加方法
-        appendFace(vertexIndices: number[]): void;
-        appendTriangle(v1: number, v2: number, v3: number): void;
+    enum GeometryObjectType {
+        Solid = 'Solid',
+        Shell = 'Shell',
+        Face = 'Face',
+        Edge = 'Edge',
+        Vertex = 'Vertex',
+        Wire = 'Wire',
+        Compound = 'Compound',
+        CompSolid = 'CompSolid',
+        Shape = 'Shape'
     }
 
     class GeometryObject {
         // 基础属性检查
         isNull(): boolean;
         isValid(): boolean;
-        type(): string;
+        type(): GeometryObjectType;
 
         // 几何属性
-        boundingBox(): BBox;
+        boundingBox(tolerance?: number): Bnd_Box;
 
         // 比较方法
         equals(other: GeometryObject): boolean;
@@ -229,20 +317,56 @@ declare module 'topo' {
         setTag(tag: number): void;
     }
 
-
     enum TextureMappingRule {
         CUBE = 'CUBE',
         NORMAL = 'NORMAL',
         NORMAL_AUTO_SCALE = 'NORMAL_AUTO_SCALE'
     }
 
+    enum Orientation {
+        FORWARD = 'FORWARD',
+        REVERSED = 'REVERSED',
+        INTERNAL = 'INTERNAL',
+        EXTERNAL = 'EXTERNAL',
+        UNKNOW = 'UNKNOW'
+    }
+
+    enum ShapeGeomType {
+        NULL = 'NULL',
+        VERTEX = 'VERTEX',
+        WIRE = 'WIRE',
+        SHELL = 'SHELL',
+        SOLID = 'SOLID',
+        COMPSOLID = 'COMPSOLID',
+        COMPOUND = 'COMPOUND',
+        LINE = 'LINE',
+        CIRCLE = 'CIRCLE',
+        HYPERBOLA = 'HYPERBOLA',
+        PARABOLA = 'PARABOLA',
+        ELLIPSE = 'ELLIPSE',
+        BEZIER_CURVE = 'BEZIER_CURVE',
+        BSPLINE_CURVE = 'BSPLINE_CURVE',
+        OFFSET_CURVE = 'OFFSET_CURVE',
+        OTHER_CURVE = 'OTHER_CURVE',
+        PLANE = 'PLANE',
+        CYLINDER = 'CYLINDER',
+        CONE = 'CONE',
+        SPHERE = 'SPHERE',
+        TORUS = 'TORUS',
+        BEZIER_SURFACE = 'BEZIER_SURFACE',
+        BSPLINE_SURFACE = 'BSPLINE_SURFACE',
+        OFFSET_SURFACE = 'OFFSET_SURFACE',
+        OTHER_SURFACE = 'OTHER_SURFACE',
+        REVOLVED_SURFACE = 'REVOLVED_SURFACE',
+        EXTRUDED_SURFACE = 'EXTRUDED_SURFACE'
+    }
 
     class Shape extends GeometryObject {
         constructor();
         constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
         // 静态方法
-        static makeShape(): Shape;
+        static makeShape(shp: TopoDS_Shape): Shape;
         static importFromBrep(brep: string): Shape;
         static combinedCenter(shapes: Shape[]): Vector;
         static combinedCenterOfBoundingBox(shapes: Shape[]): Vector;
@@ -251,7 +375,7 @@ declare module 'topo' {
         isNull(): boolean;
         isValid(): boolean;
         isSolid(): boolean;
-        type(): string;
+        type(): GeometryObjectType;
         bbox(): BBox;
         hashCode(): number;
         equals(other: Shape): boolean;
@@ -259,8 +383,8 @@ declare module 'topo' {
         forConstruction(): boolean;
 
         // 属性设置
-        setSurfaceColour(color: Color): void;
-        setCurveColour(color: Color): void;
+        setSurfaceColour(color: Quantity_Color): void;
+        setCurveColour(color: Quantity_Color): void;
         setLabel(label: string): void;
         setUOrigin(origin: number): void;
         setVOrigin(origin: number): void;
@@ -274,8 +398,8 @@ declare module 'topo' {
         setRotationAngle(angle: number): void;
 
         // 属性获取
-        surfaceColour(): Color;
-        curveColour(): Color;
+        surfaceColour(): Quantity_Color;
+        curveColour(): Quantity_Color;
         label(): string;
         getUOrigin(): number;
         getVOrigin(): number;
@@ -291,36 +415,36 @@ declare module 'topo' {
         // 变换操作
         transform(trsf: gp_Trsf): number;
         transform(matrix: Matrix): number;
-        translate(vec: Vector): number;
-        rotate(angle: number, p1: Point, p2: Point): number;
-        rotate(angle: number, axis: Axis): number;
-        rotate(quat: Quaternion): number;
+        translate(delta: gp_Vec): number;
+        rotate(angle: number, p1: gp_Pnt, p2: gp_Pnt): number;
+        rotate(angle: number, axis: gp_Ax1): number;
+        rotate(quat: gp_Quaternion): number;
         scale(factor: number): number;
-        mirror(p1: Point, p2: Point): number;
-        mirror(p: Point, dir: Vector): number;
-        mirror(axis: Axis): number;
-        mirror(ax2: Ax2): number;
+        mirror(p1: gp_Pnt, p2: gp_Pnt): number;
+        mirror(p: gp_Pnt, dir: gp_Vec): number;
+        mirror(axis: gp_Ax1): number;
+        mirror(ax2: gp_Ax2): number;
 
         // 几何计算
-        centreOfMass(): Vector;
-        centerOfBoundBox(): Vector;
+        centreOfMass(): gp_Pnt;
+        centerOfBoundBox(): gp_Pnt;
         computeMass(): number;
         computeArea(): number;
         distance(other: Shape): number;
-        distances(other: Shape): number[];
+        distances(other: Shape[]): number[];
 
         // 非破坏性变换方法
         transformed(trsf: gp_Trsf): Shape;
         transformed(matrix: Matrix): Shape;
-        translated(vec: Vector): Shape;
-        rotated(angle: number, p1: Point, p2: Point): Shape;
-        rotated(angle: number, axis: Axis): Shape;
-        rotated(quat: Quaternion): Shape;
-        scaled(factor: number): Shape;
-        mirrored(p1: Point, p2: Point): Shape;
-        mirrored(p: Point, dir: Vector): Shape;
-        mirrored(axis: Axis): Shape;
-        mirrored(ax2: Ax2): Shape;
+        translated(delta: gp_Vec): Shape;
+        rotated(angle: number, p1: gp_Pnt, p2: gp_Pnt): Shape;
+        rotated(angle: number, axis: gp_Ax1): Shape;
+        rotated(quat: gp_Quaternion): Shape;
+        scaled(pnt: gp_Pnt, scale: number): Shape;
+        mirrored(pnt: gp_Pnt, nor: gp_Pnt): Shape;
+        mirrored(pnt: gp_Pnt, nor: gp_Vec): Shape;
+        mirrored(axis: gp_Ax1): Shape;
+        mirrored(ax2: gp_Ax2): Shape;
 
         // 位置和方向操作
         location(): Location;
@@ -328,19 +452,19 @@ declare module 'topo' {
         located(loc: Location): Shape;
         move(loc: Location): number;
         move(x: number, y: number, z: number, rx: number, ry: number, rz: number): number;
-        move(vec: Vector): number;
+        move(vec: gp_Vec): number;
         moved(loc: Location): Shape;
         moved(x: number, y: number, z: number, rx: number, ry: number, rz: number): Shape;
-        moved(vec: Vector): Shape;
+        moved(vec: gp_Vec): Shape;
 
         // 方向操作
-        getOrientation(): Quaternion;
-        setOrientation(quat: Quaternion): void;
-        oriented(quat: Quaternion): Shape;
+        getOrientation(): Orientation;
+        setOrientation(quat: Orientation): void;
+        oriented(quat: Orientation): Shape;
 
         // 子元素访问
         children(): Shape[];
-        getShapes(): Shape[];
+        getShapes(kind: TopAbs_ShapeEnum): Shape[];
         vertices(): Vertex[];
         edges(): Edge[];
         wires(): Wire[];
@@ -368,9 +492,9 @@ declare module 'topo' {
         // 实用方法
         clean(): void;
         fixShape(): void;
-        toSplines(): Shape;
-        toNurbs(): Shape;
-        toString(): string;
+        toSplines(): OptionalShape;
+        toNurbs(): OptionalShape;
+        toString(tolerance?: number, angularTolerance?: number): string;
 
         // 操作符重载
         equals(other: Shape): boolean;
@@ -378,11 +502,11 @@ declare module 'topo' {
         lessThan(other: Shape): boolean;
 
         // 网格生成
-        writeTriangulation(filename: string): boolean;
-        mesh(): Mesh;
+        writeTriangulation(mesh: MeshReceiver, precision: number, deflection: number, angle: number, uvCoords: boolean): boolean;
+        mesh(mesh: MeshReceiver, precision?: number, deflection?: number, angle?: number, uvCoords?: boolean): number;
 
         // 选择器相关
-        filter(selector: Selector): Shape[];
+        static filter(selector: Selector, shapes: Shape[]): Shape[];
         vertices(selector: Selector): Shape;
         edges(selector: Selector): Shape;
         wires(selector: Selector): Shape;
@@ -395,27 +519,26 @@ declare module 'topo' {
         autoCast(): Shape;
 
         // 其他方法
-        copy(): Shape;
-        shapeType(): string;
-        geomType(): string;
+        copy(deep?: boolean): Shape;
+        shapeType(): TopAbs_ShapeEnum;
+        geomType(): ShapeGeomType;
     }
-
 
     class Vertex extends Shape {
         constructor();
         constructor(x: number, y: number, z: number);
-        constructor(pnt: Point);
+        constructor(pnt: gp_Pnt);
 
         // 静态工厂方法
-        static makeVertex(pnt: Point): Vertex;
+        static makeVertex(pnt: gp_Pnt): Vertex;
         static makeVertex(vec: Vector): Vertex;
 
         // 方法
         value(): TopoDS_Vertex;
-        toPnt(): Point;
-        point(): Point;
-        type(): string;
-        copy(): Vertex;
+        toPnt(): gp_Pnt;
+        point(): gp_Pnt;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
     }
 
     class VertexIterator {
@@ -440,43 +563,43 @@ declare module 'topo' {
         constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
         // 几何属性方法
-        getCurve(): Curve;
+        getCurve(): Handle_Geom_Curve;
+
         bounds(): [number, number];
         length(): number;
         isClosed(): boolean;
 
         // 端点访问
-        startPoint(): Point;
-        endPoint(): Point;
+        startgPoint(): gp_Pnt;
+        endPoint(): gp_Pnt;
 
         // 参数化方法
         paramAt(param: number): number;
-        paramAt(point: Point): number;
-        params(): number[];
-        paramsLength(): number[];
+        paramAt(point: gp_Pnt): number;
+        params(points: gp_Pnt[], tolerance?: number): number[];
+        paramsLength(parameters: number[]): number[];
 
         // 几何特征
-        tangentAt(param: number): Vector;
-        tangents(): Vector[];
-        normal(): Vector;
-        center(): Point;
+        tangentAt(param: number): gp_Dir;
+        tangents(parameters: number[]): gp_Dir[];
+        normal(): gp_Dir;
+        center(): gp_Pnt;
         radius(): number;
 
         // 位置和采样
-        positionAt(param: number): Point;
-        positions(): Point[];
-        sampleUniform(numPoints: number): Point[];
+        positionAt(param: number, mode: ParamMode): gp_Pnt;
+        positions(ds: number[], mode: ParamMode): gp_Pnt[];
+        sampleUniform(n: number): [gp_Pnt[], number[]];
 
         // 定位和投影
-        locationAt(param: number): Location;
-        locations(): Location[];
-        projected(point: Point): Point;
+        locationAt(param: number, mode: ParamMode, frame: FrameMode, planar?: boolean): Location;
+        locations(ds: number[], mode: ParamMode, frame: FrameMode, planar?: boolean): Location[];
+        projected(f: Face, direction: gp_Vec, closest?: boolean): Shape | Shape[];
 
         // 曲率分析
-        curvatureAt(param: number): number;
-        curvatures(): number[];
+        curvatureAt(param: number, mode: ParamMode, resolution?: number): number;
+        curvatures(ds: number[], mode: ParamMode, resolution?: number): number[];
     }
-
 
     class Edge extends Shape1D {
         constructor();
@@ -484,31 +607,103 @@ declare module 'topo' {
 
         // 静态创建方法 - 基本类型
         static makeEdge(v1: Vertex, v2: Vertex): Edge;
-        static makeEdge(p1: Point, p2: Point): Edge;
+        static makeEdge(p1: gp_Pnt, p2: gp_Pnt): Edge;
 
         // 静态创建方法 - 直线
-        static makeEdge(line: Line): Edge;
-        static makeEdge(line: Line, u1: number, u2: number): Edge;
-        static makeEdge(line: Line, p1: Point, p2: Point): Edge;
-        static makeEdge(line: Line, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge(line: gp_Lin): Edge;
+        static makeEdge(line: gp_Lin, u1: number, u2: number): Edge;
+        static makeEdge(line: gp_Lin, p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makeEdge(line: gp_Lin, v1: Vertex, v2: Vertex): Edge;
 
         // 静态创建方法 - 圆
-        static makeEdge(circle: Circle): Edge;
-        static makeEdge(circle: Circle, u1: number, u2: number): Edge;
-        static makeEdge(circle: Circle, p1: Point, p2: Point): Edge;
-        static makeEdge(circle: Circle, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge(circle: gp_Circ): Edge;
+        static makeEdge(circle: gp_Circ, u1: number, u2: number): Edge;
+        static makeEdge(circle: gp_Circ, p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makeEdge(circle: gp_Circ, v1: Vertex, v2: Vertex): Edge;
 
         // 静态创建方法 - 椭圆
-        static makeEdge(ellipse: Ellipse): Edge;
-        static makeEdge(ellipse: Ellipse, u1: number, u2: number): Edge;
-        static makeEdge(ellipse: Ellipse, p1: Point, p2: Point): Edge;
-        static makeEdge(ellipse: Ellipse, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge(ellipse: gp_Elips): Edge;
+        static makeEdge(ellipse: gp_Elips, u1: number, u2: number): Edge;
+        static makeEdge(ellipse: gp_Elips, p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makeEdge(ellipse: gp_Elips, v1: Vertex, v2: Vertex): Edge;
+
+        // 双曲线创建方法
+        static makeEdge(hyperbola: gp_Hypr): Edge;
+        static makeEdge(hyperbola: gp_Hypr, u1: number, u2: number): Edge;
+        static makeEdge(hyperbola: gp_Hypr, p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makeEdge(hyperbola: gp_Hypr, v1: Vertex, v2: Vertex): Edge;
+
+        // 抛物线创建方法
+        static makeEdge(parabola: gp_Parab): Edge;
+        static makeEdge(parabola: gp_Parab, u1: number, u2: number): Edge;
+        static makeEdge(parabola: gp_Parab, p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makeEdge(parabola: gp_Parab, v1: Vertex, v2: Vertex): Edge;
+
+        // 通用曲线创建方法
+        static makeEdge(curve: Handle_Geom_Curve): Edge;
+        static makeEdge(curve: Handle_Geom_Curve, u1: number, u2: number): Edge;
+        static makeEdge(curve: Handle_Geom_Curve, p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makeEdge(curve: Handle_Geom_Curve, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge(
+            curve: Handle_Geom_Curve,
+            p1: gp_Pnt,
+            p2: gp_Pnt,
+            u1: number,
+            u2: number
+        ): Edge;
+        static makeEdge(
+            curve: Handle_Geom_Curve,
+            v1: Vertex,
+            v2: Vertex,
+            u1: number,
+            u2: number
+        ): Edge;
+
+        // 2D曲线创建方法
+        static makeEdge(
+            curve2d: Handle_Geom2d_Curve,
+            surface: Handle_Geom_Surface
+        ): Edge;
+        static makeEdge(
+            curve2d: Handle_Geom2d_Curve,
+            surface: Handle_Geom_Surface,
+            u1: number,
+            u2: number
+        ): Edge;
+        static makeEdge(
+            curve2d: Handle_Geom2d_Curve,
+            surface: Handle_Geom_Surface,
+            p1: gp_Pnt,
+            p2: gp_Pnt
+        ): Edge;
+        static makeEdge(
+            curve2d: Handle_Geom2d_Curve,
+            surface: Handle_Geom_Surface,
+            v1: Vertex,
+            v2: Vertex
+        ): Edge;
+        static makeEdge(
+            curve2d: Handle_Geom2d_Curve,
+            surface: Handle_Geom_Surface,
+            p1: gp_Pnt,
+            p2: gp_Pnt,
+            u1: number,
+            u2: number
+        ): Edge;
+        static makeEdge(
+            curve2d: Handle_Geom2d_Curve,
+            surface: Handle_Geom_Surface,
+            v1: Vertex,
+            v2: Vertex,
+            u1: number,
+            u2: number
+        ): Edge;
 
         // 值访问
         value(): TopoDS_Edge;
 
         // 基本属性
-        isSeam(): boolean;
+        isSeam(face: Face): boolean;
         isDegenerated(): boolean;
         isClosed(): boolean;
         isInfinite(): boolean;
@@ -520,55 +715,110 @@ declare module 'topo' {
 
         // 2D曲线创建方法
         static makeEdge2d(v1: Vertex, v2: Vertex): Edge;
-        static makeEdge2d(p1: Point2d, p2: Point2d): Edge;
-        static makeEdge2d(line: Line2d): Edge;
-        static makeEdge2d(line: Line2d, u1: number, u2: number): Edge;
-        static makeEdge2d(line: Line2d, p1: Point2d, p2: Point2d): Edge;
-        static makeEdge2d(line: Line2d, v1: Vertex, v2: Vertex): Edge;
-        static makeEdge2d(circle: Circle2d): Edge;
-        static makeEdge2d(circle: Circle2d, u1: number, u2: number): Edge;
-        static makeEdge2d(circle: Circle2d, p1: Point2d, p2: Point2d): Edge;
-        static makeEdge2d(circle: Circle2d, v1: Vertex, v2: Vertex): Edge;
-        static makeEdge2d(ellipse: Ellipse2d): Edge;
-        static makeEdge2d(ellipse: Ellipse2d, u1: number, u2: number): Edge;
-        static makeEdge2d(ellipse: Ellipse2d, p1: Point2d, p2: Point2d): Edge;
-        static makeEdge2d(ellipse: Ellipse2d, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge2d(p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(line: gp_Lin2d): Edge;
+        static makeEdge2d(line: gp_Lin2d, u1: number, u2: number): Edge;
+        static makeEdge2d(line: gp_Lin2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(line: gp_Lin2d, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge2d(circle: gp_Circ2d): Edge;
+        static makeEdge2d(circle: gp_Circ2d, u1: number, u2: number): Edge;
+        static makeEdge2d(circle: gp_Circ2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(circle: gp_Circ2d, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge2d(ellipse: gp_Elips2d): Edge;
+        static makeEdge2d(ellipse: gp_Elips2d, u1: number, u2: number): Edge;
+        static makeEdge2d(ellipse: gp_Elips2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(ellipse: gp_Elips2d, v1: Vertex, v2: Vertex): Edge;
+
         // 双曲线和抛物线2D创建方法
-        static makeEdge2d(hyperbola: Hyperbola2d): Edge;
-        static makeEdge2d(hyperbola: Hyperbola2d, u1: number, u2: number): Edge;
-        static makeEdge2d(hyperbola: Hyperbola2d, p1: Point2d, p2: Point2d): Edge;
-        static makeEdge2d(hyperbola: Hyperbola2d, v1: Vertex, v2: Vertex): Edge;
-        static makeEdge2d(parabola: Parabola2d): Edge;
-        static makeEdge2d(parabola: Parabola2d, u1: number, u2: number): Edge;
-        static makeEdge2d(parabola: Parabola2d, p1: Point2d, p2: Point2d): Edge;
-        static makeEdge2d(parabola: Parabola2d, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge2d(hyperbola: gp_Hypr2d): Edge;
+        static makeEdge2d(hyperbola: gp_Hypr2d, u1: number, u2: number): Edge;
+        static makeEdge2d(hyperbola: gp_Hypr2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(hyperbola: gp_Hypr2d, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge2d(parabola: gp_Parab2d): Edge;
+        static makeEdge2d(parabola: gp_Parab2d, u1: number, u2: number): Edge;
+        static makeEdge2d(parabola: gp_Parab2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(parabola: gp_Parab2d, v1: Vertex, v2: Vertex): Edge;
+
+        // 2D曲线创建方法
+        static makeEdge2d(curve2d: Handle_Geom2d_Curve): Edge;
+        static makeEdge2d(curve2d: Handle_Geom2d_Curve, u1: number, u2: number): Edge;
+        static makeEdge2d(curve2d: Handle_Geom2d_Curve, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+        static makeEdge2d(curve2d: Handle_Geom2d_Curve, v1: Vertex, v2: Vertex): Edge;
+        static makeEdge2d(
+            curve2d: Handle_Geom2d_Curve,
+            p1: gp_Pnt2d,
+            p2: gp_Pnt2d,
+            u1: number,
+            u2: number
+        ): Edge;
+        static makeEdge2d(
+            curve2d: Handle_Geom2d_Curve,
+            v1: Vertex,
+            v2: Vertex,
+            u1: number,
+            u2: number
+        ): Edge;
 
         // 多边形创建方法
         static makePolygon(): Edge;
-        static makePolygon(p1: Point, p2: Point): Edge;
-        static makePolygon(p1: Point, p2: Point, p3: Point, close?: boolean): Edge;
-        static makePolygon(p1: Point, p2: Point, p3: Point, p4: Point, close?: boolean): Edge;
+        static makePolygon(p1: gp_Pnt, p2: gp_Pnt): Edge;
+        static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, close?: boolean): Edge;
+        static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt, close?: boolean): Edge;
         static makePolygon(v1: Vertex, v2: Vertex): Edge;
         static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, close?: boolean): Edge;
         static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, v4: Vertex, close?: boolean): Edge;
         static makePolygon(vertices: Vertex[], close?: boolean): Edge;
-        static makePolygon(points: Point[], close?: boolean): Edge;
+        static makePolygon(points: gp_Pnt[], close?: boolean): Edge;
+
+        // 矩形创建方法
+        static makeRect(width: number, height: number): Edge;
 
         // 样条曲线创建方法
-        static makeSpline(points: Point[], tolerance?: number, periodic?: boolean): Edge;
-        static makeSpline(points: Point[], tangents?: [Vector, Vector], parameters?: number[], tolerance?: number, periodic?: boolean): Edge;
-        static makeSpline(points: Point[], tangents?: Vector[], periodic?: boolean, parameters?: number[], tolerance?: number): Edge;
-        static makeSplineApprox(points: Point[], tolerance?: number): Edge;
+        static makeSpline(points: gp_Pnt[], tolerance?: number, periodic?: boolean): Edge;
+        static makeSpline(points: gp_Pnt[], tangents: [Vector, Vector], parameters?: number[], tolerance?: number, periodic?: boolean, scale?: boolean): Edge;
+        static makeSpline(points: gp_Pnt[], tangents?: Vector[], periodic?: boolean, parameters?: number[], scale?: boolean, tolerance?: number): Edge;
+        static makeSplineApprox(points: gp_Pnt[], tolerance?: number, smoothing?: [number, number, number], minDegree?: number, maxDegree?: number): Edge;
+
+        // 圆形创建方法
+        static makeCircle(
+            radius: number,
+            center?: gp_Pnt,
+            normal?: gp_Dir,
+            angle1?: number,
+            angle2?: number,
+            orientation?: boolean
+        ): Edge;
+
+        // 椭圆创建方法
+        static makeEllipse(
+            majorRadius: number,
+            minorRadius: number,
+            center?: gp_Pnt,
+            normal?: gp_Dir,
+            xnormal?: gp_Dir,
+            angle1?: number,
+            angle2?: number,
+            sense?: number
+        ): Edge;
+
+        // 三点圆弧创建方法
+        static makeThreePointArc(v1: gp_Pnt, v2: gp_Pnt, v3: gp_Pnt): Edge;
+
+        // 切线圆弧创建方法
+        static makeTangentArc(v1: gp_Pnt, tangent: gp_Vec, v3: gp_Pnt): Edge;
+
+        // 贝塞尔曲线创建方法
+        static makeBezier(points: gp_Pnt[]): Edge;
 
         // 几何操作
-        close(): Edge;
-        arcCenter(): Point;
+        close(): Wire | Edge;
+        arcCenter(): gp_Pnt;
         trim(u1: number, u2: number): Edge;
 
         // 类型方法
-        getGeom(): Geometry;
-        type(): string;
-        copy(): Edge;
+        getGeom(): Handle_Adaptor3d_Curve;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Edge;
     }
 
     class EdgeIterator {
@@ -590,13 +840,13 @@ declare module 'topo' {
 
         // 多边形创建方法
         static makePolygon(): Wire;
-        static makePolygon(p1: Point, p2: Point): Wire;
-        static makePolygon(p1: Point, p2: Point, p3: Point, close?: boolean): Wire;
-        static makePolygon(p1: Point, p2: Point, p3: Point, p4: Point, close?: boolean): Wire;
+        static makePolygon(p1: gp_Pnt, p2: gp_Pnt): Wire;
+        static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, close?: boolean): Wire;
+        static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt, close?: boolean): Wire;
         static makePolygon(v1: Vertex, v2: Vertex): Wire;
         static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, close?: boolean): Wire;
         static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, v4: Vertex, close?: boolean): Wire;
-        static makePolygon(points: Point[], close?: boolean, ordered?: boolean): Wire;
+        static makePolygon(points: gp_Pnt[], close?: boolean, ordered?: boolean): Wire;
 
         // 基础创建方法
         static makeWire(edge: Edge): Wire;
@@ -614,34 +864,33 @@ declare module 'topo' {
         static makeEllipse(majorRadius: number, minorRadius: number): Wire;
         static makeHelix(pitch: number, height: number): Wire;
         static combine(wires: Wire[]): Wire;
-        static makeWire(points: Point[][], curveTypes: WireCurveType[]): Wire;
+        static makeWire(points: gp_Pnt[][], curveTypes: WireCurveType[]): Wire;
 
         // 几何操作方法
-        stitch(tolerance?: number): Wire;
+        stitch(other: Wire): Wire;
         numEdges(): number;
-        vertices(): Vertex[];
         length(): number;
         convertToCurves3d(): void;
-        project(plane: Plane): Wire;
+        project(face: Face): number;
 
         // 值访问方法
         value(): TopoDS_Wire;
 
         // 类型方法
-        type(): string;
-        copy(): Wire;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
         close(): Wire;
 
         // 偏移和倒角操作
-        offset(distance: number): Wire;
-        fillet(radius: number): Wire;
-        chamfer(distance: number): Wire;
-        offset2d(distance: number): Wire;
-        fillet2d(radius: number): Wire;
-        chamfer2d(distance: number): Wire;
+        offset(distance: number, kind?: GeomAbs_JoinType): Wire;
+        fillet(vertices: Vertex[], radius: number[]): Wire;
+        chamfer(vertices: Vertex[], distances: number[]): Wire;
+        offset2d(distance: number, kind?: GeomAbs_JoinType): Wire;
+        fillet2d(radius: number, vertices: Vertex[]): Wire;
+        chamfer2d(distance: number, vertices: Vertex[]): Wire;
 
         // 几何操作方法
-        getGeom(): Geometry;
+        getGeom(): Handle_Adaptor3d_Curve;
     }
 
     class WireIterator {
@@ -650,6 +899,11 @@ declare module 'topo' {
         next(): Wire | null;
     }
 
+    enum BooleanOperationType {
+        FUSE = 'FUSE',
+        CUT = 'CUT',
+        COMMON = 'COMMON'
+    }
 
     class Face extends Shape {
         constructor();
@@ -657,29 +911,29 @@ declare module 'topo' {
 
         // 基础创建方法
         static makeFace(face: Face): Face;
-        static makeFace(plane: Plane): Face;
-        static makeFace(cylinder: Cylinder): Face;
-        static makeFace(cone: Cone): Face;
-        static makeFace(sphere: Sphere): Face;
-        static makeFace(torus: Torus): Face;
-        static makeFace(surface: Surface, tolerance?: number): Face;
+        static makeFace(plane: gp_Pln): Face;
+        static makeFace(cylinder: gp_Cylinder): Face;
+        static makeFace(cone: gp_Cone): Face;
+        static makeFace(sphere: gp_Sphere): Face;
+        static makeFace(torus: gp_Torus): Face;
+        static makeFace(surface: Handle_Geom_Surface, tolDegen: number): Face;
 
         // 带参数范围的创建方法
-        static makeFace(plane: Plane, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-        static makeFace(cylinder: Cylinder, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-        static makeFace(cone: Cone, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-        static makeFace(sphere: Sphere, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-        static makeFace(torus: Torus, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-        static makeFace(surface: Surface, uMin: number, uMax: number, vMin: number, vMax: number, tolerance?: number): Face;
+        static makeFace(plane: gp_Pln, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+        static makeFace(cylinder: gp_Cylinder, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+        static makeFace(cone: gp_Cone, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+        static makeFace(sphere: gp_Sphere, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+        static makeFace(torus: gp_Torus, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+        static makeFace(surface: Handle_Geom_Surface, uMin: number, uMax: number, vMin: number, vMax: number, tolerance?: number): Face;
 
         // 基于wire的创建方法
         static makeFace(wire: Wire, onlyPlane?: boolean): Face;
-        static makeFace(plane: Plane, wire: Wire, onlyPlane?: boolean): Face;
-        static makeFace(cylinder: Cylinder, wire: Wire, onlyPlane?: boolean): Face;
-        static makeFace(cone: Cone, wire: Wire, onlyPlane?: boolean): Face;
-        static makeFace(sphere: Sphere, wire: Wire, onlyPlane?: boolean): Face;
-        static makeFace(torus: Torus, wire: Wire, onlyPlane?: boolean): Face;
-        static makeFace(surface: Surface, wire: Wire, onlyPlane?: boolean): Face;
+        static makeFace(plane: gp_Pln, wire: Wire, onlyPlane?: boolean): Face;
+        static makeFace(cylinder: gp_Cylinder, wire: Wire, onlyPlane?: boolean): Face;
+        static makeFace(cone: gp_Cone, wire: Wire, onlyPlane?: boolean): Face;
+        static makeFace(sphere: gp_Sphere, wire: Wire, onlyPlane?: boolean): Face;
+        static makeFace(torus: gp_Torus, wire: Wire, onlyPlane?: boolean): Face;
+        static makeFace(surface: Handle_Geom_Surface, wire: Wire, onlyPlane?: boolean): Face;
         static makeFace(face: Face, wire: Wire): Face;
         static makeFace(face: Face, wire: Wire, otherWires: Wire[]): Face;
 
@@ -687,15 +941,15 @@ declare module 'topo' {
         static makeFace(e1: Edge, e2: Edge): Face;
         static makeFace(w1: Wire, w2: Wire): Face;
         static makeFace(wires: Wire[]): Face;
-        static makeFace(points: Point[]): Face;
-        static makeFace(edges: Edge[], points: Point[]): Face;
-        static makeFace(wire: Wire, otherWires: Wire[]): Face;
-        static makeFromWires(wires: Wire[]): Face;
+        static makeFace(points: gp_Pnt[]): Face;
+        static makeFace(edges: Edge[], points: gp_Pnt[]): Face;
+        static makeFace(outerWire: Wire, innerWires: Wire[]): Face;
+        static makeFromWires(outer: Wire, wires?: Wire[]): Face[];
 
         // 特殊创建方法
         static makeFace(
             edgesOrWires: Array<Edge | Wire>,
-            constraints: Array<Edge | Wire | Point>,
+            constraints: Array<Edge | Wire | gp_Pnt>,
             continuity?: GeomAbs_Shape,
             degree?: number,
             segments?: number,
@@ -709,48 +963,62 @@ declare module 'topo' {
             maxSegments?: number
         ): Face;
 
-        static makePlane(): Face;
-        static makeSplineApprox(points: Point[]): Face;
+        // 平面创建方法
+        static makePlane(
+            basePnt?: gp_Pnt,
+            dir?: gp_Dir,
+            length?: number,
+            width?: number
+        ): Face;
+
+        // 样条近似曲面创建方法
+        static makeSplineApprox(
+            points: gp_Pnt[][],
+            tolerance?: number,
+            smoothing?: [number, number, number],
+            minDegree?: number,
+            maxDegree?: number
+        ): Face;
 
         // 几何属性方法
         area(): number;
         tolerance(): number;
-        inertia(): [number, number, number];
-        centreOfMass(): Point;
-        center(): Point;
-        toPlane(): Plane;
+        inertia(): Bnd_Box;
+        centreOfMass(): gp_Pnt;
+        center(): gp_Pnt;
+        toPlane(): gp_Pln;
 
         // 参数化方法
         uvBounds(): [number, number, number, number];
-        paramAt(u: number, v: number): Point;
-        params(): [number[], number[]];
-        positionAt(u: number, v: number): Point;
-        positions(): Point[];
+        paramAt(pt: gp_Pnt): [number, number];
+        params(pts: gp_Pnt[], tolerance?: number): [number[], number[]];
+        positionAt(u: number, v: number): gp_Pnt;
+        positions(uvs: [number, number][]): gp_Pnt[];
 
         // 法线计算和偏移操作
-        normalAt(point?: Point): Vector;
-        normalAt(u: number, v: number): [Vector, Point];
-        normals(): Vector[];
-        offset(distance: number): Face;
+        normalAt(point?: gp_Pnt): gp_Vec;
+        normalAt(u: number, v: number): [gp_Vec, gp_Pnt];
+        normals(us: number[], vs: number[]): [gp_Vec[], gp_Pnt[]];
+        offset(distance: number, tolerance?: number): Face;
 
         // 几何变换方法
-        extrude(direction: Vector): Solid;
-        revolve(axis: Axis, angle?: number): Solid;
-        sweep(path: Wire): Solid;
-        loft(profiles: Wire[]): Solid;
+        extrude(shp: Shape, p1: gp_Pnt, p2: gp_Pnt): number;
+        revolve(shp: Shape, p1: gp_Pnt, p2: gp_Pnt, angle?: number): number;
+        sweep(spine: Wire, profiles: Shape[]): number;
+        loft(profiles: Shape[], ruled: boolean, tolerance: number): number;
 
         // 布尔运算和2D操作
         boolean(other: Face, op: BooleanOperationType): Face;
-        fillet2d(radius: number): Face;
-        chamfer2d(distance: number): Face;
+        fillet2d(radius: number, vertices: Vertex[]): Face;
+        chamfer2d(distance: number, vertices: Vertex[]): Face;
         thicken(thickness: number): Solid;
-        project(target: Shape): Wire;
+        project(face: Face, direction: gp_Vec): Face;
 
         // 其他操作方法
         toArcs(): Face;
-        trim(uMin: number, uMax: number, vMin: number, vMax: number): Face;
-        isoline(u: number, v: number): Wire;
-        isolines(): Wire[];
+        trim(uMin: number, uMax: number, vMin: number, vMax: number, tolerance?: number): Face;
+        isoline(param: number, direction?: string): Edge;
+        isolines(params: number[], direction?: string): Edge[];
 
         // 边界访问
         outerWire(): Wire;
@@ -758,9 +1026,9 @@ declare module 'topo' {
 
         // 值访问和类型方法
         value(): TopoDS_Face;
-        getGeom(): Surface;
-        type(): string;
-        copy(): Face;
+        getGeom(): Handle_Geom_Surface;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
     }
 
     class FaceIterator {
@@ -769,15 +1037,115 @@ declare module 'topo' {
         next(): Face | null;
     }
 
+    class Shell extends Shape {
+        constructor();
+        constructor(shape: TopoDS_Shape, forConstruction?: boolean);
+
+        // 基础创建方法
+        static makeShell(surface: Handle_Geom_Surface, segment?: boolean): Shell;
+        static makeShell(
+            surface: Handle_Geom_Surface,
+            uMin: number, uMax: number,
+            vMin: number, vMax: number,
+            segment?: boolean
+        ): Shell;
+
+        // 盒子创建方法
+        static makeShellFromBox(dx: number, dy: number, dz: number): Shell;
+        static makeShellFromBox(center: gp_Pnt, dx: number, dy: number, dz: number): Shell;
+        static makeShellFromBox(p1: gp_Pnt, p2: gp_Pnt): Shell;
+        static makeShellFromBox(axes: gp_Ax2, dx: number, dy: number, dz: number): Shell;
+
+        // 圆柱创建方法
+        static makeShellFromCylinder(radius: number, height: number): Shell;
+        static makeShellFromCylinder(radius: number, height: number, angle: number): Shell;
+        static makeShellFromCylinder(axes: gp_Ax2, radius: number, height: number): Shell;
+        static makeShellFromCylinder(axes: gp_Ax2, radius: number, height: number, angle: number): Shell;
+
+        // 圆锥创建方法
+        static makeShellFromCone(radius1: number, radius2: number, height: number): Shell;
+        static makeShellFromCone(radius1: number, radius2: number, height: number, angle: number): Shell;
+        static makeShellFromCone(axes: gp_Ax2, radius1: number, radius2: number, height: number): Shell;
+        static makeShellFromCone(axes: gp_Ax2, radius1: number, radius2: number, height: number, angle: number): Shell;
+
+        // 旋转体创建方法
+        static makeShellFromRevolution(meridian: Handle_Geom_Curve): Shell;
+        static makeShellFromRevolution(meridian: Handle_Geom_Curve, angle: number): Shell;
+        static makeShellFromRevolution(meridian: Handle_Geom_Curve, vMin: number, vMax: number): Shell;
+        static makeShellFromRevolution(meridian: Handle_Geom_Curve, vMin: number, vMax: number, angle: number): Shell;
+        static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve): Shell;
+        static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve, angle: number): Shell;
+        static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve, vMin: number, vMax: number): Shell;
+        static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve, vMin: number, vMax: number, angle: number): Shell;
+
+        // 球体创建方法
+        static makeShellFromSphere(radius: number): Shell;
+        static makeShellFromSphere(radius: number, angle: number): Shell;
+        static makeShellFromSphere(radius: number, angle1: number, angle2: number): Shell;
+        static makeShellFromSphere(radius: number, angle1: number, angle2: number, angle3: number): Shell;
+        static makeShellFromSphere(center: gp_Pnt, radius: number): Shell;
+        static makeShellFromSphere(center: gp_Pnt, radius: number, angle: number): Shell;
+        static makeShellFromSphere(center: gp_Pnt, radius: number, angle1: number, angle2: number): Shell;
+        static makeShellFromSphere(center: gp_Pnt, radius: number, angle1: number, angle2: number, angle3: number): Shell;
+        static makeShellFromSphere(axis: gp_Ax2, radius: number): Shell;
+        static makeShellFromSphere(axis: gp_Ax2, radius: number, angle: number): Shell;
+        static makeShellFromSphere(axis: gp_Ax2, radius: number, angle1: number, angle2: number): Shell;
+        static makeShellFromSphere(axis: gp_Ax2, radius: number, angle1: number, angle2: number, angle3: number): Shell;
+
+        // 圆环体创建方法
+        static makeShellFromTorus(radius1: number, radius2: number): Shell;
+        static makeShellFromTorus(radius1: number, radius2: number, angle: number): Shell;
+        static makeShellFromTorus(radius1: number, radius2: number, angle1: number, angle2: number): Shell;
+        static makeShellFromTorus(radius1: number, radius2: number, angle1: number, angle2: number, angle3: number): Shell;
+        static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number): Shell;
+        static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number, angle: number): Shell;
+        static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number, angle1: number, angle2: number): Shell;
+        static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number, angle1: number, angle2: number, angle3: number): Shell;
+
+        // 楔形体创建方法
+        static makeShellFromWedge(dx: number, dy: number, dz: number, ltx: number): Shell;
+        static makeShellFromWedge(axes: gp_Ax2, dx: number, dy: number, dz: number, ltx: number): Shell;
+        static makeShellFromWedge(dx: number, dy: number, dz: number, xMin: number, zMin: number, xMax: number, zMax: number): Shell;
+        static makeShellFromWedge(axes: gp_Ax2, dx: number, dy: number, dz: number, xMin: number, zMin: number, xMax: number, zMax: number): Shell;
+
+        // 几何操作方法
+        sweep(spine: Wire, profiles: Shape[], cornerMode: number): number;
+
+        // 值访问和类型方法
+        value(): TopoDS_Shell;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
+    }
+
+    class ShellIterator {
+        constructor(shape: Shape);
+        reset(): void;
+        next(): Shell | null;
+    }
+
     class Shape3D extends Shape {
         constructor();
         constructor(shape: TopoDS_Shape, forConstruction?: boolean);
         constructor(baseShape: Shape, shape: TopoDS_Shape);
 
         // 几何判断方法
-        isInside(point: Point): boolean;
+        isInside(point: gp_Pnt, tolerance?: number): boolean;
     }
 
+    class SweepMode {
+        constructor();
+        constructor(vec: Vector);
+        constructor(wire: Wire);
+        constructor(edge: Edge);
+
+        isVector(): boolean;
+        isWire(): boolean;
+        isEdge(): boolean;
+
+        getVector(): Vector;
+        getWire(): Wire;
+        getEdge(): Edge;
+    }
 
     class Solid extends Shape3D {
         constructor();
@@ -796,85 +1164,137 @@ declare module 'topo' {
 
         // 基本几何体创建方法 - 盒子
         static makeSolidFromBox(width: number, height: number, depth: number): Solid;
-        static makeSolidFromBox(center: Point, width: number, height: number, depth: number): Solid;
-        static makeSolidFromBox(p1: Point, p2: Point): Solid;
-        static makeSolidFromBox(axis: Axis, width: number, height: number, depth: number): Solid;
+        static makeSolidFromBox(center: gp_Pnt, width: number, height: number, depth: number): Solid;
+        static makeSolidFromBox(p1: gp_Pnt, p2: gp_Pnt): Solid;
+        static makeSolidFromBox(axis: gp_Ax2, width: number, height: number, depth: number): Solid;
 
         // 基本几何体创建方法 - 圆柱
         static makeSolidFromCylinder(radius: number, height: number, angle?: number): Solid;
-        static makeSolidFromCylinder(axis: Axis, radius: number, height: number): Solid;
-        static makeSolidFromCylinder(axis: Axis, radius: number, height: number, angle: number): Solid;
-        static makeSolidFromCylinder(radius: number, height: number, center: Point, direction: Vector, angle?: number): Solid;
+        static makeSolidFromCylinder(axis: gp_Ax2, radius: number, height: number): Solid;
+        static makeSolidFromCylinder(axis: gp_Ax2, radius: number, height: number, angle: number): Solid;
+        static makeSolidFromCylinder(radius: number, height: number, center: gp_Pnt, direction: Vector, angle?: number): Solid;
 
         // 基本几何体创建方法 - 圆锥
-        static makeSolidFromCone(radius1: number, radius2: number, height: number, center: Point, direction: Vector, angle?: number): Solid;
+        static makeSolidFromCone(radius1: number, radius2: number, height: number, center: gp_Pnt, direction: Vector, angle?: number): Solid;
         static makeSolidFromCone(radius1: number, radius2: number, height: number, angle?: number): Solid;
-        static makeSolidFromCone(axis: Axis, radius1: number, radius2: number, height: number): Solid;
-        static makeSolidFromCone(axis: Axis, radius1: number, radius2: number, height: number, angle: number): Solid;
+        static makeSolidFromCone(axis: gp_Ax2, radius1: number, radius2: number, height: number): Solid;
+        static makeSolidFromCone(axis: gp_Ax2, radius1: number, radius2: number, height: number, angle: number): Solid;
 
 
         // 旋转体创建方法
-        static makeSolidFromRevolution(curve: Curve): Solid;
-        static makeSolidFromRevolution(curve: Curve, angle: number): Solid;
-        static makeSolidFromRevolution(curve: Curve, angle1: number, angle2: number): Solid;
-        static makeSolidFromRevolution(curve: Curve, angle1: number, angle2: number, angle3: number): Solid;
-        static makeSolidFromRevolution(axis: Axis, curve: Curve): Solid;
-        static makeSolidFromRevolution(axis: Axis, curve: Curve, angle: number): Solid;
-        static makeSolidFromRevolution(axis: Axis, curve: Curve, angle1: number, angle2: number): Solid;
-        static makeSolidFromRevolution(axis: Axis, curve: Curve, angle1: number, angle2: number, angle3: number): Solid;
+        static makeSolidFromRevolution(curve: Handle_Geom_Curve): Solid;
+        static makeSolidFromRevolution(curve: Handle_Geom_Curve, angle: number): Solid;
+        static makeSolidFromRevolution(curve: Handle_Geom_Curve, angle1: number, angle2: number): Solid;
+        static makeSolidFromRevolution(curve: Handle_Geom_Curve, angle1: number, angle2: number, angle3: number): Solid;
+        static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve): Solid;
+        static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve, angle: number): Solid;
+        static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve, angle1: number, angle2: number): Solid;
+        static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve, angle1: number, angle2: number, angle3: number): Solid;
 
         // 球体创建方法
         static makeSolidFromSphere(radius: number): Solid;
         static makeSolidFromSphere(radius: number, angle: number): Solid;
         static makeSolidFromSphere(radius: number, angle1: number, angle2: number): Solid;
         static makeSolidFromSphere(radius: number, angle1: number, angle2: number, angle3: number): Solid;
-        static makeSolidFromSphere(center: Point, radius: number): Solid;
-        static makeSolidFromSphere(center: Point, radius: number, angle: number): Solid;
-        static makeSolidFromSphere(center: Point, radius: number, angle1: number, angle2: number): Solid;
-        static makeSolidFromSphere(center: Point, radius: number, angle1: number, angle2: number, angle3: number): Solid;
-        static makeSolidFromSphere(axis: Axis, radius: number): Solid;
-        static makeSolidFromSphere(axis: Axis, radius: number, angle: number): Solid;
-        static makeSolidFromSphere(axis: Axis, radius: number, angle1: number, angle2: number): Solid;
-        static makeSolidFromSphere(axis: Axis, radius: number, angle1: number, angle2: number, angle3: number): Solid;
+        static makeSolidFromSphere(center: gp_Pnt, radius: number): Solid;
+        static makeSolidFromSphere(center: gp_Pnt, radius: number, angle: number): Solid;
+        static makeSolidFromSphere(center: gp_Pnt, radius: number, angle1: number, angle2: number): Solid;
+        static makeSolidFromSphere(center: gp_Pnt, radius: number, angle1: number, angle2: number, angle3: number): Solid;
+        static makeSolidFromSphere(axis: gp_Ax2, radius: number): Solid;
+        static makeSolidFromSphere(axis: gp_Ax2, radius: number, angle: number): Solid;
+        static makeSolidFromSphere(axis: gp_Ax2, radius: number, angle1: number, angle2: number): Solid;
+        static makeSolidFromSphere(axis: gp_Ax2, radius: number, angle1: number, angle2: number, angle3: number): Solid;
 
         // 圆环体创建方法
         static makeSolidFromTorus(majorRadius: number, minorRadius: number): Solid;
         static makeSolidFromTorus(majorRadius: number, minorRadius: number, angle: number): Solid;
         static makeSolidFromTorus(majorRadius: number, minorRadius: number, angle1: number, angle2: number): Solid;
         static makeSolidFromTorus(majorRadius: number, minorRadius: number, angle1: number, angle2: number, angle3: number): Solid;
-        static makeSolidFromTorus(axis: Axis, majorRadius: number, minorRadius: number): Solid;
-        static makeSolidFromTorus(axis: Axis, majorRadius: number, minorRadius: number, angle: number): Solid;
-        static makeSolidFromTorus(axis: Axis, majorRadius: number, minorRadius: number, angle1: number, angle2: number): Solid;
+        static makeSolidFromTorus(axis: gp_Ax2, majorRadius: number, minorRadius: number): Solid;
+        static makeSolidFromTorus(axis: gp_Ax2, majorRadius: number, minorRadius: number, angle: number): Solid;
+        static makeSolidFromTorus(axis: gp_Ax2, majorRadius: number, minorRadius: number, angle1: number, angle2: number): Solid;
 
         // 楔形体创建方法
         static makeSolidFromWedge(width: number, height: number, depth: number, taper: number): Solid;
-        static makeSolidFromWedge(axis: Axis, width: number, height: number, depth: number, taper: number): Solid;
+        static makeSolidFromWedge(axis: gp_Ax2, width: number, height: number, depth: number, taper: number): Solid;
         static makeSolidFromWedge(width: number, height: number, depth: number, xTaper: number, yTaper: number, zTaper: number, offset: number): Solid;
-        static makeSolidFromWedge(axis: Axis, width: number, height: number, depth: number, xTaper: number, yTaper: number, zTaper: number, offset: number): Solid;
+        static makeSolidFromWedge(axis: gp_Ax2, width: number, height: number, depth: number, xTaper: number, yTaper: number, zTaper: number, offset: number): Solid;
+
+        // 放样创建方法
+        static makeSolidFromLoft(wires: Wire[], ruled?: boolean): Solid;
+
+        // 外壳访问方法
+        outerShell(): Shell;
+        innerShells(): Shell[];
 
         // 几何操作方法
-        extrude(direction: Vector, distance: number): Solid;
-        revolve(axis: Axis, angle: number): Solid;
-        sweep(path: Wire): Solid;
-        loft(profiles: Wire[]): Solid;
+        extrudeWithRotation(wire: Wire, innerWires: Wire[], center: gp_Pnt, normal: Vector, angleDegrees: number): Solid;
+        extrudeWithRotation(face: Face, center: gp_Pnt, normal: Vector, angleDegrees: number): Solid;
+        extrude(wire: Wire, innerWires: Wire[], direction: Vector, taper?: number): Solid;
+        extrude(face: Face, p1: gp_Pnt, p2: gp_Pnt): Solid;
+        extrude(face: Face, direction: Vector, taper?: number): Solid;
+        revolve(face: Face, p1: gp_Pnt, p2: gp_Pnt, angle: number): Solid;
+        revolve(wire: Wire, innerWires: Wire[], angleDegrees: number, axisStart: gp_Pnt, axisEnd: gp_Pnt): Solid;
+        revolve(face: Face, angleDegrees: number, axisStart: gp_Pnt, axisEnd: gp_Pnt): Solid;
+        loft(profiles: Shape[], ruled?: boolean, tolerance?: number): Solid;
+        pipe(face: Face, wire: Wire): Solid;
+
+        sweep(spine: Wire, profiles: { profile: Shape, index: number }[], cornerMode: number): Solid;
+        sweep(spine: Wire, profiles: Shape[], cornerMode: number): Solid;
+        sweep(outerWire: Wire, innerWires: Wire[], path: TopoDS_Shape, makeSolid?: boolean, isFrenet?: boolean,
+            mode?: SweepMode, transitionMode?: string): Solid;
+        sweep(face: Face, path: TopoDS_Shape, makeSolid?: boolean, isFrenet?: boolean,
+            mode?: SweepMode, transitionMode?: string): Solid;
+        sweepMulti(profiles: Array<Wire | Face>, path: TopoDS_Shape, makeSolid?: boolean,
+            isFrenet?: boolean, mode?: SweepMode): Solid;
+
+        // 布尔运算和特征操作
+        split(splitters: Shape[]): Solid;
+        fillet(edges: Edge[], radius: number[]): Solid;
+        chamfer(edges: Edge[], distances: number[]): Solid;
+        shelling(faces: Face[], offset: number, tolerance?: number): Solid;
+        offset(face: Face, offset: number, tolerance?: number): Solid;
+        draft(faces: Face[], direction: Vector, angle: number, plane: gp_Pln): Solid;
+        evolved(spine: Face, profile: Wire): Solid;
+        evolved(spine: Wire, profile: Wire): Solid;
+
+        // 特征操作
+        featPrism(face: Face, direction: Vector, height: number, fuse?: boolean): Solid;
+        featPrism(face: Face, direction: Vector, from: Face, end: Face, fuse?: boolean): Solid;
+        featPrism(face: Face, direction: Vector, until: Face, fuse?: boolean): Solid;
+        featDraftPrism(face: Face, angle: number, height: number, fuse?: boolean): Solid;
+        featDraftPrism(face: Face, angle: number, from: Face, end: Face, fuse?: boolean): Solid;
+        featDraftPrism(face: Face, angle: number, until: Face, fuse?: boolean): Solid;
+        featRevol(face: Face, axis: gp_Ax1, from: Face, end: Face, fuse?: boolean): Solid;
+        featRevol(face: Face, axis: gp_Ax1, until: Face, fuse?: boolean): Solid;
+        featPipe(face: Face, spine: Wire, from: Face, end: Face, fuse?: boolean): Solid;
+        featPipe(face: Face, spine: Wire, until: Face, fuse?: boolean): Solid;
+
+        // 线性形式和旋转形式
+        linearForm(wire: Wire, plane: Handle_Geom_Plane, direction: Vector, direction1: Vector, fuse?: boolean): Solid;
+        revolutionForm(wire: Wire, plane: Handle_Geom_Plane, axis: gp_Ax1, h1: number, h2: number, fuse?: boolean): Solid;
 
         // 布尔运算方法
-        boolean(other: Solid, op: BooleanOperationType): Solid;
+        boolean(tool: Solid, op: BooleanOperationType): Solid;
         union(other: Solid): Solid;
         subtract(other: Solid): Solid;
         intersect(other: Solid): Solid;
 
         // 几何属性方法
         volume(): number;
-        centerOfMass(): Point;
+        centerOfMass(): gp_Pnt;
         boundingBox(): BBox;
+
+        // 截面和转换方法
+        section(point: gp_Pnt, normal: gp_Pnt): Face | null;
+        convertToNurbs(): Solid;
 
         // 值访问方法
         value(): TopoDS_Solid;
 
         // 类型方法
-        type(): string;
-        copy(): Solid;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
     }
 
     class SolidIterator {
@@ -882,7 +1302,6 @@ declare module 'topo' {
         reset(): void;
         next(): Solid | null;
     }
-
 
     class Compound extends Shape3D {
         constructor();
@@ -894,19 +1313,396 @@ declare module 'topo' {
         static makeCompound(shapes: Shape[]): Compound;
 
         // 布尔运算方法
-        cut(other: Shape): Compound;
-        fuse(other: Shape): Compound;
-        intersect(other: Shape): Compound;
+        cut(toCut: Shape[], tol?: number): Compound;
+        fuse(toFuse: Shape[], glue?: boolean, tol?: number): Compound;
+        intersect(toIntersect: Shape[], tol?: number): Compound;
 
         // 几何操作方法
         remove(shape: Shape): Compound;
-        ancestors(shape: Shape): Shape[];
-        siblings(shape: Shape): Shape[];
+        ancestors(shape: Shape, kind: TopAbs_ShapeEnum): Shape[];
+        siblings(shape: Shape, kind: TopAbs_ShapeEnum, level?: number): Shape[];
 
         // 值访问和类型方法
         value(): TopoDS_Compound;
-        type(): string;
-        copy(): Compound;
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
     }
 
+    class CompoundIterator {
+        constructor(shape: Shape);
+        reset(): void;
+        next(): Compound | null;
+    }
+
+    class CompSolid extends Solid {
+        constructor();
+        constructor(shape: TopoDS_Shape, forConstruction?: boolean);
+        constructor(baseShape: Shape, shape: TopoDS_Shape);
+
+        // 基础创建方法
+        static makeCompSolid(solids: Solid[]): CompSolid;
+
+        // 值访问方法
+        value(): TopoDS_CompSolid;
+
+        // 类型方法
+        type(): GeometryObjectType;
+        copy(deep?: boolean): Shape;
+    }
+
+    class CompSolidIterator {
+        constructor(shape: Shape);
+        reset(): void;
+        next(): CompSolid | null;
+    }
+
+    class Mesh {
+        constructor();
+        constructor(shape: TopoDS_Shape);
+        constructor(shape: Shape);
+        constructor(doc: Handle_TDocStd_Document);
+
+        // 形状映射方法
+        mapShapes(): void;
+        mapShape(shape: TopoDS_Shape): void;
+        mapShape(shape: Shape): void;
+        mapShape(shapes: Shape[]): void;
+
+        // 三角化方法
+        triangulation(receiver: MeshReceiver, deflection?: number, tolerance?: number): void;
+    }
+
+    class Selector {
+        constructor();
+        filter(): Shape[];
+        static and(selector1: Selector, selector2: Selector): Selector;
+        static or(selector1: Selector, selector2: Selector): Selector;
+        static subtract(selector1: Selector, selector2: Selector): Selector;
+        static not(selector: Selector): Selector;
+    }
+
+    class CustomSelector extends Selector {
+        constructor(filterFunc: (shapes: Shape[]) => Shape[]);
+    }
+
+    class NearestToPointSelector extends Selector {
+        constructor(vector: Vector);
+    }
+
+    class BoxSelector extends Selector {
+        constructor(min: Vector, max: Vector, includeEdges?: boolean);
+    }
+
+    class TypeSelector extends Selector {
+        constructor(type: GeometryObjectType);
+    }
+
+    class DirectionSelector extends Selector {
+        constructor(direction: Vector, tolerance?: number);
+    }
+
+    class ParallelDirSelector extends DirectionSelector {
+        constructor(direction: Vector, tolerance?: number);
+    }
+
+    class DirSelector extends DirectionSelector {
+        constructor(direction: Vector, tolerance?: number);
+    }
+
+    class PerpendicularDirSelector extends DirectionSelector {
+        constructor(direction: Vector, tolerance?: number);
+    }
+
+    class NthSelector extends Selector {
+        constructor(n: number, reverse?: boolean, tolerance?: number);
+    }
+
+    class RadiusNthSelector extends NthSelector {
+        constructor(n: number, reverse?: boolean, tolerance?: number);
+    }
+
+    class CenterNthSelector extends NthSelector {
+        constructor(center: Vector, n: number, reverse?: boolean, tolerance?: number);
+    }
+
+    class DirectionMinmaxSelector extends CenterNthSelector {
+        constructor(direction: Vector, reverse?: boolean, tolerance?: number);
+    }
+
+    class DirectionNthSelector extends Selector {
+        constructor(direction: Vector, n: number, reverse?: boolean, tolerance?: number);
+    }
+
+    class LengthNthSelector extends NthSelector {
+        constructor(n: number, reverse?: boolean, tolerance?: number);
+    }
+
+    class AreaNthSelector extends NthSelector {
+        constructor(n: number, reverse?: boolean, tolerance?: number);
+    }
+
+    class BinarySelector extends Selector {
+        constructor(selector1: Selector, selector2: Selector);
+    }
+
+    class AndSelector extends BinarySelector {
+        constructor(selector1: Selector, selector2: Selector);
+    }
+
+    class OrSelector extends BinarySelector {
+        constructor(selector1: Selector, selector2: Selector);
+    }
+
+    class SubtractSelector extends BinarySelector {
+        constructor(selector1: Selector, selector2: Selector);
+    }
+
+    class NotSelector extends Selector {
+        constructor(selector: Selector);
+    }
+
+    class StringSyntaxSelector extends Selector {
+        constructor(syntax: string);
+    }
+
+    enum IntersectionDirection {
+        None = 0,
+        AlongAxis = 1,
+        Opposite = 2
+    }
+
+    enum TransitionMode {
+        TRANSFORMED = 0,
+        ROUND = 1,
+        RIGHT = 2
+    }
+
+    enum JoinType {
+        Arc = 0,
+        Tangent = 1,
+        Intersection = 2
+    }
+
+    interface WireSamplePoint {
+        position: gp_Pnt;
+        tangent: gp_Vec;
+        edge: Edge;
+    }
+
+    interface ProfileProjection {
+        axes: gp_Ax2;
+        trsf: gp_Trsf;
+        tangent: gp_Vec;
+        position: gp_Pnt;
+    }
+
+    class ShapeOps {
+        static fuse(shapes: Shape[], tol?: number, glue?: boolean): Shape | null;
+
+        static cut(shp: Shape, tool: Shape, tol?: number, glue?: boolean): Shape | null;
+        static cut(shp: Shape, toCuts: Shape[], tol?: number, glue?: boolean): Shape | null;
+
+        static intersect(shp: Shape, toIntersect: Shape, tol?: number, glue?: boolean): Shape | null;
+        static intersect(shp: Shape, toIntersects: Shape[], tol?: number, glue?: boolean): Shape | null;
+
+        static split(shp: Shape, splitters: Shape[], tol?: number): Shape | null;
+        static split(shp: Shape, splitters: Shape, tol?: number): Shape | null;
+
+        static facesIntersectedByLine(
+            shp: Shape,
+            point: gp_Pnt,
+            axis: gp_Dir,
+            tolerance?: number,
+            direction?: IntersectionDirection
+        ): Face[];
+
+        static fill(shp: Shape, constraints?: Shape[]): Shape | null;
+
+        static shelling(
+            shp: Shape,
+            faceList: Face[],
+            thickness: number,
+            tolerance?: number,
+            joinType?: JoinType
+        ): Shape | null;
+
+        static fillet(shp: Shape, edges: Edge[], radius: number): Shape | null;
+
+        static chamfer(
+            baseShape: Shape,
+            edges: Edge[],
+            distance: number,
+            distance2?: number | null
+        ): Shape | null;
+
+        static extrude(shape: Shape, direction: gp_Vec): Shape | null;
+
+        static extrudeLinear(
+            outerWire: Wire,
+            innerWires: Wire[],
+            vecNormal: gp_Vec,
+            taper?: number
+        ): Shape | null;
+
+        static extrudeLinear(
+            f: Face,
+            vecNormal: gp_Vec,
+            taper?: number
+        ): Shape | null;
+
+        static extrudeLinearWithRotation(
+            outerWire: Wire,
+            innerWires: Wire[],
+            center: gp_Pnt,
+            normal: gp_Vec,
+            angleDegrees: number
+        ): Shape | null;
+
+        static extrudeLinearWithRotation(
+            face: Face,
+            center: gp_Pnt,
+            normal: gp_Vec,
+            angleDegrees: number
+        ): Shape | null;
+
+        static revolve(
+            shape: Shape,
+            axisPoint: gp_Pnt,
+            axisDirection: gp_Dir,
+            angleDegrees?: number
+        ): Shape | null;
+
+        static revolve(
+            outerWire: Wire,
+            innerWires: Wire[],
+            angleDegrees: number,
+            axisStart: gp_Pnt,
+            axisEnd: gp_Pnt
+        ): Shape | null;
+
+        static revolve(
+            f: Face,
+            angleDegrees: number,
+            axisStart: gp_Pnt,
+            axisEnd: gp_Pnt
+        ): Shape | null;
+
+        static offset(
+            shape: Shape,
+            offset: number,
+            cap?: boolean,
+            both?: boolean,
+            tol?: number
+        ): Shape | null;
+
+        static sweep(
+            outerWire: Wire,
+            innerWires: Wire[],
+            path: Shape,
+            makeSolid?: boolean,
+            isFrenet?: boolean,
+            mode?: Shape | null,
+            transitionMode?: TransitionMode
+        ): Shape | null;
+
+        static sweep(
+            face: Face,
+            path: Shape,
+            makeSolid?: boolean,
+            isFrenet?: boolean,
+            mode?: Shape | null,
+            transitionMode?: TransitionMode
+        ): Shape | null;
+
+        static sweepMulti(
+            profiles: Shape[],
+            path: Shape,
+            makeSolid?: boolean,
+            isFrenet?: boolean,
+            mode?: Shape | null
+        ): Shape | null;
+
+        static loft(
+            profiles: Shape[],
+            cap?: boolean,
+            ruled?: boolean,
+            continuity?: string,
+            parametrization?: string,
+            degree?: number,
+            compat?: boolean,
+            smoothing?: boolean,
+            weights?: [number, number, number]
+        ): Shape | null;
+
+        static loft(
+            faceProfiles: Face[],
+            continuity?: string
+        ): Shape | null;
+
+        static dprism(
+            shp: Shape,
+            basis: Face,
+            profiles: Wire[],
+            depth?: number | null,
+            taper?: number,
+            upToFace?: Face | null,
+            thruAll?: boolean,
+            additive?: boolean
+        ): Shape | null;
+
+        static dprism(
+            shp: Shape,
+            basis: Face,
+            faces: Face[],
+            depth?: number | null,
+            taper?: number,
+            upToFace?: Face | null,
+            thruAll?: boolean,
+            additive?: boolean
+        ): Shape | null;
+
+        static imprint(
+            shapes: Shape[],
+            tol?: number,
+            glue?: boolean,
+            history?: Map<string, Shape> | null
+        ): Shape | null;
+
+        static clean(shape: Shape): Shape | null;
+
+        static check(
+            shp: Shape,
+            results?: [Shape[], BOPAlgo_CheckStatus][] | null,
+            tol?: number
+        ): boolean;
+
+        static closest(shape1: Shape, shape2: Shape): [gp_Pnt, gp_Pnt];
+
+        static combinedCenter(objects: Shape[]): gp_Pnt;
+
+        static combinedCenterOfBoundBox(objects: Shape[]): gp_Pnt;
+
+        static readShapeFromStep(filename: string): Shape;
+
+        static sampleWireAtDistances(
+            wirePath: Wire,
+            distances: number[]
+        ): WireSamplePoint[];
+
+        static clipWireBetweenDistances(
+            wirePath: Wire,
+            startDistance: number,
+            endDistance: number
+        ): Wire;
+
+        static calcProfileProjection(
+            path: Wire,
+            upDir: gp_Dir,
+            offset?: number | null
+        ): ProfileProjection;
+
+        static profileProjectPoint(proj: ProfileProjection, point: gp_Pnt): gp_Pnt;
+
+        static wireLength(path: Wire): number;
+    }
 }
