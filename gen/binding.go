@@ -118,6 +118,7 @@ var occtEnumTypes = map[string]bool{
 	"XCAFDimTolObjects_DatumTargetType":        true,
 	"XCAFDimTolObjects_DimensionQualifier":     true,
 	"XCAFDimTolObjects_GeomToleranceTypeValue": true,
+	"StepData_Logical":                         true,
 }
 
 var cStringTypes = []string{
