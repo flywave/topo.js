@@ -80,8 +80,44 @@ var builtInTypes = map[string]bool{
 }
 
 var occtEnumTypes = map[string]bool{
-	"Quantity_NameOfColor": true,
-	"Aspect_TypeOfLine":    true,
+	"Quantity_NameOfColor":                     true,
+	"Aspect_TypeOfLine":                        true,
+	"IntImp_ConstIsoparametric":                true,
+	"TopAbs_Orientation":                       true,
+	"GeomAbs_Shape":                            true,
+	"TopAbs_State":                             true,
+	"BRepOffset_Status":                        true,
+	"GeomAbs_BSplKnotDistribution":             true,
+	"Convert_ParameterisationType":             true,
+	"CSLib_DerivativeStatus":                   true,
+	"CSLib_NormalStatus":                       true,
+	"FairCurve_AnalysisCode":                   true,
+	"Font_FontAspect":                          true,
+	"GccEnt_Position":                          true,
+	"Graphic3d_DisplayPriority":                true,
+	"Graphic3d_NameOfMaterial":                 true,
+	"Interface_ParamType":                      true,
+	"IGESData_Status":                          true,
+	"IFSelect_SelectDeduct":                    true,
+	"IFSelect_SelectControl":                   true,
+	"IFSelect_SelectBase":                      true,
+	"IntCurveSurface_TransitionOnCurve":        true,
+	"IntRes2d_Position":                        true,
+	"Intf_SectionPoint":                        true,
+	"Intf_PIType":                              true,
+	"RecordType":                               true,
+	"Message_MetricType":                       true,
+	"Message_Gravity":                          true,
+	"OSD_SingleProtection":                     true,
+	"PrsDim_KindOfSurface":                     true,
+	"DsgPrs_ArrowSide":                         true,
+	"StepBasic_SiPrefix":                       true,
+	"StepBasic_SiUnitName":                     true,
+	"XCAFDimTolObjects_DimensionFormVariance":  true,
+	"XCAFDimTolObjects_DimensionType":          true,
+	"XCAFDimTolObjects_DatumTargetType":        true,
+	"XCAFDimTolObjects_DimensionQualifier":     true,
+	"XCAFDimTolObjects_GeomToleranceTypeValue": true,
 }
 
 var cStringTypes = []string{
@@ -132,7 +168,7 @@ func NewBindings(workDir string, typedefs, templateTypedefs []clang.Cursor, tu c
 	}
 }
 
-func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templateDecl clang.Cursor, templateArgs map[string]clang.Type) string {
+func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templateDecl clang.Cursor, templateArgs map[string]clang.Type, className string) string {
 	if templateDecl.IsNull() {
 		for _, typedef := range b.typedefs {
 			loc := typedef.Location()
@@ -156,6 +192,14 @@ func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templat
 			}
 		}
 		return templateType
+	}
+	if className != "" {
+		if strings.Contains(typeSpelling, "OptionsForAttach") && !strings.Contains(typeSpelling, "::") {
+			return strings.Replace(typeSpelling, "OptionsForAttach", className+"::OptionsForAttach", 1)
+		}
+		if strings.HasPrefix(typeSpelling, "Iterator") && !strings.Contains(typeSpelling, "::") {
+			return strings.Replace(typeSpelling, "Iterator", className+"::Iterator", 1)
+		}
 	}
 	return typeSpelling
 }
@@ -322,7 +366,7 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	return output
 }
 
-func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor bool, templateDecl clang.Cursor, templateArgs map[string]clang.Type) func(clang.Cursor) (string, bool) {
+func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor bool, templateDecl clang.Cursor, templateArgs map[string]clang.Type, className string) func(clang.Cursor) (string, bool) {
 	return func(arg clang.Cursor) (string, bool) {
 		var argChildren []clang.Cursor
 
@@ -370,8 +414,27 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 			argBinding = constStr + argChildren[0].Type().Spelling() + " (&" + pick(argNames, arg.Spelling(), "") + ")[" + arrayCount + "]"
 			changed = true
 		} else {
-			typename := e.getTypedefedTemplateTypeAsString(arg.Type().Spelling(), templateDecl, templateArgs)
-
+			typename := e.getTypedefedTemplateTypeAsString(arg.Type().Spelling(), templateDecl, templateArgs, className)
+			if className != "" {
+				if strings.HasPrefix(typename, "Iterator") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "Iterator", className+"::Iterator", 1)
+				}
+				if strings.HasPrefix(typename, "const Target &") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "Target", className+"::Target", 1)
+				}
+				if strings.HasPrefix(typename, "const Point &") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "Point", className+"::Point", 1)
+				}
+				if strings.HasPrefix(typename, "const ShaderVariableList &") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "ShaderVariableList", className+"::ShaderVariableList", 1)
+				}
+				if strings.HasPrefix(typename, "const NullString *") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "NullString", className+"::NullString", 1)
+				}
+				if strings.HasPrefix(typename, "const BVHSubset") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "BVHSubset", className+"::BVHSubset", 1)
+				}
+			}
 			if arg.Type().Kind() == clang.Type_LValueReference {
 				isConstRef := arg.Type().IsConstQualifiedType()
 				if !isConstRef {
@@ -391,6 +454,7 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 					}
 				}
 			}
+
 			argBinding = typename + pick(argNames, " "+arg.Spelling(), "")
 		}
 		return argBinding, changed
@@ -453,7 +517,28 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 						return strings.Replace(argType.Spelling(), pointeeSpelling, replacement.Spelling(), 1)
 					}
 				}
-				return argType.Spelling()
+				typename := argType.Spelling()
+				if className != "" {
+					if strings.HasPrefix(typename, "Iterator") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "Iterator", className+"::Iterator", 1)
+					}
+					if strings.HasPrefix(typename, "const Target &") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "Target", className+"::Target", 1)
+					}
+					if strings.HasPrefix(typename, "const Point &") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "Point", className+"::Point", 1)
+					}
+					if strings.HasPrefix(typename, "const ShaderVariableList &") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "ShaderVariableList", className+"::ShaderVariableList", 1)
+					}
+					if strings.HasPrefix(typename, "const NullString *") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "NullString", className+"::NullString", 1)
+					}
+					if strings.HasPrefix(typename, "const BVHSubset") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "BVHSubset", className+"::BVHSubset", 1)
+					}
+				}
+				return typename
 			}
 
 			getArgName := func(i int) string {
@@ -489,7 +574,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			}
 
 			// Generate function binding
-			resultTypeSpelling := b.getTypedefedTemplateTypeAsString(method.ResultType().Spelling(), templateDecl, templateArgs)
+			resultTypeSpelling := b.getTypedefedTemplateTypeAsString(method.ResultType().Spelling(), templateDecl, templateArgs, className)
 			if returnNeedsWrapper {
 				resultTypeSpelling = "emscripten::val"
 			}
@@ -598,7 +683,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 					if method.ResultType().Kind() == clang.Type_Pointer {
 						returnType := "std::string"
 						if !isCString(method.ResultType()) {
-							returnType = b.getTypedefedTemplateTypeAsString(method.ResultType().Spelling(), templateDecl, templateArgs)
+							returnType = b.getTypedefedTemplateTypeAsString(method.ResultType().Spelling(), templateDecl, templateArgs, className)
 						}
 						functionBinding.WriteString(indent(4))
 						functionBinding.WriteString(fmt.Sprintf(
@@ -626,12 +711,12 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			} else {
 				var params []string
 				for _, arg := range args {
-					binding, _ := b.getSingleArgumentBinding(true, true, templateDecl, templateArgs)(arg)
+					binding, _ := b.getSingleArgumentBinding(true, true, templateDecl, templateArgs, className)(arg)
 					params = append(params, binding)
 				}
 
 				overloadSpec := fmt.Sprintf("<%s(%s)",
-					b.getTypedefedTemplateTypeAsString(method.ResultType().Spelling(), templateDecl, templateArgs),
+					b.getTypedefedTemplateTypeAsString(method.ResultType().Spelling(), templateDecl, templateArgs, className),
 					strings.Join(params, ", "))
 
 				if method.CXXMethod_IsConst() {
@@ -739,10 +824,10 @@ func (e *EmbindBindings) processOverloadedConstructors(theClass clang.Cursor, te
 				argNames = append(argNames, arg.Spelling()+".c_str()")
 				argTypes = append(argTypes, "std::string")
 			} else {
-				binding, _ := e.getSingleArgumentBinding(true, true, templateDecl, templateArgs)(arg)
+				binding, _ := e.getSingleArgumentBinding(true, true, templateDecl, templateArgs, theClass.Spelling())(arg)
 				args = append(args, binding)
 				argNames = append(argNames, arg.Spelling())
-				binding, _ = e.getSingleArgumentBinding(false, true, templateDecl, templateArgs)(arg)
+				binding, _ = e.getSingleArgumentBinding(false, true, templateDecl, templateArgs, theClass.Spelling())(arg)
 				argTypes = append(argTypes, binding)
 
 				if strings.HasPrefix(binding, "const T *") {
@@ -901,7 +986,7 @@ func (t *TypescriptBindings) getTypescriptDefFromResultType(res clang.Type, temp
 	if res.Spelling() != "void" {
 		typedefType := t.getTypedefedTemplateTypeAsString(
 			strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(res.Spelling(), "&", ""), "const", "")),
-			templateDecl, templateArgs)
+			templateDecl, templateArgs, "")
 		resTypeName := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(typedefType, "&", ""), "const", ""))
 		resTypeName = t.convertBuiltinTypes(resTypeName)
 		if resTypeName == "" || strings.Contains(resTypeName, "(") ||
@@ -922,7 +1007,7 @@ func (t *TypescriptBindings) getTypescriptDefFromArg(arg clang.Cursor, suffix ..
 
 	argTypeName := t.getTypedefedTemplateTypeAsString(
 		strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(arg.Type().Spelling(), "&", ""), "const", "")),
-		clang.NewNullCursor(), nil)
+		clang.NewNullCursor(), nil, "")
 	argTypeName = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(argTypeName, "&", ""), "const", ""))
 	argTypeName = t.convertBuiltinTypes(argTypeName)
 	if argTypeName == "" || strings.Contains(argTypeName, "(") || strings.Contains(argTypeName, ":") {

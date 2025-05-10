@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -48,9 +47,7 @@ func RunBuild(workDir string, filename string) error {
 		return err
 	}
 
-	libraryBasePath := path.Join(workDir, "src")
-
-	if err := os.RemoveAll(libraryBasePath + "/bindings/myMain.h"); err != nil && !os.IsNotExist(err) {
+	if err := os.RemoveAll(workDir + "/bindings/myMain.h"); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -63,27 +60,27 @@ func RunBuild(workDir string, filename string) error {
 		return err
 	}
 
-	if err := verifyBindings(buildConfig.MainBuild.Bindings, libraryBasePath); err != nil {
+	if err := verifyBindings(buildConfig.MainBuild.Bindings, workDir); err != nil {
 		return err
 	}
 
 	for _, extraBuild := range buildConfig.ExtraBuilds {
-		if err := verifyBindings(extraBuild.Bindings, libraryBasePath); err != nil {
+		if err := verifyBindings(extraBuild.Bindings, workDir); err != nil {
 			return err
 		}
 	}
 
-	typescriptDefinitions, err := collectTypescriptDefs(buildConfig, libraryBasePath)
+	typescriptDefinitions, err := collectTypescriptDefs(buildConfig, workDir)
 	if err != nil {
 		return err
 	}
 
-	if err := runBuild(workDir, buildConfig.MainBuild, libraryBasePath); err != nil {
+	if err := runBuild(workDir, buildConfig.MainBuild); err != nil {
 		return err
 	}
 
 	for _, extraBuild := range buildConfig.ExtraBuilds {
-		if err := runBuild(workDir, extraBuild, libraryBasePath); err != nil {
+		if err := runBuild(workDir, extraBuild); err != nil {
 			return err
 		}
 	}
@@ -136,7 +133,7 @@ func shouldProcessSymbol(symbol string, bindings []Binding) bool {
 	return false
 }
 
-func collectTypescriptDefs(buildConfig BuildConfig, libraryBasePath string) ([]TypescriptDef, error) {
+func collectTypescriptDefs(buildConfig BuildConfig, workDir string) ([]TypescriptDef, error) {
 	var allBindings []Binding
 	allBindings = append(allBindings, buildConfig.MainBuild.Bindings...)
 	for _, extraBuild := range buildConfig.ExtraBuilds {
@@ -144,7 +141,7 @@ func collectTypescriptDefs(buildConfig BuildConfig, libraryBasePath string) ([]T
 	}
 
 	var typescriptDefinitions []TypescriptDef
-	err := filepath.Walk(libraryBasePath+"/bindings", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(workDir+"/bindings", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -165,20 +162,20 @@ func collectTypescriptDefs(buildConfig BuildConfig, libraryBasePath string) ([]T
 	return typescriptDefinitions, err
 }
 
-func runBuild(workDir string, build BuildSpec, libraryBasePath string) error {
-	additionalBindCodeO, err := getAdditionalBindCodeO(workDir, build, libraryBasePath)
+func runBuild(workDir string, build BuildSpec) error {
+	additionalBindCodeO, err := getAdditionalBindCodeO(workDir, build)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("Running build: " + build.Name)
 
-	bindingsO, err := collectObjectFiles(libraryBasePath+"/bindings", build.Bindings, ".cpp.o")
+	bindingsO, err := collectObjectFiles(workDir+"/bindings", build.Bindings, ".cpp.o")
 	if err != nil {
 		return err
 	}
 
-	sourcesO, err := collectObjectFiles(libraryBasePath+"/sources", nil, ".o")
+	sourcesO, err := collectObjectFiles(workDir+"/sources", nil, ".o")
 	if err != nil {
 		return err
 	}
@@ -204,12 +201,12 @@ func runBuild(workDir string, build BuildSpec, libraryBasePath string) error {
 	return nil
 }
 
-func getAdditionalBindCodeO(workDir string, build BuildSpec, libraryBasePath string) (string, error) {
+func getAdditionalBindCodeO(workDir string, build BuildSpec) (string, error) {
 	if build.AdditionalBindCode == "" {
 		return "", nil
 	}
 
-	additionalBindCodeDir := filepath.Join(libraryBasePath, "additionalBindCode")
+	additionalBindCodeDir := filepath.Join(workDir, "additionalBindCode")
 	if err := os.MkdirAll(additionalBindCodeDir, 0755); err != nil {
 		return "", err
 	}
