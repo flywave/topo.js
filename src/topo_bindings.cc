@@ -77,6 +77,69 @@ template <typename OptionalType> struct OptionalAccess {
   }
 };
 
+// 首先定义一个变体访问器类
+struct WireEdgeVariantAccess {
+  static bool is_wire(const boost::variant<wire, edge> &v) {
+    return v.which() == 0;
+  }
+
+  static bool is_edge(const boost::variant<wire, edge> &v) {
+    return v.which() == 1;
+  }
+
+  static val get(const boost::variant<wire, edge> &v) {
+    if (v.which() == 0) {
+      return val(boost::get<wire>(v));
+    } else {
+      return val(boost::get<edge>(v));
+    }
+  }
+
+  static void set(boost::variant<wire, edge> &v, const wire &w) { v = w; }
+
+  static void set(boost::variant<wire, edge> &v, const edge &e) { v = e; }
+};
+
+// 定义变体访问器类
+struct WireEdgePntVariantAccess {
+  static bool is_wire(const boost::variant<wire, edge, gp_Pnt> &v) {
+    return v.which() == 0;
+  }
+
+  static bool is_edge(const boost::variant<wire, edge, gp_Pnt> &v) {
+    return v.which() == 1;
+  }
+
+  static bool is_pnt(const boost::variant<wire, edge, gp_Pnt> &v) {
+    return v.which() == 2;
+  }
+
+  static val get(const boost::variant<wire, edge, gp_Pnt> &v) {
+    switch (v.which()) {
+    case 0:
+      return val(boost::get<wire>(v));
+    case 1:
+      return val(boost::get<edge>(v));
+    case 2:
+      return val(boost::get<gp_Pnt>(v));
+    default:
+      return val::undefined();
+    }
+  }
+
+  static void set(boost::variant<wire, edge, gp_Pnt> &v, const wire &w) {
+    v = w;
+  }
+
+  static void set(boost::variant<wire, edge, gp_Pnt> &v, const edge &e) {
+    v = e;
+  }
+
+  static void set(boost::variant<wire, edge, gp_Pnt> &v, const gp_Pnt &p) {
+    v = p;
+  }
+};
+
 template <typename T>
 class_<boost::optional<T>> register_optional(const char *name) {
   typedef boost::optional<T> OptionalType;
@@ -89,9 +152,137 @@ class_<boost::optional<T>> register_optional(const char *name) {
       .function("set", &OptionalAccess<OptionalType>::set);
 }
 
-EMSCRIPTEN_BINDINGS(Topo) {
+template <typename... Types> struct TupleAccess {
+  static val get(const std::tuple<Types...> &t) {
+    return get_impl(t, std::index_sequence_for<Types...>{});
+  }
 
-  // 注册boost::optional转换器
+private:
+  template <std::size_t... I>
+  static val get_impl(const std::tuple<Types...> &t,
+                      std::index_sequence<I...>) {
+    return val::array({val(std::get<I>(t))...});
+  }
+};
+
+struct DoublePairAccess {
+  static val get(const std::pair<double, double> &p) {
+    return val::array({val(p.first), val(p.second)});
+  }
+
+  static void set(std::pair<double, double> &p, double first, double second) {
+    p.first = first;
+    p.second = second;
+  }
+};
+
+struct DoubleVectorPairAccess {
+  static val get(const std::pair<std::vector<double>, std::vector<double>> &p) {
+    val result = val::object();
+    result.set("first", emscripten::val::array(p.first));
+    result.set("second", emscripten::val::array(p.second));
+    return result;
+  }
+
+  static void set(std::pair<std::vector<double>, std::vector<double>> &p,
+                  const std::vector<double> &first,
+                  const std::vector<double> &second) {
+    p.first = first;
+    p.second = second;
+  }
+};
+
+// 定义向量和点对的访问器类
+struct VecPntPairAccess {
+  static val get(const std::pair<gp_Vec, gp_Pnt> &p) {
+    val result = val::object();
+    result.set("vector", val(p.first));
+    result.set("point", val(p.second));
+    return result;
+  }
+
+  static void set(std::pair<gp_Vec, gp_Pnt> &p, const gp_Vec &vec,
+                  const gp_Pnt &pnt) {
+    p.first = vec;
+    p.second = pnt;
+  }
+};
+
+struct VecVecPairAccess {
+  static val get(const std::pair<gp_Vec, gp_Vec> &p) {
+    val result = val::object();
+    result.set("first", val(p.first));
+    result.set("second", val(p.second));
+    return result;
+  }
+
+  static void set(std::pair<gp_Vec, gp_Vec> &p, const gp_Vec &first,
+                  const gp_Vec &second) {
+    p.first = first;
+    p.second = second;
+  }
+};
+
+struct IntPairAccess {
+  static val get(const std::pair<int, int> &p) {
+    return val::array({val(p.first), val(p.second)});
+  }
+
+  static void set(std::pair<int, int> &p, int first, int second) {
+    p.first = first;
+    p.second = second;
+  }
+};
+
+struct NoneAccess {
+  static val get() { return val::null(); }
+};
+
+// 定义数组访问器
+struct DoubleArray3Access {
+  static val get(const std::array<double, 3> &arr) {
+    return val::array(std::vector<double>(arr.begin(), arr.end()));
+  }
+
+  static void set(std::array<double, 3> &arr, const val &jsArray) {
+    std::vector<double> vec = vecFromJSArray<double>(jsArray);
+    if (vec.size() == 3) {
+      std::copy(vec.begin(), vec.end(), arr.begin());
+    }
+  }
+};
+
+// 定义形状变体访问器类
+struct ShapeVariantAccess {
+  static bool is_shape(const boost::variant<shape, std::vector<shape>> &v) {
+    return v.which() == 0;
+  }
+
+  static bool
+  is_shape_vector(const boost::variant<shape, std::vector<shape>> &v) {
+    return v.which() == 1;
+  }
+
+  static val get(const boost::variant<shape, std::vector<shape>> &v) {
+    if (v.which() == 0) {
+      return val(boost::get<shape>(v));
+    } else {
+      return val(boost::get<std::vector<shape>>(v));
+    }
+  }
+
+  template <typename T>
+  static void set(boost::variant<shape, std::vector<shape>> &v,
+                  const T &value) {
+    v = value;
+  }
+};
+
+EMSCRIPTEN_BINDINGS(Topo) {
+  // 注册boost::none
+  class_<boost::none_t>("None").constructor<>().class_function(
+      "get", &NoneAccess::get);
+
   emscripten::register_vector<shape>("VectorShape");
   emscripten::register_vector<vertex>("VectorVertex");
   emscripten::register_vector<edge>("VectorEdge");
@@ -101,7 +292,38 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::register_vector<solid>("VectorSolid");
   emscripten::register_vector<compound>("VectorCompound");
   emscripten::register_vector<comp_solid>("VectorCompSolid");
-  emscripten::register_vector<std::vector<shape>>("VectorVectorShape");
+  emscripten::register_vector<std::vector<shape>>("VecVecShape");
+  emscripten::register_vector<double>("VectorDouble");
+  emscripten::register_vector<std::vector<double>>("VecVecDouble");
+  emscripten::register_vector<std::vector<gp_Pnt>>("VecVecPnt");
+  emscripten::register_vector<gp_Pnt>("VectorPnt");
+  emscripten::register_vector<gp_Vec>("VectorVec");
+
+  class_<boost::variant<wire, edge>>("WireEdgeVariant")
+      .constructor<>()
+      .function("isWire", &WireEdgeVariantAccess::is_wire)
+      .function("isEdge", &WireEdgeVariantAccess::is_edge)
+      .function("get", &WireEdgeVariantAccess::get)
+      .function("setWire", &WireEdgeVariantAccess::set<wire>)
+      .function("setEdge", &WireEdgeVariantAccess::set<edge>);
+
+  emscripten::register_vector<boost::variant<wire, edge>>(
+      "VectorWireEdgeVariant");
+
+  // 注册 boost::variant<wire, edge, gp_Pnt>
+  class_<boost::variant<wire, edge, gp_Pnt>>("WireEdgePntVariant")
+      .constructor<>()
+      .function("isWire", &WireEdgePntVariantAccess::is_wire)
+      .function("isEdge", &WireEdgePntVariantAccess::is_edge)
+      .function("isPnt", &WireEdgePntVariantAccess::is_pnt)
+      .function("get", &WireEdgePntVariantAccess::get)
+      .function("setWire", &WireEdgePntVariantAccess::set<wire>)
+      .function("setEdge", &WireEdgePntVariantAccess::set<edge>)
+      .function("setPnt", &WireEdgePntVariantAccess::set<gp_Pnt>);
+
+  // 注册变体向量类型
+  emscripten::register_vector<boost::variant<wire, edge, gp_Pnt>>(
+      "VectorWireEdgePntVariant");
 
   register_optional<shape>("OptionalShape");
   register_optional<vertex>("OptionalVertex");
@@ -112,6 +334,63 @@ EMSCRIPTEN_BINDINGS(Topo) {
   register_optional<solid>("OptionalSolid");
   register_optional<compound>("OptionalCompound");
   register_optional<comp_solid>("OptionalCompSolid");
+  register_optional<topo_bbox>("OptionalBBox");
+  register_optional<bool>("OptionalBool");
+  register_optional<double>("OptionalDouble");
+  register_optional<std::tuple<double, double, double>>("OptionalDoubleTuple3");
+
+  class_<std::tuple<double, double, double>>("DoubleTuple3")
+      .constructor<>()
+      .function("get", &TupleAccess<double, double, double>::get);
+
+  class_<std::tuple<double, double, double, double>>("DoubleTuple4")
+      .constructor<>()
+      .function("get", &TupleAccess<double, double, double, double>::get);
+
+  class_<std::pair<double, double>>("DoublePair")
+      .constructor<>()
+      .constructor<double, double>()
+      .function("get", &DoublePairAccess::get)
+      .function("set", &DoublePairAccess::set);
+
+  emscripten::register_vector<std::pair<double, double>>("VectorDoublePair");
+
+  class_<std::pair<std::vector<double>, std::vector<double>>>(
+      "DoubleVectorPair")
+      .constructor<>()
+      .function("get", &DoubleVectorPairAccess::get)
+      .function("set", &DoubleVectorPairAccess::set);
+
+  class_<std::pair<gp_Vec, gp_Pnt>>("VecPntPair")
+      .constructor<>()
+      .function("get", &VecPntPairAccess::get)
+      .function("set", &VecPntPairAccess::set);
+
+  class_<std::pair<gp_Vec, gp_Vec>>("VecVecPair")
+      .constructor<>()
+      .function("get", &VecVecPairAccess::get)
+      .function("set", &VecVecPairAccess::set);
+
+  class_<std::pair<int, int>>("IntPair")
+      .constructor<>()
+      .constructor<int, int>()
+      .function("get", &IntPairAccess::get)
+      .function("set", &IntPairAccess::set);
+
+  value_array<std::array<double, 3>>("DoubleArray3")
+      .element(index<0>())
+      .element(index<1>())
+      .element(index<2>());
+
+  register_map<std::string, shape>("MapStringShape");
+
+  class_<boost::variant<shape, std::vector<shape>>>("ShapeVariant")
+      .constructor<>()
+      .function("isShape", &ShapeVariantAccess::is_shape)
+      .function("isShapeVector", &ShapeVariantAccess::is_shape_vector)
+      .function("get", &ShapeVariantAccess::get)
+      .function("setShape", &ShapeVariantAccess::set<shape>)
+      .function("setShapeVector", &ShapeVariantAccess::set<std::vector<shape>>);
 
   emscripten::enum_<geometry_object_type>("GeometryObjectType")
       .value("Solid", geometry_object_type::SolidType)
@@ -182,6 +461,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("multipliedBy", &topo_location::operator*)
       .function("pow", &topo_location::pow)
       .function("toTuple", &topo_location::to_tuple)
+      .function("toVector", &topo_location::to_vector)
       // 转换操作符
       .function("toTopLocLocation",
                 &topo_location::operator const TopLoc_Location &)
@@ -1293,8 +1573,8 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .class_function(
           "makeFace",
           emscripten::select_overload<face(
-              const std::vector<boost::variant<edge, wire>> &,
-              const std::vector<boost::variant<edge, wire, gp_Pnt>> &,
+              const std::vector<boost::variant<wire, edge>> &,
+              const std::vector<boost::variant<wire, edge, gp_Pnt>> &,
               GeomAbs_Shape, int, int, int, bool, double, double, double,
               double, int, int)>(&face::make_face))
       .class_function("makePlane", &face::make_plane)
@@ -2196,175 +2476,173 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<string_syntax_selector, selector>("StringSyntaxSelector")
       .constructor<const std::string &>();
 
-  EMSCRIPTEN_BINDINGS(ShapeOps) {
-    // 布尔运算封装
-    function("fuse", &flywave::topo::fuse);
+  // 布尔运算封装
+  function("fuse", &flywave::topo::fuse);
 
-    function("cut", emscripten::select_overload<boost::optional<shape>(
-                        const shape &, const shape &, double, bool)>(
-                        &flywave::topo::cut));
+  function("cut", emscripten::select_overload<boost::optional<shape>(
+                      const shape &, const shape &, double, bool)>(
+                      &flywave::topo::cut));
 
-    function("cut",
-             emscripten::select_overload<boost::optional<shape>(
-                 const shape &, const std::vector<shape> &, double, bool)>(
-                 &flywave::topo::cut));
+  function("cut", emscripten::select_overload<boost::optional<shape>(
+                      const shape &, const std::vector<shape> &, double, bool)>(
+                      &flywave::topo::cut));
 
-    function("intersect", emscripten::select_overload<boost::optional<shape>(
-                              const shape &, const shape &, double, bool)>(
-                              &flywave::topo::intersect));
+  function("intersect", emscripten::select_overload<boost::optional<shape>(
+                            const shape &, const shape &, double, bool)>(
+                            &flywave::topo::intersect));
 
-    function("intersect",
-             emscripten::select_overload<boost::optional<shape>(
-                 const shape &, const std::vector<shape> &, double, bool)>(
-                 &flywave::topo::intersect));
+  function("intersect",
+           emscripten::select_overload<boost::optional<shape>(
+               const shape &, const std::vector<shape> &, double, bool)>(
+               &flywave::topo::intersect));
 
-    // 枚举类型绑定
-    enum_<flywave::topo::intersection_direction>("IntersectionDirection")
-        .value("None", flywave::topo::intersection_direction::None)
-        .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
-        .value("Opposite", flywave::topo::intersection_direction::Opposite);
+  // 枚举类型绑定
+  enum_<flywave::topo::intersection_direction>("IntersectionDirection")
+      .value("None", flywave::topo::intersection_direction::None)
+      .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
+      .value("Opposite", flywave::topo::intersection_direction::Opposite);
 
-    // Split operations
-    function("split", emscripten::select_overload<boost::optional<shape>(
-                          const shape &, const std::vector<shape> &, double)>(
-                          &flywave::topo::split));
-    function("split",
-             emscripten::select_overload<boost::optional<shape>(
-                 const shape &, const shape &, double)>(&flywave::topo::split));
+  // Split operations
+  function("split", emscripten::select_overload<boost::optional<shape>(
+                        const shape &, const std::vector<shape> &, double)>(
+                        &flywave::topo::split));
+  function("split",
+           emscripten::select_overload<boost::optional<shape>(
+               const shape &, const shape &, double)>(&flywave::topo::split));
 
-    // Intersection operations
-    enum_<flywave::topo::intersection_direction>("IntersectionDirection")
-        .value("None", flywave::topo::intersection_direction::None)
-        .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
-        .value("Opposite", flywave::topo::intersection_direction::Opposite);
+  // Intersection operations
+  enum_<flywave::topo::intersection_direction>("IntersectionDirection")
+      .value("None", flywave::topo::intersection_direction::None)
+      .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
+      .value("Opposite", flywave::topo::intersection_direction::Opposite);
 
-    function("facesIntersectedByLine",
-             &flywave::topo::faces_intersected_by_line);
+  function("facesIntersectedByLine", &flywave::topo::faces_intersected_by_line);
 
-    // Filling and shell operations
-    function("fill", &flywave::topo::fill);
-    function("shelling", &flywave::topo::shelling);
+  // Filling and shell operations
+  function("fill", &flywave::topo::fill);
+  function("shelling", &flywave::topo::shelling);
 
-    // Edge operations
-    function("fillet", &flywave::topo::fillet);
-    function("chamfer", &flywave::topo::chamfer);
+  // Edge operations
+  function("fillet", &flywave::topo::fillet);
+  function("chamfer", &flywave::topo::chamfer);
 
-    // Extrusion operations
-    function("extrude", &flywave::topo::extrude);
-    function(
-        "extrudeLinear",
-        emscripten::select_overload<boost::optional<shape>(
-            const wire &, const std::vector<wire> &, const gp_Vec &, double)>(
-            &flywave::topo::extrude_linear));
+  // Extrusion operations
+  function("extrude", &flywave::topo::extrude);
+  function(
+      "extrudeLinear",
+      emscripten::select_overload<boost::optional<shape>(
+          const wire &, const std::vector<wire> &, const gp_Vec &, double)>(
+          &flywave::topo::extrude_linear));
 
-    // Extrusion operations
-    function("extrudeLinear",
-             emscripten::select_overload<boost::optional<shape>(
-                 const face &, const gp_Vec &, double)>(
-                 &flywave::topo::extrude_linear));
+  // Extrusion operations
+  function("extrudeLinear", emscripten::select_overload<boost::optional<shape>(
+                                const face &, const gp_Vec &, double)>(
+                                &flywave::topo::extrude_linear));
 
-    function("extrudeLinearWithRotation",
-             emscripten::select_overload<boost::optional<shape>(
-                 const wire &, const std::vector<wire> &, const gp_Pnt &,
-                 const gp_Vec &, double)>(
-                 &flywave::topo::extrude_linear_with_rotation));
+  function("extrudeLinearWithRotation",
+           emscripten::select_overload<boost::optional<shape>(
+               const wire &, const std::vector<wire> &, const gp_Pnt &,
+               const gp_Vec &, double)>(
+               &flywave::topo::extrude_linear_with_rotation));
 
-    function("extrudeLinearWithRotation",
-             emscripten::select_overload<boost::optional<shape>(
-                 const face &, const gp_Pnt &, const gp_Vec &, double)>(
-                 &flywave::topo::extrude_linear_with_rotation));
+  function("extrudeLinearWithRotation",
+           emscripten::select_overload<boost::optional<shape>(
+               const face &, const gp_Pnt &, const gp_Vec &, double)>(
+               &flywave::topo::extrude_linear_with_rotation));
 
-    // Revolution operations
-    function("revolve",
-             emscripten::select_overload<boost::optional<shape>(
-                 const shape &, const gp_Pnt &, const gp_Dir &, double)>(
-                 &flywave::topo::revolve));
+  // Revolution operations
+  function("revolve",
+           emscripten::select_overload<boost::optional<shape>(
+               const shape &, const gp_Pnt &, const gp_Dir &, double)>(
+               &flywave::topo::revolve));
 
-    function("revolve",
-             emscripten::select_overload<boost::optional<shape>(
-                 const wire &, const std::vector<wire> &, double,
-                 const gp_Pnt &, const gp_Pnt &)>(&flywave::topo::revolve));
+  function("revolve",
+           emscripten::select_overload<boost::optional<shape>(
+               const wire &, const std::vector<wire> &, double, const gp_Pnt &,
+               const gp_Pnt &)>(&flywave::topo::revolve));
 
-    function("revolve",
-             emscripten::select_overload<boost::optional<shape>(
-                 const face &, double, const gp_Pnt &, const gp_Pnt &)>(
-                 &flywave::topo::revolve));
+  function("revolve",
+           emscripten::select_overload<boost::optional<shape>(
+               const face &, double, const gp_Pnt &, const gp_Pnt &)>(
+               &flywave::topo::revolve));
 
-    // Offset operation
-    function("offset", &flywave::topo::offset);
+  // Offset operation
+  function("offset", &flywave::topo::offset);
 
-    // Sweep operations
-    enum_<flywave::topo::transition_mode>("TransitionMode")
-        .value("TRANSFORMED", flywave::topo::transition_mode::TRANSFORMED)
-        .value("ROUND", flywave::topo::transition_mode::ROUND)
-        .value("RIGHT", flywave::topo::transition_mode::RIGHT);
+  // Sweep operations
+  enum_<flywave::topo::transition_mode>("TransitionMode")
+      .value("TRANSFORMED", flywave::topo::transition_mode::TRANSFORMED)
+      .value("ROUND", flywave::topo::transition_mode::ROUND)
+      .value("RIGHT", flywave::topo::transition_mode::RIGHT);
 
-    function("sweep",
-             emscripten::select_overload<boost::optional<shape>(
-                 const wire &, const std::vector<wire> &, const shape &, bool,
-                 bool, const shape *, flywave::topo::transition_mode)>(
-                 &flywave::topo::sweep));
+  function("sweep",
+           emscripten::select_overload<boost::optional<shape>(
+               const wire &, const std::vector<wire> &, const shape &, bool,
+               bool, const shape *, flywave::topo::transition_mode)>(
+               &flywave::topo::sweep));
 
-    function("sweep",
-             emscripten::select_overload<boost::optional<shape>(
-                 const face &, const shape &, bool, bool, const shape *,
-                 flywave::topo::transition_mode)>(&flywave::topo::sweep));
+  function("sweep",
+           emscripten::select_overload<boost::optional<shape>(
+               const face &, const shape &, bool, bool, const shape *,
+               flywave::topo::transition_mode)>(&flywave::topo::sweep));
 
-    function("sweepMulti", &flywave::topo::sweep_multi);
+  function("sweepMulti", &flywave::topo::sweep_multi);
 
-    // Loft operations
-    function("loft",
-             emscripten::select_overload<boost::optional<shape>(
-                 const std::vector<shape> &, bool, bool, const std::string &,
-                 const std::string &, int, bool, bool,
-                 const std::array<double, 3> &)>(&flywave::topo::loft));
+  // Loft operations
+  function(
+      "loft",
+      emscripten::select_overload<boost::optional<shape>(
+          const std::vector<shape> &, bool, bool, const std::string &,
+          const std::string &, int, bool, bool, const std::array<double, 3> &)>(
+          &flywave::topo::loft));
 
-    function("loft", emscripten::select_overload<boost::optional<shape>(
-                         const std::vector<face> &, const std::string &)>(
-                         &flywave::topo::loft));
+  function("loft", emscripten::select_overload<boost::optional<shape>(
+                       const std::vector<face> &, const std::string &)>(
+                       &flywave::topo::loft));
 
-    // DPrism operations
-    function("dprism",
-             emscripten::select_overload<boost::optional<shape>(
-                 const shape &, const std::shared_ptr<face> &,
-                 const std::vector<wire> &, const boost::optional<double> &,
-                 double, const face *, bool, bool)>(&flywave::topo::dprism));
+  // DPrism operations
+  function(
+      "dprism",
+      emscripten::select_overload<boost::optional<shape>(
+          const shape &, const face &, const std::vector<wire> &,
+          const boost::optional<double> &, double, const face *, bool, bool)>(
+          &flywave::topo::dprism));
 
-    function("dprism",
-             emscripten::select_overload<boost::optional<shape>(
-                 const shape &, const std::shared_ptr<face> &,
-                 const std::vector<face> &, const boost::optional<double> &,
-                 double, const face *, bool, bool)>(&flywave::topo::dprism));
+  function(
+      "dprism",
+      emscripten::select_overload<boost::optional<shape>(
+          const shape &, const face &, const std::vector<face> &,
+          const boost::optional<double> &, double, const face *, bool, bool)>(
+          &flywave::topo::dprism));
 
-    // Other operations
-    function("imprint", &flywave::topo::imprint);
-    function("clean", &flywave::topo::clean);
-    function("check", &flywave::topo::check);
-    function("closest", &flywave::topo::closest);
-    function("combinedCenter", &flywave::topo::combined_center);
-    function("combinedCenterOfBoundBox",
-             &flywave::topo::combined_center_of_bound_box);
-    function("readShapeFromStep", &flywave::topo::read_shape_from_step);
+  // Other operations
+  function("imprint", &flywave::topo::imprint);
+  function("clean", &flywave::topo::clean);
+  function("check", &flywave::topo::check);
+  function("closest", &flywave::topo::closest);
+  function("combinedCenter", &flywave::topo::combined_center);
+  function("combinedCenterOfBoundBox",
+           &flywave::topo::combined_center_of_bound_box);
+  function("readShapeFromStep", &flywave::topo::read_shape_from_step);
 
-    // Wire sample point struct binding
-    value_object<flywave::topo::wire_sample_point>("WireSamplePoint")
-        .field("position", &flywave::topo::wire_sample_point::position)
-        .field("tangent", &flywave::topo::wire_sample_point::tangent)
-        .field("edge", &flywave::topo::wire_sample_point::edge);
+  // Wire sample point struct binding
+  value_object<flywave::topo::wire_sample_point>("WireSamplePoint")
+      .field("position", &flywave::topo::wire_sample_point::position)
+      .field("tangent", &flywave::topo::wire_sample_point::tangent)
+      .field("edge", &flywave::topo::wire_sample_point::edge);
 
-    // Profile projection struct binding
-    value_object<flywave::topo::profile_projection>("ProfileProjection")
-        .field("axes", &flywave::topo::profile_projection::axes)
-        .field("trsf", &flywave::topo::profile_projection::trsf)
-        .field("tangent", &flywave::topo::profile_projection::tangent)
-        .field("position", &flywave::topo::profile_projection::position);
+  // Profile projection struct binding
+  value_object<flywave::topo::profile_projection>("ProfileProjection")
+      .field("axes", &flywave::topo::profile_projection::axes)
+      .field("trsf", &flywave::topo::profile_projection::trsf)
+      .field("tangent", &flywave::topo::profile_projection::tangent)
+      .field("position", &flywave::topo::profile_projection::position);
 
-    // Wire operations
-    function("sampleWireAtDistances", &flywave::topo::sample_wire_at_distances);
-    function("clipWireBetweenDistances",
-             &flywave::topo::clip_wire_between_distances);
-    function("calcProfileProjection", &flywave::topo::cacl_profile_projection);
-    function("profileProjectPoint", &flywave::topo::profile_project_point);
-    function("wireLength", &flywave::topo::wrie_length);
-  }
+  // Wire operations
+  function("sampleWireAtDistances", &flywave::topo::sample_wire_at_distances);
+  function("clipWireBetweenDistances",
+           &flywave::topo::clip_wire_between_distances);
+  function("calcProfileProjection", &flywave::topo::cacl_profile_projection);
+  function("profileProjectPoint", &flywave::topo::profile_project_point);
+  function("wireLength", &flywave::topo::wrie_length);
 }

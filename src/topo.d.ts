@@ -1,16 +1,115 @@
 declare module 'topo' {
+    class None {
+        constructor();
+        static get(): null;
+    }
 
-    // 向量类型声明
-    type VectorShape = Shape[];
-    type VectorVertex = Vertex[];
-    type VectorEdge = Edge[];
-    type VectorWire = Wire[];
-    type VectorFace = Face[];
-    type VectorShell = Shell[];
-    type VectorSolid = Solid[];
-    type VectorCompound = Compound[];
-    type VectorCompSolid = CompSolid[];
-    type VectorVectorShape = Shape[][];
+    // 基于std::vector封装的形状容器类型
+    interface VectorShape extends VectorWrapper<Shape> { }
+    interface VectorVertex extends VectorWrapper<Vertex> { }
+    interface VectorEdge extends VectorWrapper<Edge> { }
+    interface VectorWire extends VectorWrapper<Wire> { }
+    interface VectorFace extends VectorWrapper<Face> { }
+    interface VectorShell extends VectorWrapper<Shell> { }
+    interface VectorSolid extends VectorWrapper<Solid> { }
+    interface VectorCompound extends VectorWrapper<Compound> { }
+    interface VectorCompSolid extends VectorWrapper<CompSolid> { }
+
+    // 基于std::vector封装的嵌套形状容器类型
+    interface VecVecShape extends VectorWrapper<VectorShape> { }
+
+    // 基于std::vector封装的数值容器类型
+    interface VectorDouble extends VectorWrapper<number> { }
+    interface VecVecDouble extends VectorWrapper<VectorDouble> { }
+
+    // 基于std::vector封装的几何点容器类型
+    interface VectorPnt extends VectorWrapper<gp_Pnt> { }
+    interface VecVecPnt extends VectorWrapper<VectorPnt> { }
+
+    // 基于std::vector封装的向量容器类型
+    interface VectorVec extends VectorWrapper<gp_Vec> { }
+
+    // 基础VectorWrapper接口定义
+    interface VectorWrapper<T> {
+        size(): number;
+        at(index: number): T;
+        push_back(value: T): void;
+        clear(): void;
+        empty(): boolean;
+        data(): T[];
+        begin(): VectorIterator<T>;
+        end(): VectorIterator<T>;
+    }
+
+    // 迭代器接口
+    interface VectorIterator<T> {
+        next(): { value: T, done: boolean };
+    }
+
+    // 通用Map接口模板
+    interface GenericMap<K, V> {
+        // 容量查询
+        size(): number;
+        empty(): boolean;
+
+        // 元素访问
+        get(key: K): V | undefined;
+        at(key: K): V | undefined;
+
+        // 修改操作
+        set(key: K, value: V): void;
+        insert(key: K, value: V): boolean;
+        erase(key: K): boolean;
+        clear(): void;
+
+        // 查找操作
+        has(key: K): boolean;
+        find(key: K): V | undefined;
+        count(key: K): number;
+
+        // 迭代器
+        begin(): MapIterator<K, V>;
+        end(): MapIterator<K, V>;
+
+        // 批量操作
+        keys(): K[];
+        values(): V[];
+        entries(): Array<[K, V]>;
+    }
+
+    // 映射迭代器接口
+    interface MapIterator<K, V> {
+        key(): K;
+        value(): V;
+        next(): { value: [K, V], done: boolean };
+    }
+
+    // 具体Map类型实现
+    interface MapStringShape extends GenericMap<string, Shape> { }
+
+    class WireEdgePntVariant {
+        constructor();
+        isWire(): boolean;
+        isEdge(): boolean;
+        isPnt(): boolean;
+        get(): Wire | Edge | gp_Pnt;
+        setWire(w: Wire): void;
+        setEdge(e: Edge): void;
+        setPnt(p: gp_Pnt): void;
+    }
+
+    type VectorWireEdgePntVariant = WireEdgePntVariant[];
+
+    class WireEdgeVariant {
+        constructor();
+        isWire(): boolean;
+        isEdge(): boolean;
+        get(): Wire | Edge;
+        setWire(w: Wire): void;
+        setEdge(e: Edge): void;
+    }
+
+    type VectorWireEdgeVariant = WireEdgeVariant[];
 
     // 可选类型声明
     interface OptionalShape {
@@ -65,6 +164,98 @@ declare module 'topo' {
         is_initialized(): boolean;
         get(): CompSolid | undefined;
         set(value: CompSolid): void;
+    }
+
+    interface OptionalBool {
+        is_initialized(): boolean;
+        get(): boolean | undefined;
+        set(value: boolean): void;
+    }
+
+    interface OptionalDouble {
+        is_initialized(): boolean;
+        get(): number | undefined;
+        set(value: number): void;
+    }
+
+    class DoubleTuple3 {
+        constructor();
+        get(): [number, number, number];
+    }
+
+    class OptionalDoubleTuple3 {
+        constructor();
+        constructor(value: DoubleTuple3);
+        is_initialized(): boolean;
+        get(): DoubleTuple3 | undefined;
+        set(value: DoubleTuple3): void;
+    }
+
+    class DoubleTuple4 {
+        constructor();
+        get(): [number, number, number, number];
+    }
+
+    class DoublePair {
+        constructor();
+        constructor(first: number, second: number);
+        get(): [number, number];
+        set(first: number, second: number): void;
+    }
+
+    type VectorDoublePair = DoublePair[];
+
+    class DoubleVectorPair {
+        constructor();
+        get(): { first: number[], second: number[] };
+        set(first: number[], second: number[]): void;
+    }
+
+    class VecPntPair {
+        constructor();
+        get(): { vector: gp_Vec, point: gp_Pnt };
+        set(vector: gp_Vec, point: gp_Pnt): void;
+    }
+
+    class VecVecPair {
+        constructor();
+        get(): { first: gp_Vec, second: gp_Vec };
+        set(first: gp_Vec, second: gp_Vec): void;
+    }
+
+    class IntPair {
+        constructor();
+        constructor(first: number, second: number);
+        get(): [number, number];
+        set(first: number, second: number): void;
+    }
+
+    class DoubleArray3 {
+        constructor();
+        constructor(x: number, y: number, z: number);
+        get(): [number, number, number];
+        set(index: number, value: number): void;
+    }
+
+    class MapStringShape {
+        constructor();
+        get(key: string): Shape | undefined;
+        set(key: string, value: Shape): void;
+        has(key: string): boolean;
+        delete(key: string): boolean;
+        size(): number;
+        keys(): string[];
+        values(): Shape[];
+        entries(): Array<[string, Shape]>;
+    }
+
+    class ShapeVariant {
+        constructor();
+        isShape(): boolean;
+        isShapeVector(): boolean;
+        get(): Shape | Shape[];
+        setShape(shape: Shape): void;
+        setShapeVector(shapes: Shape[]): void;
     }
 
     class BBox {
@@ -948,8 +1139,8 @@ declare module 'topo' {
 
         // 特殊创建方法
         static makeFace(
-            edgesOrWires: Array<Edge | Wire>,
-            constraints: Array<Edge | Wire | gp_Pnt>,
+            edgesOrWires: VectorWireEdgePntVariant,
+            constraints: VectorWireEdgeVariant,
             continuity?: GeomAbs_Shape,
             degree?: number,
             segments?: number,
@@ -967,8 +1158,8 @@ declare module 'topo' {
         static makePlane(
             basePnt?: gp_Pnt,
             dir?: gp_Dir,
-            length?: number,
-            width?: number
+            length?: OptionalDouble,
+            width?: OptionalDouble
         ): Face;
 
         // 样条近似曲面创建方法
