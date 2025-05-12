@@ -1,4 +1,5 @@
 declare module 'geometry' {
+
     class GeometryCreator {
         // 圆弧创建方法
         static makeArcOfCircle(
