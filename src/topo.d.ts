@@ -1071,7 +1071,6 @@ declare module 'topo' {
     class Solid extends Shape3D {
         constructor();
         constructor(shape: TopoDS_Shape, forConstruction?: boolean);
-        constructor(baseShape: Shape, shape: TopoDS_Shape);
 
         // 基础创建方法
         static makeSolid(compSolid: CompSolid): Solid;
@@ -1222,7 +1221,6 @@ declare module 'topo' {
     class Compound extends Shape3D {
         constructor();
         constructor(shape: TopoDS_Shape, forConstruction?: boolean);
-        constructor(baseShape: Shape, shape: TopoDS_Shape);
 
         // 基础创建方法
         static makeCompound(shapes: Shape[]): Compound;
@@ -1251,7 +1249,6 @@ declare module 'topo' {
     class CompSolid extends Solid {
         constructor();
         constructor(shape: TopoDS_Shape, forConstruction?: boolean);
-        constructor(baseShape: Shape, shape: TopoDS_Shape);
 
         // 基础创建方法
         static makeCompSolid(solids: Solid[]): CompSolid;
@@ -1402,8 +1399,8 @@ declare module 'topo' {
 
         // 相交操作
         function facesIntersectedByLine(shape: Shape,
-            point: Point,
-            axis: Vector,
+            point: gp_Pnt,
+            axis: gp_Dir,
             tolerance?: number,
             direction?: IntersectionDirection): Face[];
 
