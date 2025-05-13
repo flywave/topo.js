@@ -976,6 +976,52 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("minorRadius", &composite_insulator_params::minorRadius)
       .field("gap", &composite_insulator_params::gap);
 
+  // 金具尺寸子结构绑定
+  value_object<insulator_params::fitting_lengths>("FittingLengths")
+      .field("leftUpper", &insulator_params::fitting_lengths::leftUpper)
+      .field("rightUpper", &insulator_params::fitting_lengths::rightUpper)
+      .field("leftLower", &insulator_params::fitting_lengths::leftLower)
+      .field("rightLower", &insulator_params::fitting_lengths::rightLower);
+
+  // 多联配置子结构绑定
+  value_object<insulator_params::multi_link>("MultiLink")
+      .field("count", &insulator_params::multi_link::count)
+      .field("spacing", &insulator_params::multi_link::spacing)
+      .field("arrangement", &insulator_params::multi_link::arrangement);
+
+  // 绝缘子参数子结构绑定
+  value_object<insulator_params::insulator>("Insulator")
+      .field(
+          "radius",
+          // Getter
+          [](const insulator_params::insulator &i) -> emscripten::val {
+            if (i.radius.which() == 0) { // double
+              return emscripten::val(boost::get<double>(i.radius));
+            } else { // CompositeInsulatorParams
+              return emscripten::val(
+                  boost::get<composite_insulator_params>(i.radius));
+            }
+          },
+          // Setter
+          [](insulator_params::insulator &i, emscripten::val v) {
+            if (v.isNumber()) {
+              i.radius = v.as<double>();
+            } else {
+              i.radius = v.as<composite_insulator_params>();
+            }
+          })
+      .field("height", &insulator_params::insulator::height)
+      .field("leftCount", &insulator_params::insulator::leftCount)
+      .field("rightCount", &insulator_params::insulator::rightCount)
+      .field("material", &insulator_params::insulator::material);
+
+  // 均压环配置子结构绑定
+  value_object<insulator_params::grading_ring>("GradingRing")
+      .field("count", &insulator_params::grading_ring::count)
+      .field("position", &insulator_params::grading_ring::position)
+      .field("height", &insulator_params::grading_ring::height)
+      .field("radius", &insulator_params::grading_ring::radius);
+
   // 绝缘子参数结构体绑定
   value_object<insulator_params>("InsulatorParams")
       .field("type", &insulator_params::type)
@@ -986,15 +1032,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("vAngleRight", &insulator_params::vAngleRight)
       .field("uLinkLength", &insulator_params::uLinkLength)
       .field("weight", &insulator_params::weight)
-      // 金具尺寸子结构
       .field("fittingLengths", &insulator_params::fittingLengths)
-      // 多联配置子结构
       .field("multiLink", &insulator_params::multiLink)
-      // 绝缘子参数子结构
       .field("insulator", &insulator_params::insulator)
-      // 均压环配置子结构
       .field("gradingRing", &insulator_params::gradingRing)
-      // 用途类型
       .field("application", &insulator_params::application)
       .field("stringType", &insulator_params::stringType);
 

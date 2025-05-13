@@ -1,151 +1,4 @@
 declare module 'topo' {
-    // 基于std::vector封装的形状容器类型
-    interface VectorShape extends VectorWrapper<Shape> { }
-    interface VectorVertex extends VectorWrapper<Vertex> { }
-    interface VectorEdge extends VectorWrapper<Edge> { }
-    interface VectorWire extends VectorWrapper<Wire> { }
-    interface VectorFace extends VectorWrapper<Face> { }
-    interface VectorShell extends VectorWrapper<Shell> { }
-    interface VectorSolid extends VectorWrapper<Solid> { }
-    interface VectorCompound extends VectorWrapper<Compound> { }
-    interface VectorCompSolid extends VectorWrapper<CompSolid> { }
-
-    // 基于std::vector封装的嵌套形状容器类型
-    interface VecVecShape extends VectorWrapper<VectorShape> { }
-
-    // 基于std::vector封装的数值容器类型
-    interface VectorDouble extends VectorWrapper<number> { }
-    interface VecVecDouble extends VectorWrapper<VectorDouble> { }
-
-    // 基于std::vector封装的几何点容器类型
-    interface VectorPnt extends VectorWrapper<gp_Pnt> { }
-    interface VecVecPnt extends VectorWrapper<VectorPnt> { }
-
-    interface VectorDir extends VectorWrapper<gp_Dir> { }
-
-    // 基于std::vector封装的向量容器类型
-    interface VectorVec extends VectorWrapper<gp_Vec> { }
-
-    // 基础VectorWrapper接口定义
-    interface VectorWrapper<T> {
-        size(): number;
-        at(index: number): T;
-        push_back(value: T): void;
-        clear(): void;
-        empty(): boolean;
-        data(): T[];
-        begin(): VectorIterator<T>;
-        end(): VectorIterator<T>;
-    }
-
-    // 迭代器接口
-    interface VectorIterator<T> {
-        next(): { value: T, done: boolean };
-    }
-
-    // 通用Map接口模板
-    interface GenericMap<K, V> {
-        // 容量查询
-        size(): number;
-        empty(): boolean;
-
-        // 元素访问
-        get(key: K): V | undefined;
-        at(key: K): V | undefined;
-
-        // 修改操作
-        set(key: K, value: V): void;
-        insert(key: K, value: V): boolean;
-        erase(key: K): boolean;
-        clear(): void;
-
-        // 查找操作
-        has(key: K): boolean;
-        find(key: K): V | undefined;
-        count(key: K): number;
-
-        // 迭代器
-        begin(): MapIterator<K, V>;
-        end(): MapIterator<K, V>;
-
-        // 批量操作
-        keys(): K[];
-        values(): V[];
-        entries(): Array<[K, V]>;
-    }
-
-    // 映射迭代器接口
-    interface MapIterator<K, V> {
-        key(): K;
-        value(): V;
-        next(): { value: [K, V], done: boolean };
-    }
-
-    // 具体Map类型实现
-    interface MapStringShape extends GenericMap<string, Shape> { }
-
-    class WireEdgePntVariant {
-        constructor();
-        isWire(): boolean;
-        isEdge(): boolean;
-        isPnt(): boolean;
-        get(): Wire | Edge | gp_Pnt;
-        setWire(w: Wire): void;
-        setEdge(e: Edge): void;
-        setPnt(p: gp_Pnt): void;
-    }
-
-    type VectorWireEdgePntVariant = WireEdgePntVariant[];
-
-    class WireEdgeVariant {
-        constructor();
-        isWire(): boolean;
-        isEdge(): boolean;
-        get(): Wire | Edge;
-        setWire(w: Wire): void;
-        setEdge(e: Edge): void;
-    }
-
-    type VectorWireEdgeVariant = WireEdgeVariant[];
-
-    class DoublePair {
-        constructor();
-        constructor(first: number, second: number);
-        get(): [number, number];
-        set(first: number, second: number): void;
-    }
-
-    type VectorDoublePair = DoublePair[];
-
-    class DoubleVectorPair {
-        constructor();
-        get(): { first: number[], second: number[] };
-        set(first: number[], second: number[]): void;
-    }
-
-    class VecPntPair {
-        constructor();
-        get(): { vector: gp_Vec, point: gp_Pnt };
-        set(vector: gp_Vec, point: gp_Pnt): void;
-    }
-
-    class VecVecPair {
-        constructor();
-        get(): { first: gp_Vec, second: gp_Vec };
-        set(first: gp_Vec, second: gp_Vec): void;
-    }
-
-    class MapStringShape {
-        constructor();
-        get(key: string): Shape | undefined;
-        set(key: string, value: Shape): void;
-        has(key: string): boolean;
-        delete(key: string): boolean;
-        size(): number;
-        keys(): string[];
-        values(): Shape[];
-        entries(): Array<[string, Shape]>;
-    }
 
     class BBox {
         constructor();
@@ -196,6 +49,8 @@ declare module 'topo' {
         constructor(pln: gp_Pln, pos: gp_Pnt);
         constructor(vec: gp_Vec, axis: gp_Vec, angle: number);
         constructor(vec: Vector);
+
+        copy(): Location;
 
         // 操作方法
         hashCode(): number;
@@ -279,7 +134,7 @@ declare module 'topo' {
 
         // 变换方法
         rotated(rotate?: Vector): Plane;
-        mirrorInPlane(shapes: VectorShape, axis?: string): Plane;
+        mirrorInPlane(shapes: Shape[], axis?: string): Plane;
 
         // 转换方法
         toPln(): gp_Pln;
@@ -541,8 +396,8 @@ declare module 'topo' {
         oriented(quat: Orientation): Shape;
 
         // 子元素访问
-        children(): VectorShape;
-        getShapes(kind: TopAbs_ShapeEnum): VectorShape;
+        children(): Shape[];
+        getShapes(kind: TopAbs_ShapeEnum): Shape[];
         vertices(): Vertex[];
         edges(): Edge[];
         wires(): Wire[];
@@ -594,6 +449,8 @@ declare module 'topo' {
         faces(selector: Selector): Shape;
         shells(selector: Selector): Shape;
         solids(selector: Selector): Shape;
+        compounds(selector: Selector): Shape;
+        compSolids(selector: Selector): Shape;
 
         // 类型转换
         castVertex(): Vertex | null;
@@ -646,7 +503,6 @@ declare module 'topo' {
 
     class Shape1D extends Shape {
         constructor();
-        constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
         // 几何属性方法
         getCurve(): Handle_Geom_Curve;
@@ -1211,8 +1067,6 @@ declare module 'topo' {
 
     class Shape3D extends Shape {
         constructor();
-        constructor(shape: TopoDS_Shape, forConstruction?: boolean);
-        constructor(baseShape: Shape, shape: TopoDS_Shape);
 
         // 几何判断方法
         isInside(point: gp_Pnt, tolerance?: number): boolean;
@@ -1349,7 +1203,7 @@ declare module 'topo' {
 
         // 布尔运算方法
         boolean(tool: Solid, op: BooleanOperationType): Solid;
- 
+
         // 几何属性方法
         volume(): number;
         centerOfMass(): gp_Pnt;
@@ -1389,8 +1243,6 @@ declare module 'topo' {
 
         // 几何操作方法
         remove(shape: Shape): Compound;
-        ancestors(shape: Shape, kind: TopAbs_ShapeEnum): Shape[];
-        siblings(shape: Shape, kind: TopAbs_ShapeEnum, level?: number): Shape[];
 
         // 值访问和类型方法
         value(): TopoDS_Compound;
@@ -1452,7 +1304,7 @@ declare module 'topo' {
     }
 
     class CustomSelector extends Selector {
-        constructor(filterFunc: (shapes: Shape[]) => Shape[]);
+        constructor(callback: (shapes: Shape[]) => Shape[]);
     }
 
     class NearestToPointSelector extends Selector {
@@ -1535,7 +1387,6 @@ declare module 'topo' {
         constructor(syntax: string);
     }
 
-
     namespace ShapeOps {
 
         enum IntersectionDirection {
@@ -1551,15 +1402,15 @@ declare module 'topo' {
         }
 
         // 布尔运算
-        function fuse(shapes: Shape[], tol?: number, glue?: boolean): Shape | null;
-        function cut(shape: Shape, tool: Shape, tol?: number, glue?: boolean): Shape | null;
-        function cut(shape: Shape, toCuts: Shape[], tol?: number, glue?: boolean): Shape | null;
-        function intersect(shape: Shape, toIntersect: Shape, tol?: number, glue?: boolean): Shape | null;
-        function intersect(shape: Shape, toIntersects: Shape[], tol?: number, glue?: boolean): Shape | null;
+        function fuse(shapes: Shape[], tol?: number, glue?: boolean): Shape | undefined;
+        function cut(shape: Shape, tool: Shape, tol?: number, glue?: boolean): Shape | undefined;
+        function cut(shape: Shape, toCuts: Shape[], tol?: number, glue?: boolean): Shape | undefined;
+        function intersect(shape: Shape, toIntersect: Shape, tol?: number, glue?: boolean): Shape | undefined;
+        function intersect(shape: Shape, toIntersects: Shape[], tol?: number, glue?: boolean): Shape | undefined;
 
         // 分割操作
-        function split(shape: Shape, tools: Shape[], tolerance?: number): Shape | null;
-        function split(shape: Shape, tool: Shape, tolerance?: number): Shape | null;
+        function split(shape: Shape, tools: Shape[], tolerance?: number): Shape | undefined;
+        function split(shape: Shape, tool: Shape, tolerance?: number): Shape | undefined;
 
         // 相交操作
         function facesIntersectedByLine(shape: Shape,
@@ -1569,7 +1420,7 @@ declare module 'topo' {
             direction?: IntersectionDirection): Face[];
 
         // 填充和壳操作
-        function fill(shape: Shape, constraints?: Shape[]): Shape | null;
+        function fill(shape: Shape, constraints?: Shape[]): Shape | undefined;
 
         function shelling(
             shape: Shape,
@@ -1577,36 +1428,35 @@ declare module 'topo' {
             thickness: number,
             tolerance?: number,
             joinType?: GeomAbs_JoinType
-        ): Shape | null;
+        ): Shape | undefined;
 
         function fillet(
             shape: Shape,
             edges: Edge[],
             radius: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         function chamfer(
             baseShape: Shape,
             edges: Edge[],
             distance: number,
             distance2?: number
-        ): Shape | null;
+        ): Shape | undefined;
 
-
-        function extrude(shape: Shape, direction: gp_Vec): Shape | null;
+        function extrude(shape: Shape, direction: gp_Vec): Shape | undefined;
 
         function extrudeLinear(
             outerWire: Wire,
             innerWires: Wire[],
             vecNormal: gp_Vec,
             taper?: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         function extrudeLinear(
             face: Face,
             vecNormal: gp_Vec,
             taper?: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         function extrudeLinearWithRotation(
             outerWire: Wire,
@@ -1614,14 +1464,14 @@ declare module 'topo' {
             center: gp_Pnt,
             normal: gp_Vec,
             angleDegrees: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         function extrudeLinearWithRotation(
             face: Face,
             center: gp_Pnt,
             normal: gp_Vec,
             angleDegrees: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         // 旋转操作
         function revolve(
@@ -1629,7 +1479,7 @@ declare module 'topo' {
             axisPoint: gp_Pnt,
             axisDirection: gp_Vec,
             angleDegrees?: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         function revolve(
             outerWire: Wire,
@@ -1637,14 +1487,14 @@ declare module 'topo' {
             angleDegrees: number,
             axisStart: gp_Pnt,
             axisEnd: gp_Pnt
-        ): Shape | null;
+        ): Shape | undefined;
 
         function revolve(
             face: Face,
             angleDegrees: number,
             axisStart: gp_Pnt,
             axisEnd: gp_Pnt
-        ): Shape | null;
+        ): Shape | undefined;
 
         function offset(
             shape: Shape,
@@ -1652,7 +1502,7 @@ declare module 'topo' {
             cap?: boolean,
             both?: boolean,
             tol?: number
-        ): Shape | null;
+        ): Shape | undefined;
 
         // 扫描操作
         function sweep(
@@ -1663,7 +1513,7 @@ declare module 'topo' {
             isFrenet?: boolean,
             mode?: Shape,
             transitionMode?: TransitionMode
-        ): Shape | null;
+        ): Shape | undefined;
 
         function sweep(
             face: Face,
@@ -1672,7 +1522,7 @@ declare module 'topo' {
             isFrenet?: boolean,
             mode?: Shape,
             transitionMode?: TransitionMode
-        ): Shape | null;
+        ): Shape | undefined;
 
         function sweep_multi(
             profiles: Shape[],
@@ -1680,7 +1530,7 @@ declare module 'topo' {
             makeSolid?: boolean,
             isFrenet?: boolean,
             mode?: Shape
-        ): Shape | null;
+        ): Shape | undefined;
 
         function loft(
             profiles: Shape[],
@@ -1691,13 +1541,13 @@ declare module 'topo' {
             degree?: number,
             compat?: boolean,
             smoothing?: boolean,
-            weights?: DoubleArray3
-        ): Shape | null;
+            weights?: [number, number, number]
+        ): Shape | undefined;
 
         function loft(
             faceProfiles: Face[],
             continuity?: string
-        ): Shape | null;
+        ): Shape | undefined;
 
         // 棱柱操作
         function dprism(
@@ -1709,7 +1559,7 @@ declare module 'topo' {
             upToFace?: Face,
             thruAll?: boolean,
             additive?: boolean
-        ): Shape | null;
+        ): Shape | undefined;
 
         function dprism(
             shp: Shape,
@@ -1720,23 +1570,40 @@ declare module 'topo' {
             upToFace?: Face,
             thruAll?: boolean,
             additive?: boolean
-        ): Shape | null;
+        ): Shape | undefined;
 
         // 其他操作
-        function imprint(shapes: Shape[],
+        interface ImprintResult {
+            result?: Shape;
+            history: Record<string, Shape>;
+        }
+
+        function imprint(
+            shapes: Shape[],
             tol?: number,
-            glue?: boolean,
-            history?: Map<string, Shape>): Shape | null;
-        function clean(shape: Shape): Shape | null;
+            glue?: boolean
+        ): ImprintResult;
+
+        function clean(shape: Shape): Shape | undefined;
+
+        interface ShapeCheckResult {
+            shapes: Shape[];
+            status: BOPAlgo_CheckStatus;
+        }
+
+        interface ShapeCheckStatus {
+            isValid: boolean;
+            results: ShapeCheckResult[];
+        }
+
         function check(
             shp: Shape,
-            results?: [Shape[], BOPAlgo_CheckStatus][],
             tol?: number
-        ): boolean;
-        function closest(shape1: Shape, shape2: Shape): Point;
-        function combinedCenter(shapes: Shape[]): Point;
-        function combinedCenterOfBoundBox(shapes: Shape[]): Point;
-        function readShapeFromStep(filename: string): Shape | null;
+        ): ShapeCheckStatus;
+        function closest(shape1: Shape, shape2: Shape): [gp_Pnt, gp_Pnt];
+        function combinedCenter(shapes: Shape[]): gp_Pnt;
+        function combinedCenterOfBoundBox(shapes: Shape[]): gp_Pnt;
+        function readShapeFromStep(filename: string): Shape
 
         interface WireSamplePoint {
             position: gp_Pnt;
@@ -1753,9 +1620,9 @@ declare module 'topo' {
 
         // 线框操作
         function sampleWireAtDistances(wire: Wire, distances: number[]): WireSamplePoint[];
-        function clipWireBetweenDistances(wire: Wire, start: number, end: number): Wire | null;
+        function clipWireBetweenDistances(wire: Wire, start: number, end: number): Wire;
         function calcProfileProjection(wire: Wire, upDir: gp_Dir, offset?: number): ProfileProjection;
-        function profileProjectPoint(profile: ProfileProjection, point: Point): Point;
+        function profileProjectPoint(profile: ProfileProjection, point: gp_Pnt): gp_Pnt;
         function wireLength(wire: Wire): number;
     }
 }
