@@ -1,562 +1,642 @@
 #include "binding.hh"
 #include "geometry_creator.hh"
 
+using namespace flywave;
+using namespace flywave::topo;
+
 EMSCRIPTEN_BINDINGS(Geometry) {
 
-  class_<geometry_creator>("GeometryCreator")
+  emscripten::class_<geometry_creator>("GeometryCreator")
       // 圆弧创建方法
-      .class_function("makeArcOfCircle",
-                      select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Circ &, Standard_Real, Standard_Real, bool)>(
-                          &geometry_creator::make_arc_of_circle),
-                      allow_raw_pointers())
       .class_function(
-          "makeArcOfCircleWithPoint",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Circ &, const gp_Pnt &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_circle),
-          allow_raw_pointers())
+          "makeArcOfCircle",
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Circ &, const Standard_Real, const Standard_Real,
+              const bool)>(&geometry_creator::make_arc_of_circle))
+      .class_function("makeArcOfCircleWithPoint",
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+                          const gp_Circ &, const gp_Pnt &, const Standard_Real,
+                          const bool)>(&geometry_creator::make_arc_of_circle))
       .class_function(
           "makeArcOfCircleWithTwoPoints",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Circ &, const gp_Pnt &, const gp_Pnt &, bool)>(
-              &geometry_creator::make_arc_of_circle),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Circ &, const gp_Pnt &, const gp_Pnt &, const bool)>(
+              &geometry_creator::make_arc_of_circle))
       .class_function("makeArcOfCircleWithThreePoints",
-                      select_overload<Handle(Geom_TrimmedCurve)(
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_arc_of_circle),
-                      allow_raw_pointers())
+                          &geometry_creator::make_arc_of_circle))
       .class_function("makeArcOfCircleWithVector",
-                      &geometry_creator::make_arc_of_circle_vector,
-                      allow_raw_pointers())
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+                          const gp_Pnt &, const gp_Vec &, const gp_Pnt &)>(
+                          &geometry_creator::make_arc_of_circle_vector))
 
       // 椭圆弧创建方法
       .class_function(
           "makeArcOfEllipse",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Elips &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_ellipse),
-          allow_raw_pointers())
-      .class_function(
-          "makeArcOfEllipseWithPoint",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Elips &, const gp_Pnt &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_ellipse),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Elips &, const Standard_Real, const Standard_Real,
+              bool)>(&geometry_creator::make_arc_of_ellipse))
+      .class_function("makeArcOfEllipseWithPoint",
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+                          const gp_Elips &, const gp_Pnt &, const Standard_Real,
+                          const bool)>(&geometry_creator::make_arc_of_ellipse))
       .class_function(
           "makeArcOfEllipseWithTwoPoints",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Elips &, const gp_Pnt &, const gp_Pnt &, bool)>(
-              &geometry_creator::make_arc_of_ellipse),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Elips &, const gp_Pnt &, const gp_Pnt &, const bool)>(
+              &geometry_creator::make_arc_of_ellipse))
 
       // 双曲线弧创建方法
-      .class_function("makeArcOfHyperbola",
-                      select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Hypr &, Standard_Real, Standard_Real, bool)>(
-                          &geometry_creator::make_arc_of_hyperbola),
-                      allow_raw_pointers())
+      .class_function(
+          "makeArcOfHyperbola",
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Hypr &, const Standard_Real, const Standard_Real,
+              const bool)>(&geometry_creator::make_arc_of_hyperbola))
       .class_function(
           "makeArcOfHyperbolaWithPoint",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Hypr &, const gp_Pnt &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_hyperbola),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Hypr &, const gp_Pnt &, const Standard_Real,
+              const bool)>(&geometry_creator::make_arc_of_hyperbola))
       .class_function(
           "makeArcOfHyperbolaWithTwoPoints",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Hypr &, const gp_Pnt &, const gp_Pnt &, bool)>(
-              &geometry_creator::make_arc_of_hyperbola),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Hypr &, const gp_Pnt &, const gp_Pnt &, const bool)>(
+              &geometry_creator::make_arc_of_hyperbola))
 
       // 抛物线弧创建方法
       .class_function(
           "makeArcOfParabola",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Parab &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_parabola),
-          allow_raw_pointers())
-      .class_function(
-          "makeArcOfParabolaWithPoint",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Parab &, const gp_Pnt &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_parabola),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Parab &, const Standard_Real, const Standard_Real,
+              bool)>(&geometry_creator::make_arc_of_parabola))
+      .class_function("makeArcOfParabolaWithPoint",
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+                          const gp_Parab &, const gp_Pnt &, const Standard_Real,
+                          const bool)>(&geometry_creator::make_arc_of_parabola))
       .class_function(
           "makeArcOfParabolaWithTwoPoints",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Parab &, const gp_Pnt &, const gp_Pnt &, bool)>(
-              &geometry_creator::make_arc_of_parabola),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Parab &, const gp_Pnt &, const gp_Pnt &, const bool)>(
+              &geometry_creator::make_arc_of_parabola))
 
       // 圆创建方法
-      .class_function("makeCircle",
-                      select_overload<Handle(Geom_Circle)(const gp_Circ &)>(
-                          &geometry_creator::make_circle),
-                      allow_raw_pointers())
       .class_function(
-          "makeCircleWithAxis",
-          select_overload<Handle(Geom_Circle)(const gp_Ax2 &, Standard_Real)>(
-              &geometry_creator::make_circle),
-          allow_raw_pointers())
-      .class_function(
-          "makeCircleWithDistance",
-          select_overload<Handle(Geom_Circle)(const gp_Circ &, Standard_Real)>(
-              &geometry_creator::make_circle),
-          allow_raw_pointers())
+          "makeCircle",
+          emscripten::select_overload<Handle(Geom_Circle)(const gp_Circ &)>(
+              &geometry_creator::make_circle))
+      .class_function("makeCircleWithAxis",
+                      emscripten::select_overload<Handle(Geom_Circle)(
+                          const gp_Ax2 &, const Standard_Real)>(
+                          &geometry_creator::make_circle))
+      .class_function("makeCircleWithDistance",
+                      emscripten::select_overload<Handle(Geom_Circle)(
+                          const gp_Circ &, const Standard_Real)>(
+                          &geometry_creator::make_circle))
       .class_function(
           "makeCircleWithPoint",
-          select_overload<Handle(Geom_Circle)(const gp_Circ &, const gp_Pnt &)>(
-              &geometry_creator::make_circle),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Circle)(
+              const gp_Circ &, const gp_Pnt &)>(&geometry_creator::make_circle))
       .class_function("makeCircleWithThreePoints",
-                      select_overload<Handle(Geom_Circle)(
+                      emscripten::select_overload<Handle(Geom_Circle)(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_circle),
-                      allow_raw_pointers())
+                          &geometry_creator::make_circle))
       .class_function("makeCircleWithCenterNormal",
-                      select_overload<Handle(Geom_Circle)(
-                          const gp_Pnt &, const gp_Dir &, Standard_Real)>(
-                          &geometry_creator::make_circle),
-                      allow_raw_pointers())
+                      emscripten::select_overload<Handle(Geom_Circle)(
+                          const gp_Pnt &, const gp_Dir &, const Standard_Real)>(
+                          &geometry_creator::make_circle))
       .class_function("makeCircleWithCenterAxisPoint",
-                      select_overload<Handle(Geom_Circle)(
-                          const gp_Pnt &, const gp_Pnt &, Standard_Real)>(
-                          &geometry_creator::make_circle),
-                      allow_raw_pointers())
-      .class_function(
-          "makeCircleWithAxis1",
-          select_overload<Handle(Geom_Circle)(const gp_Ax1 &, Standard_Real)>(
-              &geometry_creator::make_circle),
-          allow_raw_pointers())
+                      emscripten::select_overload<Handle(Geom_Circle)(
+                          const gp_Pnt &, const gp_Pnt &, const Standard_Real)>(
+                          &geometry_creator::make_circle))
+      .class_function("makeCircleWithAxis1",
+                      emscripten::select_overload<Handle(Geom_Circle)(
+                          const gp_Ax1 &, const Standard_Real)>(
+                          &geometry_creator::make_circle))
 
       // 椭圆创建方法
-      .class_function("makeEllipse",
-                      select_overload<Handle(Geom_Ellipse)(const gp_Elips &)>(
-                          &geometry_creator::make_ellipse),
-                      allow_raw_pointers())
-      .class_function("makeEllipseWithAxis",
-                      select_overload<Handle(Geom_Ellipse)(
-                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_ellipse),
-                      allow_raw_pointers())
+      .class_function(
+          "makeEllipse",
+          emscripten::select_overload<Handle(Geom_Ellipse)(const gp_Elips &)>(
+              &geometry_creator::make_ellipse))
+      .class_function(
+          "makeEllipseWithAxis",
+          emscripten::select_overload<Handle(Geom_Ellipse)(
+              const gp_Ax2 &, const Standard_Real, const Standard_Real)>(
+              &geometry_creator::make_ellipse))
       .class_function("makeEllipseWithThreePoints",
-                      select_overload<Handle(Geom_Ellipse)(
+                      emscripten::select_overload<Handle(Geom_Ellipse)(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_ellipse),
-                      allow_raw_pointers())
+                          &geometry_creator::make_ellipse))
 
       // 双曲线创建方法
-      .class_function("makeHyperbola",
-                      select_overload<Handle(Geom_Hyperbola)(const gp_Hypr &)>(
-                          &geometry_creator::make_hyperbola),
-                      allow_raw_pointers())
-      .class_function("makeHyperbolaWithAxis",
-                      select_overload<Handle(Geom_Hyperbola)(
-                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_hyperbola),
-                      allow_raw_pointers())
+      .class_function(
+          "makeHyperbola",
+          emscripten::select_overload<Handle(Geom_Hyperbola)(const gp_Hypr &)>(
+              &geometry_creator::make_hyperbola))
+      .class_function(
+          "makeHyperbolaWithAxis",
+          emscripten::select_overload<Handle(Geom_Hyperbola)(
+              const gp_Ax2 &, const Standard_Real, const Standard_Real)>(
+              &geometry_creator::make_hyperbola))
       .class_function("makeHyperbolaWithThreePoints",
-                      select_overload<Handle(Geom_Hyperbola)(
+                      emscripten::select_overload<Handle(Geom_Hyperbola)(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_hyperbola),
-                      allow_raw_pointers())
+                          &geometry_creator::make_hyperbola))
 
       // 圆锥曲面创建方法
-      .class_function("makeConicalSurface",
-                      select_overload<Handle(Geom_ConicalSurface)(
-                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_conical_surface),
-                      allow_raw_pointers())
+      .class_function(
+          "makeConicalSurface",
+          emscripten::select_overload<Handle(Geom_ConicalSurface)(
+              const gp_Ax2 &, const Standard_Real, const Standard_Real)>(
+              &geometry_creator::make_conical_surface))
       .class_function(
           "makeConicalSurfaceWithCone",
-          select_overload<Handle(Geom_ConicalSurface)(const gp_Cone &)>(
-              &geometry_creator::make_conical_surface),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_ConicalSurface)(
+              const gp_Cone &)>(&geometry_creator::make_conical_surface))
       .class_function(
           "makeConicalSurfaceWithFourPoints",
-          select_overload<Handle(Geom_ConicalSurface)(
+          emscripten::select_overload<Handle(Geom_ConicalSurface)(
               const gp_Pnt &, const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_conical_surface),
-          allow_raw_pointers())
+              &geometry_creator::make_conical_surface))
       .class_function(
           "makeConicalSurfaceWithTwoPointsTwoRadii",
-          select_overload<Handle(Geom_ConicalSurface)(
-              const gp_Pnt &, const gp_Pnt &, Standard_Real, Standard_Real)>(
-              &geometry_creator::make_conical_surface),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_ConicalSurface)(
+              const gp_Pnt &, const gp_Pnt &, const Standard_Real,
+              const Standard_Real)>(&geometry_creator::make_conical_surface))
 
       // 圆柱曲面创建方法
-      .class_function("makeCylindricalSurface",
-                      select_overload<Handle(Geom_CylindricalSurface)(
-                          const gp_Ax2 &, Standard_Real)>(
-                          &geometry_creator::make_cylindrical_surface),
-                      allow_raw_pointers())
       .class_function(
-          "makeCylindricalSurfaceWithCylinder",
-          select_overload<Handle(Geom_CylindricalSurface)(const gp_Cylinder &)>(
-              &geometry_creator::make_cylindrical_surface),
-          allow_raw_pointers())
-      .class_function("makeCylindricalSurfaceWithPoint",
-                      select_overload<Handle(Geom_CylindricalSurface)(
-                          const gp_Cylinder &, const gp_Pnt &)>(
-                          &geometry_creator::make_cylindrical_surface),
-                      allow_raw_pointers())
-      .class_function("makeCylindricalSurfaceWithDistance",
-                      select_overload<Handle(Geom_CylindricalSurface)(
-                          const gp_Cylinder &, Standard_Real)>(
-                          &geometry_creator::make_cylindrical_surface),
-                      allow_raw_pointers())
-      .class_function("makeCylindricalSurfaceWithThreePoints",
-                      select_overload<Handle(Geom_CylindricalSurface)(
-                          const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_cylindrical_surface),
-                      allow_raw_pointers())
-      .class_function("makeCylindricalSurfaceWithAxis1",
-                      select_overload<Handle(Geom_CylindricalSurface)(
-                          const gp_Ax1 &, Standard_Real)>(
-                          &geometry_creator::make_cylindrical_surface),
-                      allow_raw_pointers())
+          "makeCylindricalSurface",
+          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
+              const gp_Ax2 &, const Standard_Real)>(
+              &geometry_creator::make_cylindrical_surface))
+      .class_function("makeCylindricalSurfaceWithCylinder",
+                      emscripten::select_overload<Handle(
+                          Geom_CylindricalSurface)(const gp_Cylinder &)>(
+                          &geometry_creator::make_cylindrical_surface))
+      .class_function(
+          "makeCylindricalSurfaceWithPoint",
+          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
+              const gp_Cylinder &, const gp_Pnt &)>(
+              &geometry_creator::make_cylindrical_surface))
+      .class_function(
+          "makeCylindricalSurfaceWithDistance",
+          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
+              const gp_Cylinder &, const Standard_Real)>(
+              &geometry_creator::make_cylindrical_surface))
+      .class_function(
+          "makeCylindricalSurfaceWithThreePoints",
+          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
+              const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
+              &geometry_creator::make_cylindrical_surface))
+      .class_function(
+          "makeCylindricalSurfaceWithAxis1",
+          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
+              const gp_Ax1 &, const Standard_Real)>(
+              &geometry_creator::make_cylindrical_surface))
       .class_function(
           "makeCylindricalSurfaceWithCirc",
-          select_overload<Handle(Geom_CylindricalSurface)(const gp_Circ &)>(
-              &geometry_creator::make_cylindrical_surface),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
+              const gp_Circ &)>(&geometry_creator::make_cylindrical_surface))
 
       // 直线创建方法
-      .class_function("makeLine",
-                      select_overload<Handle(Geom_Line)(const gp_Ax1 &)>(
-                          &geometry_creator::make_line),
-                      allow_raw_pointers())
-      .class_function("makeLineWithLin",
-                      select_overload<Handle(Geom_Line)(const gp_Lin &)>(
-                          &geometry_creator::make_line),
-                      allow_raw_pointers())
+      .class_function(
+          "makeLine",
+          emscripten::select_overload<Handle(Geom_Line)(const gp_Ax1 &)>(
+              &geometry_creator::make_line))
+      .class_function(
+          "makeLineWithLin",
+          emscripten::select_overload<Handle(Geom_Line)(const gp_Lin &)>(
+              &geometry_creator::make_line))
       .class_function(
           "makeLineWithPointDir",
-          select_overload<Handle(Geom_Line)(const gp_Pnt &, const gp_Dir &)>(
-              &geometry_creator::make_line),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Line)(
+              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_line))
       .class_function(
           "makeLineWithLinPoint",
-          select_overload<Handle(Geom_Line)(const gp_Lin &, const gp_Pnt &)>(
-              &geometry_creator::make_line),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Line)(
+              const gp_Lin &, const gp_Pnt &)>(&geometry_creator::make_line))
       .class_function(
           "makeLineWithTwoPoints",
-          select_overload<Handle(Geom_Line)(const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_line),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Line)(
+              const gp_Pnt &, const gp_Pnt &)>(&geometry_creator::make_line))
 
       // 镜像变换创建方法
-      .class_function(
-          "makeMirrorWithPoint",
-          select_overload<Handle(Geom_Transformation)(const gp_Pnt &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
-      .class_function(
-          "makeMirrorWithAxis1",
-          select_overload<Handle(Geom_Transformation)(const gp_Ax1 &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
-      .class_function(
-          "makeMirrorWithLin",
-          select_overload<Handle(Geom_Transformation)(const gp_Lin &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
+      .class_function("makeMirrorWithPoint",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Pnt &)>(&geometry_creator::make_mirror))
+      .class_function("makeMirrorWithAxis1",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Ax1 &)>(&geometry_creator::make_mirror))
+      .class_function("makeMirrorWithLin",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Lin &)>(&geometry_creator::make_mirror))
       .class_function(
           "makeMirrorWithPointDir",
-          select_overload<Handle(Geom_Transformation)(
-              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_mirror),
-          allow_raw_pointers())
-      .class_function(
-          "makeMirrorWithPln",
-          select_overload<Handle(Geom_Transformation)(const gp_Pln &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
-      .class_function(
-          "makeMirrorWithAxis2",
-          select_overload<Handle(Geom_Transformation)(const gp_Ax2 &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Transformation)(
+              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_mirror))
+      .class_function("makeMirrorWithPln",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Pln &)>(&geometry_creator::make_mirror))
+      .class_function("makeMirrorWithAxis2",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Ax2 &)>(&geometry_creator::make_mirror))
 
       // 旋转变换创建方法
-      .class_function(
-          "makeRotationWithLin",
-          select_overload<Handle(Geom_Transformation)(
-              const gp_Lin &, Standard_Real)>(&geometry_creator::make_rotation),
-          allow_raw_pointers())
-      .class_function(
-          "makeRotationWithAxis1",
-          select_overload<Handle(Geom_Transformation)(
-              const gp_Ax1 &, Standard_Real)>(&geometry_creator::make_rotation),
-          allow_raw_pointers())
+      .class_function("makeRotationWithLin",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Lin &, const Standard_Real)>(
+                          &geometry_creator::make_rotation))
+      .class_function("makeRotationWithAxis1",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Ax1 &, const Standard_Real)>(
+                          &geometry_creator::make_rotation))
       .class_function("makeRotationWithPointDir",
-                      select_overload<Handle(Geom_Transformation)(
-                          const gp_Pnt &, const gp_Dir &, Standard_Real)>(
-                          &geometry_creator::make_rotation),
-                      allow_raw_pointers())
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Pnt &, const gp_Dir &, const Standard_Real)>(
+                          &geometry_creator::make_rotation))
 
       // 平移变换创建方法
-      .class_function(
-          "makeTranslationWithVec",
-          select_overload<Handle(Geom_Transformation)(const gp_Vec &)>(
-              &geometry_creator::make_translation),
-          allow_raw_pointers())
+      .class_function("makeTranslationWithVec",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Vec &)>(&geometry_creator::make_translation))
       .class_function("makeTranslationWithTwoPoints",
-                      select_overload<Handle(Geom_Transformation)(
+                      emscripten::select_overload<Handle(Geom_Transformation)(
                           const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_translation),
-                      allow_raw_pointers())
+                          &geometry_creator::make_translation))
 
       // 缩放变换创建方法
-      .class_function(
-          "makeScale",
-          select_overload<Handle(Geom_Transformation)(
-              const gp_Pnt &, Standard_Real)>(&geometry_creator::make_scale),
-          allow_raw_pointers())
+      .class_function("makeScale",
+                      emscripten::select_overload<Handle(Geom_Transformation)(
+                          const gp_Pnt &, const Standard_Real)>(
+                          &geometry_creator::make_scale))
 
       // 平面创建方法
-      .class_function("makePlane",
-                      select_overload<Handle(Geom_Plane)(const gp_Pln &)>(
-                          &geometry_creator::make_plane),
-                      allow_raw_pointers())
+      .class_function(
+          "makePlane",
+          emscripten::select_overload<Handle(Geom_Plane)(const gp_Pln &)>(
+              &geometry_creator::make_plane))
       .class_function(
           "makePlaneWithPointDir",
-          select_overload<Handle(Geom_Plane)(const gp_Pnt &, const gp_Dir &)>(
-              &geometry_creator::make_plane),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Plane)(
+              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_plane))
       .class_function(
           "makePlaneWithCoefficients",
-          select_overload<Handle(Geom_Plane)(Standard_Real, Standard_Real,
-                                             Standard_Real, Standard_Real)>(
-              &geometry_creator::make_plane),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Plane)(
+              const Standard_Real, const Standard_Real, const Standard_Real,
+              const Standard_Real)>(&geometry_creator::make_plane))
       .class_function(
           "makePlaneWithPlnPoint",
-          select_overload<Handle(Geom_Plane)(const gp_Pln &, const gp_Pnt &)>(
-              &geometry_creator::make_plane),
-          allow_raw_pointers())
-      .class_function(
-          "makePlaneWithPlnDistance",
-          select_overload<Handle(Geom_Plane)(const gp_Pln &, Standard_Real)>(
-              &geometry_creator::make_plane),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_Plane)(
+              const gp_Pln &, const gp_Pnt &)>(&geometry_creator::make_plane))
+      .class_function("makePlaneWithPlnDistance",
+                      emscripten::select_overload<Handle(Geom_Plane)(
+                          const gp_Pln &, const Standard_Real)>(
+                          &geometry_creator::make_plane))
       .class_function("makePlaneWithThreePoints",
-                      select_overload<Handle(Geom_Plane)(
+                      emscripten::select_overload<Handle(Geom_Plane)(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_plane),
-                      allow_raw_pointers())
-      .class_function("makePlaneWithAxis1",
-                      select_overload<Handle(Geom_Plane)(const gp_Ax1 &)>(
-                          &geometry_creator::make_plane),
-                      allow_raw_pointers())
+                          &geometry_creator::make_plane))
+      .class_function(
+          "makePlaneWithAxis1",
+          emscripten::select_overload<Handle(Geom_Plane)(const gp_Ax1 &)>(
+              &geometry_creator::make_plane))
 
       // 线段创建方法
       .class_function(
           "makeSegmentWithTwoPoints",
-          select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Pnt &, const gp_Pnt &)>(&geometry_creator::make_segment),
-          allow_raw_pointers())
-      .class_function("makeSegmentWithLinParams",
-                      select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Lin &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_segment),
-                      allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Pnt &, const gp_Pnt &)>(&geometry_creator::make_segment))
+      .class_function(
+          "makeSegmentWithLinParams",
+          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+              const gp_Lin &, const Standard_Real, const Standard_Real)>(
+              &geometry_creator::make_segment))
       .class_function("makeSegmentWithLinPointParam",
-                      select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Lin &, const gp_Pnt &, Standard_Real)>(
-                          &geometry_creator::make_segment),
-                      allow_raw_pointers())
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
+                          const gp_Lin &, const gp_Pnt &, const Standard_Real)>(
+                          &geometry_creator::make_segment))
       .class_function("makeSegmentWithLinTwoPoints",
-                      select_overload<Handle(Geom_TrimmedCurve)(
+                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
                           const gp_Lin &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_segment),
-                      allow_raw_pointers())
+                          &geometry_creator::make_segment))
 
       // 修剪圆锥曲面创建方法
       .class_function(
           "makeTrimmedConeWithFourPoints",
-          select_overload<Handle(Geom_RectangularTrimmedSurface)(
+          emscripten::select_overload<Handle(Geom_RectangularTrimmedSurface)(
               const gp_Pnt &, const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_trimmed_cone),
-          allow_raw_pointers())
+              &geometry_creator::make_trimmed_cone))
       .class_function(
           "makeTrimmedConeWithTwoPointsTwoRadii",
-          select_overload<Handle(Geom_RectangularTrimmedSurface)(
-              const gp_Pnt &, const gp_Pnt &, Standard_Real, Standard_Real)>(
-              &geometry_creator::make_trimmed_cone),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom_RectangularTrimmedSurface)(
+              const gp_Pnt &, const gp_Pnt &, const Standard_Real,
+              const Standard_Real)>(&geometry_creator::make_trimmed_cone))
 
-      // 抛物线创建方法
-      .class_function("makeParabola",
-                      select_overload<Handle(Geom_Parabola)(const gp_Parab &)>(
-                          &geometry_creator::make_parabola),
-                      allow_raw_pointers())
-      .class_function("makeParabolaWithAxis",
-                      select_overload<Handle(Geom_Parabola)(const gp_Ax22d &,
-                                                            Standard_Real)>(
-                          &geometry_creator::make_parabola),
-                      allow_raw_pointers())
-      .class_function("makeParabolaWithMirrorAxis",
-                      select_overload<Handle(Geom_Parabola)(
-                          const gp_Ax2d &, Standard_Real, bool)>(
-                          &geometry_creator::make_parabola),
-                      allow_raw_pointers())
-      .class_function("makeParabolaWithDirectrix",
-                      select_overload<Handle(Geom_Parabola)(
-                          const gp_Ax2d &, const gp_Pnt2d &, bool)>(
-                          &geometry_creator::make_parabola),
-                      allow_raw_pointers())
-      .class_function("makeParabolaWithTwoPoints",
-                      select_overload<Handle(Geom_Parabola)(const gp_Pnt2d &,
-                                                            const gp_Pnt2d &)>(
-                          &geometry_creator::make_parabola),
-                      allow_raw_pointers())
-
-      // 球面创建方法
-      .class_function("makeSphericalSurface",
-                      select_overload<Handle(Geom_SphericalSurface)(
-                          const gp_Ax2 &, Standard_Real)>(
-                          &geometry_creator::make_spherical_surface),
-                      allow_raw_pointers())
-      .class_function(
-          "makeSphericalSurfaceWithSphere",
-          select_overload<Handle(Geom_SphericalSurface)(const gp_Sphere &)>(
-              &geometry_creator::make_spherical_surface),
-          allow_raw_pointers())
-      .class_function("makeSphericalSurfaceWithThreePoints",
-                      select_overload<Handle(Geom_SphericalSurface)(
+      // 修剪圆柱曲面创建方法
+      .class_function("makeTrimmedCylinderWithThreePoints",
+                      select_overload<Handle(Geom_RectangularTrimmedSurface)(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_spherical_surface),
-                      allow_raw_pointers())
-      .class_function(
-          "makeSphericalSurfaceWithFourPoints",
-          select_overload<Handle(Geom_SphericalSurface)(
-              const gp_Pnt &, const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_spherical_surface),
-          allow_raw_pointers())
-
-      // 圆环面创建方法
-      .class_function("makeToroidalSurface",
-                      select_overload<Handle(Geom_ToroidalSurface)(
-                          const gp_Ax2 &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_toroidal_surface),
-                      allow_raw_pointers())
-      .class_function(
-          "makeToroidalSurfaceWithTorus",
-          select_overload<Handle(Geom_ToroidalSurface)(const gp_Torus &)>(
-              &geometry_creator::make_toroidal_surface),
-          allow_raw_pointers())
+                          &geometry_creator::make_trimmed_cylinder))
+      .class_function("makeTrimmedCylinderWithCirc",
+                      select_overload<Handle(Geom_RectangularTrimmedSurface)(
+                          const gp_Circ &, Standard_Real)>(
+                          &geometry_creator::make_trimmed_cylinder))
+      .class_function("makeTrimmedCylinderWithAxis1",
+                      select_overload<Handle(Geom_RectangularTrimmedSurface)(
+                          const gp_Ax1 &, Standard_Real, Standard_Real)>(
+                          &geometry_creator::make_trimmed_cylinder))
 
       // 曲线近似转换方法
-      .class_function("convertApproxCurve",
-                      select_overload<Handle(Geom_BSplineCurve)(
-                          const Handle(Geom_Curve) &, Standard_Real,
-                          GeomAbs_Shape, Standard_Integer, Standard_Integer)>(
-                          &geometry_creator::convert_approx_curve),
-                      allow_raw_pointers())
+      .class_function(
+          "convertApproxCurve",
+          emscripten::select_overload<Handle(Geom_BSplineCurve)(
+              const Handle(Geom_Curve) &, const Standard_Real,
+              const GeomAbs_Shape, const Standard_Integer,
+              const Standard_Integer)>(&geometry_creator::convert_approx_curve))
 
       // 曲面近似转换方法
+      .class_function("convertApproxSurface",
+                      emscripten::select_overload<Handle(Geom_BSplineSurface)(
+                          const Handle(Geom_Surface) &, const Standard_Real,
+                          const GeomAbs_Shape, const GeomAbs_Shape,
+                          const Standard_Integer, const Standard_Integer,
+                          const Standard_Integer, const Standard_Integer)>(
+                          &geometry_creator::convert_approx_surface))
+
+      // 2D圆弧创建方法
       .class_function(
-          "convertApproxSurface",
-          select_overload<Handle(Geom_BSplineSurface)(
-              const Handle(Geom_Surface) &, Standard_Real, GeomAbs_Shape,
-              GeomAbs_Shape, Standard_Integer, Standard_Integer,
-              Standard_Integer, Standard_Integer)>(
-              &geometry_creator::convert_approx_surface),
-          allow_raw_pointers())
+          "make2dArcOfCircle",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Circ2d &, Standard_Real, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_circle))
+      .class_function(
+          "make2dArcOfCircleWithPoint",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Circ2d &, const gp_Pnt2d &, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_circle))
+      .class_function(
+          "make2dArcOfCircleWithTwoPoints",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Circ2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
+              &geometry_creator::make_arc_of_circle))
+      .class_function(
+          "make2dArcOfCircleWithThreePoints",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
+              &geometry_creator::make_arc_of_circle))
+      .class_function(
+          "make2dArcOfCircleWithVector",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Pnt2d &, const gp_Vec2d &, const gp_Pnt2d &)>(
+              &geometry_creator::make_arc_of_circle_vector))
 
       // 2D几何创建方法
       .class_function(
-          "make2dArcOfCircle",
-          select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Circ2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_circle),
-          allow_raw_pointers())
-      .class_function(
           "make2dArcOfEllipse",
-          select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Elips2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_ellipse),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Elips2d &, const Standard_Real, const Standard_Real,
+              bool)>(&geometry_creator::make_arc_of_ellipse))
       .class_function(
           "make2dArcOfHyperbola",
-          select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Hypr2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_hyperbola),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Hypr2d &, const Standard_Real, const Standard_Real,
+              bool)>(&geometry_creator::make_arc_of_hyperbola))
       .class_function(
           "make2dArcOfParabola",
-          select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Parab2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_parabola),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Parab2d &, const Standard_Real, const Standard_Real,
+              bool)>(&geometry_creator::make_arc_of_parabola))
 
+      // 2D椭圆弧创建方法
+      .class_function(
+          "make2dArcOfEllipse",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Elips2d &, Standard_Real, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_ellipse))
+      .class_function(
+          "make2dArcOfEllipseWithPoint",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Elips2d &, const gp_Pnt2d &, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_ellipse))
+      .class_function(
+          "make2dArcOfEllipseWithTwoPoints",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Elips2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
+              &geometry_creator::make_arc_of_ellipse))
+
+      // 2D双曲线弧创建方法
+      .class_function(
+          "make2dArcOfHyperbola",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Hypr2d &, Standard_Real, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_hyperbola))
+      .class_function(
+          "make2dArcOfHyperbolaWithPoint",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Hypr2d &, const gp_Pnt2d &, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_hyperbola))
+      .class_function(
+          "make2dArcOfHyperbolaWithTwoPoints",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Hypr2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
+              &geometry_creator::make_arc_of_hyperbola))
+
+      // 2D抛物线弧创建方法
+      .class_function(
+          "make2dArcOfParabola",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Parab2d &, Standard_Real, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_parabola))
+      .class_function(
+          "make2dArcOfParabolaWithPoint",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Parab2d &, const gp_Pnt2d &, Standard_Real, bool)>(
+              &geometry_creator::make_arc_of_parabola))
+      .class_function(
+          "make2dArcOfParabolaWithTwoPoints",
+          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Parab2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
+              &geometry_creator::make_arc_of_parabola))
+
+      // 2D圆创建方法
+      .class_function(
+          "make2dCircle",
+          emscripten::select_overload<Handle(Geom2d_Circle)(const gp_Circ2d &)>(
+              &geometry_creator::make_circle))
+      .class_function("make2dCircleWithAxis",
+                      emscripten::select_overload<Handle(Geom2d_Circle)(
+                          const gp_Ax2d &, Standard_Real, bool)>(
+                          &geometry_creator::make_circle))
+      .class_function(
+          "make2dCircleWithAxis2d",
+          emscripten::select_overload<Handle(Geom2d_Circle)(
+              const gp_Ax22d &, Standard_Real)>(&geometry_creator::make_circle))
+      .class_function("make2dCircleWithDistance",
+                      emscripten::select_overload<Handle(Geom2d_Circle)(
+                          const gp_Circ2d &, Standard_Real)>(
+                          &geometry_creator::make_circle))
+      .class_function("make2dCircleWithPoint",
+                      emscripten::select_overload<Handle(Geom2d_Circle)(
+                          const gp_Circ2d &, const gp_Pnt2d &)>(
+                          &geometry_creator::make_circle))
+      .class_function(
+          "make2dCircleWithThreePoints",
+          emscripten::select_overload<Handle(Geom2d_Circle)(
+              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
+              &geometry_creator::make_circle))
+      .class_function("make2dCircleWithCenterRadius",
+                      emscripten::select_overload<Handle(Geom2d_Circle)(
+                          const gp_Pnt2d &, Standard_Real, bool)>(
+                          &geometry_creator::make_circle))
+      .class_function("make2dCircleWithCenterPoint",
+                      emscripten::select_overload<Handle(Geom2d_Circle)(
+                          const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
+                          &geometry_creator::make_circle))
+
+      // 2D椭圆创建方法
+      .class_function("make2dEllipse",
+                      emscripten::select_overload<Handle(Geom2d_Ellipse)(
+                          const gp_Elips2d &)>(&geometry_creator::make_ellipse))
+      .class_function("make2dEllipseWithMajorAxis",
+                      emscripten::select_overload<Handle(Geom2d_Ellipse)(
+                          const gp_Ax2d &, Standard_Real, Standard_Real, bool)>(
+                          &geometry_creator::make_ellipse))
+      .class_function("make2dEllipseWithAxis2d",
+                      emscripten::select_overload<Handle(Geom2d_Ellipse)(
+                          const gp_Ax22d &, Standard_Real, Standard_Real)>(
+                          &geometry_creator::make_ellipse))
+      .class_function(
+          "make2dEllipseWithThreePoints",
+          emscripten::select_overload<Handle(Geom2d_Ellipse)(
+              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
+              &geometry_creator::make_ellipse))
+
+      // 2D双曲线创建方法
+      .class_function(
+          "make2dHyperbola",
+          emscripten::select_overload<Handle(Geom2d_Hyperbola)(
+              const gp_Hypr2d &)>(&geometry_creator::make_hyperbola))
+      .class_function("make2dHyperbolaWithMajorAxis",
+                      emscripten::select_overload<Handle(Geom2d_Hyperbola)(
+                          const gp_Ax2d &, Standard_Real, Standard_Real, bool)>(
+                          &geometry_creator::make_hyperbola))
+      .class_function("make2dHyperbolaWithAxis2d",
+                      emscripten::select_overload<Handle(Geom2d_Hyperbola)(
+                          const gp_Ax22d &, Standard_Real, Standard_Real)>(
+                          &geometry_creator::make_hyperbola))
+      .class_function(
+          "make2dHyperbolaWithThreePoints",
+          emscripten::select_overload<Handle(Geom2d_Hyperbola)(
+              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
+              &geometry_creator::make_hyperbola))
+
+      // 2D直线创建方法
+      .class_function(
+          "make2dLine",
+          emscripten::select_overload<Handle(Geom2d_Line)(const gp_Ax2d &)>(
+              &geometry_creator::make_line))
+      .class_function(
+          "make2dLineWithLin2d",
+          emscripten::select_overload<Handle(Geom2d_Line)(const gp_Lin2d &)>(
+              &geometry_creator::make_line))
+      .class_function("make2dLineWithPointDir",
+                      emscripten::select_overload<Handle(Geom2d_Line)(
+                          const gp_Pnt2d &, const gp_Dir2d &)>(
+                          &geometry_creator::make_line))
+      .class_function("make2dLineWithLinPoint",
+                      emscripten::select_overload<Handle(Geom2d_Line)(
+                          const gp_Lin2d &, const gp_Pnt2d &)>(
+                          &geometry_creator::make_line))
+      .class_function(
+          "make2dLineWithLinDistance",
+          emscripten::select_overload<Handle(Geom2d_Line)(
+              const gp_Lin2d &, Standard_Real)>(&geometry_creator::make_line))
+      .class_function("make2dLineWithTwoPoints",
+                      emscripten::select_overload<Handle(Geom2d_Line)(
+                          const gp_Pnt2d &, const gp_Pnt2d &)>(
+                          &geometry_creator::make_line))
+
+      // 2D抛物线创建方法
+      .class_function(
+          "make2dParabola",
+          emscripten::select_overload<Handle(Geom2d_Parabola)(
+              const gp_Parab2d &)>(&geometry_creator::make_parabola))
+      .class_function("make2dParabolaWithAxis",
+                      emscripten::select_overload<Handle(Geom2d_Parabola)(
+                          const gp_Ax22d &, Standard_Real)>(
+                          &geometry_creator::make_parabola))
+      .class_function("make2dParabolaWithMirrorAxis",
+                      emscripten::select_overload<Handle(Geom2d_Parabola)(
+                          const gp_Ax2d &, Standard_Real, bool)>(
+                          &geometry_creator::make_parabola))
+      .class_function("make2dParabolaWithDirectrix",
+                      emscripten::select_overload<Handle(Geom2d_Parabola)(
+                          const gp_Ax2d &, const gp_Pnt2d &, bool)>(
+                          &geometry_creator::make_parabola))
+      .class_function("make2dParabolaWithTwoPoints",
+                      emscripten::select_overload<Handle(Geom2d_Parabola)(
+                          const gp_Pnt2d &, const gp_Pnt2d &)>(
+                          &geometry_creator::make_parabola))
       // 2D线段创建方法
       .class_function("make2dSegment",
                       select_overload<Handle(Geom2d_TrimmedCurve)(
                           const gp_Pnt2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_segment),
-                      allow_raw_pointers())
+                          &geometry_creator::make_segment))
       .class_function(
           "make2dSegmentWithDirection",
           select_overload<Handle(Geom2d_TrimmedCurve)(
               const gp_Pnt2d &, const gp_Dir2d &, const gp_Pnt2d &)>(
-              &geometry_creator::make_segment),
-          allow_raw_pointers())
+              &geometry_creator::make_segment))
       .class_function("make2dSegmentWithLineParams",
                       select_overload<Handle(Geom2d_TrimmedCurve)(
                           const gp_Lin2d &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_segment),
-                      allow_raw_pointers())
+                          &geometry_creator::make_segment))
+      .class_function("make2dSegmentWithLinePointParam",
+                      select_overload<Handle(Geom2d_TrimmedCurve)(
+                          const gp_Lin2d &, const gp_Pnt2d &, Standard_Real)>(
+                          &geometry_creator::make_segment))
+      .class_function(
+          "make2dSegmentWithLineTwoPoints",
+          select_overload<Handle(Geom2d_TrimmedCurve)(
+              const gp_Lin2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
+              &geometry_creator::make_segment))
 
       // 2D变换创建方法
-      .class_function(
-          "make2dMirror",
-          select_overload<Handle(Geom2d_Transformation)(const gp_Pnt2d &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
-      .class_function(
-          "make2dMirrorWithAxis",
-          select_overload<Handle(Geom2d_Transformation)(const gp_Ax2d &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
-      .class_function(
-          "make2dMirrorWithLine",
-          select_overload<Handle(Geom2d_Transformation)(const gp_Lin2d &)>(
-              &geometry_creator::make_mirror),
-          allow_raw_pointers())
+      .class_function("make2dMirror",
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
+                          const gp_Pnt2d &)>(&geometry_creator::make_mirror))
+      .class_function("make2dMirrorWithAxis",
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
+                          const gp_Ax2d &)>(&geometry_creator::make_mirror))
+      .class_function("make2dMirrorWithLine",
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
+                          const gp_Lin2d &)>(&geometry_creator::make_mirror))
       .class_function("make2dMirrorWithPointDir",
-                      select_overload<Handle(Geom2d_Transformation)(
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
                           const gp_Pnt2d &, const gp_Dir2d &)>(
-                          &geometry_creator::make_mirror),
-                      allow_raw_pointers())
+                          &geometry_creator::make_mirror))
 
       // 2D旋转创建方法
       .class_function("make2dRotation",
-                      select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Pnt2d &, Standard_Real)>(
-                          &geometry_creator::make_rotation),
-                      allow_raw_pointers())
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
+                          const gp_Pnt2d &, const Standard_Real)>(
+                          &geometry_creator::make_rotation))
 
       // 2D缩放创建方法
-      .class_function(
-          "make2dScale",
-          select_overload<Handle(Geom2d_Transformation)(
-              const gp_Pnt2d &, Standard_Real)>(&geometry_creator::make_scale),
-          allow_raw_pointers())
+      .class_function("make2dScale",
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
+                          const gp_Pnt2d &, const Standard_Real)>(
+                          &geometry_creator::make_scale))
 
       // 2D平移创建方法
       .class_function(
           "make2dTranslation",
-          select_overload<Handle(Geom2d_Transformation)(const gp_Vec2d &)>(
-              &geometry_creator::make_translation),
-          allow_raw_pointers())
+          emscripten::select_overload<Handle(Geom2d_Transformation)(
+              const gp_Vec2d &)>(&geometry_creator::make_translation))
       .class_function("make2dTranslationWithPoints",
-                      select_overload<Handle(Geom2d_Transformation)(
+                      emscripten::select_overload<Handle(Geom2d_Transformation)(
                           const gp_Pnt2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_translation),
-                      allow_raw_pointers());
+                          &geometry_creator::make_translation));
 }

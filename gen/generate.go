@@ -37,7 +37,7 @@ func filterClasses(workDir string, child clang.Cursor, customBuild bool) bool {
 		return file.Name() == "myMain.h" && shouldProcessClass(child)
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
-	return strings.HasPrefix(sfile.Name(), path.Join(workDir, sourceBasePath)) &&
+	return strings.HasPrefix(sfile.Name(), path.Join(workDir, oggSourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		shouldProcessClass(child)
 }
@@ -52,7 +52,7 @@ func filterTemplates(workDir string, child clang.Cursor, customBuild bool) bool 
 				child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed)
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
-	return strings.HasPrefix(sfile.Name(), path.Join(workDir, sourceBasePath)) &&
+	return strings.HasPrefix(sfile.Name(), path.Join(workDir, oggSourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		child.Kind() == clang.Cursor_TypedefDecl &&
 		(child.TypedefDeclUnderlyingType().Kind() == clang.Type_Elaborated ||
@@ -67,7 +67,7 @@ func filterEnums(workDir string, child clang.Cursor, customBuild bool) bool {
 		return file.Name() == "myMain.h"
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
-	return strings.HasPrefix(sfile.Name(), path.Join(workDir, sourceBasePath)) &&
+	return strings.HasPrefix(sfile.Name(), path.Join(workDir, oggSourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		child.Kind() == clang.Cursor_EnumDecl
 }
@@ -89,7 +89,7 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 			continue
 		}
 		sfile, _, _, _ := child.Extent().Start().FileLocation()
-		relOcFileName := strings.Replace(sfile.Name(), path.Join(workDir, sourceBasePath), "", 1)
+		relOcFileName := strings.Replace(sfile.Name(), path.Join(workDir, oggSourceBasePath), "", 1)
 		dirPath := filepath.Join(bulidPath, buildType, filepath.Dir(relOcFileName))
 		if err := mkdirp(dirPath); err != nil {
 			fmt.Printf("Error creating directory %s: %v\n", dirPath, err)

@@ -82,6 +82,7 @@ declare module 'topo' {
         rotateZ(angle: number): Matrix;
         inverse(): Matrix;
         multiply(other: Matrix): Matrix;
+        multiply(vec: Vector): Matrix;
 
         // 数据访问
         get(row: number, col: number): number;
@@ -92,11 +93,7 @@ declare module 'topo' {
         getValue(): gp_GTrsf;
     }
 
-    // 全局操作符
-    function multiplyMatrixVector(mat: Matrix, vec: Vector): Vector;
-
     class Plane {
-        constructor();
         constructor(pln: gp_Pln);
         constructor(origin: Vector, xDir: Vector, normal?: Vector);
 
@@ -190,9 +187,6 @@ declare module 'topo' {
         notEquals(other: Vector): boolean;
     }
 
-    // 全局运算符
-    function multiplyScalarVector(scalar: number, vec: Vector): Vector;
-
     interface MeshCallback {
         begin(): void;
         end(): void;
@@ -242,10 +236,6 @@ declare module 'topo' {
 
         // 序列化方法
         toBrep(): string;
-
-        // 标签管理
-        getTag(): number;
-        setTag(tag: number): void;
     }
 
     enum TextureMappingRule {
@@ -342,6 +332,9 @@ declare module 'topo' {
         getAutoScaleSizeOnV(): boolean;
         getTextureMapType(): TextureMappingRule;
         getRotationAngle(): number;
+
+        // 获取表面颜色
+        surfaceColour(): [number, number, number] | null;
 
         // 变换操作
         transform(trsf: gp_Trsf): number;
@@ -464,6 +457,7 @@ declare module 'topo' {
         autoCast(): Vertex | Edge | Wire | Face | Shell | Solid | Compound | CompSolid | null;
 
         // 其他方法
+        value(): TopoDS_Shape;
         copy(deep?: boolean): Shape;
         shapeType(): TopAbs_ShapeEnum;
         geomType(): ShapeGeomType;
@@ -1215,8 +1209,6 @@ declare module 'topo' {
 
         // 值访问方法
         value(): TopoDS_Solid;
-
-        // 类型方法
         type(): GeometryObjectType;
         copy(deep?: boolean): Shape;
     }
@@ -1297,10 +1289,6 @@ declare module 'topo' {
     class Selector {
         constructor();
         filter(): Shape[];
-        static and(selector1: Selector, selector2: Selector): Selector;
-        static or(selector1: Selector, selector2: Selector): Selector;
-        static subtract(selector1: Selector, selector2: Selector): Selector;
-        static not(selector: Selector): Selector;
     }
 
     class CustomSelector extends Selector {

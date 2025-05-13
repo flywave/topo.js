@@ -1,6 +1,27 @@
 #include "binding.hh"
 #include "primitives.hh"
 
+using namespace flywave;
+using namespace flywave::topo;
+
+static emscripten::val
+get_insulator_radius(const flywave::topo::insulator_params::insulator_ &obj) {
+  if (obj.radius.which() == 0) { // double
+    return emscripten::val(boost::get<double>(obj.radius));
+  } else { // CompositeInsulatorParams
+    return emscripten::val(boost::get<composite_insulator_params>(obj.radius));
+  }
+}
+static void
+set_insulator_radius(flywave::topo::insulator_params::insulator_ &obj,
+                     emscripten::val val) {
+  if (val.isNumber()) {
+    obj.radius = val.as<double>();
+  } else {
+    obj.radius = val.as<composite_insulator_params>();
+  }
+}
+
 EMSCRIPTEN_BINDINGS(Primitive) {
   // 球体参数结构体
   value_object<sphere_params>("SphereParams")
@@ -990,30 +1011,12 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("arrangement", &insulator_params::multi_link::arrangement);
 
   // 绝缘子参数子结构绑定
-  value_object<insulator_params::insulator>("Insulator")
-      .field(
-          "radius",
-          // Getter
-          [](const insulator_params::insulator &i) -> emscripten::val {
-            if (i.radius.which() == 0) { // double
-              return emscripten::val(boost::get<double>(i.radius));
-            } else { // CompositeInsulatorParams
-              return emscripten::val(
-                  boost::get<composite_insulator_params>(i.radius));
-            }
-          },
-          // Setter
-          [](insulator_params::insulator &i, emscripten::val v) {
-            if (v.isNumber()) {
-              i.radius = v.as<double>();
-            } else {
-              i.radius = v.as<composite_insulator_params>();
-            }
-          })
-      .field("height", &insulator_params::insulator::height)
-      .field("leftCount", &insulator_params::insulator::leftCount)
-      .field("rightCount", &insulator_params::insulator::rightCount)
-      .field("material", &insulator_params::insulator::material);
+  value_object<insulator_params::insulator_>("Insulator")
+      .field("radius", &get_insulator_radius, &set_insulator_radius)
+      .field("height", &insulator_params::insulator_::height)
+      .field("leftCount", &insulator_params::insulator_::leftCount)
+      .field("rightCount", &insulator_params::insulator_::rightCount)
+      .field("material", &insulator_params::insulator_::material);
 
   // 均压环配置子结构绑定
   value_object<insulator_params::grading_ring>("GradingRing")
@@ -1173,7 +1176,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const triple_hook_anchor_params &)>(
                &create_triple_hook_anchor));
   function("createTripleHookAnchorWithPosition",
-           select_overload<TodoDS_Shape(
+           select_overload<TopoDS_Shape(
                const triple_hook_anchor_params &, const gp_Pnt &,
                const gp_Dir &, const gp_Dir &)>(&create_triple_hook_anchor));
 
@@ -1484,7 +1487,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 电缆夹具创建函数
   function("createCableClamp",
            select_overload<TopoDS_Shape(const cable_clamp_params &)>(
-               &create_c cable_clamp));
+               &create_cable_clamp));
   function(
       "createCableClampWithPosition",
       select_overload<TopoDS_Shape(const cable_clamp_params &, const gp_Pnt &,
@@ -1494,7 +1497,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 电缆立柱参数结构体绑定
   value_object<cable_pole_params>("CablePoleParams")
       .field("specification", &cable_pole_params::specification)
-      .field("length", &c cable_pole_params::length)
+      .field("length", &cable_pole_params::length)
       .field("radius", &cable_pole_params::radius)
       .field("arcAngle", &cable_pole_params::arcAngle)
       .field("width", &cable_pole_params::width)
@@ -1809,7 +1812,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("cushionThickness", &cable_trench_params::cushionThickness)
       .field("wallThickness", &cable_trench_params::wallThickness)
       .field("wallThickness2", &cable_trench_params::wallThickness2)
-      .field("points", &c cable_trench_params::points);
+      .field("points", &cable_trench_params::points);
 
   // 电缆沟创建函数
   function("createCableTrench",

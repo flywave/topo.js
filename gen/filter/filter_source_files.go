@@ -11,6 +11,7 @@ func FilterSourceFile(filename string) bool {
 	// Allow C++ and C source files
 	if strings.HasSuffix(filename, ".cxx") ||
 		strings.HasSuffix(filename, ".cpp") ||
+		strings.HasSuffix(filename, ".cc") ||
 		strings.HasSuffix(filename, ".c") {
 		return true
 	}

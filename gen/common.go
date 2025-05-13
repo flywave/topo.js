@@ -15,7 +15,7 @@ func GetGlobalIncludes(workDir string) ([]string, []string) {
 	var additionalIncludePaths []string
 
 	// Walk OCCT directory to collect include files and paths
-	err := filepath.Walk(path.Join(workDir, sourceBasePath), func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path.Join(workDir, oggSourceBasePath), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -54,6 +54,7 @@ var (
 		"/external/rapidjson/include",
 		"/external/freetype2/include/freetype",
 		"/external/freetype2/include",
+		"/external/libboost/boost_1_67_0",
 	}
 )
 

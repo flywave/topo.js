@@ -179,7 +179,7 @@ func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templat
 		for _, typedef := range b.typedefs {
 			loc := typedef.Location()
 			file, _, _, _ := loc.FileLocation()
-			spath := path.Join(b.workDir, sourceBasePath)
+			spath := path.Join(b.workDir, oggSourceBasePath)
 			if strings.HasPrefix(file.Name(), spath) &&
 				typedef.TypedefDeclUnderlyingType().Spelling() == typeSpelling {
 				return typedef.Spelling()
