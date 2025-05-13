@@ -35,6 +35,8 @@ declare module 'topo' {
 
         // 底层访问
         getValue(): Bnd_Box;
+
+        delete(): void;
     }
 
 
@@ -68,6 +70,8 @@ declare module 'topo' {
         // 比较操作
         equals(other: Location): boolean;
         notEquals(other: Location): boolean;
+
+        delete(): void;
     }
 
     class Matrix {
@@ -91,6 +95,8 @@ declare module 'topo' {
 
         // 转换方法
         getValue(): gp_GTrsf;
+
+        delete(): void;
     }
 
     class Plane {
@@ -135,6 +141,8 @@ declare module 'topo' {
 
         // 转换方法
         toPln(): gp_Pln;
+
+        delete(): void;
     }
 
     class Vector {
@@ -185,6 +193,8 @@ declare module 'topo' {
         div(scalar: number): Vector;
         equals(other: Vector): boolean;
         notEquals(other: Vector): boolean;
+
+        delete(): void;
     }
 
     interface MeshCallback {
@@ -208,6 +218,8 @@ declare module 'topo' {
 
     class MeshReceiver {
         constructor(callback: MeshCallback);
+
+        delete(): void;
     }
 
     enum GeometryObjectType {
@@ -236,6 +248,8 @@ declare module 'topo' {
 
         // 序列化方法
         toBrep(): string;
+
+        delete(): void;
     }
 
     enum TextureMappingRule {
@@ -483,6 +497,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Vertex | null;
+        delete(): void;
     }
 
     enum ParamMode {
@@ -761,6 +776,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Edge | null;
+        delete(): void;
     }
 
     enum WireCurveType {
@@ -833,6 +849,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Wire | null;
+        delete(): void;
     }
 
     enum BooleanOperationType {
@@ -971,6 +988,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Face | null;
+        delete(): void;
     }
 
     class Shell extends Shape {
@@ -1057,6 +1075,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Shell | null;
+        delete(): void;
     }
 
     class Shape3D extends Shape {
@@ -1216,6 +1235,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Solid | null;
+        delete(): void;
     }
 
     class Compound extends Shape3D {
@@ -1244,6 +1264,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): Compound | null;
+        delete(): void;
     }
 
     class CompSolid extends Solid {
@@ -1265,6 +1286,7 @@ declare module 'topo' {
         constructor(shape: Shape);
         reset(): void;
         next(): CompSolid | null;
+        delete(): void;
     }
 
     class Mesh {
@@ -1281,11 +1303,14 @@ declare module 'topo' {
 
         // 三角化方法
         triangulation(receiver: MeshReceiver, deflection?: number, tolerance?: number): void;
+
+        delete(): void;
     }
 
     class Selector {
         constructor();
         filter(): Shape[];
+        delete(): void;
     }
 
     class CustomSelector extends Selector {
