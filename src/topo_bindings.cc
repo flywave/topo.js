@@ -20,6 +20,8 @@
 using namespace flywave;
 using namespace flywave::topo;
 
+struct shape_ops {};
+
 class emscripten_mesh_receiver : public flywave::topo::mesh_receiver {
 public:
   emscripten::val js_receiver;
@@ -145,15 +147,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
 
   class_<topo_location>("Location")
       .constructor<>()
-      .constructor<gp_Trsf>()
-      .constructor<TopLoc_Location>()
-      .constructor<const gp_Pnt &>()
-      .constructor<const gp_Vec &>()
-      .constructor<const gp_Vec &, double, double, double>()
-      .constructor<const gp_Pln &>()
-      .constructor<const gp_Pln &, const gp_Pnt &>()
-      .constructor<const gp_Vec &, const gp_Vec &, double>()
-      .constructor<const topo_vector &>()
+      .constructor(emscripten::optional_override(
+          [](const gp_Vec &t, double rx, double ry, double rz) {
+            return topo_location(t, rx, ry, rz);
+          }))
+      .constructor(emscripten::optional_override(
+          [](const gp_Pln &pln, const gp_Pnt &pos) {
+            return topo_location(pln, pos);
+          }))
+      .constructor(emscripten::optional_override(
+          [](const gp_Vec &t, const gp_Vec &axis, double angle) {
+            return topo_location(t, axis, angle);
+          }))
+      .constructor(emscripten::optional_override([](emscripten::val v) {
+        if (v.instanceof(emscripten::val::global("gp_Trsf"))) {
+          return topo_location(v.as<gp_Trsf>());
+        } else if (v.instanceof(emscripten::val::global("TopLoc_Location"))) {
+          return topo_location(v.as<TopLoc_Location>());
+        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
+          return topo_location(v.as<gp_Pnt>());
+        } else if (v.instanceof(emscripten::val::global("gp_Vec"))) {
+          return topo_location(v.as<gp_Vec>());
+        } else if (v.instanceof(emscripten::val::global("gp_Pln"))) {
+          return topo_location(v.as<gp_Pln>());
+        } else if (v.instanceof(emscripten::val::global("topo_vector"))) {
+          return topo_location(v.as<topo_vector>());
+        } else {
+          throw std::runtime_error(
+              "Invalid argument type for Location constructor");
+        }
+      }))
       .function("copy", emscripten::optional_override(
                             [](const topo_location &self) -> topo_location {
                               return self;
@@ -215,8 +238,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
 
   class_<topo_matrix>("Matrix")
       .constructor<>()
-      .constructor<const gp_GTrsf &>()
-      .constructor<const gp_Trsf &>()
+      .constructor(emscripten::optional_override([](emscripten::val v) {
+        if (v.instanceof(emscripten::val::global("gp_Trsf"))) {
+          return topo_matrix(v.as<gp_Trsf>());
+        } else if (v.instanceof(emscripten::val::global("gp_GTrsf"))) {
+          return topo_matrix(v.as<gp_GTrsf>());
+        } else {
+          throw std::runtime_error(
+              "Invalid argument type for Matrix constructor");
+        }
+      }))
       .constructor(emscripten::optional_override([](emscripten::val matrixVal) {
         std::vector<std::vector<double>> matrix;
         if (!matrixVal.isUndefined() && !matrixVal.isNull()) {
@@ -425,18 +456,27 @@ EMSCRIPTEN_BINDINGS(Topo) {
 
   class_<topo_vector>("Vector")
       .constructor<>()
-      .constructor<double, double, double>()
-      .constructor<const gp_Vec &>()
-      .constructor<const gp_Pnt &>()
-      .constructor<const gp_Dir &>()
-      .constructor<const gp_XYZ &>()
-      .constructor(emscripten::optional_override([](emscripten::val vec) {
-        if (!vec.isArray() || vec["length"].as<unsigned>() != 3) {
-          throw std::runtime_error("Expected array of length 3");
+      .constructor(emscripten::optional_override(
+          [](double x, double y, double z) { return topo_vector(x, y, z); }))
+      .constructor(emscripten::optional_override([](emscripten::val v) {
+        if (v.instanceof(emscripten::val::global("gp_Vec"))) {
+          return topo_vector(v.as<gp_Vec>());
+        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
+          return topo_vector(v.as<gp_Pnt>());
+        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
+          return topo_vector(v.as<gp_Pnt>());
+        } else if (v.instanceof(emscripten::val::global("gp_Dir"))) {
+          return topo_vector(v.as<gp_Dir>());
+        } else if (v.instanceof(emscripten::val::global("gp_XYZ"))) {
+          return topo_vector(v.as<gp_XYZ>());
+        } else if (v.isArray() && v["length"].as<unsigned>() == 3) {
+          std::array<double, 3> arr = {v[0].as<double>(), v[1].as<double>(),
+                                       v[2].as<double>()};
+          return topo_vector(arr);
+        } else {
+          throw std::runtime_error(
+              "Invalid argument type for Matrix constructor");
         }
-        std::array<double, 3> arr = {vec[0].as<double>(), vec[1].as<double>(),
-                                     vec[2].as<double>()};
-        return topo_vector(arr);
       }))
       // Properties
       .property("x", &topo_vector::x, &topo_vector::set_x)
@@ -4637,951 +4677,947 @@ EMSCRIPTEN_BINDINGS(Topo) {
       }))
       .smart_ptr<std::shared_ptr<string_syntax_selector>>(
           "StringSyntaxSelector");
-}
-
-// 布尔运算封装
-EMSCRIPTEN_BINDINGS(ShapeOps) {
-
-  emscripten::constant("ShapeOps", emscripten::val::object());
 
   // Intersection operations
-  enum_<flywave::topo::intersection_direction>("ShapeOps.IntersectionDirection")
+  enum_<flywave::topo::intersection_direction>("IntersectionDirection")
       .value("None", flywave::topo::intersection_direction::None)
       .value("AlongAxis", flywave::topo::intersection_direction::AlongAxis)
       .value("Opposite", flywave::topo::intersection_direction::Opposite);
 
   // Sweep operations
-  enum_<flywave::topo::transition_mode>("ShapeOps.TransitionMode")
+  enum_<flywave::topo::transition_mode>("TransitionMode")
       .value("TRANSFORMED", flywave::topo::transition_mode::TRANSFORMED)
       .value("ROUND", flywave::topo::transition_mode::ROUND)
       .value("RIGHT", flywave::topo::transition_mode::RIGHT);
 
-  emscripten::function(
-      "ShapeOps.fuse",
-      emscripten::optional_override(
-          [](emscripten::val shapesVal, emscripten::val tolVal,
-             emscripten::val glueVal) -> emscripten::val {
-            std::vector<shape> shapes;
-            if (shapesVal.isArray()) {
-              const size_t length = shapesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                shapes.push_back(shapesVal[i].as<shape>());
-              }
-            }
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-            bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
-
-            auto result = flywave::topo::fuse(shapes, tol, glue);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-  emscripten::function(
-      "ShapeOps.cut",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val toolVal,
-             emscripten::val tolVal,
-             emscripten::val glueVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            auto tool = toolVal.as<shape>();
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-            bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
-
-            auto result = flywave::topo::cut(shp, tool, tol, glue);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.cut",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val toCutsVal,
-             emscripten::val tolVal,
-             emscripten::val glueVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            std::vector<shape> toCuts;
-            if (toCutsVal.isArray()) {
-              const size_t length = toCutsVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                toCuts.push_back(toCutsVal[i].as<shape>());
-              }
-            }
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-            bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
-
-            auto result = flywave::topo::cut(shp, toCuts, tol, glue);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.intersect",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val toIntersectVal,
-             emscripten::val tolVal,
-             emscripten::val glueVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            auto toIntersect = toIntersectVal.as<shape>();
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-            bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
-
-            auto result = flywave::topo::intersect(shp, toIntersect, tol, glue);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.intersect",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val toIntersectsVal,
-             emscripten::val tolVal,
-             emscripten::val glueVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            std::vector<shape> toIntersects;
-            if (toIntersectsVal.isArray()) {
-              const size_t length = toIntersectsVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                toIntersects.push_back(toIntersectsVal[i].as<shape>());
-              }
-            }
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-            bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
-
-            auto result =
-                flywave::topo::intersect(shp, toIntersects, tol, glue);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.split",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val splittersVal,
-             emscripten::val tolVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            std::vector<shape> splitters;
-            if (splittersVal.isArray()) {
-              const size_t length = splittersVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                splitters.push_back(splittersVal[i].as<shape>());
-              }
-            }
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-
-            auto result = flywave::topo::split(shp, splitters, tol);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.split",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val splitterVal,
-             emscripten::val tolVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            auto splitter = splitterVal.as<shape>();
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-
-            auto result = flywave::topo::split(shp, splitter, tol);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.facesIntersectedByLine",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val pointVal,
-             emscripten::val axisVal, emscripten::val toleranceVal,
-             emscripten::val directionVal) {
-            auto shp = shpVal.as<shape>();
-            auto point = pointVal.as<gp_Pnt>();
-            auto axis = axisVal.as<gp_Dir>();
-            double tolerance =
-                toleranceVal.isUndefined() ? 1e-4 : toleranceVal.as<double>();
-            auto direction = directionVal.isUndefined()
-                                 ? intersection_direction::None
-                                 : static_cast<intersection_direction>(
-                                       directionVal.as<int>());
-
-            auto faces = flywave::topo::faces_intersected_by_line(
-                shp, point, axis, tolerance, direction);
-            emscripten::val result = emscripten::val::array();
-            for (auto &face : faces) {
-              result.call<void>("push", emscripten::val(face));
-            }
-            return result;
-          }));
-
-  emscripten::function(
-      "ShapeOps.fill",
-      emscripten::optional_override(
-          [](emscripten::val shpVal,
-             emscripten::val constraintsVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            std::vector<shape> constraints;
-            if (constraintsVal.isArray()) {
-              const size_t length = constraintsVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                constraints.push_back(constraintsVal[i].as<shape>());
-              }
-            }
-
-            auto result = flywave::topo::fill(shp, constraints);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.shelling",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val faceListVal,
-             emscripten::val thicknessVal, emscripten::val toleranceVal,
-             emscripten::val joinTypeVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            std::vector<face> faceList;
-            if (faceListVal.isArray()) {
-              const size_t length = faceListVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                faceList.push_back(faceListVal[i].as<face>());
-              }
-            }
-            double thickness = thicknessVal.as<double>();
-            double tolerance =
-                toleranceVal.isUndefined() ? 0.0001 : toleranceVal.as<double>();
-            auto joinType =
-                joinTypeVal.isUndefined()
-                    ? GeomAbs_JoinType::GeomAbs_Arc
-                    : static_cast<GeomAbs_JoinType>(joinTypeVal.as<int>());
-
-            auto result = flywave::topo::shelling(shp, faceList, thickness,
-                                                  tolerance, joinType);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function("ShapeOps.fillet",
-                       emscripten::optional_override(
-                           [](emscripten::val shpVal, emscripten::val edgesVal,
-                              emscripten::val radiusVal) -> emscripten::val {
-                             auto shp = shpVal.as<shape>();
-                             std::vector<edge> edges;
-                             if (edgesVal.isArray()) {
-                               const size_t length =
-                                   edgesVal["length"].as<size_t>();
-                               for (size_t i = 0; i < length; i++) {
-                                 edges.push_back(edgesVal[i].as<edge>());
-                               }
-                             }
-                             double radius = radiusVal.as<double>();
-
-                             auto result =
-                                 flywave::topo::fillet(shp, edges, radius);
-                             if (result) {
-                               return emscripten::val(*result);
-                             }
-                             return emscripten::val::undefined();
-                           }));
-
-  emscripten::function(
-      "ShapeOps.chamfer",
-      emscripten::optional_override(
-          [](emscripten::val baseShapeVal, emscripten::val edgesVal,
-             emscripten::val distanceVal,
-             emscripten::val distance2Val) -> emscripten::val {
-            auto baseShape = baseShapeVal.as<shape>();
-            std::vector<edge> edges;
-            if (edgesVal.isArray()) {
-              const size_t length = edgesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                edges.push_back(edgesVal[i].as<edge>());
-              }
-            }
-            double distance = distanceVal.as<double>();
-            boost::optional<double> distance2 =
-                distance2Val.isUndefined()
-                    ? boost::none
-                    : boost::optional<double>(distance2Val.as<double>());
-
-            auto result =
-                flywave::topo::chamfer(baseShape, edges, distance, distance2);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function("ShapeOps.extrude",
-                       emscripten::optional_override(
-                           [](emscripten::val shapeVal,
-                              emscripten::val directionVal) -> emscripten::val {
-                             auto shp = shapeVal.as<shape>();
-                             auto direction = directionVal.as<gp_Vec>();
-
-                             auto result =
-                                 flywave::topo::extrude(shp, direction);
-                             if (result) {
-                               return emscripten::val(*result);
-                             }
-                             return emscripten::val::undefined();
-                           }));
-
-  emscripten::function(
-      "ShapeOps.extrudeLinear",
-      emscripten::optional_override(
-          [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
-             emscripten::val vecNormalVal,
-             emscripten::val taperVal) -> emscripten::val {
-            auto outerWire = outerWireVal.as<wire>();
-            std::vector<wire> innerWires;
-            if (innerWiresVal.isArray()) {
-              const size_t length = innerWiresVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                innerWires.push_back(innerWiresVal[i].as<wire>());
-              }
-            }
-            auto vecNormal = vecNormalVal.as<gp_Vec>();
-            double taper = taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
-
-            auto result = flywave::topo::extrude_linear(outerWire, innerWires,
-                                                        vecNormal, taper);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.extrudeLinear",
-      emscripten::optional_override(
-          [](emscripten::val faceVal, emscripten::val vecNormalVal,
-             emscripten::val taperVal) -> emscripten::val {
-            auto f = faceVal.as<face>();
-            auto vecNormal = vecNormalVal.as<gp_Vec>();
-            double taper = taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
-
-            auto result = flywave::topo::extrude_linear(f, vecNormal, taper);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.extrudeLinearWithRotation",
-      emscripten::optional_override(
-          [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
-             emscripten::val centerVal, emscripten::val normalVal,
-             emscripten::val angleDegreesVal) -> emscripten::val {
-            auto outerWire = outerWireVal.as<wire>();
-            std::vector<wire> innerWires;
-            if (innerWiresVal.isArray()) {
-              const size_t length = innerWiresVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                innerWires.push_back(innerWiresVal[i].as<wire>());
-              }
-            }
-            auto center = centerVal.as<gp_Pnt>();
-            auto normal = normalVal.as<gp_Vec>();
-            double angleDegrees = angleDegreesVal.as<double>();
-
-            auto result = flywave::topo::extrude_linear_with_rotation(
-                outerWire, innerWires, center, normal, angleDegrees);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.extrudeLinearWithRotation",
-      emscripten::optional_override(
-          [](emscripten::val faceVal, emscripten::val centerVal,
-             emscripten::val normalVal,
-             emscripten::val angleDegreesVal) -> emscripten::val {
-            auto f = faceVal.as<face>();
-            auto center = centerVal.as<gp_Pnt>();
-            auto normal = normalVal.as<gp_Vec>();
-            double angleDegrees = angleDegreesVal.as<double>();
-
-            auto result = flywave::topo::extrude_linear_with_rotation(
-                f, center, normal, angleDegrees);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.revolve",
-      emscripten::optional_override(
-          [](emscripten::val shapeVal, emscripten::val axisPointVal,
-             emscripten::val axisDirectionVal,
-             emscripten::val angleDegreesVal) -> emscripten::val {
-            auto shp = shapeVal.as<shape>();
-            auto axisPoint = axisPointVal.as<gp_Pnt>();
-            auto axisDirection = axisDirectionVal.as<gp_Dir>();
-            double angleDegrees = angleDegreesVal.isUndefined()
-                                      ? 360.0
-                                      : angleDegreesVal.as<double>();
-
-            auto result = flywave::topo::revolve(shp, axisPoint, axisDirection,
-                                                 angleDegrees);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.revolve",
-      emscripten::optional_override(
-          [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
-             emscripten::val angleDegreesVal, emscripten::val axisStartVal,
-             emscripten::val axisEndVal) -> emscripten::val {
-            auto outerWire = outerWireVal.as<wire>();
-            std::vector<wire> innerWires;
-            if (innerWiresVal.isArray()) {
-              const size_t length = innerWiresVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                innerWires.push_back(innerWiresVal[i].as<wire>());
-              }
-            }
-            double angleDegrees = angleDegreesVal.as<double>();
-            auto axisStart = axisStartVal.as<gp_Pnt>();
-            auto axisEnd = axisEndVal.as<gp_Pnt>();
-
-            auto result = flywave::topo::revolve(
-                outerWire, innerWires, angleDegrees, axisStart, axisEnd);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function("ShapeOps.revolve",
-                       emscripten::optional_override(
-                           [](emscripten::val faceVal, double angleDegrees,
-                              emscripten::val axisStartVal,
-                              emscripten::val axisEndVal) -> emscripten::val {
-                             auto f = faceVal.as<face>();
-                             auto axisStart = axisStartVal.as<gp_Pnt>();
-                             auto axisEnd = axisEndVal.as<gp_Pnt>();
-
-                             auto result = flywave::topo::revolve(
-                                 f, angleDegrees, axisStart, axisEnd);
-                             if (result) {
-                               return emscripten::val(*result);
-                             }
-                             return emscripten::val::undefined();
-                           }));
-
-  emscripten::function(
-      "ShapeOps.offset",
-      emscripten::optional_override(
-          [](emscripten::val shapeVal, emscripten::val offsetVal,
-             emscripten::val capVal, emscripten::val bothVal,
-             emscripten::val tolVal) -> emscripten::val {
-            auto shp = shapeVal.as<shape>();
-            double offset = offsetVal.as<double>();
-            bool cap = capVal.isUndefined() ? true : capVal.as<bool>();
-            bool both = bothVal.isUndefined() ? false : bothVal.as<bool>();
-            double tol = tolVal.isUndefined() ? 1e-6 : tolVal.as<double>();
-
-            auto result = flywave::topo::offset(shp, offset, cap, both, tol);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.sweep",
-      emscripten::optional_override(
-          [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
-             emscripten::val pathVal, emscripten::val makeSolidVal,
-             emscripten::val isFrenetVal, emscripten::val modeVal,
-             emscripten::val transitionModeVal) -> emscripten::val {
-            auto outerWire = outerWireVal.as<wire>();
-            std::vector<wire> innerWires;
-            if (innerWiresVal.isArray()) {
-              const size_t length = innerWiresVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                innerWires.push_back(innerWiresVal[i].as<wire>());
-              }
-            }
-            auto path = pathVal.as<shape>();
-            bool makeSolid =
-                makeSolidVal.isUndefined() ? true : makeSolidVal.as<bool>();
-            bool isFrenet =
-                isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
-
-            boost::optional<shape> mode;
-            if (!modeVal.isNull()) {
-              mode = modeVal.as<shape>();
-            }
-            auto transitionMode =
-                transitionModeVal.isUndefined()
-                    ? transition_mode::RIGHT
-                    : static_cast<transition_mode>(transitionModeVal.as<int>());
-
-            auto result =
-                flywave::topo::sweep(outerWire, innerWires, path, makeSolid,
-                                     isFrenet, mode.get_ptr(), transitionMode);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.sweep",
-      emscripten::optional_override(
-          [](emscripten::val faceVal, emscripten::val pathVal,
-             emscripten::val makeSolidVal, emscripten::val isFrenetVal,
-             emscripten::val modeVal,
-             emscripten::val transitionModeVal) -> emscripten::val {
-            auto f = faceVal.as<face>();
-            auto path = pathVal.as<shape>();
-            bool makeSolid =
-                makeSolidVal.isUndefined() ? true : makeSolidVal.as<bool>();
-            bool isFrenet =
-                isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
-
-            boost::optional<shape> mode;
-            if (!modeVal.isNull()) {
-              mode = modeVal.as<shape>();
-            }
-            auto transitionMode =
-                transitionModeVal.isUndefined()
-                    ? transition_mode::RIGHT
-                    : static_cast<transition_mode>(transitionModeVal.as<int>());
-
-            auto result = flywave::topo::sweep(f, path, makeSolid, isFrenet,
-                                               mode.get_ptr(), transitionMode);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.sweepMulti",
-      emscripten::optional_override(
-          [](emscripten::val profilesVal, emscripten::val pathVal,
-             emscripten::val makeSolidVal, emscripten::val isFrenetVal,
-             emscripten::val modeVal) -> emscripten::val {
-            std::vector<shape> profiles;
-            if (profilesVal.isArray()) {
-              const size_t length = profilesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                profiles.push_back(profilesVal[i].as<shape>());
-              }
-            }
-            auto path = pathVal.as<shape>();
-            bool makeSolid =
-                makeSolidVal.isUndefined() ? true : makeSolidVal.as<bool>();
-            bool isFrenet =
-                isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
-            boost::optional<shape> mode;
-            if (!modeVal.isNull()) {
-              mode = modeVal.as<shape>();
-            }
-
-            auto result = flywave::topo::sweep_multi(profiles, path, makeSolid,
-                                                     isFrenet, mode.get_ptr());
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.loft",
-      emscripten::optional_override(
-          [](emscripten::val profilesVal, emscripten::val capVal,
-             emscripten::val ruledVal, emscripten::val continuityVal,
-             emscripten::val parametrizationVal, emscripten::val degreeVal,
-             emscripten::val compatVal, emscripten::val smoothingVal,
-             emscripten::val weightsVal) -> emscripten::val {
-            std::vector<shape> profiles;
-            if (profilesVal.isArray()) {
-              const size_t length = profilesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                profiles.push_back(profilesVal[i].as<shape>());
-              }
-            }
-            bool cap = capVal.isUndefined() ? false : capVal.as<bool>();
-            bool ruled = ruledVal.isUndefined() ? false : ruledVal.as<bool>();
-            std::string continuity = continuityVal.isUndefined()
-                                         ? "C2"
-                                         : continuityVal.as<std::string>();
-            std::string parametrization =
-                parametrizationVal.isUndefined()
-                    ? "uniform"
-                    : parametrizationVal.as<std::string>();
-            int degree = degreeVal.isUndefined() ? 3 : degreeVal.as<int>();
-            bool compat = compatVal.isUndefined() ? true : compatVal.as<bool>();
-            bool smoothing =
-                smoothingVal.isUndefined() ? false : smoothingVal.as<bool>();
-            std::array<double, 3> weights;
-            if (!weightsVal.isUndefined() && weightsVal.isArray()) {
-              const size_t length = weightsVal["length"].as<size_t>();
-              if (length != 3) {
-                throw std::runtime_error("weights array must have 3 elements");
-              }
-              weights[0] = (weightsVal[0].as<double>());
-              weights[1] = (weightsVal[1].as<double>());
-              weights[2] = (weightsVal[2].as<double>());
-            } else {
-              weights = std::array<double, 3>{1.0, 1.0, 1.0};
-            }
-            auto result = flywave::topo::loft(profiles, cap, ruled, continuity,
-                                              parametrization, degree, compat,
-                                              smoothing, weights);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.loft",
-      emscripten::optional_override(
-          [](emscripten::val faceProfilesVal,
-             emscripten::val continuityVal) -> emscripten::val {
-            std::vector<face> faceProfiles;
-            if (faceProfilesVal.isArray()) {
-              const size_t length = faceProfilesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                faceProfiles.push_back(faceProfilesVal[i].as<face>());
-              }
-            }
-            std::string continuity = continuityVal.isUndefined()
-                                         ? "C2"
-                                         : continuityVal.as<std::string>();
-
-            auto result = flywave::topo::loft(faceProfiles, continuity);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.dprism",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val basisVal,
-             emscripten::val profilesVal, emscripten::val depthVal,
-             emscripten::val taperVal, emscripten::val upToFaceVal,
-             emscripten::val thruAllVal,
-             emscripten::val additiveVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            auto basis = basisVal.as<face>();
-            std::vector<wire> profiles;
-            if (profilesVal.isArray()) {
-              const size_t length = profilesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                profiles.push_back(profilesVal[i].as<wire>());
-              }
-            }
-            boost::optional<double> depth =
-                depthVal.isUndefined()
-                    ? boost::none
-                    : boost::optional<double>(depthVal.as<double>());
-            double taper = taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
-
-            boost::optional<face> upToFace;
-            if (!upToFaceVal.isNull()) {
-              upToFace = upToFaceVal.as<face>();
-            }
-
-            bool thruAll =
-                thruAllVal.isUndefined() ? true : thruAllVal.as<bool>();
-            bool additive =
-                additiveVal.isUndefined() ? true : additiveVal.as<bool>();
-
-            auto result =
-                flywave::topo::dprism(shp, basis, profiles, depth, taper,
-                                      upToFace.get_ptr(), thruAll, additive);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.dprism",
-      emscripten::optional_override(
-          [](emscripten::val shpVal, emscripten::val basisVal,
-             emscripten::val facesVal, emscripten::val depthVal,
-             emscripten::val taperVal, emscripten::val upToFaceVal,
-             emscripten::val thruAllVal,
-             emscripten::val additiveVal) -> emscripten::val {
-            auto shp = shpVal.as<shape>();
-            auto basis = basisVal.as<face>();
-            std::vector<face> faces;
-            if (facesVal.isArray()) {
-              const size_t length = facesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                faces.push_back(facesVal[i].as<face>());
-              }
-            }
-            boost::optional<double> depth =
-                depthVal.isUndefined()
-                    ? boost::none
-                    : boost::optional<double>(depthVal.as<double>());
-            double taper = taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
-            boost::optional<face> upToFace;
-            if (!upToFaceVal.isNull()) {
-              upToFace = upToFaceVal.as<face>();
-            }
-
-            bool thruAll =
-                thruAllVal.isUndefined() ? true : thruAllVal.as<bool>();
-            bool additive =
-                additiveVal.isUndefined() ? true : additiveVal.as<bool>();
-
-            auto result =
-                flywave::topo::dprism(shp, basis, faces, depth, taper,
-                                      upToFace.get_ptr(), thruAll, additive);
-            if (result) {
-              return emscripten::val(*result);
-            }
-            return emscripten::val::undefined();
-          }));
-
-  emscripten::function(
-      "ShapeOps.imprint",
-      emscripten::optional_override(
-          [](emscripten::val shapesVal, emscripten::val tolVal,
-             emscripten::val glueVal) -> emscripten::val {
-            std::vector<shape> shapes;
-            if (shapesVal.isArray()) {
-              const size_t length = shapesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                shapes.push_back(shapesVal[i].as<shape>());
-              }
-            }
-            double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-            bool glue = glueVal.isUndefined() ? true : glueVal.as<bool>();
-
-            std::map<std::string, shape> history;
-            auto result = flywave::topo::imprint(shapes, tol, glue, &history);
-
-            emscripten::val jsResult = emscripten::val::object();
-            if (result) {
-              jsResult.set("result", emscripten::val(*result));
-            } else {
-              jsResult.set("result", emscripten::val::undefined());
-            }
-
-            emscripten::val jsHistory = emscripten::val::object();
-            for (const auto &entry : history) {
-              jsHistory.set(entry.first, emscripten::val(entry.second));
-            }
-            jsResult.set("history", jsHistory);
-
-            return jsResult;
-          }));
-
-  emscripten::function("ShapeOps.clean",
-                       emscripten::optional_override(
-                           [](emscripten::val shapeVal) -> emscripten::val {
-                             auto shp = shapeVal.as<shape>();
-
-                             auto result = flywave::topo::clean(shp);
-                             if (result) {
-                               return emscripten::val(*result);
-                             }
-                             return emscripten::val::undefined();
-                           }));
-
-  emscripten::function(
-      "ShapeOps.check", emscripten::optional_override([](emscripten::val shpVal,
-                                                         emscripten::val tolVal)
-                                                          -> emscripten::val {
-        auto shp = shpVal.as<shape>();
-        double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-
-        std::vector<std::pair<std::vector<shape>, BOPAlgo_CheckStatus>> results;
-        bool isValid = flywave::topo::check(shp, &results, tol);
-
-        emscripten::val jsResult = emscripten::val::object();
-        jsResult.set("isValid", isValid);
-
-        emscripten::val jsErrors = emscripten::val::array();
-        for (const auto &error : results) {
-          emscripten::val jsError = emscripten::val::object();
-
-          emscripten::val jsShapes = emscripten::val::array();
-          for (const auto &shape : error.first) {
-            jsShapes.call<void>("push", emscripten::val(shape));
-          }
-
-          jsError.set("shapes", jsShapes);
-          jsError.set("status", error.second);
-          jsErrors.call<void>("push", jsError);
-        }
-
-        jsResult.set("results", jsErrors);
-        return jsResult;
-      }));
-
-  emscripten::function(
-      "ShapeOps.closest",
-      emscripten::optional_override(
-          [](emscripten::val shape1Val,
-             emscripten::val shape2Val) -> emscripten::val {
-            auto shape1 = shape1Val.as<shape>();
-            auto shape2 = shape2Val.as<shape>();
-
-            auto result = flywave::topo::closest(shape1, shape2);
-
-            emscripten::val points = emscripten::val::array();
-            points.call<void>("push", emscripten::val(result.first));
-            points.call<void>("push", emscripten::val(result.second));
-            return points;
-          }));
-
-  emscripten::function("ShapeOps.combinedCenter",
-                       emscripten::optional_override(
-                           [](emscripten::val objectsVal) -> emscripten::val {
-                             std::vector<shape> objects;
-                             if (objectsVal.isArray()) {
-                               const size_t length =
-                                   objectsVal["length"].as<size_t>();
-                               for (size_t i = 0; i < length; i++) {
-                                 objects.push_back(objectsVal[i].as<shape>());
-                               }
-                             }
-
-                             auto result =
-                                 flywave::topo::combined_center(objects);
-                             return emscripten::val(result);
-                           }));
-
-  emscripten::function(
-      "ShapeOps.combinedCenterOfBoundBox",
-      emscripten::optional_override(
-          [](emscripten::val objectsVal) -> emscripten::val {
-            std::vector<shape> objects;
-            if (objectsVal.isArray()) {
-              const size_t length = objectsVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                objects.push_back(objectsVal[i].as<shape>());
-              }
-            }
-
-            auto result = flywave::topo::combined_center_of_bound_box(objects);
-            return emscripten::val(result);
-          }));
-
-  emscripten::function("ShapeOps.readShapeFromStep",
-                       emscripten::optional_override(
-                           [](emscripten::val filenameVal) -> emscripten::val {
-                             auto filename = filenameVal.as<std::string>();
-                             auto result =
-                                 flywave::topo::read_shape_from_step(filename);
-                             return emscripten::val(result);
-                           }));
-
-  value_object<flywave::topo::wire_sample_point>("ShapeOps.WireSamplePoint")
+  value_object<flywave::topo::wire_sample_point>("WireSamplePoint")
       .field("position", &flywave::topo::wire_sample_point::position)
       .field("tangent", &flywave::topo::wire_sample_point::tangent)
       .field("edge", &flywave::topo::wire_sample_point::edge);
 
-  value_object<flywave::topo::profile_projection>("ShapeOps.ProfileProjection")
+  value_object<flywave::topo::profile_projection>("ProfileProjection")
       .field("axes", &flywave::topo::profile_projection::axes)
       .field("trsf", &flywave::topo::profile_projection::trsf)
       .field("tangent", &flywave::topo::profile_projection::tangent)
       .field("position", &flywave::topo::profile_projection::position);
 
-  emscripten::function(
-      "ShapeOps.sampleWireAtDistances",
-      emscripten::optional_override(
-          [](emscripten::val wirePathVal,
-             emscripten::val distancesVal) -> emscripten::val {
-            auto wire_path = wirePathVal.as<wire>();
+  emscripten::class_<shape_ops>("ShapeOps")
+      .class_function(
+          "fuse",
+          emscripten::optional_override(
+              [](emscripten::val shapesVal, emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                std::vector<shape> shapes;
+                if (shapesVal.isArray()) {
+                  const size_t length = shapesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    shapes.push_back(shapesVal[i].as<shape>());
+                  }
+                }
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-            std::vector<double> distances;
-            if (distancesVal.isArray()) {
-              const size_t length = distancesVal["length"].as<size_t>();
-              for (size_t i = 0; i < length; i++) {
-                distances.push_back(distancesVal[i].as<double>());
-              }
-            }
+                auto result = flywave::topo::fuse(shapes, tol, glue);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "fuse",
+          emscripten::optional_override(
+              [](emscripten::val shapesVal, emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                std::vector<shape> shapes;
+                if (shapesVal.isArray()) {
+                  const size_t length = shapesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    shapes.push_back(shapesVal[i].as<shape>());
+                  }
+                }
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-            auto result =
-                flywave::topo::sample_wire_at_distances(wire_path, distances);
-            emscripten::val points = emscripten::val::array();
-            for (const auto &p : result) {
-              points.call<void>("push", emscripten::val(p));
-            }
-            return points;
-          }));
+                auto result = flywave::topo::fuse(shapes, tol, glue);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "cut",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val toolVal,
+                 emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                auto tool = toolVal.as<shape>();
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-  emscripten::function("ShapeOps.clipWireBetweenDistances",
-                       emscripten::optional_override(
-                           [](emscripten::val wirePathVal, double startDistance,
-                              double endDistance) -> emscripten::val {
-                             auto wire_path = wirePathVal.as<wire>();
-                             auto result =
-                                 flywave::topo::clip_wire_between_distances(
-                                     wire_path, startDistance, endDistance);
-                             return emscripten::val(result);
-                           }));
+                auto result = flywave::topo::cut(shp, tool, tol, glue);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "cut",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val toCutsVal,
+                 emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                std::vector<shape> toCuts;
+                if (toCutsVal.isArray()) {
+                  const size_t length = toCutsVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    toCuts.push_back(toCutsVal[i].as<shape>());
+                  }
+                }
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-  emscripten::function(
-      "ShapeOps.calcProfileProjection",
-      emscripten::optional_override(
-          [](emscripten::val pathVal, emscripten::val upDirVal,
-             emscripten::val offsetVal) -> emscripten::val {
+                auto result = flywave::topo::cut(shp, toCuts, tol, glue);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "intersect",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val toIntersectVal,
+                 emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                auto toIntersect = toIntersectVal.as<shape>();
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+
+                auto result =
+                    flywave::topo::intersect(shp, toIntersect, tol, glue);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "intersect",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val toIntersectsVal,
+                 emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                std::vector<shape> toIntersects;
+                if (toIntersectsVal.isArray()) {
+                  const size_t length = toIntersectsVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    toIntersects.push_back(toIntersectsVal[i].as<shape>());
+                  }
+                }
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+
+                auto result =
+                    flywave::topo::intersect(shp, toIntersects, tol, glue);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "split",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val splittersVal,
+                 emscripten::val tolVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                std::vector<shape> splitters;
+                if (splittersVal.isArray()) {
+                  const size_t length = splittersVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    splitters.push_back(splittersVal[i].as<shape>());
+                  }
+                }
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+
+                auto result = flywave::topo::split(shp, splitters, tol);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "split", emscripten::optional_override(
+                       [](emscripten::val shpVal, emscripten::val splitterVal,
+                          emscripten::val tolVal) -> emscripten::val {
+                         auto shp = shpVal.as<shape>();
+                         auto splitter = splitterVal.as<shape>();
+                         double tol =
+                             tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+
+                         auto result = flywave::topo::split(shp, splitter, tol);
+                         if (result) {
+                           return emscripten::val(*result);
+                         }
+                         return emscripten::val::undefined();
+                       }))
+      .class_function(
+          "facesIntersectedByLine",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val pointVal,
+                 emscripten::val axisVal, emscripten::val toleranceVal,
+                 emscripten::val directionVal) {
+                auto shp = shpVal.as<shape>();
+                auto point = pointVal.as<gp_Pnt>();
+                auto axis = axisVal.as<gp_Dir>();
+                double tolerance = toleranceVal.isUndefined()
+                                       ? 1e-4
+                                       : toleranceVal.as<double>();
+                auto direction = directionVal.isUndefined()
+                                     ? intersection_direction::None
+                                     : static_cast<intersection_direction>(
+                                           directionVal.as<int>());
+
+                auto faces = flywave::topo::faces_intersected_by_line(
+                    shp, point, axis, tolerance, direction);
+                emscripten::val result = emscripten::val::array();
+                for (auto &face : faces) {
+                  result.call<void>("push", emscripten::val(face));
+                }
+                return result;
+              }))
+      .class_function(
+          "fill",
+          emscripten::optional_override(
+              [](emscripten::val shpVal,
+                 emscripten::val constraintsVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                std::vector<shape> constraints;
+                if (constraintsVal.isArray()) {
+                  const size_t length = constraintsVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    constraints.push_back(constraintsVal[i].as<shape>());
+                  }
+                }
+
+                auto result = flywave::topo::fill(shp, constraints);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "shelling",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val faceListVal,
+                 emscripten::val thicknessVal, emscripten::val toleranceVal,
+                 emscripten::val joinTypeVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                std::vector<face> faceList;
+                if (faceListVal.isArray()) {
+                  const size_t length = faceListVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    faceList.push_back(faceListVal[i].as<face>());
+                  }
+                }
+                double thickness = thicknessVal.as<double>();
+                double tolerance = toleranceVal.isUndefined()
+                                       ? 0.0001
+                                       : toleranceVal.as<double>();
+                auto joinType =
+                    joinTypeVal.isUndefined()
+                        ? GeomAbs_JoinType::GeomAbs_Arc
+                        : static_cast<GeomAbs_JoinType>(joinTypeVal.as<int>());
+
+                auto result = flywave::topo::shelling(shp, faceList, thickness,
+                                                      tolerance, joinType);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function("fillet",
+                      emscripten::optional_override(
+                          [](emscripten::val shpVal, emscripten::val edgesVal,
+                             emscripten::val radiusVal) -> emscripten::val {
+                            auto shp = shpVal.as<shape>();
+                            std::vector<edge> edges;
+                            if (edgesVal.isArray()) {
+                              const size_t length =
+                                  edgesVal["length"].as<size_t>();
+                              for (size_t i = 0; i < length; i++) {
+                                edges.push_back(edgesVal[i].as<edge>());
+                              }
+                            }
+                            double radius = radiusVal.as<double>();
+
+                            auto result =
+                                flywave::topo::fillet(shp, edges, radius);
+                            if (result) {
+                              return emscripten::val(*result);
+                            }
+                            return emscripten::val::undefined();
+                          }))
+      .class_function(
+          "chamfer",
+          emscripten::optional_override(
+              [](emscripten::val baseShapeVal, emscripten::val edgesVal,
+                 emscripten::val distanceVal,
+                 emscripten::val distance2Val) -> emscripten::val {
+                auto baseShape = baseShapeVal.as<shape>();
+                std::vector<edge> edges;
+                if (edgesVal.isArray()) {
+                  const size_t length = edgesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    edges.push_back(edgesVal[i].as<edge>());
+                  }
+                }
+                double distance = distanceVal.as<double>();
+                boost::optional<double> distance2 =
+                    distance2Val.isUndefined()
+                        ? boost::none
+                        : boost::optional<double>(distance2Val.as<double>());
+
+                auto result = flywave::topo::chamfer(baseShape, edges, distance,
+                                                     distance2);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "extrude", emscripten::optional_override(
+                         [](emscripten::val shapeVal,
+                            emscripten::val directionVal) -> emscripten::val {
+                           auto shp = shapeVal.as<shape>();
+                           auto direction = directionVal.as<gp_Vec>();
+
+                           auto result = flywave::topo::extrude(shp, direction);
+                           if (result) {
+                             return emscripten::val(*result);
+                           }
+                           return emscripten::val::undefined();
+                         }))
+      .class_function(
+          "extrudeLinear",
+          emscripten::optional_override(
+              [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
+                 emscripten::val vecNormalVal,
+                 emscripten::val taperVal) -> emscripten::val {
+                auto outerWire = outerWireVal.as<wire>();
+                std::vector<wire> innerWires;
+                if (innerWiresVal.isArray()) {
+                  const size_t length = innerWiresVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    innerWires.push_back(innerWiresVal[i].as<wire>());
+                  }
+                }
+                auto vecNormal = vecNormalVal.as<gp_Vec>();
+                double taper =
+                    taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
+
+                auto result = flywave::topo::extrude_linear(
+                    outerWire, innerWires, vecNormal, taper);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "extrudeLinear",
+          emscripten::optional_override(
+              [](emscripten::val faceVal, emscripten::val vecNormalVal,
+                 emscripten::val taperVal) -> emscripten::val {
+                auto f = faceVal.as<face>();
+                auto vecNormal = vecNormalVal.as<gp_Vec>();
+                double taper =
+                    taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
+
+                auto result =
+                    flywave::topo::extrude_linear(f, vecNormal, taper);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "extrudeLinearWithRotation",
+          emscripten::optional_override(
+              [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
+                 emscripten::val centerVal, emscripten::val normalVal,
+                 emscripten::val angleDegreesVal) -> emscripten::val {
+                auto outerWire = outerWireVal.as<wire>();
+                std::vector<wire> innerWires;
+                if (innerWiresVal.isArray()) {
+                  const size_t length = innerWiresVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    innerWires.push_back(innerWiresVal[i].as<wire>());
+                  }
+                }
+                auto center = centerVal.as<gp_Pnt>();
+                auto normal = normalVal.as<gp_Vec>();
+                double angleDegrees = angleDegreesVal.as<double>();
+
+                auto result = flywave::topo::extrude_linear_with_rotation(
+                    outerWire, innerWires, center, normal, angleDegrees);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "extrudeLinearWithRotation",
+          emscripten::optional_override(
+              [](emscripten::val faceVal, emscripten::val centerVal,
+                 emscripten::val normalVal,
+                 emscripten::val angleDegreesVal) -> emscripten::val {
+                auto f = faceVal.as<face>();
+                auto center = centerVal.as<gp_Pnt>();
+                auto normal = normalVal.as<gp_Vec>();
+                double angleDegrees = angleDegreesVal.as<double>();
+
+                auto result = flywave::topo::extrude_linear_with_rotation(
+                    f, center, normal, angleDegrees);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "revolve",
+          emscripten::optional_override(
+              [](emscripten::val shapeVal, emscripten::val axisPointVal,
+                 emscripten::val axisDirectionVal,
+                 emscripten::val angleDegreesVal) -> emscripten::val {
+                auto shp = shapeVal.as<shape>();
+                auto axisPoint = axisPointVal.as<gp_Pnt>();
+                auto axisDirection = axisDirectionVal.as<gp_Dir>();
+                double angleDegrees = angleDegreesVal.isUndefined()
+                                          ? 360.0
+                                          : angleDegreesVal.as<double>();
+
+                auto result = flywave::topo::revolve(
+                    shp, axisPoint, axisDirection, angleDegrees);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "revolve",
+          emscripten::optional_override(
+              [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
+                 emscripten::val angleDegreesVal, emscripten::val axisStartVal,
+                 emscripten::val axisEndVal) -> emscripten::val {
+                auto outerWire = outerWireVal.as<wire>();
+                std::vector<wire> innerWires;
+                if (innerWiresVal.isArray()) {
+                  const size_t length = innerWiresVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    innerWires.push_back(innerWiresVal[i].as<wire>());
+                  }
+                }
+                double angleDegrees = angleDegreesVal.as<double>();
+                auto axisStart = axisStartVal.as<gp_Pnt>();
+                auto axisEnd = axisEndVal.as<gp_Pnt>();
+
+                auto result = flywave::topo::revolve(
+                    outerWire, innerWires, angleDegrees, axisStart, axisEnd);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function("revolve",
+                      emscripten::optional_override(
+                          [](emscripten::val faceVal, double angleDegrees,
+                             emscripten::val axisStartVal,
+                             emscripten::val axisEndVal) -> emscripten::val {
+                            auto f = faceVal.as<face>();
+                            auto axisStart = axisStartVal.as<gp_Pnt>();
+                            auto axisEnd = axisEndVal.as<gp_Pnt>();
+
+                            auto result = flywave::topo::revolve(
+                                f, angleDegrees, axisStart, axisEnd);
+                            if (result) {
+                              return emscripten::val(*result);
+                            }
+                            return emscripten::val::undefined();
+                          }))
+      .class_function(
+          "offset",
+          emscripten::optional_override(
+              [](emscripten::val shapeVal, emscripten::val offsetVal,
+                 emscripten::val capVal, emscripten::val bothVal,
+                 emscripten::val tolVal) -> emscripten::val {
+                auto shp = shapeVal.as<shape>();
+                double offset = offsetVal.as<double>();
+                bool cap = capVal.isUndefined() ? true : capVal.as<bool>();
+                bool both = bothVal.isUndefined() ? false : bothVal.as<bool>();
+                double tol = tolVal.isUndefined() ? 1e-6 : tolVal.as<double>();
+
+                auto result =
+                    flywave::topo::offset(shp, offset, cap, both, tol);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "sweep",
+          emscripten::optional_override(
+              [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
+                 emscripten::val pathVal, emscripten::val makeSolidVal,
+                 emscripten::val isFrenetVal, emscripten::val modeVal,
+                 emscripten::val transitionModeVal) -> emscripten::val {
+                auto outerWire = outerWireVal.as<wire>();
+                std::vector<wire> innerWires;
+                if (innerWiresVal.isArray()) {
+                  const size_t length = innerWiresVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    innerWires.push_back(innerWiresVal[i].as<wire>());
+                  }
+                }
+                auto path = pathVal.as<shape>();
+                bool makeSolid =
+                    makeSolidVal.isUndefined() ? true : makeSolidVal.as<bool>();
+                bool isFrenet =
+                    isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
+
+                boost::optional<shape> mode;
+                if (!modeVal.isNull()) {
+                  mode = modeVal.as<shape>();
+                }
+                auto transitionMode = transitionModeVal.isUndefined()
+                                          ? transition_mode::RIGHT
+                                          : static_cast<transition_mode>(
+                                                transitionModeVal.as<int>());
+
+                auto result = flywave::topo::sweep(
+                    outerWire, innerWires, path, makeSolid, isFrenet,
+                    mode.get_ptr(), transitionMode);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "sweep",
+          emscripten::optional_override(
+              [](emscripten::val faceVal, emscripten::val pathVal,
+                 emscripten::val makeSolidVal, emscripten::val isFrenetVal,
+                 emscripten::val modeVal,
+                 emscripten::val transitionModeVal) -> emscripten::val {
+                auto f = faceVal.as<face>();
+                auto path = pathVal.as<shape>();
+                bool makeSolid =
+                    makeSolidVal.isUndefined() ? true : makeSolidVal.as<bool>();
+                bool isFrenet =
+                    isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
+
+                boost::optional<shape> mode;
+                if (!modeVal.isNull()) {
+                  mode = modeVal.as<shape>();
+                }
+                auto transitionMode = transitionModeVal.isUndefined()
+                                          ? transition_mode::RIGHT
+                                          : static_cast<transition_mode>(
+                                                transitionModeVal.as<int>());
+
+                auto result =
+                    flywave::topo::sweep(f, path, makeSolid, isFrenet,
+                                         mode.get_ptr(), transitionMode);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "sweepMulti",
+          emscripten::optional_override(
+              [](emscripten::val profilesVal, emscripten::val pathVal,
+                 emscripten::val makeSolidVal, emscripten::val isFrenetVal,
+                 emscripten::val modeVal) -> emscripten::val {
+                std::vector<shape> profiles;
+                if (profilesVal.isArray()) {
+                  const size_t length = profilesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    profiles.push_back(profilesVal[i].as<shape>());
+                  }
+                }
+                auto path = pathVal.as<shape>();
+                bool makeSolid =
+                    makeSolidVal.isUndefined() ? true : makeSolidVal.as<bool>();
+                bool isFrenet =
+                    isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
+                boost::optional<shape> mode;
+                if (!modeVal.isNull()) {
+                  mode = modeVal.as<shape>();
+                }
+
+                auto result = flywave::topo::sweep_multi(
+                    profiles, path, makeSolid, isFrenet, mode.get_ptr());
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "loft",
+          emscripten::optional_override(
+              [](emscripten::val profilesVal, emscripten::val capVal,
+                 emscripten::val ruledVal, emscripten::val continuityVal,
+                 emscripten::val parametrizationVal, emscripten::val degreeVal,
+                 emscripten::val compatVal, emscripten::val smoothingVal,
+                 emscripten::val weightsVal) -> emscripten::val {
+                std::vector<shape> profiles;
+                if (profilesVal.isArray()) {
+                  const size_t length = profilesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    profiles.push_back(profilesVal[i].as<shape>());
+                  }
+                }
+                bool cap = capVal.isUndefined() ? false : capVal.as<bool>();
+                bool ruled =
+                    ruledVal.isUndefined() ? false : ruledVal.as<bool>();
+                std::string continuity = continuityVal.isUndefined()
+                                             ? "C2"
+                                             : continuityVal.as<std::string>();
+                std::string parametrization =
+                    parametrizationVal.isUndefined()
+                        ? "uniform"
+                        : parametrizationVal.as<std::string>();
+                int degree = degreeVal.isUndefined() ? 3 : degreeVal.as<int>();
+                bool compat =
+                    compatVal.isUndefined() ? true : compatVal.as<bool>();
+                bool smoothing = smoothingVal.isUndefined()
+                                     ? false
+                                     : smoothingVal.as<bool>();
+                std::array<double, 3> weights;
+                if (!weightsVal.isUndefined() && weightsVal.isArray()) {
+                  const size_t length = weightsVal["length"].as<size_t>();
+                  if (length != 3) {
+                    throw std::runtime_error(
+                        "weights array must have 3 elements");
+                  }
+                  weights[0] = (weightsVal[0].as<double>());
+                  weights[1] = (weightsVal[1].as<double>());
+                  weights[2] = (weightsVal[2].as<double>());
+                } else {
+                  weights = std::array<double, 3>{1.0, 1.0, 1.0};
+                }
+                auto result = flywave::topo::loft(
+                    profiles, cap, ruled, continuity, parametrization, degree,
+                    compat, smoothing, weights);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "loft",
+          emscripten::optional_override(
+              [](emscripten::val faceProfilesVal,
+                 emscripten::val continuityVal) -> emscripten::val {
+                std::vector<face> faceProfiles;
+                if (faceProfilesVal.isArray()) {
+                  const size_t length = faceProfilesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    faceProfiles.push_back(faceProfilesVal[i].as<face>());
+                  }
+                }
+                std::string continuity = continuityVal.isUndefined()
+                                             ? "C2"
+                                             : continuityVal.as<std::string>();
+
+                auto result = flywave::topo::loft(faceProfiles, continuity);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "dprism",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val basisVal,
+                 emscripten::val profilesVal, emscripten::val depthVal,
+                 emscripten::val taperVal, emscripten::val upToFaceVal,
+                 emscripten::val thruAllVal,
+                 emscripten::val additiveVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                auto basis = basisVal.as<face>();
+                std::vector<wire> profiles;
+                if (profilesVal.isArray()) {
+                  const size_t length = profilesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    profiles.push_back(profilesVal[i].as<wire>());
+                  }
+                }
+                boost::optional<double> depth =
+                    depthVal.isUndefined()
+                        ? boost::none
+                        : boost::optional<double>(depthVal.as<double>());
+                double taper =
+                    taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
+
+                boost::optional<face> upToFace;
+                if (!upToFaceVal.isNull()) {
+                  upToFace = upToFaceVal.as<face>();
+                }
+
+                bool thruAll =
+                    thruAllVal.isUndefined() ? true : thruAllVal.as<bool>();
+                bool additive =
+                    additiveVal.isUndefined() ? true : additiveVal.as<bool>();
+
+                auto result = flywave::topo::dprism(shp, basis, profiles, depth,
+                                                    taper, upToFace.get_ptr(),
+                                                    thruAll, additive);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "dprism",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val basisVal,
+                 emscripten::val facesVal, emscripten::val depthVal,
+                 emscripten::val taperVal, emscripten::val upToFaceVal,
+                 emscripten::val thruAllVal,
+                 emscripten::val additiveVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                auto basis = basisVal.as<face>();
+                std::vector<face> faces;
+                if (facesVal.isArray()) {
+                  const size_t length = facesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    faces.push_back(facesVal[i].as<face>());
+                  }
+                }
+                boost::optional<double> depth =
+                    depthVal.isUndefined()
+                        ? boost::none
+                        : boost::optional<double>(depthVal.as<double>());
+                double taper =
+                    taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
+                boost::optional<face> upToFace;
+                if (!upToFaceVal.isNull()) {
+                  upToFace = upToFaceVal.as<face>();
+                }
+
+                bool thruAll =
+                    thruAllVal.isUndefined() ? true : thruAllVal.as<bool>();
+                bool additive =
+                    additiveVal.isUndefined() ? true : additiveVal.as<bool>();
+
+                auto result = flywave::topo::dprism(shp, basis, faces, depth,
+                                                    taper, upToFace.get_ptr(),
+                                                    thruAll, additive);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "imprint",
+          emscripten::optional_override(
+              [](emscripten::val shapesVal, emscripten::val tolVal,
+                 emscripten::val glueVal) -> emscripten::val {
+                std::vector<shape> shapes;
+                if (shapesVal.isArray()) {
+                  const size_t length = shapesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    shapes.push_back(shapesVal[i].as<shape>());
+                  }
+                }
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                bool glue = glueVal.isUndefined() ? true : glueVal.as<bool>();
+
+                std::map<std::string, shape> history;
+                auto result =
+                    flywave::topo::imprint(shapes, tol, glue, &history);
+
+                emscripten::val jsResult = emscripten::val::object();
+                if (result) {
+                  jsResult.set("result", emscripten::val(*result));
+                } else {
+                  jsResult.set("result", emscripten::val::undefined());
+                }
+
+                emscripten::val jsHistory = emscripten::val::object();
+                for (const auto &entry : history) {
+                  jsHistory.set(entry.first, emscripten::val(entry.second));
+                }
+                jsResult.set("history", jsHistory);
+
+                return jsResult;
+              }))
+      .class_function("clean",
+                      emscripten::optional_override(
+                          [](emscripten::val shapeVal) -> emscripten::val {
+                            auto shp = shapeVal.as<shape>();
+
+                            auto result = flywave::topo::clean(shp);
+                            if (result) {
+                              return emscripten::val(*result);
+                            }
+                            return emscripten::val::undefined();
+                          }))
+      .class_function(
+          "check",
+          emscripten::optional_override(
+              [](emscripten::val shpVal,
+                 emscripten::val tolVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+
+                std::vector<std::pair<std::vector<shape>, BOPAlgo_CheckStatus>>
+                    results;
+                bool isValid = flywave::topo::check(shp, &results, tol);
+
+                emscripten::val jsResult = emscripten::val::object();
+                jsResult.set("isValid", isValid);
+
+                emscripten::val jsErrors = emscripten::val::array();
+                for (const auto &error : results) {
+                  emscripten::val jsError = emscripten::val::object();
+
+                  emscripten::val jsShapes = emscripten::val::array();
+                  for (const auto &shape : error.first) {
+                    jsShapes.call<void>("push", emscripten::val(shape));
+                  }
+
+                  jsError.set("shapes", jsShapes);
+                  jsError.set("status", error.second);
+                  jsErrors.call<void>("push", jsError);
+                }
+
+                jsResult.set("results", jsErrors);
+                return jsResult;
+              }))
+      .class_function(
+          "closest",
+          emscripten::optional_override(
+              [](emscripten::val shape1Val,
+                 emscripten::val shape2Val) -> emscripten::val {
+                auto shape1 = shape1Val.as<shape>();
+                auto shape2 = shape2Val.as<shape>();
+
+                auto result = flywave::topo::closest(shape1, shape2);
+
+                emscripten::val points = emscripten::val::array();
+                points.call<void>("push", emscripten::val(result.first));
+                points.call<void>("push", emscripten::val(result.second));
+                return points;
+              }))
+      .class_function("combinedCenter",
+                      emscripten::optional_override(
+                          [](emscripten::val objectsVal) -> emscripten::val {
+                            std::vector<shape> objects;
+                            if (objectsVal.isArray()) {
+                              const size_t length =
+                                  objectsVal["length"].as<size_t>();
+                              for (size_t i = 0; i < length; i++) {
+                                objects.push_back(objectsVal[i].as<shape>());
+                              }
+                            }
+
+                            auto result =
+                                flywave::topo::combined_center(objects);
+                            return emscripten::val(result);
+                          }))
+      .class_function(
+          "combinedCenterOfBoundBox",
+          emscripten::optional_override(
+              [](emscripten::val objectsVal) -> emscripten::val {
+                std::vector<shape> objects;
+                if (objectsVal.isArray()) {
+                  const size_t length = objectsVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    objects.push_back(objectsVal[i].as<shape>());
+                  }
+                }
+
+                auto result =
+                    flywave::topo::combined_center_of_bound_box(objects);
+                return emscripten::val(result);
+              }))
+      .class_function("readShapeFromStep",
+                      emscripten::optional_override(
+                          [](emscripten::val filenameVal) -> emscripten::val {
+                            auto filename = filenameVal.as<std::string>();
+                            auto result =
+                                flywave::topo::read_shape_from_step(filename);
+                            return emscripten::val(result);
+                          }))
+      .class_function(
+          "sampleWireAtDistances",
+          emscripten::optional_override(
+              [](emscripten::val wirePathVal,
+                 emscripten::val distancesVal) -> emscripten::val {
+                auto wire_path = wirePathVal.as<wire>();
+
+                std::vector<double> distances;
+                if (distancesVal.isArray()) {
+                  const size_t length = distancesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    distances.push_back(distancesVal[i].as<double>());
+                  }
+                }
+
+                auto result = flywave::topo::sample_wire_at_distances(
+                    wire_path, distances);
+                emscripten::val points = emscripten::val::array();
+                for (const auto &p : result) {
+                  points.call<void>("push", emscripten::val(p));
+                }
+                return points;
+              }))
+      .class_function("clipWireBetweenDistances",
+                      emscripten::optional_override(
+                          [](emscripten::val wirePathVal, double startDistance,
+                             double endDistance) -> emscripten::val {
+                            auto wire_path = wirePathVal.as<wire>();
+                            auto result =
+                                flywave::topo::clip_wire_between_distances(
+                                    wire_path, startDistance, endDistance);
+                            return emscripten::val(result);
+                          }))
+      .class_function(
+          "calcProfileProjection",
+          emscripten::optional_override(
+              [](emscripten::val pathVal, emscripten::val upDirVal,
+                 emscripten::val offsetVal) -> emscripten::val {
+                auto path = pathVal.as<wire>();
+                auto upDir = upDirVal.as<gp_Dir>();
+                boost::optional<double> offset =
+                    offsetVal.isUndefined()
+                        ? boost::none
+                        : boost::optional<double>(offsetVal.as<double>());
+
+                auto result =
+                    flywave::topo::cacl_profile_projection(path, upDir, offset);
+
+                return emscripten::val(result);
+              }))
+      .class_function("profileProjectPoint",
+                      emscripten::optional_override(
+                          [](emscripten::val projVal,
+                             emscripten::val pointVal) -> emscripten::val {
+                            auto proj =
+                                projVal.as<flywave::topo::profile_projection>();
+                            auto point = pointVal.as<gp_Pnt>();
+
+                            auto result = flywave::topo::profile_project_point(
+                                &proj, point);
+                            return emscripten::val(result);
+                          }))
+      .class_function(
+          "wireLength",
+          emscripten::optional_override([](emscripten::val pathVal) -> double {
             auto path = pathVal.as<wire>();
-            auto upDir = upDirVal.as<gp_Dir>();
-            boost::optional<double> offset =
-                offsetVal.isUndefined()
-                    ? boost::none
-                    : boost::optional<double>(offsetVal.as<double>());
-
-            auto result =
-                flywave::topo::cacl_profile_projection(path, upDir, offset);
-
-            return emscripten::val(result);
+            return flywave::topo::wrie_length(path);
           }));
-
-  emscripten::function(
-      "ShapeOps.profileProjectPoint",
-      emscripten::optional_override(
-          [](emscripten::val projVal,
-             emscripten::val pointVal) -> emscripten::val {
-            auto proj = projVal.as<flywave::topo::profile_projection>();
-            auto point = pointVal.as<gp_Pnt>();
-
-            auto result = flywave::topo::profile_project_point(&proj, point);
-            return emscripten::val(result);
-          }));
-
-  emscripten::function(
-      "ShapeOps.wireLength",
-      emscripten::optional_override([](emscripten::val pathVal) -> double {
-        auto path = pathVal.as<wire>();
-        return flywave::topo::wrie_length(path);
-      }));
 }

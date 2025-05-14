@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -34,6 +35,10 @@ type TypescriptDef struct {
 	Dts     string   `json:".d.ts"`
 	Kind    string   `json:"kind"`
 	Exports []string `json:"exports"`
+	Defs    []struct {
+		Kind    string   `json:"kind"`
+		Exports []string `json:"exports"`
+	} `json:"defs"`
 }
 
 func RunBuild(workDir string, filename string) error {
@@ -86,7 +91,7 @@ func RunBuild(workDir string, filename string) error {
 	}
 
 	if buildConfig.GenerateTypescriptDefs {
-		if err := generateTypescriptDefs(typescriptDefinitions, buildConfig.MainBuild.Name); err != nil {
+		if err := generateTypescriptDefs(workDir, typescriptDefinitions, buildConfig.MainBuild.Name); err != nil {
 			return err
 		}
 	}
@@ -141,7 +146,7 @@ func collectTypescriptDefs(buildConfig BuildConfig, workDir string) ([]Typescrip
 	}
 
 	var typescriptDefinitions []TypescriptDef
-	err := filepath.Walk(workDir+"/bindings", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(workDir+"/build", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -170,12 +175,17 @@ func runBuild(workDir string, build BuildSpec) error {
 
 	fmt.Println("Running build: " + build.Name)
 
-	bindingsO, err := collectObjectFiles(workDir+"/bindings", build.Bindings, ".cpp.o")
+	bindingsO, err := collectObjectFiles(workDir+"/build/bindings", build.Bindings, ".cpp.o")
 	if err != nil {
 		return err
 	}
 
-	sourcesO, err := collectObjectFiles(workDir+"/sources", nil, ".o")
+	occtO, err := collectObjectFiles(workDir+"/build/occt", nil, ".o")
+	if err != nil {
+		return err
+	}
+
+	sourceO, err := collectObjectFiles(workDir+"/build/src", nil, ".o")
 	if err != nil {
 		return err
 	}
@@ -184,9 +194,23 @@ func runBuild(workDir string, build BuildSpec) error {
 	if additionalBindCodeO != "" {
 		args = append(args, additionalBindCodeO)
 	}
-	args = append(args, bindingsO...)
-	args = append(args, sourcesO...)
-	args = append(args, "-o", filepath.Join(".", build.Name))
+	files := []string{}
+
+	files = append(files, bindingsO...)
+	files = append(files, occtO...)
+	files = append(files, sourceO...)
+
+	outputStr := strings.Join(files, " ")
+
+	outFile := build.Name + ".txt"
+
+	os.WriteFile(outFile, []byte(outputStr), 0644)
+
+	defer os.Remove(outFile)
+
+	args = append(args, "@"+outFile)
+
+	args = append(args, "-o", filepath.Join(workDir, "dist/", build.Name))
 	if os.Getenv("threading") == "multi-threaded" {
 		args = append(args, "-pthread")
 	}
@@ -419,7 +443,7 @@ declare namespace FS {
 }
 `
 
-func generateTypescriptDefs(defs []TypescriptDef, buildName string) error {
+func generateTypescriptDefs(workDir string, defs []TypescriptDef, buildName string) error {
 	var output strings.Builder
 	var exports []struct {
 		Export string
@@ -428,11 +452,22 @@ func generateTypescriptDefs(defs []TypescriptDef, buildName string) error {
 
 	for _, dts := range defs {
 		output.WriteString(dts.Dts)
-		for _, export := range dts.Exports {
-			exports = append(exports, struct {
-				Export string
-				Kind   string
-			}{export, dts.Kind})
+		if len(dts.Defs) > 0 {
+			for _, def := range dts.Defs {
+				for _, export := range def.Exports {
+					exports = append(exports, struct {
+						Export string
+						Kind   string
+					}{export, def.Kind})
+				}
+			}
+		} else {
+			for _, export := range dts.Exports {
+				exports = append(exports, struct {
+					Export string
+					Kind   string
+				}{export, dts.Kind})
+			}
 		}
 	}
 
@@ -442,7 +477,7 @@ func generateTypescriptDefs(defs []TypescriptDef, buildName string) error {
 		if i > 0 {
 			output.WriteString(";\n  ")
 		}
-		if exp.Kind == "class" {
+		if exp.Kind == "class" || exp.Kind == "function" {
 			output.WriteString(fmt.Sprintf("%s: typeof %s", exp.Export, exp.Export))
 		} else {
 			output.WriteString(fmt.Sprintf("%s: %s", exp.Export, exp.Export))
@@ -452,6 +487,6 @@ func generateTypescriptDefs(defs []TypescriptDef, buildName string) error {
 	output.WriteString("declare function init(): Promise<TopoInstance>;\n\n")
 	output.WriteString("export default init;\n")
 
-	filename := strings.TrimSuffix(buildName, filepath.Ext(buildName)) + ".d.ts"
+	filename := path.Join(workDir, "dist/", strings.TrimSuffix(buildName, filepath.Ext(buildName))+".d.ts")
 	return os.WriteFile(filename, []byte(output.String()), 0644)
 }

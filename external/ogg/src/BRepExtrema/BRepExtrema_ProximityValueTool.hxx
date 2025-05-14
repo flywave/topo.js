@@ -66,6 +66,12 @@ public:
   //! Implementation of inspection method
   Standard_EXPORT NCollection_CellFilter_Action Inspect (const Standard_Integer theTarget);
 
+  static Standard_Boolean IsEqual(const Target& theT1, const Target& theT2)
+  {
+      // 实现目标对象比较逻辑
+      return theT1 == theT2;
+  }
+
 private:
   Standard_Real myTol;
   Standard_Boolean myIsNeedAdd;

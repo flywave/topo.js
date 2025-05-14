@@ -334,6 +334,12 @@ protected:
 
       return ::HashCode(aCode, theUpperBound);
     }
+    
+    static Standard_Boolean IsEqual(const Target& theT1, const Target& theT2)
+    {
+        return theT1.IsEqual(theT2);
+    }
+
 
   public:
     NCollection_LocalArray<Cell_IndexType, 10> index;

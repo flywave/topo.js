@@ -12,7 +12,8 @@ func FilterSourceFile(filename string) bool {
 	if strings.HasSuffix(filename, ".cxx") ||
 		strings.HasSuffix(filename, ".cpp") ||
 		strings.HasSuffix(filename, ".cc") ||
-		strings.HasSuffix(filename, ".c") {
+		strings.HasSuffix(filename, ".c") ||
+		strings.HasSuffix(filename, ".gxx") {
 		return true
 	}
 

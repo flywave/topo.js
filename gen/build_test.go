@@ -1,7 +1,11 @@
 package gen
 
 import (
+	"os"
+	"path"
 	"testing"
+
+	"gopkg.in/yaml.v2"
 )
 
 func TestBuildOggSource(t *testing.T) {
@@ -39,4 +43,32 @@ func TestBuildSource(t *testing.T) {
 
 	// 调用 BuildSource 函数
 	BuildTopoSource(workDir, args)
+
+	GenSourceTypescriptDefs(workDir)
+}
+
+func TestRunBuild(t *testing.T) {
+	workDir, _ := GetResourcePath("../")
+
+	fileName := path.Join(workDir, "gen/topo.full.yml")
+
+	RunBuild(workDir, fileName)
+}
+
+func TestGenTypescriptDefs(t *testing.T) {
+	workDir, _ := GetResourcePath("../")
+	fileName := path.Join(workDir, "gen/topo.full.yml")
+	data, _ := os.ReadFile(fileName)
+
+	var buildConfig BuildConfig
+	if err := yaml.Unmarshal(data, &buildConfig); err != nil {
+		t.Fail()
+	}
+
+	typescriptDefinitions, err := collectTypescriptDefs(buildConfig, workDir)
+	if err != nil {
+		t.Fail()
+	}
+
+	generateTypescriptDefs(workDir, typescriptDefinitions, buildConfig.MainBuild.Name)
 }

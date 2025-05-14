@@ -2,8 +2,10 @@ package gen
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"runtime"
 	"sync"
 )
@@ -11,6 +13,65 @@ import (
 const (
 	topoSourceBasePath = "/src/"
 )
+
+func writeTypescriptDefs(workDir string, targetDir string, sourceDir string, module string) error {
+	dts, err := os.ReadFile(path.Join(workDir, sourceDir, module+".d.ts"))
+	if err != nil {
+		return err
+	}
+
+	export, err := os.ReadFile(path.Join(workDir, sourceDir, module+".export.json"))
+	if err != nil {
+		return err
+	}
+
+	type tsExport struct {
+		Kind    string   `json:"kind"`
+		Exports []string `json:"exports"`
+	}
+
+	src := []tsExport{}
+
+	err = json.Unmarshal(export, &src)
+	if err != nil {
+		return err
+	}
+
+	out := &TypescriptDef{
+		Dts: string(dts),
+	}
+	if len(src) == 1 {
+		out.Exports = src[0].Exports
+		out.Kind = src[0].Kind
+	} else {
+		defs := []struct {
+			Kind    string   `json:"kind"`
+			Exports []string `json:"exports"`
+		}{}
+		for _, v := range src {
+			defs = append(defs, v)
+		}
+
+		out.Defs = defs
+	}
+
+	export, err = json.Marshal(out)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(path.Join(workDir, targetDir, module+".d.ts.json"), export, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GenSourceTypescriptDefs(workDir string) {
+	writeTypescriptDefs(workDir, "build/src", topoSourceBasePath, "geometry")
+	writeTypescriptDefs(workDir, "build/src", topoSourceBasePath, "primitives")
+	writeTypescriptDefs(workDir, "build/src", topoSourceBasePath, "topo")
+}
 
 func BuildTopoSource(workDir string, args map[string]string) {
 	if err := collectIncludePaths(workDir, oggSourceBasePath); err != nil {

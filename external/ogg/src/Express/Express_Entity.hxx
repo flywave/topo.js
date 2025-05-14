@@ -57,7 +57,7 @@ public:
   Standard_EXPORT void SetAbstractFlag (const Standard_Boolean theIsAbstract);
 
   //! Returns abstract flag.
-  Standard_EXPORT inline Standard_Boolean AbstractFlag() const;
+  Standard_EXPORT Standard_Boolean AbstractFlag() const;
 
   DEFINE_STANDARD_RTTIEXT(Express_Entity, Express_Item)
 

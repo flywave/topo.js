@@ -55,9 +55,9 @@ public:
   
   Standard_EXPORT Standard_Boolean Complete (Blend_CSFunction& F, const Standard_Real Pmin);
   
-    Standard_Boolean IsDone() const;
+  Standard_Boolean IsDone() const;
   
-    const Handle(BRepBlend_Line)& Line() const;
+  const Handle(BRepBlend_Line)& Line() const;
 
 private:
 
@@ -129,6 +129,8 @@ private:
 #define Blend_CSWalking BRepBlend_CSWalking
 #define Blend_CSWalking_hxx <BRepBlend_CSWalking.hxx>
 
+#include <Blend_CSWalking.lxx>
+
 #undef TheVertex
 #undef TheVertex_hxx
 #undef TheArc
@@ -161,8 +163,6 @@ private:
 #undef TheLine_hxx
 #undef Blend_CSWalking
 #undef Blend_CSWalking_hxx
-
-
 
 
 #endif // _BRepBlend_CSWalking_HeaderFile

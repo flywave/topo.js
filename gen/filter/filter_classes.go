@@ -116,6 +116,8 @@ func FilterClass(theClass clang.Cursor, additionalInfo interface{}) bool {
 		"Xw_Window",
 		"StepKinematics_UnconstrainedPair",
 		"StepKinematics_UnconstrainedPairValue",
+		"VectorOfPoint",
+		"Resource_DataMapOfAsciiStringAsciiString",
 	}
 
 	for _, name := range blacklist {
@@ -176,5 +178,41 @@ func FilterClass(theClass clang.Cursor, additionalInfo interface{}) bool {
 		return false
 	}
 
+	return true
+}
+
+func FilterAbstractClass(theClass clang.Cursor) bool {
+	className := theClass.Spelling()
+
+	abstractlist := []string{
+		"Expr_BinaryExpression",
+		"Expr_NamedExpression",
+		"Expr_SingleRelation",
+		"Expr_UnaryExpression",
+		"Geom_BoundedSurface",
+		"Geom_SweptSurface",
+		"IFSelect_SelectBase",
+		"IFSelect_SelectControl",
+		"IFSelect_SelectDeduct",
+		"PCDM_RetrievalDriver",
+		"SelectMgr_CompositionFilter",
+		"ShapeCustom_Modification",
+		"TDataStd_GenericEmpty",
+		"TDataStd_GenericExtString",
+		"VrmlData_ArrayVec3d_1",
+		"VrmlData_ArrayVec3d_2",
+		"VrmlData_Faceted_1",
+		"VrmlData_Faceted_2",
+		"VrmlData_Texture_1",
+		"VrmlData_Texture_2",
+		"VrmlData_TextureTransform_1",
+		"VrmlData_TextureTransform_2",
+	}
+
+	for _, name := range abstractlist {
+		if className == name {
+			return false
+		}
+	}
 	return true
 }

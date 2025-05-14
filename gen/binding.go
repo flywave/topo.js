@@ -80,50 +80,54 @@ var builtInTypes = map[string]bool{
 }
 
 var occtEnumTypes = map[string]bool{
-	"Quantity_NameOfColor":                     true,
-	"Aspect_TypeOfLine":                        true,
-	"IntImp_ConstIsoparametric":                true,
-	"TopAbs_Orientation":                       true,
-	"GeomAbs_Shape":                            true,
-	"TopAbs_State":                             true,
-	"BRepOffset_Status":                        true,
-	"GeomAbs_BSplKnotDistribution":             true,
-	"Convert_ParameterisationType":             true,
-	"CSLib_DerivativeStatus":                   true,
-	"CSLib_NormalStatus":                       true,
-	"FairCurve_AnalysisCode":                   true,
-	"Font_FontAspect":                          true,
-	"GccEnt_Position":                          true,
-	"Graphic3d_DisplayPriority":                true,
-	"Graphic3d_NameOfMaterial":                 true,
-	"Interface_ParamType":                      true,
-	"IGESData_Status":                          true,
-	"IFSelect_SelectDeduct":                    true,
-	"IFSelect_SelectControl":                   true,
-	"IFSelect_SelectBase":                      true,
-	"IntCurveSurface_TransitionOnCurve":        true,
-	"IntRes2d_Position":                        true,
-	"Intf_SectionPoint":                        true,
-	"Intf_PIType":                              true,
-	"RecordType":                               true,
-	"Message_MetricType":                       true,
-	"Message_Gravity":                          true,
-	"OSD_SingleProtection":                     true,
-	"PrsDim_KindOfSurface":                     true,
-	"DsgPrs_ArrowSide":                         true,
-	"StepBasic_SiPrefix":                       true,
-	"StepBasic_SiUnitName":                     true,
-	"XCAFDimTolObjects_DimensionFormVariance":  true,
-	"XCAFDimTolObjects_DimensionType":          true,
-	"XCAFDimTolObjects_DatumTargetType":        true,
-	"XCAFDimTolObjects_DimensionQualifier":     true,
-	"XCAFDimTolObjects_GeomToleranceTypeValue": true,
-	"StepData_Logical":                         true,
-	"TopAbs_ShapeEnum":                         true,
-	"TopOpeBRepDS_Kind":                        true,
-	"TopOpeBRepDS_TKI":                         true,
-	"V3d_TypeOfOrientation":                    true,
-	"XCAFDimTolObjects_DimensionGrade":         true,
+	"Quantity_NameOfColor":                          true,
+	"Aspect_TypeOfLine":                             true,
+	"IntImp_ConstIsoparametric":                     true,
+	"ProxPnt_Status":                                true,
+	"BRepExtrema_ProximityDistTool::ProxPnt_Status": true,
+	"TopAbs_Orientation":                            true,
+	"GeomAbs_Shape":                                 true,
+	"TopAbs_State":                                  true,
+	"BRepOffset_Status":                             true,
+	"GeomAbs_BSplKnotDistribution":                  true,
+	"Convert_ParameterisationType":                  true,
+	"CSLib_DerivativeStatus":                        true,
+	"CSLib_NormalStatus":                            true,
+	"FairCurve_AnalysisCode":                        true,
+	"Font_FontAspect":                               true,
+	"GccEnt_Position":                               true,
+	"Graphic3d_DisplayPriority":                     true,
+	"Graphic3d_NameOfMaterial":                      true,
+	"Interface_ParamType":                           true,
+	"IGESData_Status":                               true,
+	"IFSelect_SelectDeduct":                         true,
+	"IFSelect_SelectControl":                        true,
+	"IFSelect_SelectBase":                           true,
+	"IntCurveSurface_TransitionOnCurve":             true,
+	"IntRes2d_Position":                             true,
+	"Intf_SectionPoint":                             true,
+	"Intf_PIType":                                   true,
+	"RecordType":                                    true,
+	"Message_MetricType":                            true,
+	"Message_Gravity":                               true,
+	"OSD_SingleProtection":                          true,
+	"PrsDim_KindOfSurface":                          true,
+	"DsgPrs_ArrowSide":                              true,
+	"StepBasic_SiPrefix":                            true,
+	"StepBasic_SiUnitName":                          true,
+	"XCAFDimTolObjects_DimensionFormVariance":       true,
+	"XCAFDimTolObjects_DimensionType":               true,
+	"XCAFDimTolObjects_DatumTargetType":             true,
+	"XCAFDimTolObjects_DimensionQualifier":          true,
+	"XCAFDimTolObjects_GeomToleranceTypeValue":      true,
+	"StepData_Logical":                              true,
+	"TopAbs_ShapeEnum":                              true,
+	"TopOpeBRepDS_Kind":                             true,
+	"TopOpeBRepDS_TKI":                              true,
+	"V3d_TypeOfOrientation":                         true,
+	"VrmlData_ErrorStatus":                          true,
+	"XCAFDimTolObjects_DimensionGrade":              true,
+	"XCAFDimTolObjects_DatumModifWithValue":         true,
 }
 
 var cStringTypes = []string{
@@ -205,6 +209,15 @@ func (b *Bindings) getTypedefedTemplateTypeAsString(typeSpelling string, templat
 		}
 		if strings.HasPrefix(typeSpelling, "Iterator") && !strings.Contains(typeSpelling, "::") {
 			return strings.Replace(typeSpelling, "Iterator", className+"::Iterator", 1)
+		}
+		if strings.HasPrefix(typeSpelling, "StreamBuffer") && !strings.Contains(typeSpelling, "::") {
+			return strings.Replace(typeSpelling, "StreamBuffer", className+"::StreamBuffer", 1)
+		}
+		if strings.HasPrefix(typeSpelling, "NewDerived") && !strings.Contains(typeSpelling, "::") {
+			typeSpelling = strings.Replace(typeSpelling, "NewDerived", className+"::NewDerived", 1)
+		}
+		if strings.HasPrefix(typeSpelling, "RecordType") && !strings.Contains(typeSpelling, "::") {
+			typeSpelling = strings.Replace(typeSpelling, "RecordType", className+"::RecordType", 1)
 		}
 	}
 	return typeSpelling
@@ -336,6 +349,10 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	constructors := []clang.Cursor{}
 	publicConstructors := []clang.Cursor{}
 
+	if !filter.FilterAbstractClass(theClass) {
+		return output
+	}
+
 	theClass.Visit(func(child, parent clang.Cursor) clang.ChildVisitResult {
 		if child.Kind() == clang.Cursor_Constructor {
 			constructors = append(constructors, child)
@@ -440,6 +457,12 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 				if strings.HasPrefix(typename, "const BVHSubset") && !strings.Contains(typename, "::") {
 					typename = strings.Replace(typename, "BVHSubset", className+"::BVHSubset", 1)
 				}
+				if strings.HasPrefix(typename, "const AppendMode") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "AppendMode", className+"::AppendMode", 1)
+				}
+				if strings.HasPrefix(typename, "NewDerived") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "NewDerived", className+"::NewDerived", 1)
+				}
 			}
 			if arg.Type().Kind() == clang.Type_LValueReference {
 				isConstRef := arg.Type().IsConstQualifiedType()
@@ -542,6 +565,12 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 					}
 					if strings.HasPrefix(typename, "const BVHSubset") && !strings.Contains(typename, "::") {
 						typename = strings.Replace(typename, "BVHSubset", className+"::BVHSubset", 1)
+					}
+					if strings.HasPrefix(typename, "const AppendMode") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "AppendMode", className+"::AppendMode", 1)
+					}
+					if strings.HasPrefix(typename, "NewDerived") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "NewDerived", className+"::NewDerived", 1)
 					}
 				}
 				return typename
@@ -670,7 +699,8 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			if !method.CXXMethod_IsStatic() {
 				functionBinding.WriteString(fmt.Sprintf("that.%s(%s)", method.Spelling(), strings.Join(invocationArgs, ", ")))
 			} else {
-				functionBinding.WriteString(fmt.Sprintf("%s::%s(%s)", theClass.Spelling(), method.Spelling(), strings.Join(invocationArgs, ", ")))
+				className := getClassTypeName(theClass, templateDecl)
+				functionBinding.WriteString(fmt.Sprintf("%s::%s(%s)", className, method.Spelling(), strings.Join(invocationArgs, ", ")))
 			}
 			functionBinding.WriteString(";\n")
 
@@ -746,8 +776,14 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 		} else {
 			output.WriteString(".function(")
 		}
-		output.WriteString(fmt.Sprintf("\"%s%s\",%s, allow_raw_pointers())\n",
-			method.Spelling(), overloadPostfix, functionBinding.String()))
+
+		if method.ResultType().Kind() == clang.Type_LValueReference && method.Spelling() == "Intersector" {
+			output.WriteString(fmt.Sprintf("\"%s%s\",%s, return_value_policy::reference())\n",
+				method.Spelling(), overloadPostfix, functionBinding.String()))
+		} else {
+			output.WriteString(fmt.Sprintf("\"%s%s\",%s, allow_raw_pointers())\n",
+				method.Spelling(), overloadPostfix, functionBinding.String()))
+		}
 	}
 
 	// Process public fields
@@ -847,7 +883,9 @@ func (e *EmbindBindings) processOverloadedConstructors(theClass clang.Cursor, te
 		constructorBindings.WriteString("      " + name + overloadPostfix + "(" + strings.Join(args, ", ") + ") : " + name + "(" + strings.Join(argNames, ", ") + ") {}\n")
 		constructorBindings.WriteString("    };\n")
 		constructorBindings.WriteString("    class_<" + name + overloadPostfix + ", base<" + name + ">>(\"" + name + overloadPostfix + "\")\n")
-		constructorBindings.WriteString("      .constructor<" + strings.Join(argTypes, ", ") + ">()\n")
+		if !filter.FilterAbstractClass(theClass) {
+			constructorBindings.WriteString("      .constructor<" + strings.Join(argTypes, ", ") + ">()\n")
+		}
 		constructorBindings.WriteString("    ;\n")
 	}
 
@@ -966,7 +1004,7 @@ func (t *TypescriptBindings) processSimpleConstructor(theClass clang.Cursor) str
 	var args []string
 	for i := int32(0); i < standardConstructor.NumArguments(); i++ {
 		arg := standardConstructor.Argument(uint32(i))
-		args = append(args, t.getTypescriptDefFromArg(arg))
+		args = append(args, t.getTypescriptDefFromArg(arg, clang.NewNullCursor(), nil))
 	}
 
 	output.WriteString(fmt.Sprintf("  constructor(%s)\n", strings.Join(args, ", ")))
@@ -993,7 +1031,7 @@ func (t *TypescriptBindings) getTypescriptDefFromResultType(res clang.Type, temp
 		typedefType := t.getTypedefedTemplateTypeAsString(
 			strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(res.Spelling(), "&", ""), "const", "")),
 			templateDecl, templateArgs, "")
-		resTypeName := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(typedefType, "&", ""), "const", ""))
+		resTypeName := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(typedefType, "*", ""), "&", ""), "const", ""))
 		resTypeName = t.convertBuiltinTypes(resTypeName)
 		if resTypeName == "" || strings.Contains(resTypeName, "(") ||
 			strings.Contains(resTypeName, ":") || strings.Contains(resTypeName, "<") {
@@ -1005,7 +1043,7 @@ func (t *TypescriptBindings) getTypescriptDefFromResultType(res clang.Type, temp
 	return "void"
 }
 
-func (t *TypescriptBindings) getTypescriptDefFromArg(arg clang.Cursor, suffix ...string) string {
+func (t *TypescriptBindings) getTypescriptDefFromArg(arg clang.Cursor, templateDecl clang.Cursor, templateArgs map[string]clang.Type, suffix ...string) string {
 	suffixVal := ""
 	if len(suffix) > 0 {
 		suffixVal = suffix[0]
@@ -1013,8 +1051,8 @@ func (t *TypescriptBindings) getTypescriptDefFromArg(arg clang.Cursor, suffix ..
 
 	argTypeName := t.getTypedefedTemplateTypeAsString(
 		strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(arg.Type().Spelling(), "&", ""), "const", "")),
-		clang.NewNullCursor(), nil, "")
-	argTypeName = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(argTypeName, "&", ""), "const", ""))
+		templateDecl, templateArgs, "")
+	argTypeName = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(argTypeName, "*", ""), "&", ""), "const", ""))
 	argTypeName = t.convertBuiltinTypes(argTypeName)
 	if argTypeName == "" || strings.Contains(argTypeName, "(") || strings.Contains(argTypeName, ":") {
 		fmt.Printf("could not generate proper types for type name '%s', using 'any' instead.\n", argTypeName)
@@ -1043,7 +1081,7 @@ func (t *TypescriptBindings) processMethodOrProperty(theClass, method clang.Curs
 		var args []string
 		for i := int32(0); i < method.NumArguments(); i++ {
 			arg := method.Argument(uint32(i))
-			args = append(args, t.getTypescriptDefFromArg(arg, fmt.Sprintf("%d", i)))
+			args = append(args, t.getTypescriptDefFromArg(arg, templateDecl, templateArgs, fmt.Sprintf("%d", i)))
 		}
 
 		returnType := t.getTypescriptDefFromResultType(method.ResultType(), templateDecl, templateArgs)
@@ -1093,7 +1131,7 @@ func (t *TypescriptBindings) processOverloadedConstructors(theClass clang.Cursor
 		var args []string
 		for i := int32(0); i < constructor.NumArguments(); i++ {
 			arg := constructor.Argument(uint32(i))
-			args = append(args, t.getTypescriptDefFromArg(arg))
+			args = append(args, t.getTypescriptDefFromArg(arg, templateDecl, templateArgs))
 		}
 
 		name := getClassTypeName(theClass, templateDecl)

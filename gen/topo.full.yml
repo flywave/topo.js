@@ -1,11 +1,18 @@
 mainBuild:
   name: topo.full.js
+  emccFlags:
+    - "-flto"
+    - "-fexceptions"
+    - "-sDISABLE_EXCEPTION_CATCHING=0"
+    - "-O3"
+    - "-sEXPORT_ES6=1"
+    - "-sEXPORTED_RUNTIME_METHODS=['FS']"
+    - "-sINITIAL_MEMORY=100MB"
+    - "-sMAXIMUM_MEMORY=4GB"
+    - "-sALLOW_MEMORY_GROWTH=1"
+    - "-sUSE_FREETYPE=1"
+    - "-sLLD_REPORT_UNDEFINED"
+    - "--no-entry"
+    - "-sENVIRONMENT=web,worker"
 
-additionalCppCode: |
-  typedef Handle(IMeshTools_Context) Handle_IMeshTools_Context;
-  class TopoJS {
-  public:
-    static Standard_Failure* getStandard_FailureData(intptr_t exceptionPtr) {
-      return reinterpret_cast<Standard_Failure*>(exceptionPtr);
-    }
-  };
+GenerateTypescriptDefs: true
