@@ -23,8 +23,8 @@ export declare class BBox {
     diagonalLength(): number;
 
     // 操作方法
-    add(point: Vector, tolerance?: number): BBox;
-    add(other: BBox, tolerance?: number): BBox;
+    addVector(point: Vector, tolerance?: number): BBox;
+    addBBOx(other: BBox, tolerance?: number): BBox;
     isInside(other: BBox, tolerance?: number): boolean;
     enlarge(tolerance?: number): void;
 
@@ -41,15 +41,10 @@ export declare class BBox {
 
 export declare class Location {
     constructor();
-    constructor(trsf: gp_Trsf);
-    constructor(loc: TopLoc_Location);
-    constructor(pnt: gp_Pnt);
-    constructor(vec: gp_Vec);
+    constructor(pnt: gp_Trsf | TopLoc_Location | gp_Pnt | gp_Vec | gp_Pln | Vector);
     constructor(vec: gp_Vec, rx: number, ry: number, rz: number);
-    constructor(pln: gp_Pln);
     constructor(pln: gp_Pln, pos: gp_Pnt);
     constructor(vec: gp_Vec, axis: gp_Vec, angle: number);
-    constructor(vec: Vector);
 
     copy(): Location;
 
@@ -75,17 +70,15 @@ export declare class Location {
 
 export declare class Matrix {
     constructor();
-    constructor(gtrsf: gp_GTrsf);
-    constructor(trsf: gp_Trsf);
-    constructor(data: number[][]);
+    constructor(gtrsf: gp_GTrsf | gp_Trsf | number[][]);
 
     // 变换方法
     rotateX(angle: number): Matrix;
     rotateY(angle: number): Matrix;
     rotateZ(angle: number): Matrix;
     inverse(): Matrix;
-    multiply(other: Matrix): Matrix;
-    multiply(vec: Vector): Matrix;
+    multiplyMatrix(other: Matrix): Matrix;
+    multiplyVector(vec: Vector): Matrix;
 
     // 数据访问
     get(row: number, col: number): number;
@@ -124,10 +117,10 @@ export declare class Plane {
     zDir(): Vector;
 
     // 坐标转换方法
-    toWorldCoords(localVec: Vector): Vector;
-    toLocalCoords(worldVec: Vector): Vector;
-    toWorldCoords(localShp: Shape): Shape;
-    toLocalCoords(worldShp: Shape): Shape;
+    toWorldCoordsForVector(localVec: Vector): Vector;
+    toLocalCoordsForVector(worldVec: Vector): Vector;
+    toWorldCoordsForShape(localShp: Shape): Shape;
+    toLocalCoordsForShape(worldShp: Shape): Shape;
     location(): Location;
 
     // 设置方法
@@ -147,11 +140,7 @@ export declare class Plane {
 export declare class Vector {
     constructor();
     constructor(x: number, y: number, z?: number);
-    constructor(arr: [number, number, number]);
-    constructor(vec: gp_Vec);
-    constructor(pnt: gp_Pnt);
-    constructor(dir: gp_Dir);
-    constructor(xyz: gp_XYZ);
+    constructor(arr: gp_Vec | gp_Pnt | gp_Dir | gp_XYZ | [number, number, number]);
 
     // 属性
     x: number;
@@ -346,21 +335,17 @@ export declare class Shape extends GeometryObject {
     getTextureMapType(): TextureMappingRule;
     getRotationAngle(): number;
 
-    // 获取表面颜色
-    surfaceColour(): [number, number, number] | null;
-
     // 变换操作
-    transform(trsf: gp_Trsf): number;
-    transform(matrix: Matrix): number;
+    transform(trsf: gp_Trsf | Matrix): number;
     translate(delta: gp_Vec): number;
-    rotate(angle: number, p1: gp_Pnt, p2: gp_Pnt): number;
-    rotate(angle: number, axis: gp_Ax1): number;
-    rotate(quat: gp_Quaternion): number;
+    rotateFromPoint(angle: number, p1: gp_Pnt, p2: gp_Pnt): number;
+    rotateFromAxis1(angle: number, axis: gp_Ax1): number;
+    rotateFromQuaternion(quat: gp_Quaternion): number;
     scale(factor: number): number;
-    mirror(p1: gp_Pnt, p2: gp_Pnt): number;
-    mirror(p: gp_Pnt, dir: gp_Vec): number;
-    mirror(axis: gp_Ax1): number;
-    mirror(ax2: gp_Ax2): number;
+    mirrorFromTwoPoint(p1: gp_Pnt, p2: gp_Pnt): number;
+    mirrorFromPointNorm(p: gp_Pnt, dir: gp_Vec): number;
+    mirrorFromAxis1(axis: gp_Ax1): number;
+    mirrorFromAxis2(ax2: gp_Ax2): number;
 
     // 几何计算
     centreOfMass(): gp_Pnt;
@@ -371,30 +356,29 @@ export declare class Shape extends GeometryObject {
     distances(other: Shape[]): number[];
 
     // 非破坏性变换方法
-    transformed(trsf: gp_Trsf): Shape;
-    transformed(matrix: Matrix): Shape;
+    transformed(trsf: gp_Trsf | Matrix): Shape;
     translated(delta: gp_Vec): Shape;
-    rotated(angle: number, p1: gp_Pnt, p2: gp_Pnt): Shape;
-    rotated(angle: number, axis: gp_Ax1): Shape;
-    rotated(quat: gp_Quaternion): Shape;
+    rotatedFromPoint(angle: number, p1: gp_Pnt, p2: gp_Pnt): Shape;
+    rotatedFromAxis1(angle: number, axis: gp_Ax1): Shape;
+    rotatedFromQuaternion(quat: gp_Quaternion): Shape;
     scaled(pnt: gp_Pnt, scale: number): Shape;
-    mirrored(pnt: gp_Pnt, nor: gp_Pnt): Shape;
-    mirrored(pnt: gp_Pnt, nor: gp_Vec): Shape;
-    mirrored(axis: gp_Ax1): Shape;
-    mirrored(ax2: gp_Ax2): Shape;
+    mirroredFromTwoPoint(pnt: gp_Pnt, nor: gp_Pnt): Shape;
+    mirroredFromPointNorm(pnt: gp_Pnt, nor: gp_Vec): Shape;
+    mirroredFromAxis1(axis: gp_Ax1): Shape;
+    mirroredFromAxis2(ax2: gp_Ax2): Shape;
 
     // 位置和方向操作
     location(): number[] | null;
     setLocation(loc: Location): void;
     located(loc: Location): Shape;
-    move(loc: Location): number;
+    moveFromLocation(loc: Location): number;
     move(x: number, y: number, z: number, rx: number, ry: number, rz: number): number;
-    move(vec: gp_Vec): number;
-    moved(loc: Location): Shape;
+    moveFromVector(vec: gp_Vec): number;
+    movedFromLocation(loc: Location): Shape;
     moved(x: number, y: number, z: number, rx: number, ry: number, rz: number): Shape;
-    moved(vec: gp_Vec): Shape;
-    moved(locs: Location[]): Shape;
-    moved(vecs: gp_Vec[]): Shape;
+    movedFromVector(vec: gp_Vec): Shape;
+    movedFromLocations(locs: Location[]): Shape;
+    movedFromVectors(vecs: gp_Vec[]): Shape;
 
     // 方向操作
     getOrientation(): Orientation;
@@ -449,14 +433,14 @@ export declare class Shape extends GeometryObject {
 
     // 选择器相关
     static filter(selector: Selector, shapes: Shape[]): Shape[];
-    vertices(selector: Selector): Shape;
-    edges(selector: Selector): Shape;
-    wires(selector: Selector): Shape;
-    faces(selector: Selector): Shape;
-    shells(selector: Selector): Shape;
-    solids(selector: Selector): Shape;
-    compounds(selector: Selector): Shape;
-    compSolids(selector: Selector): Shape;
+    selectVertices(selector: Selector): Shape;
+    selectEdges(selector: Selector): Shape;
+    selectWires(selector: Selector): Shape;
+    selectFaces(selector: Selector): Shape;
+    selectShells(selector: Selector): Shape;
+    selectSolids(selector: Selector): Shape;
+    selectCompounds(selector: Selector): Shape;
+    selectCompSolids(selector: Selector): Shape;
 
     // 类型转换
     castVertex(): Vertex | null;
@@ -482,7 +466,7 @@ export declare class Vertex extends Shape {
     constructor(pnt: gp_Pnt);
 
     // 静态工厂方法
-    static makeVertex(pnt: gp_Pnt): Vertex;
+    static makeVertex(pnt: gp_Pnt | gp_Vec): Vertex;
     static makeVertex(vec: gp_Vec): Vertex;
 
     // 方法
@@ -525,7 +509,7 @@ export declare class Shape1D extends Shape {
 
     // 参数化方法
     paramAt(param: number): number;
-    paramAt(point: gp_Pnt): number;
+    ParamAtPoint(point: gp_Pnt): number;
     params(points: gp_Pnt[], tolerance?: number): number[];
     paramsLength(parameters: number[]): number[];
 
@@ -556,52 +540,52 @@ export declare class Edge extends Shape1D {
     constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
     // 静态创建方法 - 基本类型
-    static makeEdge(v1: Vertex, v2: Vertex): Edge;
-    static makeEdge(p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromTwoVertex(v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromTwoPoint(p1: gp_Pnt, p2: gp_Pnt): Edge;
 
     // 静态创建方法 - 直线
-    static makeEdge(line: gp_Lin): Edge;
-    static makeEdge(line: gp_Lin, u1: number, u2: number): Edge;
-    static makeEdge(line: gp_Lin, p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makeEdge(line: gp_Lin, v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromLine(line: gp_Lin): Edge;
+    static makeEdgeFromLineParm(line: gp_Lin, u1: number, u2: number): Edge;
+    static makeEdgeFromLinePoint(line: gp_Lin, p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromLineVertex(line: gp_Lin, v1: Vertex, v2: Vertex): Edge;
 
     // 静态创建方法 - 圆
-    static makeEdge(circle: gp_Circ): Edge;
-    static makeEdge(circle: gp_Circ, u1: number, u2: number): Edge;
-    static makeEdge(circle: gp_Circ, p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makeEdge(circle: gp_Circ, v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromCirc(circle: gp_Circ): Edge;
+    static makeEdgeFromCircParm(circle: gp_Circ, u1: number, u2: number): Edge;
+    static makeEdgeFromCircPoint(circle: gp_Circ, p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromCircVertex(circle: gp_Circ, v1: Vertex, v2: Vertex): Edge;
 
     // 静态创建方法 - 椭圆
-    static makeEdge(ellipse: gp_Elips): Edge;
-    static makeEdge(ellipse: gp_Elips, u1: number, u2: number): Edge;
-    static makeEdge(ellipse: gp_Elips, p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makeEdge(ellipse: gp_Elips, v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromElips(ellipse: gp_Elips): Edge;
+    static makeEdgeFromElipsParm(ellipse: gp_Elips, u1: number, u2: number): Edge;
+    static makeEdgeFromElipsPoint(ellipse: gp_Elips, p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromElipsVertex(ellipse: gp_Elips, v1: Vertex, v2: Vertex): Edge;
 
     // 双曲线创建方法
-    static makeEdge(hyperbola: gp_Hypr): Edge;
-    static makeEdge(hyperbola: gp_Hypr, u1: number, u2: number): Edge;
-    static makeEdge(hyperbola: gp_Hypr, p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makeEdge(hyperbola: gp_Hypr, v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromHyper(hyperbola: gp_Hypr): Edge;
+    static makeEdgeFromHyperParm(hyperbola: gp_Hypr, u1: number, u2: number): Edge;
+    static makeEdgeFromHyperPoint(hyperbola: gp_Hypr, p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromHyperVertex(hyperbola: gp_Hypr, v1: Vertex, v2: Vertex): Edge;
 
     // 抛物线创建方法
-    static makeEdge(parabola: gp_Parab): Edge;
-    static makeEdge(parabola: gp_Parab, u1: number, u2: number): Edge;
-    static makeEdge(parabola: gp_Parab, p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makeEdge(parabola: gp_Parab, v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromPara(parabola: gp_Parab): Edge;
+    static makeEdgeFromParaParm(parabola: gp_Parab, u1: number, u2: number): Edge;
+    static makeEdgeFromParaPoint(parabola: gp_Parab, p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromParaVertex(parabola: gp_Parab, v1: Vertex, v2: Vertex): Edge;
 
     // 通用曲线创建方法
-    static makeEdge(curve: Handle_Geom_Curve): Edge;
-    static makeEdge(curve: Handle_Geom_Curve, u1: number, u2: number): Edge;
-    static makeEdge(curve: Handle_Geom_Curve, p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makeEdge(curve: Handle_Geom_Curve, v1: Vertex, v2: Vertex): Edge;
-    static makeEdge(
+    static makeEdgeFromCurve(curve: Handle_Geom_Curve): Edge;
+    static makeEdgeFromCurveParm(curve: Handle_Geom_Curve, u1: number, u2: number): Edge;
+    static makeEdgeFromCurvePoint(curve: Handle_Geom_Curve, p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makeEdgeFromCurveVertex(curve: Handle_Geom_Curve, v1: Vertex, v2: Vertex): Edge;
+    static makeEdgeFromCurvePointParm(
         curve: Handle_Geom_Curve,
         p1: gp_Pnt,
         p2: gp_Pnt,
         u1: number,
         u2: number
     ): Edge;
-    static makeEdge(
+    static makeEdgeFromCurveVertexParm(
         curve: Handle_Geom_Curve,
         v1: Vertex,
         v2: Vertex,
@@ -610,29 +594,29 @@ export declare class Edge extends Shape1D {
     ): Edge;
 
     // 2D曲线创建方法
-    static makeEdge(
+    static makeEdgeFromSurface(
         curve2d: Handle_Geom2d_Curve,
         surface: Handle_Geom_Surface
     ): Edge;
-    static makeEdge(
+    static makeEdgeFromSurfaceParm(
         curve2d: Handle_Geom2d_Curve,
         surface: Handle_Geom_Surface,
         u1: number,
         u2: number
     ): Edge;
-    static makeEdge(
+    static makeEdgeFromSurfacePoint(
         curve2d: Handle_Geom2d_Curve,
         surface: Handle_Geom_Surface,
         p1: gp_Pnt,
         p2: gp_Pnt
     ): Edge;
-    static makeEdge(
+    static makeEdgeFromSurfaceVertex(
         curve2d: Handle_Geom2d_Curve,
         surface: Handle_Geom_Surface,
         v1: Vertex,
         v2: Vertex
     ): Edge;
-    static makeEdge(
+    static makeEdgeFromSurfacePointParm(
         curve2d: Handle_Geom2d_Curve,
         surface: Handle_Geom_Surface,
         p1: gp_Pnt,
@@ -640,7 +624,7 @@ export declare class Edge extends Shape1D {
         u1: number,
         u2: number
     ): Edge;
-    static makeEdge(
+    static makeEdgeFromSurfaceVertexParm(
         curve2d: Handle_Geom2d_Curve,
         surface: Handle_Geom_Surface,
         v1: Vertex,
@@ -664,44 +648,44 @@ export declare class Edge extends Shape1D {
     reverse(): Edge;
 
     // 2D曲线创建方法
-    static makeEdge2d(v1: Vertex, v2: Vertex): Edge;
-    static makeEdge2d(p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(line: gp_Lin2d): Edge;
-    static makeEdge2d(line: gp_Lin2d, u1: number, u2: number): Edge;
-    static makeEdge2d(line: gp_Lin2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(line: gp_Lin2d, v1: Vertex, v2: Vertex): Edge;
-    static makeEdge2d(circle: gp_Circ2d): Edge;
-    static makeEdge2d(circle: gp_Circ2d, u1: number, u2: number): Edge;
-    static makeEdge2d(circle: gp_Circ2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(circle: gp_Circ2d, v1: Vertex, v2: Vertex): Edge;
-    static makeEdge2d(ellipse: gp_Elips2d): Edge;
-    static makeEdge2d(ellipse: gp_Elips2d, u1: number, u2: number): Edge;
-    static makeEdge2d(ellipse: gp_Elips2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(ellipse: gp_Elips2d, v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromTwoVertex(v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromTwoPoint(p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromLine(line: gp_Lin2d): Edge;
+    static makeEdge2dFromLineParm(line: gp_Lin2d, u1: number, u2: number): Edge;
+    static makeEdge2dFromLinePoint(line: gp_Lin2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromLineVertex(line: gp_Lin2d, v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromCirc(circle: gp_Circ2d): Edge;
+    static makeEdge2dFromCircParm(circle: gp_Circ2d, u1: number, u2: number): Edge;
+    static makeEdge2dFromCircPoint(circle: gp_Circ2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromCircVertex(circle: gp_Circ2d, v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromElips(ellipse: gp_Elips2d): Edge;
+    static makeEdge2dFromElipsParm(ellipse: gp_Elips2d, u1: number, u2: number): Edge;
+    static makeEdge2dFromElipsPoint(ellipse: gp_Elips2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromElipsVertex(ellipse: gp_Elips2d, v1: Vertex, v2: Vertex): Edge;
 
     // 双曲线和抛物线2D创建方法
-    static makeEdge2d(hyperbola: gp_Hypr2d): Edge;
-    static makeEdge2d(hyperbola: gp_Hypr2d, u1: number, u2: number): Edge;
-    static makeEdge2d(hyperbola: gp_Hypr2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(hyperbola: gp_Hypr2d, v1: Vertex, v2: Vertex): Edge;
-    static makeEdge2d(parabola: gp_Parab2d): Edge;
-    static makeEdge2d(parabola: gp_Parab2d, u1: number, u2: number): Edge;
-    static makeEdge2d(parabola: gp_Parab2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(parabola: gp_Parab2d, v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromHyper(hyperbola: gp_Hypr2d): Edge;
+    static makeEdge2dFromHyperParm(hyperbola: gp_Hypr2d, u1: number, u2: number): Edge;
+    static makeEdge2dFromHyperPoint(hyperbola: gp_Hypr2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromHyperVertex(hyperbola: gp_Hypr2d, v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromPara(parabola: gp_Parab2d): Edge;
+    static makeEdge2dFromParaParm(parabola: gp_Parab2d, u1: number, u2: number): Edge;
+    static makeEdge2dFromParaPoint(parabola: gp_Parab2d, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromParaVertex(parabola: gp_Parab2d, v1: Vertex, v2: Vertex): Edge;
 
     // 2D曲线创建方法
-    static makeEdge2d(curve2d: Handle_Geom2d_Curve): Edge;
-    static makeEdge2d(curve2d: Handle_Geom2d_Curve, u1: number, u2: number): Edge;
-    static makeEdge2d(curve2d: Handle_Geom2d_Curve, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
-    static makeEdge2d(curve2d: Handle_Geom2d_Curve, v1: Vertex, v2: Vertex): Edge;
-    static makeEdge2d(
+    static makeEdge2dFromCurve(curve2d: Handle_Geom2d_Curve): Edge;
+    static makeEdge2dFromCurveParm(curve2d: Handle_Geom2d_Curve, u1: number, u2: number): Edge;
+    static makeEdge2dFromCurvePoint(curve2d: Handle_Geom2d_Curve, p1: gp_Pnt2d, p2: gp_Pnt2d): Edge;
+    static makeEdge2dFromCurveVertex(curve2d: Handle_Geom2d_Curve, v1: Vertex, v2: Vertex): Edge;
+    static makeEdge2dFromCurvePointParm(
         curve2d: Handle_Geom2d_Curve,
         p1: gp_Pnt2d,
         p2: gp_Pnt2d,
         u1: number,
         u2: number
     ): Edge;
-    static makeEdge2d(
+    static makeEdge2dFromCurveVertexParm(
         curve2d: Handle_Geom2d_Curve,
         v1: Vertex,
         v2: Vertex,
@@ -711,22 +695,22 @@ export declare class Edge extends Shape1D {
 
     // 多边形创建方法
     static makePolygon(): Edge;
-    static makePolygon(p1: gp_Pnt, p2: gp_Pnt): Edge;
-    static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, close?: boolean): Edge;
-    static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt, close?: boolean): Edge;
-    static makePolygon(v1: Vertex, v2: Vertex): Edge;
-    static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, close?: boolean): Edge;
-    static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, v4: Vertex, close?: boolean): Edge;
-    static makePolygon(vertices: Vertex[], close?: boolean): Edge;
-    static makePolygon(points: gp_Pnt[], close?: boolean): Edge;
+    static makePolygonFromTwoPoint(p1: gp_Pnt, p2: gp_Pnt): Edge;
+    static makePolygonFromThreePoint(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, close?: boolean): Edge;
+    static makePolygonFromFourPoint(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt, close?: boolean): Edge;
+    static makePolygonFromTwoVertex(v1: Vertex, v2: Vertex): Edge;
+    static makePolygonFromThreeVertex(v1: Vertex, v2: Vertex, v3: Vertex, close?: boolean): Edge;
+    static makePolygonFromFourVertex(v1: Vertex, v2: Vertex, v3: Vertex, v4: Vertex, close?: boolean): Edge;
+    static makePolygonFromVertices(vertices: Vertex[], close?: boolean): Edge;
+    static makePolygonFromPoints(points: gp_Pnt[], close?: boolean): Edge;
 
     // 矩形创建方法
     static makeRect(width: number, height: number): Edge;
 
     // 样条曲线创建方法
     static makeSpline(points: gp_Pnt[], tolerance?: number, periodic?: boolean): Edge;
-    static makeSpline(points: gp_Pnt[], tangents?: [gp_Vec, gp_Vec], parameters?: number[], tolerance?: number, periodic?: boolean, scale?: boolean): Edge;
-    static makeSpline(points: gp_Pnt[], tangents?: gp_Vec[], periodic?: boolean, parameters?: number[], scale?: boolean, tolerance?: number): Edge;
+    static makeSplineFromTangentsAndParametersAndPeriodic(points: gp_Pnt[], tangents?: [gp_Vec, gp_Vec], parameters?: number[], tolerance?: number, periodic?: boolean, scale?: boolean): Edge;
+    static makeSplineFromTangentsAndParameters(points: gp_Pnt[], tangents?: gp_Vec[], periodic?: boolean, parameters?: number[], scale?: boolean, tolerance?: number): Edge;
     static makeSplineApprox(points: gp_Pnt[], tolerance?: number, smoothing?: [number, number, number], minDegree?: number, maxDegree?: number): Edge;
 
     // 圆形创建方法
@@ -791,23 +775,23 @@ export declare class Wire extends Shape1D {
 
     // 多边形创建方法
     static makePolygon(): Wire;
-    static makePolygon(p1: gp_Pnt, p2: gp_Pnt): Wire;
-    static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, close?: boolean): Wire;
-    static makePolygon(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt, close?: boolean): Wire;
-    static makePolygon(v1: Vertex, v2: Vertex): Wire;
-    static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, close?: boolean): Wire;
-    static makePolygon(v1: Vertex, v2: Vertex, v3: Vertex, v4: Vertex, close?: boolean): Wire;
-    static makePolygon(points: gp_Pnt[], close?: boolean, ordered?: boolean): Wire;
+    static makePolygonFromTwoPoint(p1: gp_Pnt, p2: gp_Pnt): Wire;
+    static makePolygonFromThreePoint(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, close?: boolean): Wire;
+    static makePolygonFromFourPoint(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt, close?: boolean): Wire;
+    static makePolygonFromTwoVertex(v1: Vertex, v2: Vertex): Wire;
+    static makePolygonFromThreeVertex(v1: Vertex, v2: Vertex, v3: Vertex, close?: boolean): Wire;
+    static makePolygonFromFourVertex(v1: Vertex, v2: Vertex, v3: Vertex, v4: Vertex, close?: boolean): Wire;
+    static makePolygonFromPoints(points: gp_Pnt[], close?: boolean, ordered?: boolean): Wire;
 
     // 基础创建方法
-    static makeWire(edge: Edge): Wire;
-    static makeWire(e1: Edge, e2: Edge): Wire;
-    static makeWire(e1: Edge, e2: Edge, e3: Edge): Wire;
-    static makeWire(e1: Edge, e2: Edge, e3: Edge, e4: Edge): Wire;
-    static makeWire(wire: Wire): Wire;
-    static makeWire(wire: Wire, edge: Edge): Wire;
-    static makeWire(edges: Edge[]): Wire;
-    static makeWire(wires: Wire[]): Wire;
+    static makeWireFromEdge(edge: Edge): Wire;
+    static makeWireFromTwoEdge(e1: Edge, e2: Edge): Wire;
+    static makeWireFromThreeEdge(e1: Edge, e2: Edge, e3: Edge): Wire;
+    static makeWireFromFourEdge(e1: Edge, e2: Edge, e3: Edge, e4: Edge): Wire;
+    static makeWireFromWire(wire: Wire): Wire;
+    static makeWireFromTwoWire(wire: Wire, edge: Edge): Wire;
+    static makeWireFromEdges(edges: Edge[]): Wire;
+    static makeWireFromWires(wires: Wire[]): Wire;
 
     // 几何形状创建方法
     static makeRect(width: number, height: number): Wire;
@@ -863,43 +847,43 @@ export declare class Face extends Shape {
 
     // 基础创建方法
     static makeFace(face: Face): Face;
-    static makeFace(plane: gp_Pln): Face;
-    static makeFace(cylinder: gp_Cylinder): Face;
-    static makeFace(cone: gp_Cone): Face;
-    static makeFace(sphere: gp_Sphere): Face;
-    static makeFace(torus: gp_Torus): Face;
-    static makeFace(surface: Handle_Geom_Surface, tolDegen: number): Face;
+    static makeFaceFromPlane(plane: gp_Pln): Face;
+    static makeFaceFromCylinder(cylinder: gp_Cylinder): Face;
+    static makeFaceFromCone(cone: gp_Cone): Face;
+    static makeFaceFromSphere(sphere: gp_Sphere): Face;
+    static makeFaceFromTorus(torus: gp_Torus): Face;
+    static makeFaceFromSurface(surface: Handle_Geom_Surface, tolDegen: number): Face;
 
     // 带参数范围的创建方法
-    static makeFace(plane: gp_Pln, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-    static makeFace(cylinder: gp_Cylinder, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-    static makeFace(cone: gp_Cone, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-    static makeFace(sphere: gp_Sphere, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-    static makeFace(torus: gp_Torus, uMin: number, uMax: number, vMin: number, vMax: number): Face;
-    static makeFace(surface: Handle_Geom_Surface, uMin: number, uMax: number, vMin: number, vMax: number, tolerance?: number): Face;
+    static makeFaceFromPlaneParm(plane: gp_Pln, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+    static makeFaceFromCylinderParm(cylinder: gp_Cylinder, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+    static makeFaceFromConeParm(cone: gp_Cone, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+    static makeFaceFromSphereParm(sphere: gp_Sphere, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+    static makeFaceFromTorusParm(torus: gp_Torus, uMin: number, uMax: number, vMin: number, vMax: number): Face;
+    static makeFaceFromSurfaceParm(surface: Handle_Geom_Surface, uMin: number, uMax: number, vMin: number, vMax: number, tolerance?: number): Face;
 
     // 基于wire的创建方法
-    static makeFace(wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(plane: gp_Pln, wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(cylinder: gp_Cylinder, wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(cone: gp_Cone, wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(sphere: gp_Sphere, wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(torus: gp_Torus, wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(surface: Handle_Geom_Surface, wire: Wire, onlyPlane?: boolean): Face;
-    static makeFace(face: Face, wire: Wire): Face;
-    static makeFace(face: Face, wire: Wire, otherWires: Wire[]): Face;
+    static makeFaceFromWire(wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromPlaneWire(plane: gp_Pln, wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromCylinderWire(cylinder: gp_Cylinder, wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromConeWire(cone: gp_Cone, wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromSphereWire(sphere: gp_Sphere, wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromTorusWire(torus: gp_Torus, wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromSurfaceWire(surface: Handle_Geom_Surface, wire: Wire, onlyPlane?: boolean): Face;
+    static makeFaceFromFaceWire(face: Face, wire: Wire): Face;
+    static makeFaceFromFaceWireWithOuterInners(face: Face, wire: Wire, otherWires: Wire[]): Face;
 
     // 基于边和点的创建方法
-    static makeFace(e1: Edge, e2: Edge): Face;
-    static makeFace(w1: Wire, w2: Wire): Face;
-    static makeFace(wires: Wire[]): Face;
-    static makeFace(points: gp_Pnt[]): Face;
-    static makeFace(edges: Edge[], points: gp_Pnt[]): Face;
-    static makeFace(outerWire: Wire, innerWires: Wire[]): Face;
+    static makeFaceFromEdges(e1: Edge, e2: Edge): Face;
+    static makeFaceFaceFromTwoWire(w1: Wire, w2: Wire): Face;
+    static makeFaceFaceFromWires(wires: Wire[]): Face;
+    static makeFaceFromPoints(points: gp_Pnt[]): Face;
+    static makeFaceFromEdgesAndPoints(edges: Edge[], points: gp_Pnt[]): Face;
+    static makeFaceFromOuterAndInners(outerWire: Wire, innerWires: Wire[]): Face;
     static makeFromWires(outer: Wire, wires?: Wire[]): Face[];
 
     // 特殊创建方法
-    static makeFace(
+    static makeComplexFace(
         edgesOrWires: (Wire | Edge)[],
         constraints: (Wire | Edge | gp_Pnt)[],
         continuity?: GeomAbs_Shape,
@@ -949,7 +933,7 @@ export declare class Face extends Shape {
 
     // 法线计算和偏移操作
     normalAt(point?: gp_Pnt): gp_Vec;
-    normalAt(u: number, v: number): [gp_Vec, gp_Pnt];
+    normalAtUV(u: number, v: number): [gp_Vec, gp_Pnt];
     normals(us: number[], vs: number[]): [gp_Vec[], gp_Pnt[]];
     offset(distance: number, tolerance?: number): Face;
 
@@ -995,8 +979,8 @@ export declare class Shell extends Shape {
     constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
     // 基础创建方法
-    static makeShell(surface: Handle_Geom_Surface, segment?: boolean): Shell;
-    static makeShell(
+    static makeShellFromSurface(surface: Handle_Geom_Surface, segment?: boolean): Shell;
+    static makeShellFromSurfaceFromSurfaceParm(
         surface: Handle_Geom_Surface,
         uMin: number, uMax: number,
         vMin: number, vMax: number,
@@ -1005,61 +989,61 @@ export declare class Shell extends Shape {
 
     // 盒子创建方法
     static makeShellFromBox(dx: number, dy: number, dz: number): Shell;
-    static makeShellFromBox(center: gp_Pnt, dx: number, dy: number, dz: number): Shell;
-    static makeShellFromBox(p1: gp_Pnt, p2: gp_Pnt): Shell;
-    static makeShellFromBox(axes: gp_Ax2, dx: number, dy: number, dz: number): Shell;
+    static makeShellFromBoxPoint(center: gp_Pnt, dx: number, dy: number, dz: number): Shell;
+    static makeShellFromBoxTwoPoint(p1: gp_Pnt, p2: gp_Pnt): Shell;
+    static makeShellFromBoxAxis2(axes: gp_Ax2, dx: number, dy: number, dz: number): Shell;
 
     // 圆柱创建方法
     static makeShellFromCylinder(radius: number, height: number): Shell;
-    static makeShellFromCylinder(radius: number, height: number, angle: number): Shell;
-    static makeShellFromCylinder(axes: gp_Ax2, radius: number, height: number): Shell;
-    static makeShellFromCylinder(axes: gp_Ax2, radius: number, height: number, angle: number): Shell;
+    static makeShellFromCylinderAngle(radius: number, height: number, angle: number): Shell;
+    static makeShellFromCylinderAxis2(axes: gp_Ax2, radius: number, height: number): Shell;
+    static makeShellFromCylinderAxis2Angle(axes: gp_Ax2, radius: number, height: number, angle: number): Shell;
 
     // 圆锥创建方法
     static makeShellFromCone(radius1: number, radius2: number, height: number): Shell;
-    static makeShellFromCone(radius1: number, radius2: number, height: number, angle: number): Shell;
-    static makeShellFromCone(axes: gp_Ax2, radius1: number, radius2: number, height: number): Shell;
-    static makeShellFromCone(axes: gp_Ax2, radius1: number, radius2: number, height: number, angle: number): Shell;
+    static makeShellFromConeAngle(radius1: number, radius2: number, height: number, angle: number): Shell;
+    static makeShellFromConeAxis2(axes: gp_Ax2, radius1: number, radius2: number, height: number): Shell;
+    static makeShellFromConeAxis2Angle(axes: gp_Ax2, radius1: number, radius2: number, height: number, angle: number): Shell;
 
     // 旋转体创建方法
     static makeShellFromRevolution(meridian: Handle_Geom_Curve): Shell;
-    static makeShellFromRevolution(meridian: Handle_Geom_Curve, angle: number): Shell;
-    static makeShellFromRevolution(meridian: Handle_Geom_Curve, vMin: number, vMax: number): Shell;
-    static makeShellFromRevolution(meridian: Handle_Geom_Curve, vMin: number, vMax: number, angle: number): Shell;
-    static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve): Shell;
-    static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve, angle: number): Shell;
-    static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve, vMin: number, vMax: number): Shell;
-    static makeShellFromRevolution(axes: gp_Ax2, meridian: Handle_Geom_Curve, vMin: number, vMax: number, angle: number): Shell;
+    static makeShellFromRevolutionAngle(meridian: Handle_Geom_Curve, angle: number): Shell;
+    static makeShellFromRevolutionLimit(meridian: Handle_Geom_Curve, vMin: number, vMax: number): Shell;
+    static makeShellFromRevolutionLimitAngle(meridian: Handle_Geom_Curve, vMin: number, vMax: number, angle: number): Shell;
+    static makeShellFromRevolutionAxis2(axes: gp_Ax2, meridian: Handle_Geom_Curve): Shell;
+    static makeShellFromRevolutionAxis2Angle(axes: gp_Ax2, meridian: Handle_Geom_Curve, angle: number): Shell;
+    static makeShellFromRevolutionAxis2Limit(axes: gp_Ax2, meridian: Handle_Geom_Curve, vMin: number, vMax: number): Shell;
+    static makeShellFromRevolutionAxis2LimitAngle(axes: gp_Ax2, meridian: Handle_Geom_Curve, vMin: number, vMax: number, angle: number): Shell;
 
     // 球体创建方法
     static makeShellFromSphere(radius: number): Shell;
-    static makeShellFromSphere(radius: number, angle: number): Shell;
-    static makeShellFromSphere(radius: number, angle1: number, angle2: number): Shell;
-    static makeShellFromSphere(radius: number, angle1: number, angle2: number, angle3: number): Shell;
-    static makeShellFromSphere(center: gp_Pnt, radius: number): Shell;
-    static makeShellFromSphere(center: gp_Pnt, radius: number, angle: number): Shell;
-    static makeShellFromSphere(center: gp_Pnt, radius: number, angle1: number, angle2: number): Shell;
-    static makeShellFromSphere(center: gp_Pnt, radius: number, angle1: number, angle2: number, angle3: number): Shell;
-    static makeShellFromSphere(axis: gp_Ax2, radius: number): Shell;
-    static makeShellFromSphere(axis: gp_Ax2, radius: number, angle: number): Shell;
-    static makeShellFromSphere(axis: gp_Ax2, radius: number, angle1: number, angle2: number): Shell;
-    static makeShellFromSphere(axis: gp_Ax2, radius: number, angle1: number, angle2: number, angle3: number): Shell;
+    static makeShellFromSphereAngle(radius: number, angle: number): Shell;
+    static makeShellFromSphereTwoAngle(radius: number, angle1: number, angle2: number): Shell;
+    static makeShellFromSphereThreeAngle(radius: number, angle1: number, angle2: number, angle3: number): Shell;
+    static makeShellFromSphereCenterRaduis(center: gp_Pnt, radius: number): Shell;
+    static makeShellFromSphereCenterAngle(center: gp_Pnt, radius: number, angle: number): Shell;
+    static makeShellFromSphereCenterTwoAngle(center: gp_Pnt, radius: number, angle1: number, angle2: number): Shell;
+    static makeShellFromSphereCenterThreeAngle(center: gp_Pnt, radius: number, angle1: number, angle2: number, angle3: number): Shell;
+    static makeShellFromSphereAxis2(axis: gp_Ax2, radius: number): Shell;
+    static makeShellFromSphereAxis2Angle(axis: gp_Ax2, radius: number, angle: number): Shell;
+    static makeShellFromSphereAxis2TwoAngle(axis: gp_Ax2, radius: number, angle1: number, angle2: number): Shell;
+    static makeShellFromSphereAxis2ThreeAngle(axis: gp_Ax2, radius: number, angle1: number, angle2: number, angle3: number): Shell;
 
     // 圆环体创建方法
     static makeShellFromTorus(radius1: number, radius2: number): Shell;
-    static makeShellFromTorus(radius1: number, radius2: number, angle: number): Shell;
-    static makeShellFromTorus(radius1: number, radius2: number, angle1: number, angle2: number): Shell;
-    static makeShellFromTorus(radius1: number, radius2: number, angle1: number, angle2: number, angle3: number): Shell;
-    static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number): Shell;
-    static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number, angle: number): Shell;
-    static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number, angle1: number, angle2: number): Shell;
-    static makeShellFromTorus(axes: gp_Ax2, radius1: number, radius2: number, angle1: number, angle2: number, angle3: number): Shell;
+    static makeShellFromTorusAngle(radius1: number, radius2: number, angle: number): Shell;
+    static makeShellFromTorusTwoAngle(radius1: number, radius2: number, angle1: number, angle2: number): Shell;
+    static makeShellFromTorusThreeAngle(radius1: number, radius2: number, angle1: number, angle2: number, angle3: number): Shell;
+    static makeShellFromTorusAxis2(axes: gp_Ax2, radius1: number, radius2: number): Shell;
+    static makeShellFromTorusAxis2Angle(axes: gp_Ax2, radius1: number, radius2: number, angle: number): Shell;
+    static makeShellFromTorusAxis2TwoAngle(axes: gp_Ax2, radius1: number, radius2: number, angle1: number, angle2: number): Shell;
+    static makeShellFromTorusAxis2ThreeAngle(axes: gp_Ax2, radius1: number, radius2: number, angle1: number, angle2: number, angle3: number): Shell;
 
     // 楔形体创建方法
     static makeShellFromWedge(dx: number, dy: number, dz: number, ltx: number): Shell;
-    static makeShellFromWedge(axes: gp_Ax2, dx: number, dy: number, dz: number, ltx: number): Shell;
-    static makeShellFromWedge(dx: number, dy: number, dz: number, xMin: number, zMin: number, xMax: number, zMax: number): Shell;
-    static makeShellFromWedge(axes: gp_Ax2, dx: number, dy: number, dz: number, xMin: number, zMin: number, xMax: number, zMax: number): Shell;
+    static makeShellFromWedgeAxis2(axes: gp_Ax2, dx: number, dy: number, dz: number, ltx: number): Shell;
+    static makeShellFromWedgeLimit(dx: number, dy: number, dz: number, xMin: number, zMin: number, xMax: number, zMax: number): Shell;
+    static makeShellFromWedgeAxis2Limit(axes: gp_Ax2, dx: number, dy: number, dz: number, xMin: number, zMin: number, xMax: number, zMax: number): Shell;
 
     // 几何操作方法
     sweep(spine: Wire, profiles: Shape[], cornerMode: number): number;
@@ -1091,43 +1075,43 @@ export declare class Solid extends Shape3D {
     constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
     // 基础创建方法
-    static makeSolid(compSolid: CompSolid): Solid;
-    static makeSolid(shell: Shell): Solid;
-    static makeSolid(shell1: Shell, shell2: Shell): Solid;
-    static makeSolid(shell1: Shell, shell2: Shell, shell3: Shell): Solid;
-    static makeSolid(shells: Shell[]): Solid;
-    static makeSolid(solid: Solid): Solid;
-    static makeSolid(solid: Solid, shell: Shell): Solid;
-    static makeSolid(faces: Face[], tolerance: number): Solid;
+    static makeSolidFromCompSolid(compSolid: CompSolid): Solid;
+    static makeSolidFromShell(shell: Shell): Solid;
+    static makeSolidFromTwoShell(shell1: Shell, shell2: Shell): Solid;
+    static makeSolidFromThreeShell(shell1: Shell, shell2: Shell, shell3: Shell): Solid;
+    static makeSolidFromShells(shells: Shell[]): Solid;
+    static makeSolidFromSolid(solid: Solid): Solid;
+    static makeSolidFromSolidShell(solid: Solid, shell: Shell): Solid;
+    static makeSolidFromFaces(faces: Face[], tolerance: number): Solid;
 
     // 基本几何体创建方法 - 盒子
     static makeSolidFromBox(width: number, height: number, depth: number): Solid;
-    static makeSolidFromBox(center: gp_Pnt, width: number, height: number, depth: number): Solid;
-    static makeSolidFromBox(p1: gp_Pnt, p2: gp_Pnt): Solid;
-    static makeSolidFromBox(axis: gp_Ax2, width: number, height: number, depth: number): Solid;
+    static makeSolidFromBoxPoint(center: gp_Pnt, width: number, height: number, depth: number): Solid;
+    static makeSolidFromBoxTwoPoint(p1: gp_Pnt, p2: gp_Pnt): Solid;
+    static makeSolidFromBoxAxis2(axis: gp_Ax2, width: number, height: number, depth: number): Solid;
 
     // 基本几何体创建方法 - 圆柱
-    static makeSolidFromCylinder(radius: number, height: number, angle?: number): Solid;
-    static makeSolidFromCylinder(axis: gp_Ax2, radius: number, height: number): Solid;
-    static makeSolidFromCylinder(axis: gp_Ax2, radius: number, height: number, angle: number): Solid;
+    static makeSolidFromCylinderAngle(radius: number, height: number, angle?: number): Solid;
+    static makeSolidFromCylinderAxis2(axis: gp_Ax2, radius: number, height: number): Solid;
+    static makeSolidFromCylinderAxis2Angle(axis: gp_Ax2, radius: number, height: number, angle: number): Solid;
     static makeSolidFromCylinder(radius: number, height: number, center: gp_Pnt, direction: Vector, angle?: number): Solid;
 
     // 基本几何体创建方法 - 圆锥
     static makeSolidFromCone(radius1: number, radius2: number, height: number, center: gp_Pnt, direction: Vector, angle?: number): Solid;
-    static makeSolidFromCone(radius1: number, radius2: number, height: number, angle?: number): Solid;
-    static makeSolidFromCone(axis: gp_Ax2, radius1: number, radius2: number, height: number): Solid;
-    static makeSolidFromCone(axis: gp_Ax2, radius1: number, radius2: number, height: number, angle: number): Solid;
+    static makeSolidFromConeAngle(radius1: number, radius2: number, height: number, angle?: number): Solid;
+    static makeSolidFromConeAxis2(axis: gp_Ax2, radius1: number, radius2: number, height: number): Solid;
+    static makeSolidFromConeAxis2Angle(axis: gp_Ax2, radius1: number, radius2: number, height: number, angle: number): Solid;
 
 
     // 旋转体创建方法
     static makeSolidFromRevolution(curve: Handle_Geom_Curve): Solid;
-    static makeSolidFromRevolution(curve: Handle_Geom_Curve, angle: number): Solid;
-    static makeSolidFromRevolution(curve: Handle_Geom_Curve, angle1: number, angle2: number): Solid;
-    static makeSolidFromRevolution(curve: Handle_Geom_Curve, angle1: number, angle2: number, angle3: number): Solid;
-    static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve): Solid;
-    static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve, angle: number): Solid;
-    static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve, angle1: number, angle2: number): Solid;
-    static makeSolidFromRevolution(axis: gp_Ax2, curve: Handle_Geom_Curve, angle1: number, angle2: number, angle3: number): Solid;
+    static makeSolidFromRevolutionAngle(curve: Handle_Geom_Curve, angle: number): Solid;
+    static makeSolidFromRevolutionLimit(curve: Handle_Geom_Curve, angle1: number, angle2: number): Solid;
+    static makeSolidFromRevolutionLimitAngle(curve: Handle_Geom_Curve, angle1: number, angle2: number, angle3: number): Solid;
+    static makeSolidFromRevolutionAxis2(axis: gp_Ax2, curve: Handle_Geom_Curve): Solid;
+    static makeSolidFromRevolutionAxis2Angle(axis: gp_Ax2, curve: Handle_Geom_Curve, angle: number): Solid;
+    static makeSolidFromRevolutionAxis2Limit(axis: gp_Ax2, curve: Handle_Geom_Curve, angle1: number, angle2: number): Solid;
+    static makeSolidFromRevolutionAxis2LimitAngle(axis: gp_Ax2, curve: Handle_Geom_Curve, angle1: number, angle2: number, angle3: number): Solid;
 
     // 球体创建方法
     static makeSolidFromSphere(radius: number): Solid;

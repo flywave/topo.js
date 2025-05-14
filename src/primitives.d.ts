@@ -989,8 +989,8 @@ export declare interface InsulatorParams {
     stringType: StringType;
 }
 
-export declare function createInsulatorString(params: InsulatorParams): TopoDS_Shape;
-export declare function createInsulatorStringWithPosition(
+export declare function createInsulator(params: InsulatorParams): TopoDS_Shape;
+export declare function createInsulatorWithPosition(
     params: InsulatorParams,
     position: gp_Pnt,
     direction: gp_Dir

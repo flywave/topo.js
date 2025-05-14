@@ -1043,11 +1043,11 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("stringType", &insulator_params::stringType);
 
   // 绝缘子串创建函数
-  function("createInsulatorString",
+  function("createInsulator",
            select_overload<TopoDS_Shape(const insulator_params &)>(
                &create_insulator_string));
   function(
-      "createInsulatorStringWithPosition",
+      "createInsulatorWithPosition",
       select_overload<TopoDS_Shape(const insulator_params &, const gp_Pnt &,
                                    const gp_Dir &)>(&create_insulator_string));
 

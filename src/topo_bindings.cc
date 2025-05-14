@@ -99,20 +99,21 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("max", &topo_bbox::max)
       .function("center", &topo_bbox::center)
       .function("diagonalLength", &topo_bbox::diagonal_length)
-      .function("add", emscripten::optional_override([](const topo_bbox &self,
+      .function(
+          "addVector", emscripten::optional_override([](const topo_bbox &self,
                                                         const topo_vector &obj,
                                                         emscripten::val tol) {
-                  double tolerance =
-                      tol.isUndefined() ? 1e-6 : tol.as<double>();
-                  return self.add(obj, tolerance);
-                }))
-      .function("add", emscripten::optional_override([](const topo_bbox &self,
-                                                        const topo_bbox &other,
-                                                        emscripten::val tol) {
-                  double tolerance =
-                      tol.isUndefined() ? 1e-6 : tol.as<double>();
-                  return self.add(other, tolerance);
-                }))
+            double tolerance = tol.isUndefined() ? 1e-6 : tol.as<double>();
+            return self.add(obj, tolerance);
+          }))
+      .function("addBBOx", emscripten::optional_override(
+                               [](const topo_bbox &self, const topo_bbox &other,
+                                  emscripten::val tol) {
+                                 double tolerance = tol.isUndefined()
+                                                        ? 1e-6
+                                                        : tol.as<double>();
+                                 return self.add(other, tolerance);
+                               }))
       .function("isInside", &topo_bbox::is_inside)
       .function("enlarge", emscripten::optional_override(
                                [](const topo_bbox &self, emscripten::val tol) {
@@ -160,17 +161,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return topo_location(t, axis, angle);
           }))
       .constructor(emscripten::optional_override([](emscripten::val v) {
-        if (v.instanceof(emscripten::val::global("gp_Trsf"))) {
+        if (v.instanceof (emscripten::val::global("gp_Trsf"))) {
           return topo_location(v.as<gp_Trsf>());
-        } else if (v.instanceof(emscripten::val::global("TopLoc_Location"))) {
+        } else if (v.instanceof (emscripten::val::global("TopLoc_Location"))) {
           return topo_location(v.as<TopLoc_Location>());
-        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_Pnt"))) {
           return topo_location(v.as<gp_Pnt>());
-        } else if (v.instanceof(emscripten::val::global("gp_Vec"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_Vec"))) {
           return topo_location(v.as<gp_Vec>());
-        } else if (v.instanceof(emscripten::val::global("gp_Pln"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_Pln"))) {
           return topo_location(v.as<gp_Pln>());
-        } else if (v.instanceof(emscripten::val::global("topo_vector"))) {
+        } else if (v.instanceof (emscripten::val::global("topo_vector"))) {
           return topo_location(v.as<topo_vector>());
         } else {
           throw std::runtime_error(
@@ -239,22 +240,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
   class_<topo_matrix>("Matrix")
       .constructor<>()
       .constructor(emscripten::optional_override([](emscripten::val v) {
-        if (v.instanceof(emscripten::val::global("gp_Trsf"))) {
+        if (v.instanceof (emscripten::val::global("gp_Trsf"))) {
           return topo_matrix(v.as<gp_Trsf>());
-        } else if (v.instanceof(emscripten::val::global("gp_GTrsf"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_GTrsf"))) {
           return topo_matrix(v.as<gp_GTrsf>());
-        } else {
-          throw std::runtime_error(
-              "Invalid argument type for Matrix constructor");
-        }
-      }))
-      .constructor(emscripten::optional_override([](emscripten::val matrixVal) {
-        std::vector<std::vector<double>> matrix;
-        if (!matrixVal.isUndefined() && !matrixVal.isNull()) {
-          const size_t rows = matrixVal["length"].as<size_t>();
+        } else if (v.isArray()) {
+          std::vector<std::vector<double>> matrix;
+          const size_t rows = v["length"].as<size_t>();
           matrix.reserve(rows);
           for (size_t i = 0; i < rows; ++i) {
-            emscripten::val rowVal = matrixVal[i];
+            emscripten::val rowVal = v[i];
             const size_t cols = rowVal["length"].as<size_t>();
             std::vector<double> row;
             row.reserve(cols);
@@ -263,16 +258,19 @@ EMSCRIPTEN_BINDINGS(Topo) {
             }
             matrix.push_back(row);
           }
+          return topo_matrix(matrix);
+        } else {
+          throw std::runtime_error(
+              "Invalid argument type for Matrix constructor");
         }
-        return topo_matrix(matrix);
       }))
       // Methods
       .function("rotateX", &topo_matrix::rotate_x)
       .function("rotateY", &topo_matrix::rotate_y)
       .function("rotateZ", &topo_matrix::rotate_z)
       .function("inverse", &topo_matrix::inverse)
-      .function("multiply", &topo_matrix::multiply)
-      .function("multiply",
+      .function("multiplyMatrix", &topo_matrix::multiply)
+      .function("multiplyVector",
                 emscripten::optional_override(
                     [](const topo_matrix &self, const topo_vector &other) {
                       return self * other;
@@ -420,17 +418,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("zDir", &topo_plane::z_dir)
       // Methods
       .function(
-          "toWorldCoords",
+          "toWorldCoordsForVector",
           emscripten::select_overload<topo_vector(const topo_vector &) const>(
               &topo_plane::to_world_coords))
-      .function("toWorldCoords",
+      .function("toWorldCoordsForShape",
                 emscripten::select_overload<shape(const shape &) const>(
                     &topo_plane::to_world_coords))
       .function(
-          "toLocalCoords",
+          "toLocalCoordsForVector",
           emscripten::select_overload<topo_vector(const topo_vector &) const>(
               &topo_plane::to_local_coords))
-      .function("toLocalCoords",
+      .function("toLocalCoordsForShape",
                 emscripten::select_overload<shape(const shape &) const>(
                     &topo_plane::to_local_coords))
       .function("location", &topo_plane::location)
@@ -459,15 +457,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .constructor(emscripten::optional_override(
           [](double x, double y, double z) { return topo_vector(x, y, z); }))
       .constructor(emscripten::optional_override([](emscripten::val v) {
-        if (v.instanceof(emscripten::val::global("gp_Vec"))) {
+        if (v.instanceof (emscripten::val::global("gp_Vec"))) {
           return topo_vector(v.as<gp_Vec>());
-        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_Pnt"))) {
           return topo_vector(v.as<gp_Pnt>());
-        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_Pnt"))) {
           return topo_vector(v.as<gp_Pnt>());
-        } else if (v.instanceof(emscripten::val::global("gp_Dir"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_Dir"))) {
           return topo_vector(v.as<gp_Dir>());
-        } else if (v.instanceof(emscripten::val::global("gp_XYZ"))) {
+        } else if (v.instanceof (emscripten::val::global("gp_XYZ"))) {
           return topo_vector(v.as<gp_XYZ>());
         } else if (v.isArray() && v["length"].as<unsigned>() == 3) {
           std::array<double, 3> arr = {v[0].as<double>(), v[1].as<double>(),
@@ -718,19 +716,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("surfaceColour",
                 emscripten::select_overload<Quantity_Color() const>(
                     &shape::surface_colour))
-      .function(
-          "surfaceColour",
-          emscripten::optional_override([](shape &self) -> emscripten::val {
-            double colour[3];
-            if (self.surface_colour(colour)) {
-              emscripten::val result = emscripten::val::array();
-              result.set(0, colour[0]);
-              result.set(1, colour[1]);
-              result.set(2, colour[2]);
-              return result;
-            }
-            return emscripten::val::null();
-          }))
       .function("curveColour", &shape::curve_colour)
       .function("label", emscripten::optional_override([](const shape &self) {
                   std::string label = self.label();
@@ -747,27 +732,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("getTextureMapType", &shape::get_txture_map_type)
       .function("getRotationAngle", &shape::get_rotation_angle)
       // 变换操作
-      .function("transform",
-                emscripten::select_overload<int(gp_Trsf)>(&shape::transform))
-      .function("transform",
-                emscripten::select_overload<int(const topo_matrix &)>(
-                    &shape::transform))
+      .function(
+          "transform",
+          emscripten::optional_override([](shape &self, emscripten::val arg) {
+            if (arg.instanceof (emscripten::val::global("gp_Trsf"))) {
+              return self.transform(arg.as<gp_Trsf>());
+            } else if (arg.instanceof
+                       (emscripten::val::global("topo_matrix"))) {
+              return self.transform(arg.as<topo_matrix>());
+            }
+            throw std::runtime_error("Invalid argument type for transform");
+          }))
       .function("translate", &shape::translate)
-      .function("rotate",
+      .function("rotateFromPoint",
                 emscripten::select_overload<int(double, gp_Pnt, gp_Pnt)>(
                     &shape::rotate))
-      .function("rotate", emscripten::select_overload<int(double, gp_Ax1)>(
-                              &shape::rotate))
-      .function("rotate",
+      .function(
+          "rotateFromAxis1",
+          emscripten::select_overload<int(double, gp_Ax1)>(&shape::rotate))
+      .function("rotateFromQuaternion",
                 emscripten::select_overload<int(gp_Quaternion)>(&shape::rotate))
       .function("scale", &shape::scale)
-      .function("mirror", emscripten::select_overload<int(gp_Pnt, gp_Pnt)>(
-                              &shape::mirror))
-      .function("mirror", emscripten::select_overload<int(gp_Pnt, gp_Vec)>(
-                              &shape::mirror))
-      .function("mirror",
+      .function(
+          "mirrorFromTwoPoint",
+          emscripten::select_overload<int(gp_Pnt, gp_Pnt)>(&shape::mirror))
+      .function(
+          "mirrorFromPointNorm",
+          emscripten::select_overload<int(gp_Pnt, gp_Vec)>(&shape::mirror))
+      .function("mirrorFromAxis1",
                 emscripten::select_overload<int(gp_Ax1)>(&shape::mirror))
-      .function("mirror",
+      .function("mirrorFromAxis2",
                 emscripten::select_overload<int(gp_Ax2)>(&shape::mirror))
       // 几何计算
       .function("centreOfMass", &shape::centre_of_mass)
@@ -795,34 +789,41 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       return result;
                     }))
       // 非破坏性变换方法
-      .function("transformed",
-                emscripten::select_overload<shape(gp_Trsf) const>(
-                    &shape::transformed))
-      .function("transformed",
-                emscripten::select_overload<shape(const topo_matrix &) const>(
-                    &shape::transformed))
+      .function(
+          "transformed", emscripten::optional_override([](const shape &self,
+                                                          emscripten::val arg) {
+            if (arg.instanceof (emscripten::val::global("gp_Trsf"))) {
+              return self.transformed(arg.as<gp_Trsf>());
+            } else if (arg.instanceof
+                       (emscripten::val::global("topo_matrix"))) {
+              return self.transformed(arg.as<topo_matrix>());
+            }
+            throw std::runtime_error("Invalid argument type for transformed");
+          }))
       .function("translated", &shape::translated)
       .function(
-          "rotated",
+          "rotatedFromPoint",
           emscripten::select_overload<shape(double, gp_Pnt, gp_Pnt) const>(
               &shape::rotated))
-      .function("rotated",
+      .function("rotatedFromAxis1",
                 emscripten::select_overload<shape(double, gp_Ax1) const>(
                     &shape::rotated))
-      .function("rotated",
+      .function("rotatedFromQuaternion",
                 emscripten::select_overload<shape(gp_Quaternion) const>(
                     &shape::rotated))
       .function("scaled", &shape::scaled)
-      .function("mirrored",
+      .function("mirroredFromTwoPoint",
                 emscripten::select_overload<shape(gp_Pnt, gp_Pnt) const>(
                     &shape::mirrored))
-      .function("mirrored",
+      .function("mirroredFromPointNorm",
                 emscripten::select_overload<shape(gp_Pnt, gp_Vec) const>(
                     &shape::mirrored))
-      .function("mirrored", emscripten::select_overload<shape(gp_Ax1) const>(
-                                &shape::mirrored))
-      .function("mirrored", emscripten::select_overload<shape(gp_Ax2) const>(
-                                &shape::mirrored))
+      .function(
+          "mirroredFromAxis1",
+          emscripten::select_overload<shape(gp_Ax1) const>(&shape::mirrored))
+      .function(
+          "mirroredFromAxis2",
+          emscripten::select_overload<shape(gp_Ax2) const>(&shape::mirrored))
       // 位置和方向操作
       .function("location", emscripten::optional_override(
                                 [](const shape &self) -> emscripten::val {
@@ -839,8 +840,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                 }))
       .function("setLocation", &shape::set_location)
       .function("located", &shape::located)
-      .function("move", emscripten::select_overload<int(const topo_location &)>(
-                            &shape::move))
+      .function(
+          "moveFromLocation",
+          emscripten::select_overload<int(const topo_location &)>(&shape::move))
       .function("move",
                 emscripten::optional_override(
                     [](shape &self, emscripten::val x, emscripten::val y,
@@ -854,12 +856,12 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       double drz = rz.isUndefined() ? 0 : rz.as<double>();
                       return self.move(dx, dy, dz, drx, dry, drz);
                     }))
-      .function("move",
+      .function("moveFromVector",
                 emscripten::select_overload<int(const gp_Vec &)>(&shape::move))
-      .function("moved",
+      .function("movedFromLocation",
                 emscripten::select_overload<shape(const topo_location &) const>(
                     &shape::moved))
-      .function("moved",
+      .function("movedFromLocations",
                 emscripten::optional_override(
                     [](const shape &self, emscripten::val locsVal) {
                       std::vector<topo_location> locs;
@@ -885,10 +887,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       double drz = rz.isUndefined() ? 0 : rz.as<double>();
                       return self.moved(dx, dy, dz, drx, dry, drz);
                     }))
-      .function("moved",
+      .function("movedFromVector",
                 emscripten::select_overload<shape(const gp_Vec &) const>(
                     &shape::moved))
-      .function("moved",
+      .function("movedFromVectors",
                 emscripten::optional_override(
                     [](const shape &self, emscripten::val vecsVal) {
                       std::vector<gp_Vec> vecs;
@@ -1118,28 +1120,28 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return self.mesh(mesh, prec, defl, ang, uv);
               }))
       // 选择器相关功能
-      .function("vertices",
+      .function("selectVertices",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::vertices))
-      .function("edges",
+      .function("selectEdges",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::edges))
-      .function("wires",
+      .function("selectWires",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::wires))
-      .function("faces",
+      .function("selectFaces",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::faces))
-      .function("shells",
+      .function("selectShells",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::shells))
-      .function("solids",
+      .function("selectSolids",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::solids))
-      .function("compounds",
+      .function("selectCompounds",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::compounds))
-      .function("compSolids",
+      .function("selectCompSolids",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
                     &shape::comp_solids))
       // 类型转换
@@ -1228,8 +1230,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("shapeType", &shape::shape_type)
       .function("geomType", &shape::geom_type)
       .function("value",
-                emscripten::select_overload<TopoDS_Shape &()>(&shape::value))
-      .function("value",
                 emscripten::select_overload<const TopoDS_Shape &() const>(
                     &shape::value));
 
@@ -1240,15 +1240,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .constructor<Standard_Real, Standard_Real, Standard_Real>()
       .constructor<const gp_Pnt &>()
       // Static methods
-      .class_function("makeVertex",
-                      emscripten::select_overload<vertex(const gp_Pnt &)>(
-                          &vertex::make_vertex))
-      .class_function("makeVertex",
-                      emscripten::select_overload<vertex(const gp_Vec &)>(
-                          &vertex::make_vertex))
+      .class_function(
+          "makeVertex", emscripten::optional_override([](emscripten::val arg) {
+            if (arg.instanceof (emscripten::val::global("gp_Pnt"))) {
+              return vertex::make_vertex(arg.as<gp_Pnt>());
+            } else if (arg.instanceof (emscripten::val::global("gp_Vec"))) {
+              return vertex::make_vertex(arg.as<gp_Vec>());
+            }
+            throw std::runtime_error("Invalid argument type for makeVertex");
+          }))
       // Methods
-      .function("value",
-                emscripten::select_overload<TopoDS_Vertex &()>(&vertex::value))
       .function("value",
                 emscripten::select_overload<const TopoDS_Vertex &() const>(
                     &vertex::value))
@@ -1295,8 +1296,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // 参数化方法
       .function("paramAt", emscripten::select_overload<double(double) const>(
                                &shape1d::param_at))
-      .function("paramAt", emscripten::select_overload<double(gp_Pnt) const>(
-                               &shape1d::param_at))
+      .function(
+          "ParamAtPoint",
+          emscripten::select_overload<double(gp_Pnt) const>(&shape1d::param_at))
       .function("params",
                 emscripten::optional_override(
                     [](const shape1d &self, const std::vector<gp_Pnt> &points,
@@ -1565,158 +1567,156 @@ EMSCRIPTEN_BINDINGS(Topo) {
           }))
       // 静态创建方法 - 基本类型
       .class_function(
-          "makeEdge",
+          "makeEdgeFromTwoVertex",
           emscripten::select_overload<edge(const vertex &, const vertex &)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromTwoPoint",
           emscripten::select_overload<edge(const gp_Pnt &, const gp_Pnt &)>(
               &edge::make_edge))
       // 静态创建方法 - 直线
       .class_function(
-          "makeEdge",
+          "makeEdgeFromLine",
           emscripten::select_overload<edge(const gp_Lin &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromLineParm",
           emscripten::select_overload<edge(const gp_Lin &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromLinePoint",
           emscripten::select_overload<edge(const gp_Lin &, const gp_Pnt &,
                                            const gp_Pnt &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromLineVertex",
           emscripten::select_overload<edge(const gp_Lin &, const vertex &,
                                            const vertex &)>(&edge::make_edge))
       // 静态创建方法 - 圆
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCirc",
           emscripten::select_overload<edge(const gp_Circ &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCircParm",
           emscripten::select_overload<edge(const gp_Circ &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCircPoint",
           emscripten::select_overload<edge(const gp_Circ &, const gp_Pnt &,
                                            const gp_Pnt &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCircVertex",
           emscripten::select_overload<edge(const gp_Circ &, const vertex &,
                                            const vertex &)>(&edge::make_edge))
       // 静态创建方法 - 椭圆
       .class_function(
-          "makeEdge",
+          "makeEdgeFromElips",
           emscripten::select_overload<edge(const gp_Elips &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromElipsParm",
           emscripten::select_overload<edge(const gp_Elips &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromElipsPoint",
           emscripten::select_overload<edge(const gp_Elips &, const gp_Pnt &,
                                            const gp_Pnt &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromElipsVertex",
           emscripten::select_overload<edge(const gp_Elips &, const vertex &,
                                            const vertex &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromHyper",
           emscripten::select_overload<edge(const gp_Hypr &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromHyperParm",
           emscripten::select_overload<edge(const gp_Hypr &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromHyperPoint",
           emscripten::select_overload<edge(const gp_Hypr &, const gp_Pnt &,
                                            const gp_Pnt &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromHyperVertex",
           emscripten::select_overload<edge(const gp_Hypr &, const vertex &,
                                            const vertex &)>(&edge::make_edge))
       // 抛物线创建方法
       .class_function(
-          "makeEdge",
+          "makeEdgeFromPara",
           emscripten::select_overload<edge(const gp_Parab &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromParaParm",
           emscripten::select_overload<edge(const gp_Parab &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromParaPoint",
           emscripten::select_overload<edge(const gp_Parab &, const gp_Pnt &,
                                            const gp_Pnt &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromParaVertex",
           emscripten::select_overload<edge(const gp_Parab &, const vertex &,
                                            const vertex &)>(&edge::make_edge))
       // 通用曲线创建方法
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCurve",
           emscripten::select_overload<edge(const Handle(Geom_Curve) &)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCurveParm",
           emscripten::select_overload<edge(const Handle(Geom_Curve) &,
                                            Standard_Real, Standard_Real)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCurvePoint",
           emscripten::select_overload<edge(const Handle(Geom_Curve) &,
                                            const gp_Pnt &, const gp_Pnt &)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCurveVertex",
           emscripten::select_overload<edge(const Handle(Geom_Curve) &,
                                            const vertex &, const vertex &)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCurvePointParm",
           emscripten::select_overload<edge(
               const Handle(Geom_Curve) &, const gp_Pnt &, const gp_Pnt &,
               Standard_Real, Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromCurveVertexParm",
           emscripten::select_overload<edge(
               const Handle(Geom_Curve) &, const vertex &, const vertex &,
               Standard_Real, Standard_Real)>(&edge::make_edge))
       // 2D曲线创建方法
       .class_function(
-          "makeEdge",
+          "makeEdgeFromSurface",
           emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
                                            const Handle(Geom_Surface) &)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromSurfaceParm",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
               Standard_Real, Standard_Real)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromSurfacePoint",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
               const gp_Pnt &, const gp_Pnt &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromSurfaceVertex",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
               const vertex &, const vertex &)>(&edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromSurfacePointParm",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
               const gp_Pnt &, const gp_Pnt &, Standard_Real, Standard_Real)>(
               &edge::make_edge))
       .class_function(
-          "makeEdge",
+          "makeEdgeFromSurfaceVertexParm",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const Handle(Geom_Surface) &,
               const vertex &, const vertex &, Standard_Real, Standard_Real)>(
               &edge::make_edge))
       // 值访问
-      .function("value",
-                emscripten::select_overload<TopoDS_Edge &()>(&edge::value))
       .function("value",
                 emscripten::select_overload<const TopoDS_Edge &() const>(
                     &edge::value))
@@ -1732,122 +1732,122 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("reverse", &edge::reverse)
       // 2D曲线创建方法
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromTwoVertex",
           emscripten::select_overload<edge(const vertex &, const vertex &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromTwoPoint",
           emscripten::select_overload<edge(const gp_Pnt2d &, const gp_Pnt2d &)>(
               &edge::make_edge2d))
-      .class_function("makeEdge2d",
+      .class_function("makeEdge2dFromLine",
                       emscripten::select_overload<edge(const gp_Lin2d &)>(
                           &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromLineParm",
           emscripten::select_overload<edge(const gp_Lin2d &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromLinePoint",
           emscripten::select_overload<edge(const gp_Lin2d &, const gp_Pnt2d &,
                                            const gp_Pnt2d &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromLineVertex",
           emscripten::select_overload<edge(const gp_Lin2d &, const vertex &,
                                            const vertex &)>(&edge::make_edge2d))
       // 圆和椭圆2D
-      .class_function("makeEdge2d",
+      .class_function("makeEdge2dFromCirc",
                       emscripten::select_overload<edge(const gp_Circ2d &)>(
                           &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCircParm",
           emscripten::select_overload<edge(const gp_Circ2d &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCircPoint",
           emscripten::select_overload<edge(const gp_Circ2d &, const gp_Pnt2d &,
                                            const gp_Pnt2d &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCircVertex",
           emscripten::select_overload<edge(const gp_Circ2d &, const vertex &,
                                            const vertex &)>(&edge::make_edge2d))
-      .class_function("makeEdge2d",
+      .class_function("makeEdge2dFromElips",
                       emscripten::select_overload<edge(const gp_Elips2d &)>(
                           &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromElipsParm",
           emscripten::select_overload<edge(const gp_Elips2d &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromElipsPoint",
           emscripten::select_overload<edge(const gp_Elips2d &, const gp_Pnt2d &,
                                            const gp_Pnt2d &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromElipsVertex",
           emscripten::select_overload<edge(const gp_Elips2d &, const vertex &,
                                            const vertex &)>(&edge::make_edge2d))
       // 双曲线和抛物线2D
-      .class_function("makeEdge2d",
+      .class_function("makeEdge2dFromHyper",
                       emscripten::select_overload<edge(const gp_Hypr2d &)>(
                           &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromHyperParm",
           emscripten::select_overload<edge(const gp_Hypr2d &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromHyperPoint",
           emscripten::select_overload<edge(const gp_Hypr2d &, const gp_Pnt2d &,
                                            const gp_Pnt2d &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromHyperVertex",
           emscripten::select_overload<edge(const gp_Hypr2d &, const vertex &,
                                            const vertex &)>(&edge::make_edge2d))
-      .class_function("makeEdge2d",
+      .class_function("makeEdge2dFromPara",
                       emscripten::select_overload<edge(const gp_Parab2d &)>(
                           &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromParaParm",
           emscripten::select_overload<edge(const gp_Parab2d &, Standard_Real,
                                            Standard_Real)>(&edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromParaPoint",
           emscripten::select_overload<edge(const gp_Parab2d &, const gp_Pnt2d &,
                                            const gp_Pnt2d &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromParaVertex",
           emscripten::select_overload<edge(const gp_Parab2d &, const vertex &,
                                            const vertex &)>(&edge::make_edge2d))
       // 2D曲线创建方法
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCurve",
           emscripten::select_overload<edge(const Handle(Geom2d_Curve) &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCurveParm",
           emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
                                            Standard_Real, Standard_Real)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCurvePoint",
           emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
                                            const gp_Pnt2d &, const gp_Pnt2d &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCurveVertex",
           emscripten::select_overload<edge(const Handle(Geom2d_Curve) &,
                                            const vertex &, const vertex &)>(
               &edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCurvePointParm",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const gp_Pnt2d &, const gp_Pnt2d &,
               Standard_Real, Standard_Real)>(&edge::make_edge2d))
       .class_function(
-          "makeEdge2d",
+          "makeEdge2dFromCurveVertexParm",
           emscripten::select_overload<edge(
               const Handle(Geom2d_Curve) &, const vertex &, const vertex &,
               Standard_Real, Standard_Real)>(&edge::make_edge2d))
@@ -1855,33 +1855,33 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .class_function("makePolygon",
                       emscripten::select_overload<edge()>(&edge::make_polygon))
       .class_function(
-          "makePolygon",
+          "makePolygonFromTwoPoint",
           emscripten::select_overload<edge(const gp_Pnt &, const gp_Pnt &)>(
               &edge::make_polygon))
       .class_function(
-          "makePolygon",
+          "makePolygonFromThreePoint",
           emscripten::select_overload<edge(const gp_Pnt &, const gp_Pnt &,
                                            const gp_Pnt &, bool)>(
               &edge::make_polygon))
-      .class_function("makePolygon",
+      .class_function("makePolygonFromFourPoint",
                       emscripten::select_overload<edge(
                           const gp_Pnt &, const gp_Pnt &, const gp_Pnt &,
                           const gp_Pnt &, bool)>(&edge::make_polygon))
       .class_function(
-          "makePolygon",
+          "makePolygonFromTwoVertex",
           emscripten::select_overload<edge(const vertex &, const vertex &)>(
               &edge::make_polygon))
       .class_function(
-          "makePolygon",
+          "makePolygonFromThreeVertex",
           emscripten::select_overload<edge(const vertex &, const vertex &,
                                            const vertex &, bool)>(
               &edge::make_polygon))
-      .class_function("makePolygon",
+      .class_function("makePolygonFromFourVertex",
                       emscripten::select_overload<edge(
                           const vertex &, const vertex &, const vertex &,
                           const vertex &, bool)>(&edge::make_polygon))
       .class_function(
-          "makePolygon",
+          "makePolygonFromVertices",
           emscripten::optional_override(
               [](emscripten::val verticesVal, bool closed) {
                 std::vector<vertex> vertices;
@@ -1895,7 +1895,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return edge::make_polygon(vertices, closed);
               }))
       .class_function(
-          "makePolygon",
+          "makePolygonFromPoints",
           emscripten::optional_override(
               [](emscripten::val pointsVal, bool closed) {
                 std::vector<gp_Pnt> points;
@@ -1926,7 +1926,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return edge::make_spline(points, tolerance, periodic);
               }))
       .class_function(
-          "makeSpline",
+          "makeSplineFromTangentsAndParametersAndPeriodic",
           emscripten::optional_override(
               [](emscripten::val pointsVal, emscripten::val tangentsVal,
                  emscripten::val parametersVal, double tolerance, bool periodic,
@@ -1968,7 +1968,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                          tolerance, periodic, checkClosed);
               }))
       .class_function(
-          "makeSpline",
+          "makeSplineFromTangentsAndParameters",
           emscripten::optional_override(
               [](emscripten::val pointsVal, emscripten::val tangentsVal,
                  bool periodic, emscripten::val parametersVal, bool scale,
@@ -2182,10 +2182,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .class_function("makePolygon",
                       emscripten::select_overload<wire()>(&wire::make_polygon))
       .class_function(
-          "makePolygon",
+          "makePolygonFromTwoPoint",
           emscripten::select_overload<wire(const gp_Pnt &, const gp_Pnt &)>(
               &wire::make_polygon))
-      .class_function("makePolygon",
+      .class_function("makePolygonFromThreePoint",
                       emscripten::optional_override(
                           [](emscripten::val p1Val, emscripten::val p2Val,
                              emscripten::val p3Val, emscripten::val closeVal) {
@@ -2196,7 +2196,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                 p1Val.as<gp_Pnt>(), p2Val.as<gp_Pnt>(),
                                 p3Val.as<gp_Pnt>(), close);
                           }))
-      .class_function("makePolygon",
+      .class_function("makePolygonFromFourPoint",
                       emscripten::optional_override(
                           [](emscripten::val p1Val, emscripten::val p2Val,
                              emscripten::val p3Val, emscripten::val p4Val,
@@ -2209,10 +2209,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                 p3Val.as<gp_Pnt>(), p4Val.as<gp_Pnt>(), close);
                           }))
       .class_function(
-          "makePolygon",
+          "makePolygonFromTwoVertex",
           emscripten::select_overload<wire(const vertex &, const vertex &)>(
               &wire::make_polygon))
-      .class_function("makePolygon",
+      .class_function("makePolygonFromThreeVertex",
                       emscripten::optional_override(
                           [](const vertex &v1, const vertex &v2,
                              const vertex &v3, emscripten::val closeVal) {
@@ -2222,7 +2222,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                             return wire::make_polygon(v1, v2, v3, close);
                           }))
       .class_function(
-          "makePolygon",
+          "makePolygonFromFourVertex",
           emscripten::optional_override([](const vertex &v1, const vertex &v2,
                                            const vertex &v3, const vertex &v4,
                                            emscripten::val closeVal) {
@@ -2230,7 +2230,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return wire::make_polygon(v1, v2, v3, v4, close);
           }))
       .class_function(
-          "makePolygon",
+          "makePolygonFromPoints",
           emscripten::optional_override([](emscripten::val verticesVal,
                                            emscripten::val closeVal,
                                            emscripten::val forConstructionVal) {
@@ -2252,30 +2252,30 @@ EMSCRIPTEN_BINDINGS(Topo) {
           }))
       // 基础创建方法
       .class_function(
-          "makeWire",
+          "makeWireFromEdge",
           emscripten::select_overload<wire(const edge &)>(&wire::make_wire))
       .class_function(
-          "makeWire",
+          "makeWireFromTwoEdge",
           emscripten::select_overload<wire(const edge &, const edge &)>(
               &wire::make_wire))
       .class_function(
-          "makeWire",
+          "makeWireFromThreeEdge",
           emscripten::select_overload<wire(const edge &, const edge &,
                                            const edge &)>(&wire::make_wire))
       .class_function(
-          "makeWire",
+          "makeWireFromFourEdge",
           emscripten::select_overload<wire(const edge &, const edge &,
                                            const edge &, const edge &)>(
               &wire::make_wire))
       .class_function(
-          "makeWire",
+          "makeWireFromWire",
           emscripten::select_overload<wire(const wire &)>(&wire::make_wire))
       .class_function(
-          "makeWire",
+          "makeWireFromTwoWire",
           emscripten::select_overload<wire(const wire &, const edge &)>(
               &wire::make_wire))
       .class_function(
-          "makeWire",
+          "makeWireFromEdges",
           emscripten::optional_override([](emscripten::val edgesVal) {
             std::vector<edge> edges;
             if (!edgesVal.isUndefined() && !edgesVal.isNull()) {
@@ -2288,7 +2288,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return wire::make_wire(edges);
           }))
       .class_function(
-          "makeWire",
+          "makeWireFromWires",
           emscripten::optional_override([](emscripten::val wiresVal) {
             std::vector<wire> wires;
             if (!wiresVal.isUndefined() && !wiresVal.isNull()) {
@@ -2413,8 +2413,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("convertToCurves3d", &wire::convert_to_curves3d)
       .function("project", &wire::project)
       // 值访问方法
-      .function("value",
-                emscripten::select_overload<TopoDS_Wire &()>(&wire::value))
       .function("value",
                 emscripten::select_overload<const TopoDS_Wire &() const>(
                     &wire::value))
@@ -2560,80 +2558,84 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeFace",
           emscripten::select_overload<face(const face &)>(&face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromPlane",
           emscripten::select_overload<face(const gp_Pln &)>(&face::make_face))
-      .class_function("makeFace",
+      .class_function("makeFaceFromCylinder",
                       emscripten::select_overload<face(const gp_Cylinder &)>(
                           &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromCone",
           emscripten::select_overload<face(const gp_Cone &)>(&face::make_face))
-      .class_function("makeFace",
+      .class_function("makeFaceFromSphere",
                       emscripten::select_overload<face(const gp_Sphere &)>(
                           &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromTorus",
           emscripten::select_overload<face(const gp_Torus &)>(&face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromSurface",
           emscripten::select_overload<face(const Handle(Geom_Surface) &,
                                            Standard_Real)>(&face::make_face))
       // 带参数范围的创建方法
-      .class_function("makeFace",
+      .class_function("makeFaceFromPlaneParm",
                       emscripten::select_overload<face(
                           const gp_Pln &, Standard_Real, Standard_Real,
                           Standard_Real, Standard_Real)>(&face::make_face))
-      .class_function("makeFace",
+      .class_function("makeFaceFromCylinderParm",
                       emscripten::select_overload<face(
                           const gp_Cylinder &, Standard_Real, Standard_Real,
                           Standard_Real, Standard_Real)>(&face::make_face))
-      .class_function("makeFace",
+      .class_function("makeFaceFromConeParm",
                       emscripten::select_overload<face(
                           const gp_Cone &, Standard_Real, Standard_Real,
                           Standard_Real, Standard_Real)>(&face::make_face))
-      .class_function("makeFace",
+      .class_function("makeFaceFromSphereParm",
                       emscripten::select_overload<face(
                           const gp_Sphere &, Standard_Real, Standard_Real,
                           Standard_Real, Standard_Real)>(&face::make_face))
-      .class_function("makeFace",
+      .class_function("makeFaceFromTorusParm",
                       emscripten::select_overload<face(
                           const gp_Torus &, Standard_Real, Standard_Real,
                           Standard_Real, Standard_Real)>(&face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromSurfaceParm",
           emscripten::select_overload<face(
               const Handle(Geom_Surface) &, Standard_Real, Standard_Real,
               Standard_Real, Standard_Real, Standard_Real)>(&face::make_face))
       // 基于wire的创建方法
-      .class_function("makeFace",
+      .class_function("makeFaceFromWire",
                       emscripten::select_overload<face(const wire &, bool)>(
                           &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromPlaneWire",
           emscripten::select_overload<face(const gp_Pln &, const wire &, bool)>(
               &face::make_face))
-      .class_function("makeFace", emscripten::select_overload<face(
-                                      const gp_Cylinder &, const wire &, bool)>(
-                                      &face::make_face))
-      .class_function("makeFace", emscripten::select_overload<face(
-                                      const gp_Cone &, const wire &, bool)>(
-                                      &face::make_face))
-      .class_function("makeFace", emscripten::select_overload<face(
-                                      const gp_Sphere &, const wire &, bool)>(
-                                      &face::make_face))
-      .class_function("makeFace", emscripten::select_overload<face(
-                                      const gp_Torus &, const wire &, bool)>(
-                                      &face::make_face))
-      .class_function("makeFace",
+      .class_function(
+          "makeFaceFromCylinderWire",
+          emscripten::select_overload<face(const gp_Cylinder &, const wire &,
+                                           bool)>(&face::make_face))
+      .class_function(
+          "makeFaceFromConeWire",
+          emscripten::select_overload<face(const gp_Cone &, const wire &,
+                                           bool)>(&face::make_face))
+      .class_function(
+          "makeFaceFromSphereWire",
+          emscripten::select_overload<face(const gp_Sphere &, const wire &,
+                                           bool)>(&face::make_face))
+      .class_function(
+          "makeFaceFromTorusWire",
+          emscripten::select_overload<face(const gp_Torus &, const wire &,
+                                           bool)>(&face::make_face))
+      .class_function("makeFaceFromSurfaceWire",
                       emscripten::select_overload<face(
                           const Handle(Geom_Surface) &, const wire &, bool)>(
                           &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromFaceWire",
           emscripten::select_overload<face(const face &, const wire &)>(
               &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFromFaceWireWithOuterInners",
           emscripten::optional_override(
               [](const face &f, const wire &outer, emscripten::val innersVal) {
                 std::vector<wire> inners;
@@ -2648,15 +2650,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
               }))
       // 基于边和点的创建方法
       .class_function(
-          "makeFace",
+          "makeFaceFromEdges",
           emscripten::select_overload<face(const edge &, const edge &)>(
               &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFaceFromTwoWire",
           emscripten::select_overload<face(const wire &, const wire &)>(
               &face::make_face))
       .class_function(
-          "makeFace",
+          "makeFaceFaceFromWires",
           emscripten::optional_override([](emscripten::val wiresVal) {
             std::vector<wire> wires;
             if (!wiresVal.isUndefined() && !wiresVal.isNull()) {
@@ -2669,7 +2671,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return face::make_face(wires);
           }))
       .class_function(
-          "makeFace",
+          "makeFaceFromEdgesAndPoints",
           emscripten::optional_override(
               [](emscripten::val edgesVal, emscripten::val pointsVal) {
                 std::vector<edge> edges;
@@ -2693,7 +2695,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return face::make_face(edges, points);
               }))
       .class_function(
-          "makeFace",
+          "makeFaceFromPoints",
           emscripten::optional_override([](emscripten::val pointsVal) {
             std::vector<gp_Pnt> points;
             if (!pointsVal.isUndefined() && !pointsVal.isNull()) {
@@ -2706,7 +2708,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return face::make_face(points);
           }))
       .class_function(
-          "makeFace",
+          "makeFaceFromOuterAndInners",
           emscripten::optional_override(
               [](const wire &outerWire, emscripten::val innerWiresVal) {
                 std::vector<wire> innerWires;
@@ -2742,7 +2744,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
               }))
       // 特殊创建方法
       .class_function(
-          "makeFace",
+          "makeComplexFace",
           emscripten::optional_override(
               [](emscripten::val edgesVal, emscripten::val constraintsVal,
                  emscripten::val continuityVal, emscripten::val degreeVal,
@@ -2758,10 +2760,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   edges.reserve(eLength);
                   for (size_t i = 0; i < eLength; ++i) {
                     emscripten::val item = edgesVal[i];
-                    if (item.instanceof(emscripten::val::global("Edge"))) {
+                    if (item.instanceof (emscripten::val::global("Edge"))) {
                       edges.push_back(item.as<edge>());
-                    } else if (item.instanceof(
-                                   emscripten::val::global("Wire"))) {
+                    } else if (item.instanceof
+                               (emscripten::val::global("Wire"))) {
                       edges.push_back(item.as<wire>());
                     }
                   }
@@ -2774,13 +2776,13 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   constraints.reserve(cLength);
                   for (size_t i = 0; i < cLength; ++i) {
                     emscripten::val item = constraintsVal[i];
-                    if (item.instanceof(emscripten::val::global("Edge"))) {
+                    if (item.instanceof (emscripten::val::global("Edge"))) {
                       constraints.push_back(item.as<edge>());
-                    } else if (item.instanceof(
-                                   emscripten::val::global("Wire"))) {
+                    } else if (item.instanceof
+                               (emscripten::val::global("Wire"))) {
                       constraints.push_back(item.as<wire>());
-                    } else if (item.instanceof(
-                                   emscripten::val::global("gp_Pnt"))) {
+                    } else if (item.instanceof
+                               (emscripten::val::global("gp_Pnt"))) {
                       constraints.push_back(item.as<gp_Pnt>());
                     }
                   }
@@ -2978,18 +2980,18 @@ EMSCRIPTEN_BINDINGS(Topo) {
 
                       return self.normal_at(locationVector);
                     }))
-      .function("normalAt", emscripten::optional_override(
-                                [](const face &self, double u, double v) {
-                                  auto result = self.normal_at(u, v);
+      .function("normalAtUV", emscripten::optional_override(
+                                  [](const face &self, double u, double v) {
+                                    auto result = self.normal_at(u, v);
 
-                                  emscripten::val jsResult =
-                                      emscripten::val::array();
+                                    emscripten::val jsResult =
+                                        emscripten::val::array();
 
-                                  jsResult.call<void>("push", result.first);
-                                  jsResult.call<void>("push", result.second);
+                                    jsResult.call<void>("push", result.first);
+                                    jsResult.call<void>("push", result.second);
 
-                                  return jsResult;
-                                }))
+                                    return jsResult;
+                                  }))
       .function("normals",
                 emscripten::optional_override([](const face &self,
                                                  emscripten::val usVal,
@@ -3193,8 +3195,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 }))
       // 值访问和类型方法
       .function("value",
-                emscripten::select_overload<TopoDS_Face &()>(&face::value))
-      .function("value",
                 emscripten::select_overload<const TopoDS_Face &() const>(
                     &face::value))
       .function("getGeom", &face::get_geom)
@@ -3218,7 +3218,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
           }))
       // Surface creation methods
       .class_function(
-          "makeShell",
+          "makeShellFromSurface",
           emscripten::optional_override(
               [](emscripten::val surfaceVal, emscripten::val segmentVal) {
                 Handle(Geom_Surface) S = surfaceVal.as<Handle(Geom_Surface)>();
@@ -3227,7 +3227,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return shell::make_shell(S, segment);
               }))
       .class_function(
-          "makeShell",
+          "makeShellFromSurfaceFromSurfaceParm",
           emscripten::optional_override(
               [](emscripten::val surfaceVal, double UMin, double UMax,
                  double VMin, double VMax, emscripten::val segmentVal) {
@@ -3242,16 +3242,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
                           Standard_Real, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_box))
       .class_function(
-          "makeShellFromBox",
+          "makeShellFromBoxPoint",
           emscripten::select_overload<shell(const gp_Pnt &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_box))
       .class_function(
-          "makeShellFromBox",
+          "makeShellFromBoxTwoPoint",
           emscripten::select_overload<shell(const gp_Pnt &, const gp_Pnt &)>(
               &shell::make_shell_from_box))
       .class_function(
-          "makeShellFromBox",
+          "makeShellFromBoxAxis2",
           emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_box))
@@ -3260,16 +3260,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeShellFromCylinder",
           emscripten::select_overload<shell(Standard_Real, Standard_Real)>(
               &shell::make_shell_from_cylinder))
-      .class_function("makeShellFromCylinder",
+      .class_function("makeShellFromCylinderAngle",
                       emscripten::select_overload<shell(
                           Standard_Real, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_cylinder))
-      .class_function("makeShellFromCylinder",
+      .class_function("makeShellFromCylinderAxis2",
                       emscripten::select_overload<shell(
                           const gp_Ax2 &, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_cylinder))
       .class_function(
-          "makeShellFromCylinder",
+          "makeShellFromCylinderAxis2Angle",
           emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_cylinder))
@@ -3279,17 +3279,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
                           Standard_Real, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_cone))
       .class_function(
-          "makeShellFromCone",
+          "makeShellFromConeAngle",
           emscripten::select_overload<shell(Standard_Real, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_cone))
       .class_function(
-          "makeShellFromCone",
+          "makeShellFromConeAxis2",
           emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_cone))
       .class_function(
-          "makeShellFromCone",
+          "makeShellFromConeAxis2Angle",
           emscripten::select_overload<shell(
               const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_cone))
@@ -3298,35 +3298,35 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeShellFromRevolution",
           emscripten::select_overload<shell(const Handle(Geom_Curve) &)>(
               &shell::make_shell_from_revolution))
-      .class_function("makeShellFromRevolution",
+      .class_function("makeShellFromRevolutionAngle",
                       emscripten::select_overload<shell(
                           const Handle(Geom_Curve) &, Standard_Real)>(
                           &shell::make_shell_from_revolution))
       .class_function(
-          "makeShellFromRevolution",
+          "makeShellFromRevolutionLimit",
           emscripten::select_overload<shell(const Handle(Geom_Curve) &,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_revolution))
       .class_function(
-          "makeShellFromRevolution",
+          "makeShellFromRevolutionLimitAngle",
           emscripten::select_overload<shell(
               const Handle(Geom_Curve) &, Standard_Real, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_revolution))
-      .class_function("makeShellFromRevolution",
+      .class_function("makeShellFromRevolutionAxis2",
                       emscripten::select_overload<shell(
                           const gp_Ax2 &, const Handle(Geom_Curve) &)>(
                           &shell::make_shell_from_revolution))
       .class_function(
-          "makeShellFromRevolution",
+          "makeShellFromRevolutionAxis2Angle",
           emscripten::select_overload<shell(
               const gp_Ax2 &, const Handle(Geom_Curve) &, Standard_Real)>(
               &shell::make_shell_from_revolution))
       .class_function(
-          "makeShellFromRevolution",
+          "makeShellFromRevolutionAxis2Limit",
           emscripten::select_overload<shell(
               const gp_Ax2 &, const Handle(Geom_Curve) &, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_revolution))
-      .class_function("makeShellFromRevolution",
+      .class_function("makeShellFromRevolutionAxis2LimitAngle",
                       emscripten::select_overload<shell(
                           const gp_Ax2 &, const Handle(Geom_Curve) &,
                           Standard_Real, Standard_Real, Standard_Real)>(
@@ -3336,51 +3336,51 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       emscripten::select_overload<shell(Standard_Real)>(
                           &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereAngle",
           emscripten::select_overload<shell(Standard_Real, Standard_Real)>(
               &shell::make_shell_from_sphere))
-      .class_function("makeShellFromSphere",
+      .class_function("makeShellFromSphereTwoAngle",
                       emscripten::select_overload<shell(
                           Standard_Real, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereThreeAngle",
           emscripten::select_overload<shell(Standard_Real, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereCenterRaduis",
           emscripten::select_overload<shell(const gp_Pnt &, Standard_Real)>(
               &shell::make_shell_from_sphere))
-      .class_function("makeShellFromSphere",
+      .class_function("makeShellFromSphereCenterAngle",
                       emscripten::select_overload<shell(
                           const gp_Pnt &, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereCenterTwoAngle",
           emscripten::select_overload<shell(const gp_Pnt &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereCenterThreeAngle",
           emscripten::select_overload<shell(
               const gp_Pnt &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereAxis2",
           emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real)>(
               &shell::make_shell_from_sphere))
-      .class_function("makeShellFromSphere",
+      .class_function("makeShellFromSphereAxis2Angle",
                       emscripten::select_overload<shell(
                           const gp_Ax2 &, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereAxis2TwoAngle",
           emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_sphere))
       .class_function(
-          "makeShellFromSphere",
+          "makeShellFromSphereAxis2ThreeAngle",
           emscripten::select_overload<shell(
               const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_sphere))
@@ -3389,36 +3389,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeShellFromTorus",
           emscripten::select_overload<shell(Standard_Real, Standard_Real)>(
               &shell::make_shell_from_torus))
-      .class_function("makeShellFromTorus",
+      .class_function("makeShellFromTorusAngle",
                       emscripten::select_overload<shell(
                           Standard_Real, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_torus))
       .class_function(
-          "makeShellFromTorus",
+          "makeShellFromTorusTwoAngle",
           emscripten::select_overload<shell(Standard_Real, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_torus))
-      .class_function("makeShellFromTorus",
+      .class_function("makeShellFromTorusThreeAngle",
                       emscripten::select_overload<shell(
                           Standard_Real, Standard_Real, Standard_Real,
                           Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_torus))
-      .class_function("makeShellFromTorus",
+      .class_function("makeShellFromTorusAxis2",
                       emscripten::select_overload<shell(
                           const gp_Ax2 &, Standard_Real, Standard_Real)>(
                           &shell::make_shell_from_torus))
       .class_function(
-          "makeShellFromTorus",
+          "makeShellFromTorusAxis2Angle",
           emscripten::select_overload<shell(const gp_Ax2 &, Standard_Real,
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_torus))
       .class_function(
-          "makeShellFromTorus",
+          "makeShellFromTorusAxis2TwoAngle",
           emscripten::select_overload<shell(
               const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_torus))
       .class_function(
-          "makeShellFromTorus",
+          "makeShellFromTorusAxis2ThreeAngle",
           emscripten::select_overload<shell(
               const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real, Standard_Real)>(&shell::make_shell_from_torus))
@@ -3429,18 +3429,18 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                             Standard_Real, Standard_Real)>(
               &shell::make_shell_from_wedge))
       .class_function(
-          "makeShellFromWedge",
+          "makeShellFromWedgeAxis2",
           emscripten::select_overload<shell(
               const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real)>(&shell::make_shell_from_wedge))
       .class_function(
-          "makeShellFromWedge",
+          "makeShellFromWedgeLimit",
           emscripten::select_overload<
               shell(Standard_Real, Standard_Real, Standard_Real, Standard_Real,
                     Standard_Real, Standard_Real, Standard_Real)>(
               &shell::make_shell_from_wedge))
       .class_function(
-          "makeShellFromWedge",
+          "makeShellFromWedgeAxis2Limit",
           emscripten::select_overload<shell(
               const gp_Ax2 &, Standard_Real, Standard_Real, Standard_Real,
               Standard_Real, Standard_Real, Standard_Real, Standard_Real)>(
@@ -3460,8 +3460,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   }
                   return self.sweep(spine, profiles, cornerMode);
                 }))
-      .function("value",
-                emscripten::select_overload<TopoDS_Shell &()>(&shell::value))
       .function("value",
                 emscripten::select_overload<const TopoDS_Shell &() const>(
                     &shell::value))
@@ -3487,8 +3485,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
   // 绑定shape3d类，继承自shape
   emscripten::class_<shape3d, emscripten::base<shape>>("Shape3D")
       .constructor<>()
-      .constructor<TopoDS_Shape, bool>()
-      .constructor<const shape &, TopoDS_Shape>()
       // 几何判断方法
       .function("isInside", &shape3d::is_inside);
 
@@ -3504,22 +3500,22 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return solid(shp, forConstruction);
           }))
       // 基础创建方法
-      .class_function("makeSolid",
+      .class_function("makeSolidFromCompSolid",
                       emscripten::select_overload<solid(const comp_solid &)>(
                           &solid::make_solid))
       .class_function(
-          "makeSolid",
+          "makeSolidFromShell",
           emscripten::select_overload<solid(const shell &)>(&solid::make_solid))
       .class_function(
-          "makeSolid",
+          "makeSolidFromTwoShell",
           emscripten::select_overload<solid(const shell &, const shell &)>(
               &solid::make_solid))
       .class_function(
-          "makeSolid",
+          "makeSolidFromThreeShell",
           emscripten::select_overload<solid(const shell &, const shell &,
                                             const shell &)>(&solid::make_solid))
       .class_function(
-          "makeSolid",
+          "makeSolidFromShells",
           emscripten::optional_override([](emscripten::val shellsVal) {
             std::vector<shell> shells;
             if (!shellsVal.isUndefined() && !shellsVal.isNull()) {
@@ -3532,14 +3528,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return solid::make_solid(shells);
           }))
       .class_function(
-          "makeSolid",
+          "makeSolidFromSolid",
           emscripten::select_overload<solid(const solid &)>(&solid::make_solid))
       .class_function(
-          "makeSolid",
+          "makeSolidFromSolidShell",
           emscripten::select_overload<solid(const solid &, const shell &)>(
               &solid::make_solid))
       .class_function(
-          "makeSolid",
+          "makeSolidFromFaces",
           emscripten::optional_override([](emscripten::val facesVal,
                                            emscripten::val toleranceVal) {
             std::vector<face> faces;
@@ -3561,32 +3557,32 @@ EMSCRIPTEN_BINDINGS(Topo) {
               const Standard_Real, const Standard_Real, const Standard_Real)>(
               &solid::make_solid_from_box))
       .class_function(
-          "makeSolidFromBox",
+          "makeSolidFromBoxPoint",
           emscripten::select_overload<solid(
               const gp_Pnt &, const Standard_Real, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_box))
       .class_function(
-          "makeSolidFromBox",
+          "makeSolidFromBoxTwoPoint",
           emscripten::select_overload<solid(const gp_Pnt &, const gp_Pnt &)>(
               &solid::make_solid_from_box))
       .class_function(
-          "makeSolidFromBox",
+          "makeSolidFromBoxAxis2",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Standard_Real, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_box))
       // 基本几何体创建方法 - 圆柱
       .class_function(
-          "makeSolidFromCylinder",
+          "makeSolidFromCylinderAngle",
           emscripten::select_overload<solid(
               const Standard_Real, const Standard_Real, const Standard_Real)>(
               &solid::make_solid_from_cylinder))
       .class_function(
-          "makeSolidFromCylinder",
+          "makeSolidFromCylinderAxis2",
           emscripten::select_overload<solid(const gp_Ax2 &, const Standard_Real,
                                             const Standard_Real)>(
               &solid::make_solid_from_cylinder))
       .class_function(
-          "makeSolidFromCylinder",
+          "makeSolidFromCylinderAxis2Angle",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Standard_Real, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_cylinder))
@@ -3627,17 +3623,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                                    pnt, dir, angle);
               }))
       .class_function(
-          "makeSolidFromCone",
+          "makeSolidFromConeAngle",
           emscripten::select_overload<solid(
               const Standard_Real, const Standard_Real, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_cone))
       .class_function(
-          "makeSolidFromCone",
+          "makeSolidFromConeAxis2",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Standard_Real, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_cone))
       .class_function(
-          "makeSolidFromCone",
+          "makeSolidFromConeAxis2Angle",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Standard_Real, const Standard_Real,
               const Standard_Real, const Standard_Real)>(
@@ -3647,36 +3643,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeSolidFromRevolution",
           emscripten::select_overload<solid(const Handle(Geom_Curve) &)>(
               &solid::make_solid_from_revolution))
-      .class_function("makeSolidFromRevolution",
+      .class_function("makeSolidFromRevolutionAngle",
                       emscripten::select_overload<solid(
                           const Handle(Geom_Curve) &, const Standard_Real)>(
                           &solid::make_solid_from_revolution))
       .class_function(
-          "makeSolidFromRevolution",
+          "makeSolidFromRevolutionLimit",
           emscripten::select_overload<solid(
               const Handle(Geom_Curve) &, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_revolution))
-      .class_function("makeSolidFromRevolution",
+      .class_function("makeSolidFromRevolutionLimitAngle",
                       emscripten::select_overload<solid(
                           const Handle(Geom_Curve) &, const Standard_Real,
                           const Standard_Real, const Standard_Real)>(
                           &solid::make_solid_from_revolution))
-      .class_function("makeSolidFromRevolution",
+      .class_function("makeSolidFromRevolutionAxis2",
                       emscripten::select_overload<solid(
                           const gp_Ax2 &, const Handle(Geom_Curve) &)>(
                           &solid::make_solid_from_revolution))
       .class_function(
-          "makeSolidFromRevolution",
+          "makeSolidFromRevolutionAxis2Angle",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Handle(Geom_Curve) &, const Standard_Real)>(
               &solid::make_solid_from_revolution))
       .class_function(
-          "makeSolidFromRevolution",
+          "makeSolidFromRevolutionAxis2Limit",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Handle(Geom_Curve) &, const Standard_Real,
               const Standard_Real)>(&solid::make_solid_from_revolution))
       .class_function(
-          "makeSolidFromRevolution",
+          "makeSolidFromRevolutionAxis2LimitAngle",
           emscripten::select_overload<solid(
               const gp_Ax2 &, const Handle(Geom_Curve) &, const Standard_Real,
               const Standard_Real, const Standard_Real)>(
@@ -3979,17 +3975,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 // 处理可选的SweepMode
                 boost::optional<solid::SweepMode> mode;
                 if (!modeVal.isUndefined() && !modeVal.isNull()) {
-                  if (modeVal.instanceof(emscripten::val::global("gp_Vec"))) {
+                  if (modeVal.instanceof (emscripten::val::global("gp_Vec"))) {
                     gp_Vec vec = modeVal.as<gp_Vec>();
                     mode = vec;
-                  } else if (modeVal.instanceof(
-                                 emscripten::val::global("TopoDS_Wire"))) {
+                  } else if (modeVal.instanceof
+                             (emscripten::val::global("TopoDS_Wire"))) {
                     TopoDS_Wire wire = modeVal.as<TopoDS_Wire>();
                     mode = wire;
                   }
                   // 检查是否为TopoDS_Edge类型
-                  else if (modeVal.instanceof(
-                               emscripten::val::global("TopoDS_Edge"))) {
+                  else if (modeVal.instanceof
+                           (emscripten::val::global("TopoDS_Edge"))) {
                     TopoDS_Edge edge = modeVal.as<TopoDS_Edge>();
                     mode = edge;
                   }
@@ -4019,15 +4015,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 // 处理可选的SweepMode
                 boost::optional<solid::SweepMode> mode;
                 if (!modeVal.isUndefined() && !modeVal.isNull()) {
-                  if (modeVal.instanceof(emscripten::val::global("gp_Vec"))) {
+                  if (modeVal.instanceof (emscripten::val::global("gp_Vec"))) {
                     gp_Vec vec = modeVal.as<gp_Vec>();
                     mode = vec;
-                  } else if (modeVal.instanceof(
-                                 emscripten::val::global("TopoDS_Wire"))) {
+                  } else if (modeVal.instanceof
+                             (emscripten::val::global("TopoDS_Wire"))) {
                     // TopoDS_Wire类型
                     mode = modeVal.as<TopoDS_Wire>();
-                  } else if (modeVal.instanceof(
-                                 emscripten::val::global("TopoDS_Edge"))) {
+                  } else if (modeVal.instanceof
+                             (emscripten::val::global("TopoDS_Edge"))) {
                     // TopoDS_Edge类型
                     mode = modeVal.as<TopoDS_Edge>();
                   }
@@ -4055,10 +4051,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   profiles.reserve(length);
                   for (size_t i = 0; i < length; ++i) {
                     emscripten::val item = profilesVal[i];
-                    if (item.instanceof(emscripten::val::global("Wire"))) {
+                    if (item.instanceof (emscripten::val::global("Wire"))) {
                       profiles.emplace_back(item.as<wire>());
-                    } else if (item.instanceof(
-                                   emscripten::val::global("Face"))) {
+                    } else if (item.instanceof
+                               (emscripten::val::global("Face"))) {
                       profiles.emplace_back(item.as<face>());
                     }
                   }
@@ -4073,15 +4069,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 // 处理可选的SweepMode
                 boost::optional<solid::SweepMode> mode;
                 if (!modeVal.isUndefined() && !modeVal.isNull()) {
-                  if (modeVal.instanceof(emscripten::val::global("gp_Vec"))) {
+                  if (modeVal.instanceof (emscripten::val::global("gp_Vec"))) {
                     gp_Vec vec = modeVal.as<gp_Vec>();
                     mode = vec;
-                  } else if (modeVal.instanceof(
-                                 emscripten::val::global("TopoDS_Wire"))) {
+                  } else if (modeVal.instanceof
+                             (emscripten::val::global("TopoDS_Wire"))) {
                     // TopoDS_Wire类型
                     mode = modeVal.as<TopoDS_Wire>();
-                  } else if (modeVal.instanceof(
-                                 emscripten::val::global("TopoDS_Edge"))) {
+                  } else if (modeVal.instanceof
+                             (emscripten::val::global("TopoDS_Edge"))) {
                     // TopoDS_Edge类型
                     mode = modeVal.as<TopoDS_Edge>();
                   }
