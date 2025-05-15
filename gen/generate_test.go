@@ -48,8 +48,8 @@ func TestGenerate(t *testing.T) {
 	}
 	ocIncludeStatements := strings.Join(includes, "\n")
 
-	embindPreamble := ocIncludeStatements + "\n" + referenceTypeTemplateDefs + "\n" + ""
+	//embindPreamble := ocIncludeStatements + "\n" + referenceTypeTemplateDefs + "\n" + ""
 
-	process(workDir, includePathArgs, ocIncludeStatements, ".cpp", embindGenerationFuncClasses, embindGenerationFuncTemplates, embindGenerationFuncEnums, embindPreamble, "", false)
-	//process(workDir, includePathArgs, ocIncludeStatements, ".d.ts.json", typescriptGenerationFuncClasses, typescriptGenerationFuncTemplates, typescriptGenerationFuncEnums, "", "", false)
+	//process(workDir, includePathArgs, ocIncludeStatements, ".cpp", embindGenerationFuncClasses, embindGenerationFuncTemplates, embindGenerationFuncEnums, embindPreamble, "", false)
+	process(workDir, includePathArgs, ocIncludeStatements, ".d.ts.json", typescriptGenerationFuncClasses, typescriptGenerationFuncTemplates, typescriptGenerationFuncEnums, "", "", false)
 }

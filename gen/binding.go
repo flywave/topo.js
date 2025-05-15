@@ -1000,16 +1000,15 @@ func (t *TypescriptBindings) processSimpleConstructor(theClass clang.Cursor) str
 	}
 
 	standardConstructor := publicConstructors[0]
-	if !standardConstructor.IsNull() {
-		return output.String()
-	}
 
 	var args []string
-	for i := int32(0); i < standardConstructor.NumArguments(); i++ {
-		arg := standardConstructor.Argument(uint32(i))
-		args = append(args, t.getTypescriptDefFromArg(arg, clang.NewNullCursor(), nil))
-	}
 
+	if !standardConstructor.IsNull() {
+		for i := int32(0); i < standardConstructor.NumArguments(); i++ {
+			arg := standardConstructor.Argument(uint32(i))
+			args = append(args, t.getTypescriptDefFromArg(arg, clang.NewNullCursor(), nil))
+		}
+	}
 	output.WriteString(fmt.Sprintf("  constructor(%s)\n", strings.Join(args, ", ")))
 	return output.String()
 }
@@ -1140,7 +1139,9 @@ func (t *TypescriptBindings) processOverloadedConstructors(theClass clang.Cursor
 		name := getClassTypeName(theClass, templateDecl)
 		constructorTypescriptDef.WriteString(fmt.Sprintf("  export declare class %s%s extends %s {\n",
 			name, overloadPostfix, name))
-		constructorTypescriptDef.WriteString(fmt.Sprintf("    constructor(%s);\n", strings.Join(args, ", ")))
+		if filter.FilterAbstractClass(theClass) {
+			constructorTypescriptDef.WriteString(fmt.Sprintf("    constructor(%s);\n", strings.Join(args, ", ")))
+		}
 		constructorTypescriptDef.WriteString("  }\n\n")
 		allOverloadedConstructors = append(allOverloadedConstructors, name+overloadPostfix)
 	}
