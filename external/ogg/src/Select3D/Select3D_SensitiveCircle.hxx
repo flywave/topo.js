@@ -40,7 +40,7 @@ public:
   Select3D_SensitiveCircle (const Handle(SelectMgr_EntityOwner)& theOwnerId,
                             const gp_Circ& theCircle,
                             const Standard_Boolean theIsFilled,
-                            const Standard_Integer /*theNbPnts*/)
+                            const Standard_Integer theNbPnts)
   : Select3D_SensitiveCircle (theOwnerId, theCircle, theIsFilled)
   { }
 
