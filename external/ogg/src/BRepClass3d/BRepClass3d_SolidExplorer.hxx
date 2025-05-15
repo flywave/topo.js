@@ -131,7 +131,7 @@ public:
 
   Standard_EXPORT const TopoDS_Shape& GetShape() const;
   
-  Standard_EXPORT IntCurvesFace_Intersector& Intersector (const TopoDS_Face& F) const;
+  Standard_EXPORT IntCurvesFace_Intersector* Intersector (const TopoDS_Face& F) const;
 
   //! Return UB-tree instance which is used for edge / vertex checks.
   const BRepClass3d_BndBoxTree& GetTree () {return myTree;}
