@@ -1,19 +1,19 @@
 {
-    "name": "topo-wasm",
-    "version": "0.0.1",
-    "description": "Topo wasm binging",
-    "author": "aninggo <aninggo@qq.com>",
-    "homepage": "",
-    "types": "src/index.d.ts",
-    "main": "src/index.js",
-    "directories": {
-      "lib": "src",
-      "test": "__tests__"
-    },
-    "files": [
-      "src"
-    ],
-    "scripts": {
-      "build": "echo 'Please build manually'"
-    }
+  "name": "topo-wasm",
+  "version": "0.0.1",
+  "description": "Topo wasm binging",
+  "author": "aninggo <aninggo@qq.com>",
+  "homepage": "",
+  "types": "src/index.d.ts",
+  "main": "src/index.js",
+  "directories": {
+    "lib": "src",
+    "test": "__tests__"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "echo 'Please build manually'"
   }
+}

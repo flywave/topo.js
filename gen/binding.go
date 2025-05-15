@@ -260,7 +260,7 @@ func (b *Bindings) processClass(theClass clang.Cursor, templateDecl clang.Cursor
 
 	output += b.iface.processFinalizeClass()
 
-	if !wasm.IsAbstractClass(theClass, b.translationUnit) {
+	if !wasm.IsAbstractClass(theClass, b.translationUnit) && filter.FilterAbstractClass(theClass) {
 		overloadOutput, err := b.iface.processOverloadedConstructors(theClass, templateDecl, templateArgs, nil)
 		if err != nil {
 			fmt.Println(err)
@@ -886,9 +886,7 @@ func (e *EmbindBindings) processOverloadedConstructors(theClass clang.Cursor, te
 		constructorBindings.WriteString("      " + name + overloadPostfix + "(" + strings.Join(args, ", ") + ") : " + name + "(" + strings.Join(argNames, ", ") + ") {}\n")
 		constructorBindings.WriteString("    };\n")
 		constructorBindings.WriteString("    class_<" + name + overloadPostfix + ", base<" + name + ">>(\"" + name + overloadPostfix + "\")\n")
-		if filter.FilterAbstractClass(theClass) {
-			constructorBindings.WriteString("      .constructor<" + strings.Join(argTypes, ", ") + ">()\n")
-		}
+		constructorBindings.WriteString("      .constructor<" + strings.Join(argTypes, ", ") + ">()\n")
 		constructorBindings.WriteString("    ;\n")
 	}
 
