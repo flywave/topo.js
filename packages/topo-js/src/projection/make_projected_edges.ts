@@ -4,7 +4,7 @@ import { GCWithScope } from "../register";
 import { cast } from "../shapes";
 import type { Edge, AnyShape } from "../shapes";
 import type { ProjectionCamera } from "./projection_camera";
-import type { TopoDS_Shape } from "topo-wasm-binging";
+import type { TopoDS_Shape } from "topo-wasm";
 
 const getEdges = (shape: TopoDS_Shape) => {
     if (shape.IsNull()) return [];

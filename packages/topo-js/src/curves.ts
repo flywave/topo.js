@@ -5,7 +5,7 @@ import {
     Plane,
     ShapeGeomType,
     Orientation,
-} from "topo-wasm-binging";
+} from "topo-wasm";
 
 import { GCWithScope, localGC, WrappingObj } from "./register";
 import { getTopo } from "./topolib";

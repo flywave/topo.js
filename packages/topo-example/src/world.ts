@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import initTopo, { TopoInstance } from "topo-wasm-binging"
+import initTopo, { TopoInstance } from "topo-wasm"
 import { setTopo } from "topo-js"
 
 export default class World {

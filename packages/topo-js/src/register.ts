@@ -1,5 +1,5 @@
 import { getTopo } from "./topolib";
-import { TopoInstance } from "topo-wasm-binging";
+import { TopoInstance } from "topo-wasm";
 
 interface Deletable {
     delete: () => void;

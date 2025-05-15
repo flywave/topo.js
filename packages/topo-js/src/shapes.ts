@@ -1,4 +1,4 @@
-import { Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound, Adaptor3d_Surface } from "topo-wasm-binging";
+import { Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound, Adaptor3d_Surface } from "topo-wasm";
 
 import {
     TopoDS_Face,
@@ -11,7 +11,7 @@ import {
     TopoDS_Compound,
     TopoDS_CompSolid,
     TopAbs_ShapeEnum,
-} from "topo-wasm-binging";
+} from "topo-wasm";
 import { getTopo } from "./topolib";
 import { WrappingObj } from "./register";
 

@@ -2,7 +2,7 @@ import {
   Geom2dAdaptor_Curve,
   Geom2d_Curve,
   Handle_Geom2d_Curve,
-} from "topo-wasm-binging";
+} from "topo-wasm";
 
 import { CurveType, findCurveType } from "../definitionMaps";
 import precisionRound from "../utils/precisionRound";

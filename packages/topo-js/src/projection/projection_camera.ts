@@ -1,5 +1,5 @@
-import type { gp_Ax2, } from "topo-wasm-binging";
-import { Vector, Shape } from "topo-wasm-binging";
+import type { gp_Ax2, } from "topo-wasm";
+import { Vector, Shape } from "topo-wasm";
 import { asDir, asPnt, makeAx2, Point, makeVector } from "../geom";
 import { WrappingObj } from "../register";
 

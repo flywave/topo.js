@@ -11,7 +11,7 @@ import {
     gp_Pnt,
     PlaneName,
     Plane,
-} from "topo-wasm-binging";
+} from "topo-wasm";
 
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 

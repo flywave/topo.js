@@ -1,4 +1,4 @@
-import { TopoInstance } from "topo-wasm-binging";
+import { TopoInstance } from "topo-wasm";
 
 const topo: { library: TopoInstance | null } = {
     library: null,

@@ -1,6 +1,6 @@
 import { WrappingObj, GCWithScope } from "../register.js";
 import { getTopo } from "../topolib";
-import { Bnd_Box2d } from "topo-wasm-binging";
+import { Bnd_Box2d } from "topo-wasm";
 
 import { Point2D } from "./definitions.js";
 import { reprPnt } from "./utils.js";

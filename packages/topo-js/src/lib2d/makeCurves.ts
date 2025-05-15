@@ -2,7 +2,7 @@ import {
   Geom2dAPI_PointsToBSpline,
   Geom2d_TrimmedCurve,
   Handle_Geom2d_Curve,
-} from "topo-wasm-binging";
+} from "topo-wasm";
 import { getTopo } from "../topolib";
 import { GCWithScope, localGC } from "../register.js";
 

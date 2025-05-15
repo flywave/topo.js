@@ -26,6 +26,6 @@
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-ts": "3.1.1",
     "typescript": "^5.1.6",
-    "topo-wasm-binging": "workspace:*"
+    "topo-wasm": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import { Geom2dAPI_InterCurveCurve } from "topo-wasm-binging";
+import { Geom2dAPI_InterCurveCurve } from "topo-wasm";
 import { getTopo } from "../topolib";
 import { Curve2D } from "./Curve2D";
 import { Point2D } from "./definitions";

@@ -1,5 +1,5 @@
 import { BufferGeometry, Float32BufferAttribute, EdgesGeometry } from "three";
-import { MeshCallback, MeshEdgeCallback } from "topo-wasm-binging";
+import { MeshCallback, MeshEdgeCallback } from "topo-wasm";
 
 export interface ThreeGeometry {
   faces: BufferGeometry;

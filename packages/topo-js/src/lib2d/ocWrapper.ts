@@ -1,4 +1,4 @@
-import { gp_Ax2d, gp_Dir2d, gp_Pnt2d, gp_Vec2d } from "topo-wasm-binging";
+import { gp_Ax2d, gp_Dir2d, gp_Pnt2d, gp_Vec2d } from "topo-wasm";
 import { getTopo } from "../topolib";
 import { localGC } from "../register";
 import { Point2D } from "./definitions";

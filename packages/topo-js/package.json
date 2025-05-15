@@ -52,6 +52,6 @@
     },
     "dependencies": {
         "topo-threejs-helper": "workspace:*",
-        "topo-wasm-binging": "workspace:*"
+        "topo-wasm": "workspace:*"
     }
 }

@@ -31,7 +31,7 @@
   "dependencies": {
     "topo-js": "workspace:*",
     "topo-threejs-helper": "workspace:*",
-    "topo-wasm-binging": "workspace:*"
+    "topo-wasm": "workspace:*"
   },
   "browserslist": [
     ">0.2%",

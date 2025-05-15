@@ -1,4 +1,4 @@
-import { Geom2dAdaptor_Curve, GeomAbs_Shape } from "topo-wasm-binging";
+import { Geom2dAdaptor_Curve, GeomAbs_Shape } from "topo-wasm";
 import { findCurveType } from "../definitionMaps";
 import { getTopo } from "../topolib";
 import { GCWithScope } from "../register";
