@@ -1,5 +1,5 @@
 {
-  "name": "topo-threejs-helper",
+  "name": "topo-threejs",
   "version": "0.0.1",
   "author": "aninggo <aninggo@qq.com>",
   "main": "dist/umd/threejs-helper.js",

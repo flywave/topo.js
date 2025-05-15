@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "topo-js": "workspace:*",
-    "topo-threejs-helper": "workspace:*",
+    "topo-threejs": "workspace:*",
     "topo-wasm": "workspace:*"
   },
   "browserslist": [

@@ -51,7 +51,7 @@
         "vitest": "^0.28.3"
     },
     "dependencies": {
-        "topo-threejs-helper": "workspace:*",
+        "topo-threejs": "workspace:*",
         "topo-wasm": "workspace:*"
     }
 }

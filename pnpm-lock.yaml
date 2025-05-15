@@ -26,9 +26,9 @@ importers:
       topo-js:
         specifier: workspace:*
         version: link:../topo-js
-      topo-threejs-helper:
+      topo-threejs:
         specifier: workspace:*
-        version: link:../topo-threejs-helper
+        version: link:../topo-threejs
       topo-wasm:
         specifier: workspace:*
         version: link:../topo-wasm
@@ -69,9 +69,9 @@ importers:
 
   packages/topo-js:
     dependencies:
-      topo-threejs-helper:
+      topo-threejs:
         specifier: workspace:*
-        version: link:../topo-threejs-helper
+        version: link:../topo-threejs
       topo-wasm:
         specifier: workspace:*
         version: link:../topo-wasm
@@ -185,9 +185,9 @@ importers:
       rollup-plugin-ts:
         specifier: 3.1.1
         version: 3.1.1(@swc/core@1.11.24(@swc/helpers@0.4.37))(@swc/helpers@0.4.37)(rollup@3.10.1)(typescript@5.1.6)
-      topo-threejs-helper:
+      topo-threejs:
         specifier: workspace:*
-        version: link:../topo-threejs-helper
+        version: link:../topo-threejs
       topo-wasm:
         specifier: workspace:*
         version: link:../topo-wasm
@@ -195,7 +195,7 @@ importers:
         specifier: ^5.1.6
         version: 5.1.6
 
-  packages/topo-threejs-helper:
+  packages/topo-threejs:
     dependencies:
       three:
         specifier: '>=0.174.0'
