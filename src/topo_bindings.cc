@@ -60,6 +60,27 @@ public:
   }
 };
 
+class emscripten_mesh_edges_receiver
+    : public flywave::topo::mesh_edges_receiver {
+  emscripten::val js_receiver;
+
+  emscripten_mesh_edges_receiver(emscripten::val receiver)
+      : js_receiver(receiver) {}
+
+  void begin() override { js_receiver.call<void>("begin"); }
+
+  void end() override { js_receiver.call<void>("end"); }
+
+  int append_edge(Quantity_Color color) override {
+    return js_receiver.call<int>("appendEdge", color.Red(), color.Green(),
+                                 color.Blue());
+  }
+
+  void append_point(int edge, gp_Pnt p) override {
+    js_receiver.call<void>("appendPoint", edge, p.X(), p.Y(), p.Z());
+  }
+};
+
 // 定义数组访问器
 EMSCRIPTEN_BINDINGS(Topo) {
 
@@ -161,17 +182,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return topo_location(t, axis, angle);
           }))
       .constructor(emscripten::optional_override([](emscripten::val v) {
-        if (v.instanceof (emscripten::val::global("gp_Trsf"))) {
+        if (v.instanceof(emscripten::val::global("gp_Trsf"))) {
           return topo_location(v.as<gp_Trsf>());
-        } else if (v.instanceof (emscripten::val::global("TopLoc_Location"))) {
+        } else if (v.instanceof(emscripten::val::global("TopLoc_Location"))) {
           return topo_location(v.as<TopLoc_Location>());
-        } else if (v.instanceof (emscripten::val::global("gp_Pnt"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
           return topo_location(v.as<gp_Pnt>());
-        } else if (v.instanceof (emscripten::val::global("gp_Vec"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_Vec"))) {
           return topo_location(v.as<gp_Vec>());
-        } else if (v.instanceof (emscripten::val::global("gp_Pln"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_Pln"))) {
           return topo_location(v.as<gp_Pln>());
-        } else if (v.instanceof (emscripten::val::global("topo_vector"))) {
+        } else if (v.instanceof(emscripten::val::global("topo_vector"))) {
           return topo_location(v.as<topo_vector>());
         } else {
           throw std::runtime_error(
@@ -240,9 +261,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
   class_<topo_matrix>("Matrix")
       .constructor<>()
       .constructor(emscripten::optional_override([](emscripten::val v) {
-        if (v.instanceof (emscripten::val::global("gp_Trsf"))) {
+        if (v.instanceof(emscripten::val::global("gp_Trsf"))) {
           return topo_matrix(v.as<gp_Trsf>());
-        } else if (v.instanceof (emscripten::val::global("gp_GTrsf"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_GTrsf"))) {
           return topo_matrix(v.as<gp_GTrsf>());
         } else if (v.isArray()) {
           std::vector<std::vector<double>> matrix;
@@ -457,15 +478,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .constructor(emscripten::optional_override(
           [](double x, double y, double z) { return topo_vector(x, y, z); }))
       .constructor(emscripten::optional_override([](emscripten::val v) {
-        if (v.instanceof (emscripten::val::global("gp_Vec"))) {
+        if (v.instanceof(emscripten::val::global("gp_Vec"))) {
           return topo_vector(v.as<gp_Vec>());
-        } else if (v.instanceof (emscripten::val::global("gp_Pnt"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
           return topo_vector(v.as<gp_Pnt>());
-        } else if (v.instanceof (emscripten::val::global("gp_Pnt"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_Pnt"))) {
           return topo_vector(v.as<gp_Pnt>());
-        } else if (v.instanceof (emscripten::val::global("gp_Dir"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_Dir"))) {
           return topo_vector(v.as<gp_Dir>());
-        } else if (v.instanceof (emscripten::val::global("gp_XYZ"))) {
+        } else if (v.instanceof(emscripten::val::global("gp_XYZ"))) {
           return topo_vector(v.as<gp_XYZ>());
         } else if (v.isArray() && v["length"].as<unsigned>() == 3) {
           std::array<double, 3> arr = {v[0].as<double>(), v[1].as<double>(),
@@ -496,6 +517,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("toPnt", &topo_vector::to_pnt)
       .function("toDir", &topo_vector::to_dir)
       .function("toVec", &topo_vector::to_vec)
+      .function("toXYZ", &topo_vector::to_xyz)
       .function("cross", &topo_vector::cross)
       .function("dot", &topo_vector::dot)
       .function("add", &topo_vector::add)
@@ -549,6 +571,8 @@ EMSCRIPTEN_BINDINGS(Topo) {
                     }));
 
   class_<emscripten_mesh_receiver>("MeshReceiver").constructor<val>();
+
+  class_<emscripten_mesh_edges_receiver>("MeshEdgeReceiver").constructor<val>();
 
   emscripten::class_<geometry_object>("GeometryObject")
       .smart_ptr<std::shared_ptr<geometry_object>>("GeometryObject")
@@ -735,10 +759,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function(
           "transform",
           emscripten::optional_override([](shape &self, emscripten::val arg) {
-            if (arg.instanceof (emscripten::val::global("gp_Trsf"))) {
+            if (arg.instanceof(emscripten::val::global("gp_Trsf"))) {
               return self.transform(arg.as<gp_Trsf>());
-            } else if (arg.instanceof
-                       (emscripten::val::global("topo_matrix"))) {
+            } else if (arg.instanceof(emscripten::val::global("topo_matrix"))) {
               return self.transform(arg.as<topo_matrix>());
             }
             throw std::runtime_error("Invalid argument type for transform");
@@ -792,10 +815,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function(
           "transformed", emscripten::optional_override([](const shape &self,
                                                           emscripten::val arg) {
-            if (arg.instanceof (emscripten::val::global("gp_Trsf"))) {
+            if (arg.instanceof(emscripten::val::global("gp_Trsf"))) {
               return self.transformed(arg.as<gp_Trsf>());
-            } else if (arg.instanceof
-                       (emscripten::val::global("topo_matrix"))) {
+            } else if (arg.instanceof(emscripten::val::global("topo_matrix"))) {
               return self.transformed(arg.as<topo_matrix>());
             }
             throw std::runtime_error("Invalid argument type for transformed");
@@ -1119,6 +1141,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
                     uv_coords.isUndefined() ? false : uv_coords.as<bool>();
                 return self.mesh(mesh, prec, defl, ang, uv);
               }))
+      .function("meshEdges",
+                emscripten::optional_override(
+                    [](shape &self, mesh_edges_receiver &receiver,
+                       emscripten::val precision, emscripten::val angle) {
+                      double prec = precision.isUndefined()
+                                        ? 1.0e-06
+                                        : precision.as<double>();
+                      double ang =
+                          angle.isUndefined() ? 0.1 : angle.as<double>();
+                      return self.mesh_edges(receiver, prec, ang);
+                    }))
       // 选择器相关功能
       .function("selectVertices",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
@@ -1242,9 +1275,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // Static methods
       .class_function(
           "makeVertex", emscripten::optional_override([](emscripten::val arg) {
-            if (arg.instanceof (emscripten::val::global("gp_Pnt"))) {
+            if (arg.instanceof(emscripten::val::global("gp_Pnt"))) {
               return vertex::make_vertex(arg.as<gp_Pnt>());
-            } else if (arg.instanceof (emscripten::val::global("gp_Vec"))) {
+            } else if (arg.instanceof(emscripten::val::global("gp_Vec"))) {
               return vertex::make_vertex(arg.as<gp_Vec>());
             }
             throw std::runtime_error("Invalid argument type for makeVertex");
@@ -2760,10 +2793,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   edges.reserve(eLength);
                   for (size_t i = 0; i < eLength; ++i) {
                     emscripten::val item = edgesVal[i];
-                    if (item.instanceof (emscripten::val::global("Edge"))) {
+                    if (item.instanceof(emscripten::val::global("Edge"))) {
                       edges.push_back(item.as<edge>());
-                    } else if (item.instanceof
-                               (emscripten::val::global("Wire"))) {
+                    } else if (item.instanceof(
+                                   emscripten::val::global("Wire"))) {
                       edges.push_back(item.as<wire>());
                     }
                   }
@@ -2776,13 +2809,13 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   constraints.reserve(cLength);
                   for (size_t i = 0; i < cLength; ++i) {
                     emscripten::val item = constraintsVal[i];
-                    if (item.instanceof (emscripten::val::global("Edge"))) {
+                    if (item.instanceof(emscripten::val::global("Edge"))) {
                       constraints.push_back(item.as<edge>());
-                    } else if (item.instanceof
-                               (emscripten::val::global("Wire"))) {
+                    } else if (item.instanceof(
+                                   emscripten::val::global("Wire"))) {
                       constraints.push_back(item.as<wire>());
-                    } else if (item.instanceof
-                               (emscripten::val::global("gp_Pnt"))) {
+                    } else if (item.instanceof(
+                                   emscripten::val::global("gp_Pnt"))) {
                       constraints.push_back(item.as<gp_Pnt>());
                     }
                   }
@@ -3824,7 +3857,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 }))
       // 几何操作方法
       .function(
-          "extrudeWithRotation",
+          "extrudeWithRotationFromWire",
           emscripten::optional_override(
               [](solid &self, const wire &outerWire,
                  emscripten::val innerWiresVal, const gp_Pnt &vecCenter,
@@ -3840,12 +3873,12 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return self.extrude_with_rotation(
                     outerWire, innerWires, vecCenter, vecNormal, angleDegrees);
               }))
-      .function("extrudeWithRotation",
+      .function("extrudeWithRotationFromFace",
                 emscripten::select_overload<int(const face &, const gp_Pnt &,
                                                 const gp_Vec &, double)>(
                     &solid::extrude_with_rotation))
       .function(
-          "extrude",
+          "extrudeFromWire",
           emscripten::optional_override([](solid &self, const wire &outerWire,
                                            emscripten::val innerWiresVal,
                                            const gp_Vec &vecNormal,
@@ -3861,22 +3894,22 @@ EMSCRIPTEN_BINDINGS(Topo) {
             double taper = taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
             return self.extrude(outerWire, innerWires, vecNormal, taper);
           }))
-      .function("extrude",
+      .function("extrudeFromFacePoint",
                 emscripten::select_overload<int(const face &, gp_Pnt, gp_Pnt)>(
                     &solid::extrude))
-      .function("extrude", emscripten::optional_override(
-                               [](solid &self, const face &f, const gp_Vec &dir,
-                                  emscripten::val taperVal) {
-                                 double taper = taperVal.isUndefined()
-                                                    ? 0.0
-                                                    : taperVal.as<double>();
-                                 return self.extrude(f, dir, taper);
-                               }))
-      .function("revolve",
+      .function("extrudeFromFaceVector",
+                emscripten::optional_override([](solid &self, const face &f,
+                                                 const gp_Vec &dir,
+                                                 emscripten::val taperVal) {
+                  double taper =
+                      taperVal.isUndefined() ? 0.0 : taperVal.as<double>();
+                  return self.extrude(f, dir, taper);
+                }))
+      .function("revolveFromFacePoint",
                 emscripten::select_overload<int(const face &, gp_Pnt, gp_Pnt,
                                                 double)>(&solid::revolve))
       .function(
-          "revolve",
+          "revolveFromWire",
           emscripten::optional_override(
               [](solid &self, const wire &outerWire,
                  emscripten::val innerWiresVal, double angleDegrees,
@@ -3893,7 +3926,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                     axisStart, axisEnd);
               }))
       .function(
-          "revolve",
+          "revolveFromFaceAnglePoint",
           emscripten::select_overload<int(const face &, double, const gp_Pnt &,
                                           const gp_Pnt &)>(&solid::revolve))
       .function("loft",
@@ -3917,7 +3950,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       return self.loft(profiles, ruled, tolerance);
                     }))
       .function("pipe", &solid::pipe)
-      .function("sweep",
+      .function("sweepCompound",
                 emscripten::optional_override([](solid &self, const wire &spine,
                                                  emscripten::val profilesVal,
                                                  int cornerMode) {
@@ -3950,7 +3983,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   return self.sweep(spine, profiles, cornerMode);
                 }))
       .function(
-          "sweep",
+          "sweepWire",
           emscripten::optional_override(
               [](solid &self, const wire &outerWire,
                  emscripten::val innerWiresVal, const TopoDS_Shape &path,
@@ -3975,17 +4008,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 // 处理可选的SweepMode
                 boost::optional<solid::SweepMode> mode;
                 if (!modeVal.isUndefined() && !modeVal.isNull()) {
-                  if (modeVal.instanceof (emscripten::val::global("gp_Vec"))) {
+                  if (modeVal.instanceof(emscripten::val::global("gp_Vec"))) {
                     gp_Vec vec = modeVal.as<gp_Vec>();
                     mode = vec;
-                  } else if (modeVal.instanceof
-                             (emscripten::val::global("TopoDS_Wire"))) {
+                  } else if (modeVal.instanceof(
+                                 emscripten::val::global("TopoDS_Wire"))) {
                     TopoDS_Wire wire = modeVal.as<TopoDS_Wire>();
                     mode = wire;
                   }
                   // 检查是否为TopoDS_Edge类型
-                  else if (modeVal.instanceof
-                           (emscripten::val::global("TopoDS_Edge"))) {
+                  else if (modeVal.instanceof(
+                               emscripten::val::global("TopoDS_Edge"))) {
                     TopoDS_Edge edge = modeVal.as<TopoDS_Edge>();
                     mode = edge;
                   }
@@ -4001,7 +4034,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                   isFrenet, mode, transitionMode);
               }))
       .function(
-          "sweep",
+          "sweepFace",
           emscripten::optional_override(
               [](solid &self, const face &f, const TopoDS_Shape &path,
                  emscripten::val makeSolidVal, emscripten::val isFrenetVal,
@@ -4015,15 +4048,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 // 处理可选的SweepMode
                 boost::optional<solid::SweepMode> mode;
                 if (!modeVal.isUndefined() && !modeVal.isNull()) {
-                  if (modeVal.instanceof (emscripten::val::global("gp_Vec"))) {
+                  if (modeVal.instanceof(emscripten::val::global("gp_Vec"))) {
                     gp_Vec vec = modeVal.as<gp_Vec>();
                     mode = vec;
-                  } else if (modeVal.instanceof
-                             (emscripten::val::global("TopoDS_Wire"))) {
+                  } else if (modeVal.instanceof(
+                                 emscripten::val::global("TopoDS_Wire"))) {
                     // TopoDS_Wire类型
                     mode = modeVal.as<TopoDS_Wire>();
-                  } else if (modeVal.instanceof
-                             (emscripten::val::global("TopoDS_Edge"))) {
+                  } else if (modeVal.instanceof(
+                                 emscripten::val::global("TopoDS_Edge"))) {
                     // TopoDS_Edge类型
                     mode = modeVal.as<TopoDS_Edge>();
                   }
@@ -4051,10 +4084,10 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   profiles.reserve(length);
                   for (size_t i = 0; i < length; ++i) {
                     emscripten::val item = profilesVal[i];
-                    if (item.instanceof (emscripten::val::global("Wire"))) {
+                    if (item.instanceof(emscripten::val::global("Wire"))) {
                       profiles.emplace_back(item.as<wire>());
-                    } else if (item.instanceof
-                               (emscripten::val::global("Face"))) {
+                    } else if (item.instanceof(
+                                   emscripten::val::global("Face"))) {
                       profiles.emplace_back(item.as<face>());
                     }
                   }
@@ -4069,15 +4102,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 // 处理可选的SweepMode
                 boost::optional<solid::SweepMode> mode;
                 if (!modeVal.isUndefined() && !modeVal.isNull()) {
-                  if (modeVal.instanceof (emscripten::val::global("gp_Vec"))) {
+                  if (modeVal.instanceof(emscripten::val::global("gp_Vec"))) {
                     gp_Vec vec = modeVal.as<gp_Vec>();
                     mode = vec;
-                  } else if (modeVal.instanceof
-                             (emscripten::val::global("TopoDS_Wire"))) {
+                  } else if (modeVal.instanceof(
+                                 emscripten::val::global("TopoDS_Wire"))) {
                     // TopoDS_Wire类型
                     mode = modeVal.as<TopoDS_Wire>();
-                  } else if (modeVal.instanceof
-                             (emscripten::val::global("TopoDS_Edge"))) {
+                  } else if (modeVal.instanceof(
+                                 emscripten::val::global("TopoDS_Edge"))) {
                     // TopoDS_Edge类型
                     mode = modeVal.as<TopoDS_Edge>();
                   }
@@ -4192,14 +4225,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   return self.feat_prism(f, d, height, fuse);
                 }))
       .function(
-          "featPrism",
+          "featPrismForRange",
           emscripten::optional_override(
               [](solid &self, const face &f, const gp_Dir &d, const face &from,
                  const face &end, emscripten::val fuseVal) {
                 bool fuse = fuseVal.isUndefined() ? true : fuseVal.as<bool>();
                 return self.feat_prism(f, d, from, end, fuse);
               }))
-      .function("featPrism",
+      .function("featPrismForUntil",
                 emscripten::optional_override(
                     [](solid &self, const face &f, const gp_Dir &d,
                        const face &until, emscripten::val fuseVal) {
@@ -4214,7 +4247,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   bool fuse = fuseVal.isUndefined() ? true : fuseVal.as<bool>();
                   return self.feat_draft_prism(f, angle, height, fuse);
                 }))
-      .function("featDraftPrism",
+      .function("featDraftPrismForRange",
                 emscripten::optional_override([](solid &self, const face &f,
                                                  double angle, const face &from,
                                                  const face &end,
@@ -4222,7 +4255,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   bool fuse = fuseVal.isUndefined() ? true : fuseVal.as<bool>();
                   return self.feat_draft_prism(f, angle, from, end, fuse);
                 }))
-      .function("featDraftPrism",
+      .function("featDraftPrismForUntil",
                 emscripten::optional_override(
                     [](solid &self, const face &f, double angle,
                        const face &until, emscripten::val fuseVal) {
@@ -4231,14 +4264,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       return self.feat_draft_prism(f, angle, until, fuse);
                     }))
       .function(
-          "featRevol",
+          "featRevolForRange",
           emscripten::optional_override(
               [](solid &self, const face &f, const gp_Ax1 &Axes,
                  const face &from, const face &end, emscripten::val fuseVal) {
                 bool fuse = fuseVal.isUndefined() ? true : fuseVal.as<bool>();
                 return self.feat_revol(f, Axes, from, end, fuse);
               }))
-      .function("featRevol",
+      .function("featRevolForUntil",
                 emscripten::optional_override(
                     [](solid &self, const face &f, const gp_Ax1 &Axes,
                        const face &until, emscripten::val fuseVal) {
@@ -4246,16 +4279,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
                           fuseVal.isUndefined() ? true : fuseVal.as<bool>();
                       return self.feat_revol(f, Axes, until, fuse);
                     }))
-      .function("featPipe",
-                emscripten::optional_override(
-                    [](solid &self, const face &f, const wire &Spine,
-                       const face &from, const face &end,
-                       emscripten::val fuseVal) {
-                      bool fuse =
-                          fuseVal.isUndefined() ? true : fuseVal.as<bool>();
-                      return self.feat_pipe(f, Spine, from, end, fuse);
-                    }))
-      .function("featPipe",
+      .function(
+          "featPipeForRange",
+          emscripten::optional_override(
+              [](solid &self, const face &f, const wire &Spine,
+                 const face &from, const face &end, emscripten::val fuseVal) {
+                bool fuse = fuseVal.isUndefined() ? true : fuseVal.as<bool>();
+                return self.feat_pipe(f, Spine, from, end, fuse);
+              }))
+      .function("featPipeForUntil",
                 emscripten::optional_override(
                     [](solid &self, const face &f, const wire &Spine,
                        const face &until, emscripten::val fuseVal) {
@@ -4301,8 +4333,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("convertToNurbs", &solid::convert_to_nurbs)
       // 值访问方法
       .function("value",
-                emscripten::select_overload<TopoDS_Solid &()>(&solid::value))
-      .function("value",
                 emscripten::select_overload<const TopoDS_Solid &() const>(
                     &solid::value))
       // 类型方法
@@ -4346,8 +4376,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // 几何操作方法
       .function("remove", &compound::remove)
       // 值访问和类型方法
-      .function("value", emscripten::select_overload<TopoDS_Compound &()>(
-                             &compound::value))
       .function("value",
                 emscripten::select_overload<const TopoDS_Compound &() const>(
                     &compound::value))
@@ -4389,8 +4417,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
             return comp_solid::make_comp_solid(shapes);
           }))
       // 值访问方法
-      .function("value", emscripten::select_overload<TopoDS_CompSolid &()>(
-                             &comp_solid::value))
       .function("value",
                 emscripten::select_overload<const TopoDS_CompSolid &() const>(
                     &comp_solid::value))
@@ -4411,31 +4437,42 @@ EMSCRIPTEN_BINDINGS(Topo) {
   // 绑定mesh类
   emscripten::class_<mesh>("Mesh")
       .smart_ptr<std::shared_ptr<mesh>>("MeshPtr")
-      .constructor<>()
-      .constructor<TopoDS_Shape>()
-      .constructor<const shape &>()
-      .constructor<Handle_TDocStd_Document>()
+      .constructor(emscripten::optional_override([](emscripten::val arg) {
+        if (arg.isUndefined() || arg.isNull()) {
+          return std::make_shared<mesh>();
+        } else if (arg.instanceof(emscripten::val::global("TopoDS_Shape"))) {
+          return std::make_shared<mesh>(arg.as<TopoDS_Shape>());
+        } else if (arg.instanceof(emscripten::val::global("shape"))) {
+          return std::make_shared<mesh>(arg.as<shape>());
+        } else if (arg.instanceof(
+                       emscripten::val::global("Handle_TDocStd_Document"))) {
+          return std::make_shared<mesh>(arg.as<Handle_TDocStd_Document>());
+        }
+        throw std::runtime_error("Invalid argument type for shape creation");
+      }))
       // 形状映射方法
       .function(
           "mapShapes",
           emscripten::select_overload<void(Handle_TopTools_HSequenceOfShape)>(
               &mesh::map_shapes))
-      .function("mapShape", emscripten::select_overload<void(TopoDS_Shape)>(
-                                &mesh::map_shape))
-      .function("mapShape", emscripten::select_overload<void(const shape &)>(
-                                &mesh::map_shape))
-      .function("mapShape",
-                emscripten::optional_override(
-                    [](mesh &self, emscripten::val shapesVal) {
-                      std::vector<shape> shapes;
-                      if (shapesVal.isArray()) {
-                        const size_t length = shapesVal["length"].as<size_t>();
-                        for (size_t i = 0; i < length; i++) {
-                          shapes.push_back(shapesVal[i].as<shape>());
-                        }
-                      }
-                      self.map_shape(shapes);
-                    }))
+      .function(
+          "mapShape",
+          emscripten::optional_override([](mesh &self, emscripten::val arg) {
+            if (arg.instanceof(emscripten::val::global("TopoDS_Shape"))) {
+              self.map_shape(arg.as<TopoDS_Shape>());
+            } else if (arg.instanceof(emscripten::val::global("shape"))) {
+              self.map_shape(arg.as<shape>());
+            } else if (arg.isArray()) {
+              std::vector<shape> shapes;
+              const size_t length = arg["length"].as<size_t>();
+              for (size_t i = 0; i < length; i++) {
+                shapes.push_back(arg[i].as<shape>());
+              }
+              self.map_shape(shapes);
+            } else {
+              throw std::runtime_error("Invalid argument type for mapShape");
+            }
+          }))
       // 三角化方法
       .function(
           "triangulation",
@@ -4720,27 +4757,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "fuse",
-          emscripten::optional_override(
-              [](emscripten::val shapesVal, emscripten::val tolVal,
-                 emscripten::val glueVal) -> emscripten::val {
-                std::vector<shape> shapes;
-                if (shapesVal.isArray()) {
-                  const size_t length = shapesVal["length"].as<size_t>();
-                  for (size_t i = 0; i < length; i++) {
-                    shapes.push_back(shapesVal[i].as<shape>());
-                  }
-                }
-                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
-
-                auto result = flywave::topo::fuse(shapes, tol, glue);
-                if (result) {
-                  return emscripten::val(*result);
-                }
-                return emscripten::val::undefined();
-              }))
-      .class_function(
           "cut",
           emscripten::optional_override(
               [](emscripten::val shpVal, emscripten::val toolVal,
@@ -4758,7 +4774,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "cut",
+          "cutMulti",
           emscripten::optional_override(
               [](emscripten::val shpVal, emscripten::val toCutsVal,
                  emscripten::val tolVal,
@@ -4799,7 +4815,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "intersect",
+          "intersectMulti",
           emscripten::optional_override(
               [](emscripten::val shpVal, emscripten::val toIntersectsVal,
                  emscripten::val tolVal,
@@ -4823,7 +4839,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "split",
+          "splitMulti",
           emscripten::optional_override(
               [](emscripten::val shpVal, emscripten::val splittersVal,
                  emscripten::val tolVal) -> emscripten::val {
@@ -4996,7 +5012,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                            return emscripten::val::undefined();
                          }))
       .class_function(
-          "extrudeLinear",
+          "extrudeLinearWithWire",
           emscripten::optional_override(
               [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
                  emscripten::val vecNormalVal,
@@ -5021,7 +5037,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "extrudeLinear",
+          "extrudeLinearWithFace",
           emscripten::optional_override(
               [](emscripten::val faceVal, emscripten::val vecNormalVal,
                  emscripten::val taperVal) -> emscripten::val {
@@ -5038,7 +5054,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "extrudeLinearWithRotation",
+          "extrudeLinearWithRotationWithWire",
           emscripten::optional_override(
               [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
                  emscripten::val centerVal, emscripten::val normalVal,
@@ -5063,7 +5079,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "extrudeLinearWithRotation",
+          "extrudeLinearWithRotationWithFace",
           emscripten::optional_override(
               [](emscripten::val faceVal, emscripten::val centerVal,
                  emscripten::val normalVal,
@@ -5101,7 +5117,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "revolve",
+          "revolveWithFace",
           emscripten::optional_override(
               [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
                  emscripten::val angleDegreesVal, emscripten::val axisStartVal,
@@ -5125,7 +5141,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 }
                 return emscripten::val::undefined();
               }))
-      .class_function("revolve",
+      .class_function("revolveWithFace",
                       emscripten::optional_override(
                           [](emscripten::val faceVal, double angleDegrees,
                              emscripten::val axisStartVal,
@@ -5161,7 +5177,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "sweep",
+          "sweepWithWire",
           emscripten::optional_override(
               [](emscripten::val outerWireVal, emscripten::val innerWiresVal,
                  emscripten::val pathVal, emscripten::val makeSolidVal,
@@ -5199,7 +5215,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "sweep",
+          "sweepWithFace",
           emscripten::optional_override(
               [](emscripten::val faceVal, emscripten::val pathVal,
                  emscripten::val makeSolidVal, emscripten::val isFrenetVal,
@@ -5312,7 +5328,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "loft",
+          "loftWithFaces",
           emscripten::optional_override(
               [](emscripten::val faceProfilesVal,
                  emscripten::val continuityVal) -> emscripten::val {
@@ -5376,7 +5392,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return emscripten::val::undefined();
               }))
       .class_function(
-          "dprism",
+          "dprismWithFaces",
           emscripten::optional_override(
               [](emscripten::val shpVal, emscripten::val basisVal,
                  emscripten::val facesVal, emscripten::val depthVal,

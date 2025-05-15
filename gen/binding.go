@@ -373,16 +373,15 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	}
 
 	standardConstructor := publicConstructors[0]
-	if !standardConstructor.IsNull() {
-		return output
-	}
-
 	var argTypes []string
 
-	for i := 0; int32(i) < standardConstructor.NumArguments(); i++ {
-		arg := standardConstructor.Argument(uint32(i))
-		argTypes = append(argTypes, arg.Type().Spelling())
+	if !standardConstructor.IsNull() {
+		for i := 0; int32(i) < standardConstructor.NumArguments(); i++ {
+			arg := standardConstructor.Argument(uint32(i))
+			argTypes = append(argTypes, arg.Type().Spelling())
+		}
 	}
+
 	argTypesBindings := strings.Join(argTypes, ", ")
 
 	output += "    .constructor<" + argTypesBindings + ">()\n"
@@ -462,6 +461,12 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 				}
 				if strings.HasPrefix(typename, "NewDerived") && !strings.Contains(typename, "::") {
 					typename = strings.Replace(typename, "NewDerived", className+"::NewDerived", 1)
+				}
+				if strings.HasPrefix(typename, "const BRepGProp_MeshObjType") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "BRepGProp_MeshObjType", className+"::BRepGProp_MeshObjType", 1)
+				}
+				if strings.HasPrefix(typename, "const Helper") && !strings.Contains(typename, "::") {
+					typename = strings.Replace(typename, "Helper", className+"::Helper", 1)
 				}
 			}
 			if arg.Type().Kind() == clang.Type_LValueReference {
@@ -571,6 +576,9 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 					}
 					if strings.HasPrefix(typename, "NewDerived") && !strings.Contains(typename, "::") {
 						typename = strings.Replace(typename, "NewDerived", className+"::NewDerived", 1)
+					}
+					if strings.HasPrefix(typename, "const BRepGProp_MeshObjType") && !strings.Contains(typename, "::") {
+						typename = strings.Replace(typename, "BRepGProp_MeshObjType", className+"::BRepGProp_MeshObjType", 1)
 					}
 				}
 				return typename
@@ -777,13 +785,8 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 			output.WriteString(".function(")
 		}
 
-		if method.ResultType().Kind() == clang.Type_LValueReference && method.Spelling() == "Intersector" {
-			output.WriteString(fmt.Sprintf("\"%s%s\",%s, return_value_policy::reference())\n",
-				method.Spelling(), overloadPostfix, functionBinding.String()))
-		} else {
-			output.WriteString(fmt.Sprintf("\"%s%s\",%s, allow_raw_pointers())\n",
-				method.Spelling(), overloadPostfix, functionBinding.String()))
-		}
+		output.WriteString(fmt.Sprintf("\"%s%s\",%s, allow_raw_pointers())\n",
+			method.Spelling(), overloadPostfix, functionBinding.String()))
 	}
 
 	// Process public fields
@@ -883,7 +886,7 @@ func (e *EmbindBindings) processOverloadedConstructors(theClass clang.Cursor, te
 		constructorBindings.WriteString("      " + name + overloadPostfix + "(" + strings.Join(args, ", ") + ") : " + name + "(" + strings.Join(argNames, ", ") + ") {}\n")
 		constructorBindings.WriteString("    };\n")
 		constructorBindings.WriteString("    class_<" + name + overloadPostfix + ", base<" + name + ">>(\"" + name + overloadPostfix + "\")\n")
-		if !filter.FilterAbstractClass(theClass) {
+		if filter.FilterAbstractClass(theClass) {
 			constructorBindings.WriteString("      .constructor<" + strings.Join(argTypes, ", ") + ">()\n")
 		}
 		constructorBindings.WriteString("    ;\n")

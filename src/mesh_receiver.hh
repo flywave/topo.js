@@ -2,6 +2,7 @@
 #define __FLYWAVE_MESH_TOPO_MESH_RECEIVER_HH__
 
 #include <Quantity_Color.hxx>
+#include <gp_Pnt.hxx>
 
 namespace flywave {
 namespace topo {
@@ -26,6 +27,19 @@ public:
   virtual void append_triangle(int face, int tri[3]) = 0;
 };
 
+class mesh_edges_receiver {
+public:
+  mesh_edges_receiver() = default;
+  virtual ~mesh_edges_receiver() = default;
+
+  virtual void begin() = 0;
+
+  virtual void end() = 0;
+
+  virtual int append_edge(Quantity_Color color) = 0;
+
+  virtual void append_point(int edge, gp_Pnt p) = 0;
+};
 } // namespace topo
 } // namespace flywave
 

@@ -7,6 +7,7 @@
             "Plane",
             "Vector",
             "MeshReceiver",
+            "MeshEdgeReceiver",
             "GeometryObject",
             "Shape",
             "Vertex",
@@ -57,6 +58,7 @@
     {
         "exports": [
             "MeshCallback",
+            "MeshEdgeCallback",
             "SweepMode",
             "ShapeCheckResult",
             "ShapeCheckStatus",

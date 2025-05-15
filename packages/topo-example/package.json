@@ -1,0 +1,40 @@
+{
+  "name": "topo-example",
+  "version": "1.0.0",
+  "description": ".",
+  "main": "dist/index.js",
+  "author": "aninggo <aninggo@qq.com>",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "webpack-dev-server --mode development",
+    "build": "webpack --mode production"
+  },
+  "peerDependencies": {
+    "ws": "^8.5.0",
+    "three": ">=0.174.0"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/three": "^0.174.0",
+    "typescript": "^5.1.6",
+    "css-loader": "^6.8.1",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.5.3",
+    "mini-css-extract-plugin": "^2.7.6",
+    "ts-loader": "^9.5.1",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1",
+    "topo-js": "^0.0.1"
+  },
+  "dependencies": {
+    "topo-js": "workspace:*",
+    "topo-threejs-helper": "workspace:*",
+    "topo-wasm-binging": "workspace:*"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead"
+  ]
+}

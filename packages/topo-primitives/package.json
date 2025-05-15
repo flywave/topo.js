@@ -1,0 +1,31 @@
+{
+  "name": "topo-primitives",
+  "version": "0.0.1",
+  "author": "aninggo <aninggo@qq.com>",
+  "main": "dist/umd/index.js",
+  "module": "dist/es/index.js",
+  "peerDependencies": {
+    "three": ">=0.174.0"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c rollup.config.js",
+    "start": "rollup -w -c rollup.config.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.1",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^0.4.3",
+    "@types/three": "^0.174.0",
+    "@typescript-eslint/eslint-plugin": "^5.2.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "eslint": "^8.1.0",
+    "prettier": "^2.4.1",
+    "rollup": "3.10.1",
+    "rollup-plugin-sourcemaps": "^0.6.3",
+    "rollup-plugin-ts": "3.1.1",
+    "typescript": "^5.1.6",
+    "topo-threejs-helper": "workspace:*",
+    "topo-wasm-binging": "workspace:*"
+  }
+}

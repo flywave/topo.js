@@ -207,6 +207,10 @@ func FilterAbstractClass(theClass clang.Cursor) bool {
 		"VrmlData_Texture_2",
 		"VrmlData_TextureTransform_1",
 		"VrmlData_TextureTransform_2",
+		"Aspect_CircularGrid",
+		"Aspect_RectangularGrid",
+		"BRepMesh_ConstrainedBaseMeshAlgo",
+		"SelectMgr_BaseFrustum",
 	}
 
 	for _, name := range abstractlist {

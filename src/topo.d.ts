@@ -91,12 +91,27 @@ export declare class Matrix {
     delete(): void;
 }
 
+
+export type PlaneName =
+    | "XY"
+    | "YZ"
+    | "ZX"
+    | "XZ"
+    | "YX"
+    | "ZY"
+    | "front"
+    | "back"
+    | "left"
+    | "right"
+    | "top"
+    | "bottom";
+
 export declare class Plane {
     constructor(pln: gp_Pln);
     constructor(origin: Vector, xDir: Vector, normal?: Vector);
 
     // 静态工厂方法
-    static named(name: string, origin?: Vector): Plane;
+    static named(name: PlaneName, origin?: Vector): Plane;
     static xy(origin?: Vector, xDir?: Vector): Plane;
     static yz(origin?: Vector, xDir?: Vector): Plane;
     static zx(origin?: Vector, xDir?: Vector): Plane;
@@ -171,6 +186,7 @@ export declare class Vector {
     toPnt(): gp_Pnt;
     toDir(): gp_Dir;
     toVec(): gp_Vec;
+    toXYZ(): gp_XYZ;
     toString(): string;
 
     // 运算符重载
@@ -204,8 +220,21 @@ export declare interface MeshCallback {
     appendTriangle(faceIndex: number, indices: [number, number, number]): void;
 }
 
+export declare interface MeshEdgeCallback {
+    begin(): void;
+    end(): void;
+    appendEdge(r: number, g: number, b: number): number;
+    appendNode(edgeIndex: number, x: number, y: number, z: number): void;
+}
+
 export declare class MeshReceiver {
     constructor(callback: MeshCallback);
+
+    delete(): void;
+}
+
+export declare class MeshEdgeReceiver {
+    constructor(callback: MeshEdgeCallback);
 
     delete(): void;
 }
@@ -430,6 +459,7 @@ export declare class Shape extends GeometryObject {
     // 网格生成
     writeTriangulation(mesh: MeshReceiver, precision: number, deflection: number, angle: number, uvCoords: boolean): boolean;
     mesh(mesh: MeshReceiver, precision?: number, deflection?: number, angle?: number, uvCoords?: boolean): number;
+    meshEdges(mesh: MeshEdgeReceiver, precision?: number, angle?: number): number;
 
     // 选择器相关
     static filter(selector: Selector, shapes: Shape[]): Shape[];
@@ -1150,22 +1180,22 @@ export declare class Solid extends Shape3D {
     innerShells(): Shell[];
 
     // 几何操作方法
-    extrudeWithRotation(wire: Wire, innerWires: Wire[], center: gp_Pnt, normal: Vector, angleDegrees: number): Solid;
-    extrudeWithRotation(face: Face, center: gp_Pnt, normal: Vector, angleDegrees: number): Solid;
-    extrude(wire: Wire, innerWires: Wire[], direction: Vector, taper?: number): Solid;
-    extrude(face: Face, p1: gp_Pnt, p2: gp_Pnt): Solid;
-    extrude(face: Face, direction: Vector, taper?: number): Solid;
-    revolve(face: Face, p1: gp_Pnt, p2: gp_Pnt, angle: number): Solid;
-    revolve(wire: Wire, innerWires: Wire[], angleDegrees: number, axisStart: gp_Pnt, axisEnd: gp_Pnt): Solid;
-    revolve(face: Face, angleDegrees: number, axisStart: gp_Pnt, axisEnd: gp_Pnt): Solid;
+    extrudeWithRotationFromWire(wire: Wire, innerWires: Wire[], center: gp_Pnt, normal: Vector, angleDegrees: number): Solid;
+    extrudeWithRotationFromFace(face: Face, center: gp_Pnt, normal: Vector, angleDegrees: number): Solid;
+    extrudeFromWire(wire: Wire, innerWires: Wire[], direction: Vector, taper?: number): Solid;
+    extrudeFromFacePoint(face: Face, p1: gp_Pnt, p2: gp_Pnt): Solid;
+    extrudeFromFaceVector(face: Face, direction: Vector, taper?: number): Solid;
+    revolveFromFacePoint(face: Face, p1: gp_Pnt, p2: gp_Pnt, angle: number): Solid;
+    revolveFromWire(wire: Wire, innerWires: Wire[], angleDegrees: number, axisStart: gp_Pnt, axisEnd: gp_Pnt): Solid;
+    revolveFromFaceAnglePoint(face: Face, angleDegrees: number, axisStart: gp_Pnt, axisEnd: gp_Pnt): Solid;
     loft(profiles: Shape[], ruled?: boolean, tolerance?: number): Solid;
     pipe(face: Face, wire: Wire): Solid;
 
-    sweep(spine: Wire, profiles: { profile: Shape, index: number }[], cornerMode: number): Solid;
+    sweepCompound(spine: Wire, profiles: { profile: Shape, index: number }[], cornerMode: number): Solid;
     sweep(spine: Wire, profiles: Shape[], cornerMode: number): Solid;
-    sweep(outerWire: Wire, innerWires: Wire[], path: TopoDS_Shape, makeSolid?: boolean, isFrenet?: boolean,
+    sweepWire(outerWire: Wire, innerWires: Wire[], path: TopoDS_Shape, makeSolid?: boolean, isFrenet?: boolean,
         mode?: gp_Vec | TopoDS_Wire | TopoDS_Edge, transitionMode?: string): Solid;
-    sweep(face: Face, path: TopoDS_Shape, makeSolid?: boolean, isFrenet?: boolean,
+    sweepFace(face: Face, path: TopoDS_Shape, makeSolid?: boolean, isFrenet?: boolean,
         mode?: gp_Vec | TopoDS_Wire | TopoDS_Edge, transitionMode?: string): Solid;
     sweepMulti(profiles: Array<Wire | Face>, path: TopoDS_Shape, makeSolid?: boolean,
         isFrenet?: boolean, mode?: gp_Vec | TopoDS_Wire | TopoDS_Edge): Solid;
@@ -1182,15 +1212,15 @@ export declare class Solid extends Shape3D {
 
     // 特征操作
     featPrism(face: Face, direction: Vector, height: number, fuse?: boolean): Solid;
-    featPrism(face: Face, direction: Vector, from: Face, end: Face, fuse?: boolean): Solid;
-    featPrism(face: Face, direction: Vector, until: Face, fuse?: boolean): Solid;
+    featPrismForRange(face: Face, direction: Vector, from: Face, end: Face, fuse?: boolean): Solid;
+    featPrismForUntil(face: Face, direction: Vector, until: Face, fuse?: boolean): Solid;
     featDraftPrism(face: Face, angle: number, height: number, fuse?: boolean): Solid;
-    featDraftPrism(face: Face, angle: number, from: Face, end: Face, fuse?: boolean): Solid;
-    featDraftPrism(face: Face, angle: number, until: Face, fuse?: boolean): Solid;
-    featRevol(face: Face, axis: gp_Ax1, from: Face, end: Face, fuse?: boolean): Solid;
-    featRevol(face: Face, axis: gp_Ax1, until: Face, fuse?: boolean): Solid;
-    featPipe(face: Face, spine: Wire, from: Face, end: Face, fuse?: boolean): Solid;
-    featPipe(face: Face, spine: Wire, until: Face, fuse?: boolean): Solid;
+    featDraftPrismForRange(face: Face, angle: number, from: Face, end: Face, fuse?: boolean): Solid;
+    featDraftPrismForUntil(face: Face, angle: number, until: Face, fuse?: boolean): Solid;
+    featRevolForRange(face: Face, axis: gp_Ax1, from: Face, end: Face, fuse?: boolean): Solid;
+    featRevolForUntil(face: Face, axis: gp_Ax1, until: Face, fuse?: boolean): Solid;
+    featPipeForRange(face: Face, spine: Wire, from: Face, end: Face, fuse?: boolean): Solid;
+    featPipeForUntil(face: Face, spine: Wire, until: Face, fuse?: boolean): Solid;
 
     // 线性形式和旋转形式
     linearForm(wire: Wire, plane: Handle_Geom_Plane, direction: Vector, direction1: Vector, fuse?: boolean): Solid;
@@ -1226,7 +1256,6 @@ export declare class Compound extends Shape3D {
     constructor(shape: TopoDS_Shape, forConstruction?: boolean);
 
     // 基础创建方法
-    static makeCompound(shapes: Shape[]): Compound;
     static makeCompound(shapes: Shape[]): Compound;
 
     // 布尔运算方法
@@ -1273,16 +1302,11 @@ export declare class CompSolidIterator {
 }
 
 export declare class Mesh {
-    constructor();
-    constructor(shape: TopoDS_Shape);
-    constructor(shape: Shape);
-    constructor(doc: Handle_TDocStd_Document);
+    constructor(args?: TopoDS_Shape | Shape | Handle_TDocStd_Document);
 
     // 形状映射方法
     mapShapes(): void;
-    mapShape(shape: TopoDS_Shape): void;
-    mapShape(shape: Shape): void;
-    mapShape(shapes: Shape[]): void;
+    mapShape(shape: TopoDS_Shape | Shape | Shape[]): void;
 
     // 三角化方法
     triangulation(receiver: MeshReceiver, deflection?: number, tolerance?: number): void;
@@ -1424,12 +1448,12 @@ export declare class ShapeOps {
     // 布尔运算
     static fuse(shapes: Shape[], tol?: number, glue?: boolean): Shape | undefined;
     static cut(shape: Shape, tool: Shape, tol?: number, glue?: boolean): Shape | undefined;
-    static cut(shape: Shape, toCuts: Shape[], tol?: number, glue?: boolean): Shape | undefined;
+    static cutMulti(shape: Shape, toCuts: Shape[], tol?: number, glue?: boolean): Shape | undefined;
     static intersect(shape: Shape, toIntersect: Shape, tol?: number, glue?: boolean): Shape | undefined;
-    static intersect(shape: Shape, toIntersects: Shape[], tol?: number, glue?: boolean): Shape | undefined;
+    static intersectMulti(shape: Shape, toIntersects: Shape[], tol?: number, glue?: boolean): Shape | undefined;
 
     // 分割操作
-    static split(shape: Shape, tools: Shape[], tolerance?: number): Shape | undefined;
+    static splitMulti(shape: Shape, tools: Shape[], tolerance?: number): Shape | undefined;
     static split(shape: Shape, tool: Shape, tolerance?: number): Shape | undefined;
 
     // 相交操作
@@ -1465,20 +1489,20 @@ export declare class ShapeOps {
 
     static extrude(shape: Shape, direction: gp_Vec): Shape | undefined;
 
-    static extrudeLinear(
+    static extrudeLinearWithWire(
         outerWire: Wire,
         innerWires: Wire[],
         vecNormal: gp_Vec,
         taper?: number
     ): Shape | undefined;
 
-    static extrudeLinear(
+    static extrudeLinearWithFace(
         face: Face,
         vecNormal: gp_Vec,
         taper?: number
     ): Shape | undefined;
 
-    static extrudeLinearWithRotation(
+    static extrudeLinearWithRotationWithWire(
         outerWire: Wire,
         innerWires: Wire[],
         center: gp_Pnt,
@@ -1486,7 +1510,7 @@ export declare class ShapeOps {
         angleDegrees: number
     ): Shape | undefined;
 
-    static extrudeLinearWithRotation(
+    static extrudeLinearWithRotationWithFace(
         face: Face,
         center: gp_Pnt,
         normal: gp_Vec,
@@ -1501,7 +1525,7 @@ export declare class ShapeOps {
         angleDegrees?: number
     ): Shape | undefined;
 
-    static revolve(
+    static revolveWithFace(
         outerWire: Wire,
         innerWires: Wire[],
         angleDegrees: number,
@@ -1509,7 +1533,7 @@ export declare class ShapeOps {
         axisEnd: gp_Pnt
     ): Shape | undefined;
 
-    static revolve(
+    static revolveWithFace(
         face: Face,
         angleDegrees: number,
         axisStart: gp_Pnt,
@@ -1525,7 +1549,7 @@ export declare class ShapeOps {
     ): Shape | undefined;
 
     // 扫描操作
-    static sweep(
+    static sweepWithWire(
         outerWire: Wire,
         innerWires: Wire[],
         path: Shape,
@@ -1535,7 +1559,7 @@ export declare class ShapeOps {
         transitionMode?: TransitionMode
     ): Shape | undefined;
 
-    static sweep(
+    static sweepWithFace(
         face: Face,
         path: Shape,
         makeSolid?: boolean,
@@ -1564,7 +1588,7 @@ export declare class ShapeOps {
         weights?: [number, number, number]
     ): Shape | undefined;
 
-    static loft(
+    static loftWithFaces(
         faceProfiles: Face[],
         continuity?: string
     ): Shape | undefined;
@@ -1581,7 +1605,7 @@ export declare class ShapeOps {
         additive?: boolean
     ): Shape | undefined;
 
-    static dprism(
+    static dprismWithFaces(
         shp: Shape,
         basis: Face,
         faces: Face[],

@@ -94,10 +94,10 @@ func CompileCustomCodeBindings(workDir string, args map[string]string) error {
 
 func buildOneFile(workDir string, args map[string]string, item string) error {
 	objFile := item + ".o"
-	if _, err := os.Stat(objFile); err == nil {
+	/**if _, err := os.Stat(objFile); err == nil {
 		fmt.Printf("file %s already exists, skipping\n", objFile)
 		return nil
-	}
+	}*/
 
 	fmt.Printf("building %s\n", item)
 

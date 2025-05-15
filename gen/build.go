@@ -210,7 +210,7 @@ func runBuild(workDir string, build BuildSpec) error {
 
 	args = append(args, "@"+outFile)
 
-	args = append(args, "-o", filepath.Join(workDir, "dist/", build.Name))
+	args = append(args, "-o", filepath.Join(workDir, "packages/topo-wasm-binging/src", build.Name))
 	if os.Getenv("threading") == "multi-threaded" {
 		args = append(args, "-pthread")
 	}
@@ -487,6 +487,6 @@ func generateTypescriptDefs(workDir string, defs []TypescriptDef, buildName stri
 	output.WriteString("declare function init(): Promise<TopoInstance>;\n\n")
 	output.WriteString("export default init;\n")
 
-	filename := path.Join(workDir, "dist/", strings.TrimSuffix(buildName, filepath.Ext(buildName))+".d.ts")
+	filename := path.Join(workDir, "packages/topo-wasm-binging/src/", strings.TrimSuffix(buildName, filepath.Ext(buildName))+".d.ts")
 	return os.WriteFile(filename, []byte(output.String()), 0644)
 }
