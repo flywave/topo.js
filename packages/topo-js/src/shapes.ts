@@ -14,6 +14,7 @@ import type {
 } from "topo-wasm";
 import { getTopo } from "./topolib";
 import { WrappingObj } from "./register";
+import { HASH_CODE_MAX } from "./constants";
 
 export type {
     Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound
@@ -30,7 +31,18 @@ export type AnyShape =
     | Compound
     | null;
 
-type GenericTopo =
+export type TopoEntity =
+    | "vertex"
+    | "edge"
+    | "wire"
+    | "face"
+    | "shell"
+    | "solid"
+    | "solidCompound"
+    | "compound"
+    | "shape";
+
+export type GenericTopo =
     | TopoDS_Vertex
     | TopoDS_Face
     | TopoDS_Shape
@@ -125,4 +137,71 @@ export class Surface extends WrappingObj<Adaptor3d_Surface> {
         if (!shapeType) throw new Error("surface type not found");
         return shapeType;
     }
+}
+
+
+const asTopo = (entity: TopoEntity): TopAbs_ShapeEnum => {
+    const oc = getTopo();
+
+    return {
+        vertex: oc.TopAbs_ShapeEnum.TopAbs_VERTEX,
+        wire: oc.TopAbs_ShapeEnum.TopAbs_WIRE,
+        face: oc.TopAbs_ShapeEnum.TopAbs_FACE,
+        shell: oc.TopAbs_ShapeEnum.TopAbs_SHELL,
+        solid: oc.TopAbs_ShapeEnum.TopAbs_SOLID,
+        solidCompound: oc.TopAbs_ShapeEnum.TopAbs_COMPSOLID,
+        compound: oc.TopAbs_ShapeEnum.TopAbs_COMPOUND,
+        edge: oc.TopAbs_ShapeEnum.TopAbs_EDGE,
+        shape: oc.TopAbs_ShapeEnum.TopAbs_SHAPE,
+    }[entity] as TopAbs_ShapeEnum;
+};
+
+export const iterTopo = function* iterTopo(
+    shape: TopoDS_Shape,
+    topo: TopoEntity
+): IterableIterator<TopoDS_Shape> {
+    const oc = getTopo();
+    const explorer = new oc.TopExp_Explorer_2(
+        shape,
+        asTopo(topo),
+        asTopo("shape")
+    );
+    const hashes = new Map();
+    while (explorer.More()) {
+        const item = explorer.Current();
+        const hash = item.HashCode(HASH_CODE_MAX as any);
+        if (!hashes.get(hash)) {
+            hashes.set(hash, true);
+            yield item;
+        }
+        explorer.Next();
+    }
+    explorer.delete();
+};
+
+
+function _iterTopo(shape: GenericTopo, topo: TopoEntity): IterableIterator<TopoDS_Shape> {
+    return iterTopo(shape, topo);
+}
+
+export function listTopo(shape: GenericTopo, topo: TopoEntity): TopoDS_Shape[] {
+    return Array.from(_iterTopo(shape, topo)).map((e) => {
+        return downcast(e);
+    });
+}
+
+
+export function getEdges(shape: GenericTopo): Edge[] {
+    const oc = getTopo();
+    return listTopo(shape, "edge").map((e) => new oc.Edge(e));
+}
+
+export function getFaces(shape: GenericTopo): Face[] {
+    const oc = getTopo();
+    return listTopo(shape, "face").map((e) => new oc.Face(e));
+}
+
+export function getWires(shape: GenericTopo): Wire[] {
+    const oc = getTopo();
+    return listTopo(shape, "wire").map((e) => new oc.Wire(e));
 }

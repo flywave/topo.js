@@ -64,8 +64,6 @@ func filterTemplates(workDir string, child clang.Cursor, customBuild bool) bool 
 func filterEnums(workDir string, child clang.Cursor, customBuild bool) bool {
 	file, _, _, _ := child.Location().FileLocation()
 	if customBuild {
-		name := file.Name()
-		print(name)
 		return file.Name() == "myMain.h"
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()

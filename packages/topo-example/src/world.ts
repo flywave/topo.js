@@ -1,12 +1,12 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import initTopo, { TopoInstance } from "topo-wasm"
-import { setTopo } from "topo-js"
+import initTopo, { CuboidParams, TopoInstance } from "topo-wasm"
+import { setTopo, mesh } from "topo-js"
 
 export default class World {
   setup: Setup
   scene: THREE.Scene
-  TopoInstance: TopoInstance | null = null
+  oc: TopoInstance | null = null
   done: Promise<void> | null = null
 
   constructor() {
@@ -19,6 +19,27 @@ export default class World {
   waitDone() {
     return this.done
   }
+  
+  createCube(tp: TopoInstance) {
+    let params : CuboidParams = {
+      length: 10,
+      width: 10,
+      height: 10,
+    }
+
+    const shp =  tp.createCuboid(params)
+    const shape = new tp.Shape(shp,false);
+    const ff = shape.autoCast();
+    const geometries = mesh(shape)
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+
+    const group = new THREE.Group()
+    geometries.forEach((geometry) => {
+      group.add(new THREE.Mesh(geometry, material))
+    })
+
+    this.scene.add(group)
+  }
 
   addLights() {
     const light = new THREE.AmbientLight(0x404040)
@@ -29,8 +50,9 @@ export default class World {
   }
 
   async TopoInit() {
-    this.TopoInstance = await initTopo().then((tp) => {
+    this.oc = await initTopo().then((tp) => {
       setTopo(tp);
+      this.createCube(tp);
       return tp
     })
     console.log("open cascade ready!!!")

@@ -24,60 +24,131 @@ struct shape_ops {};
 
 class emscripten_mesh_receiver : public flywave::topo::mesh_receiver {
 public:
-  emscripten::val js_receiver;
+  emscripten::val vertices = emscripten::val::array();
+  emscripten::val normals = emscripten::val::array();
+  emscripten::val uvs = emscripten::val::array();
+  emscripten::val triangles = emscripten::val::array();
+  emscripten::val faceGroups = emscripten::val::array();
+  int currentFaceIndex = -1;
+  bool hasTexCoords = false;
 
-  emscripten_mesh_receiver(emscripten::val receiver) : js_receiver(receiver) {}
+  void begin() override {
+    vertices.call<void>("push", emscripten::val::array());
+    normals.call<void>("push", emscripten::val::array());
+    uvs.call<void>("push", emscripten::val::array());
+    triangles.call<void>("push", emscripten::val::array());
+    currentFaceIndex++;
+  }
 
-  void begin() override { js_receiver.call<void>("begin"); }
-
-  void end() override { js_receiver.call<void>("end"); }
+  void end() override {}
 
   int append_face(Quantity_Color color) override {
-    return js_receiver.call<int>("appendFace", color.Red(), color.Green(),
-                                 color.Blue());
+    auto group = emscripten::val::object();
+    group.set("faceId", currentFaceIndex);
+    group.set("start", triangles[currentFaceIndex]["length"].as<int>());
+    group.set("count", 0);
+    faceGroups.call<void>("push", group);
+    return currentFaceIndex;
   }
 
   void append_node(int face, gp_Pnt p, gp_Pnt n) override {
-    js_receiver.call<void>("appendNodeWithNormal", face, p.X(), p.Y(), p.Z(),
-                           n.X(), n.Y(), n.Z());
+    vertices[face].call<void>("push", p.X());
+    vertices[face].call<void>("push", p.Y());
+    vertices[face].call<void>("push", p.Z());
+    normals[face].call<void>("push", n.X());
+    normals[face].call<void>("push", n.Y());
+    normals[face].call<void>("push", n.Z());
   }
 
   void append_node(int face, gp_Pnt p) override {
-    js_receiver.call<void>("appendNode", face, p.X(), p.Y(), p.Z());
+    vertices[face].call<void>("push", p.X());
+    vertices[face].call<void>("push", p.Y());
+    vertices[face].call<void>("push", p.Z());
   }
 
   void append_node(int face, gp_Pnt p, gp_Pnt n, gp_Pnt2d uv) override {
-    js_receiver.call<void>("appendNodeWithNormalAndUV", face, p.X(), p.Y(),
-                           p.Z(), n.X(), n.Y(), n.Z(), uv.X(), uv.Y());
+    hasTexCoords = true;
+    vertices[face].call<void>("push", p.X());
+    vertices[face].call<void>("push", p.Y());
+    vertices[face].call<void>("push", p.Z());
+    normals[face].call<void>("push", n.X());
+    normals[face].call<void>("push", n.Y());
+    normals[face].call<void>("push", n.Z());
+    uvs[face].call<void>("push", uv.X());
+    uvs[face].call<void>("push", uv.Y());
   }
 
   void append_triangle(int face, int tri[3]) override {
-    val jsTri = val::array();
-    jsTri.call<void>("push", tri[0]);
-    jsTri.call<void>("push", tri[1]);
-    jsTri.call<void>("push", tri[2]);
-    js_receiver.call<void>("appendTriangle", face, jsTri);
+    triangles[face].call<void>("push", tri[0]);
+    triangles[face].call<void>("push", tri[1]);
+    triangles[face].call<void>("push", tri[2]);
+
+    // 更新当前面组的三角形计数
+    for (int i = 0; i < faceGroups["length"].as<int>(); i++) {
+      auto group = faceGroups[i];
+      if (group["faceId"].as<int>() == face) {
+        group.set("count", group["count"].as<int>() + 3);
+        break;
+      }
+    }
+  }
+
+  emscripten::val get_mesh_data() {
+    auto buff = emscripten::val::object();
+    buff.set("vertices", vertices);
+    buff.set("normals", normals);
+    if (hasTexCoords) {
+      buff.set("uvs", uvs);
+    }
+    buff.set("triangles", triangles);
+    buff.set("faceGroups", faceGroups);
+    return buff;
   }
 };
 
 class emscripten_mesh_edges_receiver
     : public flywave::topo::mesh_edges_receiver {
-  emscripten::val js_receiver;
+public:
+  emscripten::val lines = emscripten::val::array();
+  emscripten::val edgeGroups = emscripten::val::array();
+  int currentEdgeIndex = -1;
 
-  emscripten_mesh_edges_receiver(emscripten::val receiver)
-      : js_receiver(receiver) {}
+  void begin() override {
+    lines.call<void>("push", emscripten::val::array());
+    currentEdgeIndex++;
+  }
 
-  void begin() override { js_receiver.call<void>("begin"); }
-
-  void end() override { js_receiver.call<void>("end"); }
+  void end() override {}
 
   int append_edge(Quantity_Color color) override {
-    return js_receiver.call<int>("appendEdge", color.Red(), color.Green(),
-                                 color.Blue());
+    auto group = emscripten::val::object();
+    group.set("edgeId", currentEdgeIndex);
+    group.set("start", lines[currentEdgeIndex]["length"].as<int>());
+    group.set("count", 0);
+    edgeGroups.call<void>("push", group);
+    return currentEdgeIndex;
   }
 
   void append_point(int edge, gp_Pnt p) override {
-    js_receiver.call<void>("appendPoint", edge, p.X(), p.Y(), p.Z());
+    lines[edge].call<void>("push", p.X());
+    lines[edge].call<void>("push", p.Y());
+    lines[edge].call<void>("push", p.Z());
+
+    // 更新当前边组的顶点计数
+    for (int i = 0; i < edgeGroups["length"].as<int>(); i++) {
+      auto group = edgeGroups[i];
+      if (group["edgeId"].as<int>() == edge) {
+        group.set("count", group["count"].as<int>() + 1);
+        break;
+      }
+    }
+  }
+
+  emscripten::val get_edges_data() {
+    auto buff = emscripten::val::object();
+    buff.set("lines", lines);
+    buff.set("edgeGroups", edgeGroups);
+    return buff;
   }
 };
 
@@ -569,10 +640,6 @@ EMSCRIPTEN_BINDINGS(Topo) {
                     [](const topo_vector &self, const topo_vector &other) {
                       return self != other;
                     }));
-
-  class_<emscripten_mesh_receiver>("MeshReceiver").constructor<val>();
-
-  class_<emscripten_mesh_edges_receiver>("MeshEdgeReceiver").constructor<val>();
 
   emscripten::class_<geometry_object>("GeometryObject")
       .smart_ptr<std::shared_ptr<geometry_object>>("GeometryObject")
@@ -1125,13 +1192,25 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("notEquals", &shape::operator!=)
       .function("lessThan", &shape::operator<)
       // 网格生成方法
-      .function("writeTriangulation", &shape::write_triangulation)
+      .function("writeTriangulation",
+                emscripten::optional_override([](shape &self, double precision,
+                                                 double deflection,
+                                                 double angle, bool uv_coords) {
+                  emscripten_mesh_receiver m;
+                  int r = self.write_triangulation(m, precision, deflection,
+                                                   angle, uv_coords);
+                  if (r == 0) {
+                    return m.get_mesh_data();
+                  }
+                  return emscripten::val::null();
+                }))
       .function(
           "mesh",
           emscripten::optional_override(
-              [](shape &self, mesh_receiver &mesh, emscripten::val precision,
+              [](shape &self, emscripten::val precision,
                  emscripten::val deflection, emscripten::val angle,
                  emscripten::val uv_coords) {
+                emscripten_mesh_receiver m;
                 double prec =
                     precision.isUndefined() ? 1.0e-06 : precision.as<double>();
                 double defl =
@@ -1139,19 +1218,27 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 double ang = angle.isUndefined() ? 0.5 : angle.as<double>();
                 bool uv =
                     uv_coords.isUndefined() ? false : uv_coords.as<bool>();
-                return self.mesh(mesh, prec, defl, ang, uv);
+                int r = self.mesh(m, prec, defl, ang, uv);
+                if (r == 0) {
+                  return m.get_mesh_data();
+                }
+                return emscripten::val::null();
               }))
       .function("meshEdges",
-                emscripten::optional_override(
-                    [](shape &self, mesh_edges_receiver &receiver,
-                       emscripten::val precision, emscripten::val angle) {
-                      double prec = precision.isUndefined()
-                                        ? 1.0e-06
-                                        : precision.as<double>();
-                      double ang =
-                          angle.isUndefined() ? 0.1 : angle.as<double>();
-                      return self.mesh_edges(receiver, prec, ang);
-                    }))
+                emscripten::optional_override([](shape &self,
+                                                 emscripten::val precision,
+                                                 emscripten::val angle) {
+                  emscripten_mesh_edges_receiver receiver;
+                  double prec = precision.isUndefined()
+                                    ? 1.0e-06
+                                    : precision.as<double>();
+                  double ang = angle.isUndefined() ? 0.1 : angle.as<double>();
+                  int r = self.mesh_edges(receiver, prec, ang);
+                  if (r == 0) {
+                    return receiver.get_edges_data();
+                  }
+                  return emscripten::val::null();
+                }))
       // 选择器相关功能
       .function("selectVertices",
                 emscripten::select_overload<shape(const selector_ptr &) const>(
@@ -4476,14 +4563,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // 三角化方法
       .function(
           "triangulation",
-          emscripten::optional_override([](mesh &self, mesh_receiver &receiver,
+          emscripten::optional_override([](mesh &self, emscripten::val meshVal,
                                            emscripten::val deflectionVal,
                                            emscripten::val toleranceVal) {
+            emscripten_mesh_receiver receiver;
             double deflection =
                 deflectionVal.isUndefined() ? 0.01 : deflectionVal.as<double>();
             double tolerance =
                 toleranceVal.isUndefined() ? 1.e-6 : toleranceVal.as<double>();
             self.triangulation(receiver, deflection, tolerance);
+            return receiver.get_mesh_data();
           }));
 
   // 绑定基础selector类

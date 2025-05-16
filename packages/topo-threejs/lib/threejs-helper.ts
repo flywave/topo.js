@@ -1,167 +1,41 @@
-import { BufferGeometry, Float32BufferAttribute, EdgesGeometry } from "three";
-import { MeshCallback, MeshEdgeCallback } from "topo-wasm";
+import { BufferGeometry, Float32BufferAttribute, EdgesGeometry, BufferAttribute } from "three";
 
-export interface ThreeGeometry {
-  faces: BufferGeometry;
-  lines: BufferGeometry;
-}
+export function createGeometryFromMeshData(data: any): Array<BufferGeometry> {
+  const geometries: BufferGeometry[] = [];
 
-export class ThreeGeometryBuilder implements MeshCallback {
-  private facesGeometry: BufferGeometry;
-  private linesGeometry: BufferGeometry;
-  private currentFaceIndex = 0;
-  private vertices: number[] = [];
-  private normals: number[] = [];
-  private uvs: number[] = [];
-  private triangles: number[] = [];
-  private faceGroups: { start: number; count: number; faceId: number }[] = [];
+  // 为每个面组创建独立的几何体
+  data.faceGroups.forEach(({ faceId, start, count }: any) => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(data.vertices[faceId], 3));
 
-  constructor() {
-    this.facesGeometry = new BufferGeometry();
-    this.linesGeometry = new BufferGeometry();
-  }
-
-  begin(): void {
-    this.currentFaceIndex = 0;
-    this.vertices = [];
-    this.normals = [];
-    this.uvs = [];
-    this.triangles = [];
-    this.faceGroups = [];
-  }
-
-  end(): void {
-    this.facesGeometry.setAttribute(
-      'position',
-      new Float32BufferAttribute(this.vertices, 3)
-    );
-
-    if (this.normals.length > 0) {
-      this.facesGeometry.setAttribute(
-        'normal',
-        new Float32BufferAttribute(this.normals, 3)
-      );
+    if (data.normals && data.normals[faceId].length > 0) {
+      geometry.setAttribute('normal', new Float32BufferAttribute(data.normals[faceId], 3));
     } else {
-      this.facesGeometry.computeVertexNormals();
+      geometry.computeVertexNormals();
     }
 
-    if (this.uvs.length > 0) {
-      this.facesGeometry.setAttribute(
-        'uv',
-        new Float32BufferAttribute(this.uvs, 2)
-      );
+    if (data.uvs && data.uvs[faceId].length > 0) {
+      geometry.setAttribute('uv', new Float32BufferAttribute(data.uvs[faceId], 2));
     }
 
-    this.facesGeometry.setIndex(this.triangles);
+    geometry.setIndex(data.triangles[faceId]);
+    geometries.push(geometry);
+  });
 
-    if (this.faceGroups.length > 0) {
-      this.facesGeometry.userData.faceGroups = this.faceGroups;
-      this.faceGroups.forEach(({ start, count }) => {
-        this.facesGeometry.addGroup(start, count, 0);
-      });
-    }
-
-    // 自动生成边几何体
-    this.linesGeometry.copy(new EdgesGeometry(this.facesGeometry, 2));
-  }
-
-  appendFace(r: number, g: number, b: number): number {
-    const faceId = this.currentFaceIndex++;
-    this.faceGroups.push({
-      start: this.triangles.length,
-      count: 0, // 将在appendTriangle中更新
-      faceId
-    });
-    return faceId;
-  }
-
-  appendNode(faceIndex: number, x: number, y: number, z: number): void {
-    this.vertices.push(x, y, z);
-  }
-
-  appendNodeWithNormal(
-    faceIndex: number,
-    x: number, y: number, z: number,
-    nx: number, ny: number, nz: number
-  ): void {
-    this.appendNode(faceIndex, x, y, z);
-    this.normals.push(nx, ny, nz);
-  }
-
-  appendNodeWithNormalAndUV(
-    faceIndex: number,
-    x: number, y: number, z: number,
-    nx: number, ny: number, nz: number,
-    u: number, v: number
-  ): void {
-    this.appendNodeWithNormal(faceIndex, x, y, z, nx, ny, nz);
-    this.uvs.push(u, v);
-  }
-
-  appendTriangle(faceIndex: number, indices: [number, number, number]): void {
-    this.triangles.push(...indices);
-    const group = this.faceGroups.find(g => g.faceId === faceIndex);
-    if (group) group.count += 3;
-  }
-
-  getGeometry(): ThreeGeometry {
-    return {
-      faces: this.facesGeometry,
-      lines: this.linesGeometry
-    };
-  }
+  return geometries;
 }
 
-export class ThreeEdgeGeometryBuilder implements MeshEdgeCallback {
-  private linesGeometry: BufferGeometry;
-  private currentEdgeIndex = 0;
-  private vertices: number[] = [];
-  private edgeGroups: { start: number; count: number; edgeId: number }[] = [];
+export function createGeometryFromEdgeData(data: any): Array<BufferGeometry> {
+  const geometries: BufferGeometry[] = [];
 
-  constructor() {
-    this.linesGeometry = new BufferGeometry();
-  }
+  // 为每个边组创建独立的几何体
+  data.edgeGroups.forEach(({ edgeId, start, count }: any) => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(data.lines[edgeId], 3));
+    geometries.push(geometry);
+  });
 
-  begin(): void {
-    this.currentEdgeIndex = 0;
-    this.vertices = [];
-    this.edgeGroups = [];
-  }
-
-  end(): void {
-    this.linesGeometry.setAttribute(
-      'position',
-      new Float32BufferAttribute(this.vertices, 3)
-    );
-
-    if (this.edgeGroups.length > 0) {
-      this.linesGeometry.userData.edgeGroups = this.edgeGroups;
-      this.edgeGroups.forEach(({ start, count }) => {
-        this.linesGeometry.addGroup(start, count, 0);
-      });
-    }
-  }
-
-  appendEdge(r: number, g: number, b: number): number {
-    const edgeId = this.currentEdgeIndex++;
-    this.edgeGroups.push({
-      start: this.vertices.length / 3,
-      count: 0, // 将在appendNode中更新
-      edgeId
-    });
-    return edgeId;
-  }
-
-  appendNode(edgeIndex: number, x: number, y: number, z: number): void {
-    this.vertices.push(x, y, z);
-    // 更新当前边组的顶点计数
-    const group = this.edgeGroups.find(g => g.edgeId === edgeIndex);
-    if (group) group.count += 1;
-  }
-
-  getGeometry(): BufferGeometry {
-    return this.linesGeometry;
-  }
+  return geometries;
 }
 
 export function syncLinesFromFaces(
@@ -200,27 +74,6 @@ export function clearHighlights(geometry: BufferGeometry): void {
       g.materialIndex = 0;
     }
   });
-}
-
-export function highlightInGeometry(
-  elements: number[],
-  geometry: ThreeGeometry
-): void {
-  const groupIndices = new Set(elements);
-
-  // @ts-expect-error types not up to date
-  geometry.groups.forEach(
-    (group: { materialIndex: number }, groupIndex: number) => {
-      const shouldHighlight = groupIndices.has(groupIndex);
-      const isHighlighted = group.materialIndex === 1;
-      if (shouldHighlight === isHighlighted) return;
-
-      group.materialIndex = shouldHighlight ? 1 : 0;
-
-      // @ts-expect-error types not up to date
-      geometry.groupsNeedUpdate = true;
-    }
-  );
 }
 
 export function getFaceId(

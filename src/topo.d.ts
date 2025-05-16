@@ -201,42 +201,25 @@ export declare class Vector {
     delete(): void;
 }
 
-export declare interface MeshCallback {
-    begin(): void;
-    end(): void;
-    appendFace(r: number, g: number, b: number): number;
-    appendNode(faceIndex: number, x: number, y: number, z: number): void;
-    appendNodeWithNormal(
-        faceIndex: number,
-        x: number, y: number, z: number,
-        nx: number, ny: number, nz: number
-    ): void;
-    appendNodeWithNormalAndUV(
-        faceIndex: number,
-        x: number, y: number, z: number,
-        nx: number, ny: number, nz: number,
-        u: number, v: number
-    ): void;
-    appendTriangle(faceIndex: number, indices: [number, number, number]): void;
+interface MeshData {
+    vertices: Array<Float32Array>;
+    normals?: Array<Float32Array>;
+    uvs?: Array<Float32Array>;
+    triangles: Array<Uint32Array>;
+    faceGroups: Array<{
+        faceId: number;
+        start: number;
+        count: number;
+    }>;
 }
 
-export declare interface MeshEdgeCallback {
-    begin(): void;
-    end(): void;
-    appendEdge(r: number, g: number, b: number): number;
-    appendNode(edgeIndex: number, x: number, y: number, z: number): void;
-}
-
-export declare class MeshReceiver {
-    constructor(callback: MeshCallback);
-
-    delete(): void;
-}
-
-export declare class MeshEdgeReceiver {
-    constructor(callback: MeshEdgeCallback);
-
-    delete(): void;
+interface EdgeData {
+    lines: Array<Float32Array>;
+    edgeGroups: Array<{
+        edgeId: number;
+        start: number;
+        count: number;
+    }>;
 }
 
 export declare enum GeometryObjectType {
@@ -457,9 +440,9 @@ export declare class Shape extends GeometryObject {
     lessThan(other: Shape): boolean;
 
     // 网格生成
-    writeTriangulation(mesh: MeshReceiver, precision: number, deflection: number, angle: number, uvCoords: boolean): boolean;
-    mesh(mesh: MeshReceiver, precision?: number, deflection?: number, angle?: number, uvCoords?: boolean): number;
-    meshEdges(mesh: MeshEdgeReceiver, precision?: number, angle?: number): number;
+    writeTriangulation(precision: number, deflection: number, angle: number, uvCoords: boolean): MeshData | null;
+    mesh(precision?: number, deflection?: number, angle?: number, uvCoords?: boolean):  MeshData | null;
+    meshEdges(precision?: number, angle?: number): EdgeData | null;
 
     // 选择器相关
     static filter(selector: Selector, shapes: Shape[]): Shape[];
@@ -1309,7 +1292,7 @@ export declare class Mesh {
     mapShape(shape: TopoDS_Shape | Shape | Shape[]): void;
 
     // 三角化方法
-    triangulation(receiver: MeshReceiver, deflection?: number, tolerance?: number): void;
+    triangulation(deflection?: number, tolerance?: number): MeshData | null;
 
     delete(): void;
 }

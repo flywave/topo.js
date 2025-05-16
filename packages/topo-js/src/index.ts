@@ -14,3 +14,4 @@ export * from "./register";
 export * from "./geom";
 export * from "./shapes";
 export * from "./projection";
+export * from "./mesh";

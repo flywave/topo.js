@@ -20,6 +20,9 @@
     "files": [
         "dist"
     ],
+    "peerDependencies": {
+        "three": ">=0.174.0"
+    },
     "scripts": {
         "build": "vite build",
         "start": "NO_TYPES=true vite build --watch",
@@ -35,6 +38,7 @@
         "@types/flatbush": "^3.3.0",
         "@typescript-eslint/eslint-plugin": "^5.2.0",
         "@typescript-eslint/parser": "^5.4.0",
+        "@types/three": "^0.174.0",
         "chalk": "^5.2.0",
         "eslint": "^8.1.0",
         "jest-image-snapshot": "^6.1.0",
