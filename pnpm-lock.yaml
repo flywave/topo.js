@@ -32,6 +32,9 @@ importers:
       topo-wasm:
         specifier: workspace:*
         version: link:../topo-wasm
+      vite-plugin-wasm:
+        specifier: ^3.4.1
+        version: 3.4.1(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1))
       ws:
         specifier: ^8.5.0
         version: 8.18.2
@@ -69,6 +72,9 @@ importers:
 
   packages/topo-js:
     dependencies:
+      flatbush:
+        specifier: ^4.4.0
+        version: 4.4.0
       topo-threejs:
         specifier: workspace:*
         version: link:../topo-threejs
@@ -142,6 +148,12 @@ importers:
       vite-plugin-dts:
         specifier: ^3.5.2
         version: 3.9.1(@types/node@22.15.18)(rollup@3.28.0)(typescript@5.1.6)(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1))
+      vite-plugin-top-level-await:
+        specifier: ^1.5.0
+        version: 1.5.0(@swc/helpers@0.4.37)(rollup@3.28.0)(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1))
+      vite-plugin-wasm:
+        specifier: ^3.4.1
+        version: 3.4.1(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1))
       vitest:
         specifier: ^0.28.3
         version: 0.28.5(terser@5.39.1)
@@ -737,6 +749,15 @@ packages:
     engines: {node: '>=14.0.0'}
     peerDependencies:
       rollup: ^2.0.0||^3.0.0||^4.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
+  '@rollup/plugin-virtual@3.0.2':
+    resolution: {integrity: sha512-10monEYsBp3scM4/ND4LNH5Rxvh3e/cVeL3jWTgZ2SrQ+BmUoQcopVQvnaMcOnykb1VkxUFuDAN+0FnpTFRy2A==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
     peerDependenciesMeta:
       rollup:
         optional: true
@@ -2207,6 +2228,13 @@ packages:
   flat@5.0.2:
     resolution: {integrity: sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==}
     hasBin: true
+
+  flatbush@4.4.0:
+    resolution: {integrity: sha512-cf6G+sfy/+/FLH7Ls1URQ5GCRlXgwgqUZiEsMNrMZqb3Us3EkKmzUlKbnyoBy/4wI4oLJ+8cyCQoKJIVm92Fmg==}
+
+  flatqueue@2.0.3:
+    resolution: {integrity: sha512-RZCWZNkmxzUOh8jqEcEGZCycb3B8KAfpPwg3H//cURasunYxsg1eIvE+QDSjX+ZPHTIVfINfK1aLTrVKKO0i4g==}
+    engines: {node: '>= 12.17.0'}
 
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
@@ -4430,6 +4458,10 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
+  uuid@10.0.0:
+    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    hasBin: true
+
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     hasBin: true
@@ -4473,6 +4505,16 @@ packages:
     peerDependenciesMeta:
       vite:
         optional: true
+
+  vite-plugin-top-level-await@1.5.0:
+    resolution: {integrity: sha512-r/DtuvHrSqUVk23XpG2cl8gjt1aATMG5cjExXL1BUTcSNab6CzkcPua9BPEc9fuTP5UpwClCxUe3+dNGL0yrgQ==}
+    peerDependencies:
+      vite: '>=2.8'
+
+  vite-plugin-wasm@3.4.1:
+    resolution: {integrity: sha512-ja3nSo2UCkVeitltJGkS3pfQHAanHv/DqGatdI39ja6McgABlpsZ5hVgl6wuR8Qx5etY3T5qgDQhOWzc5RReZA==}
+    peerDependencies:
+      vite: ^2 || ^3 || ^4 || ^5 || ^6
 
   vite@4.5.14:
     resolution: {integrity: sha512-+v57oAaoYNnO3hIu5Z/tJRZjq5aHM2zDve9YZ8HngVHbhk66RStobhb1sqPMIPEleV6cNKYK4eGrAbE9Ulbl2g==}
@@ -5298,6 +5340,10 @@ snapshots:
       serialize-javascript: 6.0.2
       smob: 1.5.0
       terser: 5.39.1
+    optionalDependencies:
+      rollup: 3.28.0
+
+  '@rollup/plugin-virtual@3.0.2(rollup@3.28.0)':
     optionalDependencies:
       rollup: 3.28.0
 
@@ -6950,6 +6996,12 @@ snapshots:
       rimraf: 3.0.2
 
   flat@5.0.2: {}
+
+  flatbush@4.4.0:
+    dependencies:
+      flatqueue: 2.0.3
+
+  flatqueue@2.0.3: {}
 
   flatted@3.3.3: {}
 
@@ -9322,6 +9374,8 @@ snapshots:
 
   utils-merge@1.0.1: {}
 
+  uuid@10.0.0: {}
+
   uuid@8.3.2: {}
 
   uuid@9.0.1: {}
@@ -9381,6 +9435,20 @@ snapshots:
       - '@types/node'
       - rollup
       - supports-color
+
+  vite-plugin-top-level-await@1.5.0(@swc/helpers@0.4.37)(rollup@3.28.0)(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1)):
+    dependencies:
+      '@rollup/plugin-virtual': 3.0.2(rollup@3.28.0)
+      '@swc/core': 1.11.24(@swc/helpers@0.4.37)
+      uuid: 10.0.0
+      vite: 4.5.14(@types/node@22.15.18)(terser@5.39.1)
+    transitivePeerDependencies:
+      - '@swc/helpers'
+      - rollup
+
+  vite-plugin-wasm@3.4.1(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1)):
+    dependencies:
+      vite: 4.5.14(@types/node@22.15.18)(terser@5.39.1)
 
   vite@4.5.14(@types/node@22.15.18)(terser@5.39.1):
     dependencies:

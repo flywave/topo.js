@@ -49,6 +49,9 @@ export default {
       filename: "bundle.css",
     }),
   ],
+  experiments: {
+    asyncWebAssembly: true
+  },
   devServer: {
     static: path.join(__dirname, "dist"),
     compress: true,

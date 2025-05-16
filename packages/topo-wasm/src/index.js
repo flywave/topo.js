@@ -1,5 +1,5 @@
 import ocFullJS from "./topo.full.js";
-import ocFullWasm from "./topo.full.wasm";
+import ocFullWasm from "./topo.full.wasm?url";
 
 const initTopo = ({
   mainJS = ocFullJS,

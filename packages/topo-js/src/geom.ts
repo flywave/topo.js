@@ -1,14 +1,14 @@
 import { getTopo } from "./topolib";
 
-import {
+import type {
     gp_Ax1,
     gp_Ax2,
     gp_Ax3,
     gp_Vec,
     gp_XYZ,
     gp_Dir,
-    Vector,
     gp_Pnt,
+    Vector,
     PlaneName,
     Plane,
 } from "topo-wasm";
@@ -23,8 +23,9 @@ export type Point =
     | { XYZ: () => gp_XYZ; delete: () => void };
 
 export function isPoint(p: unknown): p is Point {
+    const oc = getTopo();
     if (Array.isArray(p)) return p.length === 3 || p.length === 2;
-    else if (p instanceof Vector) return true;
+    else if (p instanceof oc.Vector) return true;
     else if (p && typeof (p as any)?.XYZ === "function") return true;
     return false;
 }
@@ -81,22 +82,24 @@ export const makeVec = (vector: Point = [0, 0, 0]): gp_Vec => {
     if (Array.isArray(vector)) {
         if (vector.length === 3) return new oc.gp_Vec_4(...vector);
         else if (vector.length === 2) return new oc.gp_Vec_4(...vector, 0);
-    } else if (vector instanceof Vector) {
+    } else if (vector instanceof oc.Vector) {
         return new oc.gp_Vec_3(vector.toXYZ());
     } else if (vector.XYZ) return new oc.gp_Vec_3(vector.XYZ());
     return new oc.gp_Vec_4(0, 0, 0);
 };
 
 export function makeVector(vector: Point): Vector {
+    const oc = getTopo();
+
     if (Array.isArray(vector)) {
-        if (vector.length === 2) return new Vector(...vector, 0);
-        if (vector.length === 3) return new Vector(...vector);
-    } else if (vector instanceof Vector) {
+        if (vector.length === 2) return new oc.Vector(...vector, 0);
+        if (vector.length === 3) return new oc.Vector(...vector);
+    } else if (vector instanceof oc.Vector) {
         return vector;
     } else if (vector.XYZ) {
-        return new Vector(vector.XYZ());
+        return new oc.Vector(vector.XYZ());
     }
-    return new Vector();
+    return new oc.Vector();
 }
 
 type Direction = Point | "X" | "Y" | "Z";
@@ -190,6 +193,8 @@ export const createNamedPlane = (
     plane: PlaneName,
     sourceOrigin: Point | number = [0, 0, 0]
 ): Plane => {
+    const oc = getTopo();
+
     const config = PLANES_CONFIG[plane];
     if (!config) throw new Error(`Could not find plane ${plane}`);
 
@@ -199,5 +204,5 @@ export const createNamedPlane = (
     } else {
         origin = makeVector(sourceOrigin);
     }
-    return Plane.named(plane, origin);
+    return oc.Plane.named(plane, origin);
 };

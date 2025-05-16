@@ -108,7 +108,7 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 		}
 		filename = filepath.Join(filename, childName+extension)
 
-		if _, err := os.Stat(filename); os.IsNotExist(err) {
+		if _, err := os.Stat(filename); !os.IsNotExist(err) {
 			fmt.Printf("Processing %s\n", child.Spelling())
 			output, err := processFunc(workDir, tu, preamble, child, typedefGen(tu), templateTypedefGen(tu))
 			if err != nil {

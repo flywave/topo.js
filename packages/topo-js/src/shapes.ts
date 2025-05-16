@@ -1,6 +1,6 @@
-import { Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound, Adaptor3d_Surface } from "topo-wasm";
+import type { Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound, Adaptor3d_Surface } from "topo-wasm";
 
-import {
+import type {
     TopoDS_Face,
     TopoDS_Shape,
     TopoDS_Edge,
@@ -15,7 +15,7 @@ import {
 import { getTopo } from "./topolib";
 import { WrappingObj } from "./register";
 
-export {
+export type {
     Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound
 }
 
@@ -76,16 +76,18 @@ export function cast(shape: TopoDS_Shape): AnyShape {
 export type Shape3D = Shell | Solid | CompSolid | Compound;
 
 export function isShape3D(shape: AnyShape): shape is Shape3D {
+    const oc = getTopo();
     return (
-        shape instanceof Shell ||
-        shape instanceof Solid ||
-        shape instanceof CompSolid ||
-        shape instanceof Compound
+        shape instanceof oc.Shell ||
+        shape instanceof oc.Solid ||
+        shape instanceof oc.CompSolid ||
+        shape instanceof oc.Compound
     );
 }
 
 export function isWire(shape: AnyShape): shape is Wire {
-    return shape instanceof Wire;
+    const oc = getTopo();
+    return shape instanceof oc.Wire;
 }
 
 export type SurfaceType =

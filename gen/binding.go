@@ -352,6 +352,7 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	if !filter.FilterAbstractClass(theClass) {
 		return output
 	}
+	className := theClass.Type().Spelling()
 
 	theClass.Visit(func(child, parent clang.Cursor) clang.ChildVisitResult {
 		if child.Kind() == clang.Cursor_Constructor {
@@ -378,7 +379,11 @@ func (e *EmbindBindings) processSimpleConstructor(theClass clang.Cursor) string 
 	if !standardConstructor.IsNull() {
 		for i := 0; int32(i) < standardConstructor.NumArguments(); i++ {
 			arg := standardConstructor.Argument(uint32(i))
-			argTypes = append(argTypes, arg.Type().Spelling())
+			typeSpelling := arg.Type().Spelling()
+			if strings.HasPrefix(typeSpelling, "const Helper") && !strings.Contains(typeSpelling, "::") {
+				typeSpelling = strings.Replace(typeSpelling, "Helper", className+"::Helper", 1)
+			}
+			argTypes = append(argTypes, typeSpelling)
 		}
 	}
 
@@ -465,9 +470,7 @@ func (e *EmbindBindings) getSingleArgumentBinding(argNames bool, isConstructor b
 				if strings.HasPrefix(typename, "const BRepGProp_MeshObjType") && !strings.Contains(typename, "::") {
 					typename = strings.Replace(typename, "BRepGProp_MeshObjType", className+"::BRepGProp_MeshObjType", 1)
 				}
-				if strings.HasPrefix(typename, "const Helper") && !strings.Contains(typename, "::") {
-					typename = strings.Replace(typename, "Helper", className+"::Helper", 1)
-				}
+
 			}
 			if arg.Type().Kind() == clang.Type_LValueReference {
 				isConstRef := arg.Type().IsConstQualifiedType()
@@ -580,6 +583,7 @@ func (b *EmbindBindings) processMethodOrProperty(theClass, method clang.Cursor, 
 					if strings.HasPrefix(typename, "const BRepGProp_MeshObjType") && !strings.Contains(typename, "::") {
 						typename = strings.Replace(typename, "BRepGProp_MeshObjType", className+"::BRepGProp_MeshObjType", 1)
 					}
+
 				}
 				return typename
 			}

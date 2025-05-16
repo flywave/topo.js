@@ -48,7 +48,7 @@ export class Curve2D extends WrappingObj<Handle_Geom2d_Curve> {
     return this.wrapped.get();
   }
 
-  value(parameter: number): Point2D {
+  _value(parameter: number): Point2D {
     const pnt = this.innerCurve.Value(parameter);
     const vec: Point2D = [pnt.X(), pnt.Y()];
     pnt.delete();
@@ -56,11 +56,11 @@ export class Curve2D extends WrappingObj<Handle_Geom2d_Curve> {
   }
 
   get firstPoint(): Point2D {
-    return this.value(this.firstParameter);
+    return this._value(this.firstParameter);
   }
 
   get lastPoint(): Point2D {
-    return this.value(this.lastParameter);
+    return this._value(this.lastParameter);
   }
 
   get firstParameter(): number {

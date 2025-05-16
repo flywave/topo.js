@@ -1,7 +1,7 @@
-import type { gp_Ax2, } from "topo-wasm";
-import { Vector, Shape } from "topo-wasm";
+import type { gp_Ax2, Vector, Shape } from "topo-wasm";
 import { asDir, asPnt, makeAx2, Point, makeVector } from "../geom";
 import { WrappingObj } from "../register";
+import { getTopo } from "../topolib";
 
 export type CubeFace = "front" | "back" | "top" | "bottom" | "left" | "right";
 export type ProjectionPlane =
@@ -45,11 +45,12 @@ export function lookFromPlane(projectionPlane: ProjectionPlane) {
 }
 
 function defaultXDir(direction: Point) {
+  const oc = getTopo();
   const dir = makeVector(direction);
-  let yAxis: Vector = new Vector(0, 0, 1);
+  let yAxis: Vector = new oc.Vector(0, 0, 1);
   let xAxis: Vector = yAxis.cross(dir);
   if (xAxis.length() === 0) {
-    yAxis = new Vector([0, 1, 0]);
+    yAxis = new oc.Vector([0, 1, 0]);
     xAxis = yAxis.cross(dir);
   }
   return xAxis.normalized();
@@ -67,19 +68,19 @@ export class ProjectionCamera extends WrappingObj<gp_Ax2> {
   }
 
   get position() {
-    return new Vector(this.wrapped.Location());
+    return new this.oc.Vector(this.wrapped.Location());
   }
 
   get direction() {
-    return new Vector(this.wrapped.Direction());
+    return new this.oc.Vector(this.wrapped.Direction());
   }
 
   get xAxis() {
-    return new Vector(this.wrapped.XDirection());
+    return new this.oc.Vector(this.wrapped.XDirection());
   }
 
   get yAxis() {
-    return new Vector(this.wrapped.YDirection());
+    return new this.oc.Vector(this.wrapped.YDirection());
   }
 
   value() {
@@ -108,7 +109,7 @@ export class ProjectionCamera extends WrappingObj<gp_Ax2> {
 
   lookAt(shape: Shape | Point) {
     const lootAtPoint = makeVector(
-      shape instanceof Shape ? shape.bbox().center() : shape
+      shape instanceof this.oc.Shape ? shape.bbox().center() : shape
     );
     const direction = this.position.sub(lootAtPoint).normalized();
 

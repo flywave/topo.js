@@ -33,7 +33,7 @@ export function curvesAsEdgesOnPlane(curves: Curve2D[], plane: Plane) {
 
     const edges = curves.map((curve) => {
         const curve3d = oc.GeomLib.To3d(ax, curve.wrapped);
-        return new Edge(new oc.BRepBuilderAPI_MakeEdge_24(curve3d).Edge());
+        return new oc.Edge(new oc.BRepBuilderAPI_MakeEdge_24(curve3d).Edge());
     });
 
     gc();
@@ -51,7 +51,7 @@ export const curvesAsEdgesOnSurface = (
         const edgeBuilder = r(
             new oc.BRepBuilderAPI_MakeEdge_30(curve.wrapped, geomSurf)
         );
-        return new Edge(edgeBuilder.Edge());
+        return new oc.Edge(edgeBuilder.Edge());
     });
 
     gc();

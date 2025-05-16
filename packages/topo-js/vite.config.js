@@ -1,6 +1,8 @@
 import { resolve } from "path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
+import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
 
 export default defineConfig({
   build: {
@@ -12,12 +14,19 @@ export default defineConfig({
     },
     sourcemap: true,
     minify: false,
+    rollupOptions: {
+      external: ['topo.full.wasm'] // Add this if you want to explicitly externalize
+    }
   },
   plugins: [
     process.env.NO_TYPES?.toLowerCase() === "true"
       ? null
       : dts({
           rollupTypes: true,
-        }),
-  ].filter((a) => !!a)
+        }), wasm(),
+        topLevelAwait()
+  ].filter((a) => !!a),
+  optimizeDeps: {
+    exclude: ['topo-wasm']
+  }
 });
