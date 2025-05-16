@@ -3,6 +3,7 @@ package gen
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -1157,7 +1158,16 @@ func (t *TypescriptBindings) processEnum(theEnum clang.Cursor) string {
 	var output strings.Builder
 	var bindingsOutput strings.Builder
 
-	bindingsOutput.WriteString(fmt.Sprintf("export declare type %s = {\n", theEnum.Spelling()))
+	enumName := theEnum.Spelling()
+
+	if strings.Contains(enumName, "unnamed ") {
+		file, _, _, _ := theEnum.Location().FileLocation()
+		enumName = filepath.Base(file.Name())
+		enumName = strings.TrimSuffix(enumName, ".hxx")
+		enumName = strings.TrimSuffix(enumName, ".lxx")
+	}
+
+	bindingsOutput.WriteString(fmt.Sprintf("export declare type %s = {\n", enumName))
 	theEnum.Visit(func(enumChild, parent clang.Cursor) clang.ChildVisitResult {
 		bindingsOutput.WriteString(fmt.Sprintf("  %s: {};\n", enumChild.Spelling()))
 		return clang.ChildVisit_Continue
@@ -1165,6 +1175,6 @@ func (t *TypescriptBindings) processEnum(theEnum clang.Cursor) string {
 	bindingsOutput.WriteString("}\n\n")
 
 	output.WriteString(bindingsOutput.String())
-	t.exports = append(t.exports, theEnum.Spelling())
+	t.exports = append(t.exports, enumName)
 	return output.String()
 }

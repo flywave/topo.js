@@ -8,7 +8,13 @@ import (
 
 func FilterClass(theClass clang.Cursor, additionalInfo interface{}) bool {
 	className := theClass.Spelling()
+	if className == "" {
+		className = theClass.Type().Spelling()
+	}
 
+	if className == "" {
+		return false
+	}
 	// Out of scope classes
 	if strings.HasPrefix(className, "D3DHost") || strings.HasPrefix(className, "IVtk") {
 		return false
@@ -116,7 +122,6 @@ func FilterClass(theClass clang.Cursor, additionalInfo interface{}) bool {
 		"Xw_Window",
 		"StepKinematics_UnconstrainedPair",
 		"StepKinematics_UnconstrainedPairValue",
-		"VectorOfPoint",
 		"Resource_DataMapOfAsciiStringAsciiString",
 	}
 

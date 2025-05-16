@@ -21,8 +21,6 @@
 #include <NCollection_CellFilter.hxx>
 #include <Precision.hxx>
 
-typedef NCollection_Vector<gp_XYZ> VectorOfPoint;
-
 //! Class BRepExtrema_VertexInspector
 //!   derived from NCollection_CellFilter_InspectorXYZ
 //!   This class define the Inspector interface for CellFilter algorithm,
@@ -75,7 +73,7 @@ public:
 private:
   Standard_Real myTol;
   Standard_Boolean myIsNeedAdd;
-  VectorOfPoint myPoints;
+  NCollection_Vector<gp_XYZ> myPoints;
   gp_XYZ myCurrent;
 };
 

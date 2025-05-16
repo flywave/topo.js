@@ -65,10 +65,80 @@ diff --color -ruN ../go-topo/external/ogg/src/BRepAlgoAPI/BRepAlgoAPI_Algo.hxx .
  protected:
  
    //! Empty constructor
+diff --color -ruN ../go-topo/external/ogg/src/BRepBlend/BRepBlend_CSWalking.hxx ./external/ogg/src/BRepBlend/BRepBlend_CSWalking.hxx
+--- ../go-topo/external/ogg/src/BRepBlend/BRepBlend_CSWalking.hxx	2023-07-21 23:36:51
++++ ./external/ogg/src/BRepBlend/BRepBlend_CSWalking.hxx	2025-05-14 13:56:02
+@@ -55,9 +55,9 @@
+   
+   Standard_EXPORT Standard_Boolean Complete (Blend_CSFunction& F, const Standard_Real Pmin);
+   
+-    Standard_Boolean IsDone() const;
++  Standard_Boolean IsDone() const;
+   
+-    const Handle(BRepBlend_Line)& Line() const;
++  const Handle(BRepBlend_Line)& Line() const;
+ 
+ private:
+ 
+@@ -129,6 +129,8 @@
+ #define Blend_CSWalking BRepBlend_CSWalking
+ #define Blend_CSWalking_hxx <BRepBlend_CSWalking.hxx>
+ 
++#include <Blend_CSWalking.lxx>
++
+ #undef TheVertex
+ #undef TheVertex_hxx
+ #undef TheArc
+@@ -161,8 +163,6 @@
+ #undef TheLine_hxx
+ #undef Blend_CSWalking
+ #undef Blend_CSWalking_hxx
+-
+-
+ 
+ 
+ #endif // _BRepBlend_CSWalking_HeaderFile
+diff --color -ruN ../go-topo/external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.cxx ./external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.cxx
+--- ../go-topo/external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.cxx	2023-07-21 23:36:51
++++ ./external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.cxx	2025-05-16 07:53:26
+@@ -1034,10 +1034,10 @@
+ //purpose  : 
+ //=======================================================================
+ 
+-IntCurvesFace_Intersector&  BRepClass3d_SolidExplorer::Intersector(const TopoDS_Face& F) const  { 
++IntCurvesFace_Intersector*  BRepClass3d_SolidExplorer::Intersector(const TopoDS_Face& F) const  { 
+   void *ptr = (void*)(myMapOfInter.Find(F));
+   IntCurvesFace_Intersector& curr = (*((IntCurvesFace_Intersector *)ptr));
+-  return curr;
++  return &curr;
+ }
+ 
+ //=======================================================================
+diff --color -ruN ../go-topo/external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.hxx ./external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.hxx
+--- ../go-topo/external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.hxx	2023-07-21 23:36:51
++++ ./external/ogg/src/BRepClass3d/BRepClass3d_SolidExplorer.hxx	2025-05-16 07:53:26
+@@ -131,7 +131,7 @@
+ 
+   Standard_EXPORT const TopoDS_Shape& GetShape() const;
+   
+-  Standard_EXPORT IntCurvesFace_Intersector& Intersector (const TopoDS_Face& F) const;
++  Standard_EXPORT IntCurvesFace_Intersector* Intersector (const TopoDS_Face& F) const;
+ 
+   //! Return UB-tree instance which is used for edge / vertex checks.
+   const BRepClass3d_BndBoxTree& GetTree () {return myTree;}
 diff --color -ruN ../go-topo/external/ogg/src/BRepExtrema/BRepExtrema_ProximityValueTool.hxx ./external/ogg/src/BRepExtrema/BRepExtrema_ProximityValueTool.hxx
 --- ../go-topo/external/ogg/src/BRepExtrema/BRepExtrema_ProximityValueTool.hxx	2023-07-21 23:36:51
-+++ ./external/ogg/src/BRepExtrema/BRepExtrema_ProximityValueTool.hxx	2025-05-14 11:23:27
-@@ -66,6 +66,12 @@
++++ ./external/ogg/src/BRepExtrema/BRepExtrema_ProximityValueTool.hxx	2025-05-16 09:32:51
+@@ -21,8 +21,6 @@
+ #include <NCollection_CellFilter.hxx>
+ #include <Precision.hxx>
+ 
+-typedef NCollection_Vector<gp_XYZ> VectorOfPoint;
+-
+ //! Class BRepExtrema_VertexInspector
+ //!   derived from NCollection_CellFilter_InspectorXYZ
+ //!   This class define the Inspector interface for CellFilter algorithm,
+@@ -66,10 +64,16 @@
    //! Implementation of inspection method
    Standard_EXPORT NCollection_CellFilter_Action Inspect (const Standard_Integer theTarget);
  
@@ -81,6 +151,11 @@ diff --color -ruN ../go-topo/external/ogg/src/BRepExtrema/BRepExtrema_ProximityV
  private:
    Standard_Real myTol;
    Standard_Boolean myIsNeedAdd;
+-  VectorOfPoint myPoints;
++  NCollection_Vector<gp_XYZ> myPoints;
+   gp_XYZ myCurrent;
+ };
+ 
 diff --color -ruN ../go-topo/external/ogg/src/BlendFunc/BlendFunc_ChamfInv.hxx ./external/ogg/src/BlendFunc/BlendFunc_ChamfInv.hxx
 --- ../go-topo/external/ogg/src/BlendFunc/BlendFunc_ChamfInv.hxx	2023-07-21 23:36:51
 +++ ./external/ogg/src/BlendFunc/BlendFunc_ChamfInv.hxx	2025-05-08 09:24:18
@@ -111,6 +186,18 @@ diff --color -ruN ../go-topo/external/ogg/src/BlendFunc/BlendFunc_ConstThroatInv
    Standard_EXPORT virtual void Set (const Standard_Real theThroat,
                                      const Standard_Real,
                                      const Standard_Integer Choix) Standard_OVERRIDE;
+diff --color -ruN ../go-topo/external/ogg/src/Express/Express_Entity.hxx ./external/ogg/src/Express/Express_Entity.hxx
+--- ../go-topo/external/ogg/src/Express/Express_Entity.hxx	2023-07-21 23:36:51
++++ ./external/ogg/src/Express/Express_Entity.hxx	2025-05-14 13:30:49
+@@ -57,7 +57,7 @@
+   Standard_EXPORT void SetAbstractFlag (const Standard_Boolean theIsAbstract);
+ 
+   //! Returns abstract flag.
+-  Standard_EXPORT inline Standard_Boolean AbstractFlag() const;
++  Standard_EXPORT Standard_Boolean AbstractFlag() const;
+ 
+   DEFINE_STANDARD_RTTIEXT(Express_Entity, Express_Item)
+ 
 diff --color -ruN ../go-topo/external/ogg/src/Graphic3d/Graphic3d_Buffer.hxx ./external/ogg/src/Graphic3d/Graphic3d_Buffer.hxx
 --- ../go-topo/external/ogg/src/Graphic3d/Graphic3d_Buffer.hxx	2023-07-21 23:36:51
 +++ ./external/ogg/src/Graphic3d/Graphic3d_Buffer.hxx	2025-05-08 09:25:30
@@ -145,6 +232,18 @@ diff --color -ruN ../go-topo/external/ogg/src/NCollection/NCollection_CellFilter
  
    public:
      NCollection_LocalArray<Cell_IndexType, 10> index;
+diff --color -ruN ../go-topo/external/ogg/src/Select3D/Select3D_SensitiveCircle.hxx ./external/ogg/src/Select3D/Select3D_SensitiveCircle.hxx
+--- ../go-topo/external/ogg/src/Select3D/Select3D_SensitiveCircle.hxx	2023-07-21 23:36:51
++++ ./external/ogg/src/Select3D/Select3D_SensitiveCircle.hxx	2025-05-16 07:53:26
+@@ -40,7 +40,7 @@
+   Select3D_SensitiveCircle (const Handle(SelectMgr_EntityOwner)& theOwnerId,
+                             const gp_Circ& theCircle,
+                             const Standard_Boolean theIsFilled,
+-                            const Standard_Integer /*theNbPnts*/)
++                            const Standard_Integer theNbPnts)
+   : Select3D_SensitiveCircle (theOwnerId, theCircle, theIsFilled)
+   { }
+ 
 diff --color -ruN ../go-topo/external/ogg/src/V3d/V3d_DirectionalLight.hxx ./external/ogg/src/V3d/V3d_DirectionalLight.hxx
 --- ../go-topo/external/ogg/src/V3d/V3d_DirectionalLight.hxx	2023-07-21 23:36:51
 +++ ./external/ogg/src/V3d/V3d_DirectionalLight.hxx	2025-05-08 09:26:36

@@ -87,41 +87,6 @@ func IsAbstractClass(theClass clang.Cursor, tu clang.TranslationUnit) bool {
 	return numPureVirtualMethods > numImplementedPureVirtualMethods
 }
 
-func ShouldProcessClass(child clang.Cursor, headerFiles []string, filterClass func(clang.Cursor) bool) bool {
-	if child.Definition().IsNull() || !child.Equal(child.Definition()) {
-		return false
-	}
-
-	if !filterClass(child) {
-		return false
-	}
-
-	if (child.Kind() == clang.Cursor_ClassDecl || child.Kind() == clang.Cursor_StructDecl) &&
-		child.Type().NumTemplateArguments() != -1 {
-		fmt.Printf("Cannot handle template classes (must be typedef'd): %s\n", child.Spelling())
-		return false
-	}
-
-	if child.Kind() == clang.Cursor_ClassDecl || child.Kind() == clang.Cursor_StructDecl {
-		var baseSpec []clang.Cursor
-		child.Visit(func(c, parent clang.Cursor) clang.ChildVisitResult {
-			if c.Kind() == clang.Cursor_CXXBaseSpecifier && c.AccessSpecifier() == clang.AccessSpecifier_Public {
-				baseSpec = append(baseSpec, c)
-			}
-			return clang.ChildVisit_Continue
-		})
-
-		if len(baseSpec) > 1 {
-			fmt.Printf("cannot handle multiple base classes (%s)\n", child.Spelling())
-			return false
-		}
-
-		return true
-	}
-
-	return false
-}
-
 func GetMethodOverloadPostfix(theClass, method clang.Cursor, children []clang.Cursor) (string, int) {
 	theClass.Visit(func(child, parent clang.Cursor) clang.ChildVisitResult {
 		children = append(children, child)

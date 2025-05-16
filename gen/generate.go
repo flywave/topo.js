@@ -49,14 +49,16 @@ func filterTemplates(workDir string, child clang.Cursor, customBuild bool) bool 
 		return file.Name() == "myMain.h" &&
 			child.Kind() == clang.Cursor_TypedefDecl &&
 			(child.TypedefDeclUnderlyingType().Kind() == clang.Type_Elaborated ||
-				child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed)
+				child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed) &&
+			filter.FilterClass(child, nil)
 	}
 	sfile, _, _, _ := child.Extent().Start().FileLocation()
 	return strings.HasPrefix(sfile.Name(), path.Join(workDir, oggSourceBasePath)) &&
 		filter.FilterPackages(filepath.Base(filepath.Dir(file.Name()))) &&
 		child.Kind() == clang.Cursor_TypedefDecl &&
 		(child.TypedefDeclUnderlyingType().Kind() == clang.Type_Elaborated ||
-			child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed)
+			child.TypedefDeclUnderlyingType().Kind() == clang.Type_Unexposed) &&
+		filter.FilterClass(child, nil)
 }
 
 func filterEnums(workDir string, child clang.Cursor, customBuild bool) bool {
@@ -106,9 +108,17 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 		if childName == "" {
 			childName = child.Type().Spelling()
 		}
+
+		if strings.Contains(childName, "unnamed ") {
+			file, _, _, _ := child.Location().FileLocation()
+			childName = filepath.Base(file.Name())
+			childName = strings.TrimSuffix(childName, ".hxx")
+			childName = strings.TrimSuffix(childName, ".lxx")
+		}
+
 		filename = filepath.Join(filename, childName+extension)
 
-		if _, err := os.Stat(filename); !os.IsNotExist(err) {
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			fmt.Printf("Processing %s\n", child.Spelling())
 			output, err := processFunc(workDir, tu, preamble, child, typedefGen(tu), templateTypedefGen(tu))
 			if err != nil {
@@ -116,6 +126,10 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 					fmt.Println(err.Error())
 				}
 				continue
+			}
+
+			if strings.Contains(filename, "anonymous-") {
+				fmt.Printf("Error writing file %s: %s\n", filename, err)
 			}
 
 			if err := os.WriteFile(filename, []byte(output), 0644); err != nil {
