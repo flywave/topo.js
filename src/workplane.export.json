@@ -1,6 +1,15 @@
 [
     {
         "exports": [
+            "ShapeObjectType",
+            "CombineModeType",
+            "CenterOption",
+            "FaceIndexType"
+        ],
+        "kind": "enum"
+    },
+    {
+        "exports": [
             "Workplane"
         ],
         "kind": "class"

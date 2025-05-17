@@ -1,0 +1,14 @@
+[
+    {
+        "exports": [
+            "AssemblyExportMode"
+        ],
+        "kind": "enum"
+    },
+    {
+        "exports": [
+            "Assembly"
+        ],
+        "kind": "class"
+    }
+]

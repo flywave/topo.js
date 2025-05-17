@@ -1,6 +1,12 @@
 [
     {
         "exports": [
+            "SketchMode"
+        ],
+        "kind": "enum"
+    },
+    {
+        "exports": [
             "Sketch"
         ],
         "kind": "class"
