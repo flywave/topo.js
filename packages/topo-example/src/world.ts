@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import initTopo, { CuboidParams, TopoInstance } from "topo-wasm"
+import initTopo, { VentilationPavilionParams, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
 
 export default class World {
@@ -21,17 +21,24 @@ export default class World {
   }
   
   createCube(tp: TopoInstance) {
-    let params : CuboidParams = {
-      length: 10,
-      width: 10,
-      height: 10,
+
+    let params: VentilationPavilionParams = {
+        topLength: 400.0,    // 顶长200mm
+        middleLength: 300.0, // 中部长度300mm
+        bottomLength: 400.0, // 底长400mm
+        topWidth: 350.0,     // 顶宽150mm
+        middleWidth: 250.0,  // 中部宽度250mm
+        bottomWidth: 350.0,  // 底宽350mm
+        topHeight: 50.0,     // 顶高50mm
+        height: 150.0,       // 总高300mm
+        baseHeight: 30.0     // 基础高100mm
     }
 
-    const shp =  tp.createCuboid(params)
+    const shp =  tp.createVentilationPavilion(params as VentilationPavilionParams)
     const shape = new tp.Shape(shp,false);
     const ff = shape.autoCast();
     const geometries = mesh(shape)
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 
     const group = new THREE.Group()
     geometries.forEach((geometry) => {
