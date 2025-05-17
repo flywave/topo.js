@@ -14,10 +14,10 @@ import (
 
 func collectIncludePaths(workDir string, basePath string) error {
 	includePaths = []string{
-		path.Join(workDir, "external/rapidjson/include"),
-		path.Join(workDir, "external/freetype2/include/freetype"),
-		path.Join(workDir, "external/freetype2/include"),
-		path.Join(workDir, "external/libboost/boost_1_67_0"),
+		path.Join(workDir, "/../go-topo/external/rapidjson/include"),
+		path.Join(workDir, "/../go-topo/external/freetype2/include/freetype"),
+		path.Join(workDir, "/../go-topo/external/freetype2/include"),
+		path.Join(workDir, "/../go-topo/external/libboost/boost_1_67_0"),
 		path.Join(workDir, "/../go-topo/src"),
 	}
 

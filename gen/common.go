@@ -51,10 +51,10 @@ func uniqueStrings(input []string) []string {
 
 var (
 	additionalIncludePaths = []string{
-		"/external/rapidjson/include",
-		"/external/freetype2/include/freetype",
-		"/external/freetype2/include",
-		"/external/libboost/boost_1_67_0",
+		"/../go-topo/external/rapidjson/include",
+		"/../go-topo/external/freetype2/include/freetype",
+		"/../go-topo/external/freetype2/include",
+		"/../go-topo/external/libboost/boost_1_67_0",
 	}
 )
 
