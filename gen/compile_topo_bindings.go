@@ -2,53 +2,83 @@ package gen
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"sync"
-
-	"github.com/flywave/jstopo/gen/filter"
 )
 
 const (
-	topoSourceBasePath = "/../go-topo/src/"
+	topoBindingsBasePath = "/src/"
 )
 
-func collectTopoFilesToBuild(workDir string, basePath string) ([]string, error) {
-	var files []string
+func writeTypescriptDefs(workDir string, targetDir string, sourceDir string, module string) error {
+	dts, err := os.ReadFile(path.Join(workDir, sourceDir, module+".d.ts"))
+	if err != nil {
+		return err
+	}
 
-	err := filepath.WalkDir(path.Join(workDir, basePath), func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !filter.FilterSourceFile(path) {
-			return nil
+	export, err := os.ReadFile(path.Join(workDir, sourceDir, module+".export.json"))
+	if err != nil {
+		return err
+	}
+
+	type tsExport struct {
+		Kind    string   `json:"kind"`
+		Exports []string `json:"exports"`
+	}
+
+	src := []tsExport{}
+
+	err = json.Unmarshal(export, &src)
+	if err != nil {
+		return err
+	}
+
+	out := &TypescriptDef{
+		Dts: string(dts),
+	}
+	if len(src) == 1 {
+		out.Exports = src[0].Exports
+		out.Kind = src[0].Kind
+	} else {
+		defs := []struct {
+			Kind    string   `json:"kind"`
+			Exports []string `json:"exports"`
+		}{}
+		for _, v := range src {
+			defs = append(defs, v)
 		}
 
-		baseName := filepath.Base(path)
-		if !filter.FilterTopoFile(baseName) {
-			return nil
-		}
+		out.Defs = defs
+	}
 
-		files = append(files, path)
-		return nil
-	})
+	export, err = json.Marshal(out)
+	if err != nil {
+		return err
+	}
 
-	return files, err
+	err = os.WriteFile(path.Join(workDir, targetDir, module+".d.ts.json"), export, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func BuildTopoSource(workDir string, args map[string]string) {
+func GenSourceTypescriptDefs(workDir string) {
+	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "geometry")
+	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "primitives")
+	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "topo")
+}
+
+func BuildTopoBindingsSource(workDir string, args map[string]string) {
 	if err := collectIncludePaths(workDir, oggSourceBasePath); err != nil {
 		panic(err)
 	}
 
-	filesToBuild, err := collectTopoFilesToBuild(workDir, topoSourceBasePath)
+	filesToBuild, err := collectFilesToBuild(workDir, topoBindingsBasePath, false)
 	if err != nil {
 		panic(err)
 	}
@@ -86,7 +116,7 @@ func BuildTopoSource(workDir string, args map[string]string) {
 				case <-ctx.Done():
 					return
 				default:
-					BuildObjectFile(workDir, "build/src", topoSourceBasePath, args, file, errChan)
+					BuildObjectFile(workDir, "build/src", topoBindingsBasePath, args, file, errChan)
 				}
 			}
 		}()

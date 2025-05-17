@@ -33,7 +33,21 @@ func TestBuildBindings(t *testing.T) {
 	CompileCustomCodeBindings(workDir, args)
 }
 
-func TestBuildSource(t *testing.T) {
+func TestBuildTopoBindingsSource(t *testing.T) {
+	workDir, _ := GetResourcePath("../")
+
+	// 准备构建参数，参考 generate_test.go 的模式
+	args := map[string]string{
+		"threading": "multi-threaded", // 默认使用单线程模式
+	}
+
+	// 调用 BuildSource 函数
+	BuildTopoBindingsSource(workDir, args)
+
+	GenSourceTypescriptDefs(workDir)
+}
+
+func TestBuildTopoSource(t *testing.T) {
 	workDir, _ := GetResourcePath("../")
 
 	// 准备构建参数，参考 generate_test.go 的模式
@@ -43,8 +57,6 @@ func TestBuildSource(t *testing.T) {
 
 	// 调用 BuildSource 函数
 	BuildTopoSource(workDir, args)
-
-	GenSourceTypescriptDefs(workDir)
 }
 
 func TestRunBuild(t *testing.T) {

@@ -18,6 +18,7 @@ func collectIncludePaths(workDir string, basePath string) error {
 		path.Join(workDir, "external/freetype2/include/freetype"),
 		path.Join(workDir, "external/freetype2/include"),
 		path.Join(workDir, "external/libboost/boost_1_67_0"),
+		path.Join(workDir, "/../go-topo/src"),
 	}
 
 	return filepath.WalkDir(path.Join(workDir, basePath), func(path string, d fs.DirEntry, err error) error {
