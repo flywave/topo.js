@@ -1,10 +1,11 @@
 import { BufferGeometry, Float32BufferAttribute, EdgesGeometry, BufferAttribute } from "three";
+import { EdgeData, MeshData } from "topo-wasm";
 
-export function createGeometryFromMeshData(data: any): Array<BufferGeometry> {
+export function createGeometryFromMeshData(data: MeshData): Array<BufferGeometry> {
   const geometries: BufferGeometry[] = [];
 
   // 为每个面组创建独立的几何体
-  data.faceGroups.forEach(({ faceId, start, count }: any) => {
+  data.faceGroups.forEach(({ faceId, start, count }) => {
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new Float32BufferAttribute(data.vertices[faceId], 3));
 
@@ -25,11 +26,11 @@ export function createGeometryFromMeshData(data: any): Array<BufferGeometry> {
   return geometries;
 }
 
-export function createGeometryFromEdgeData(data: any): Array<BufferGeometry> {
+export function createGeometryFromEdgeData(data: EdgeData): Array<BufferGeometry> {
   const geometries: BufferGeometry[] = [];
 
   // 为每个边组创建独立的几何体
-  data.edgeGroups.forEach(({ edgeId, start, count }: any) => {
+  data.edgeGroups.forEach(({ edgeId, start, count }) => {
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new Float32BufferAttribute(data.lines[edgeId], 3));
     geometries.push(geometry);

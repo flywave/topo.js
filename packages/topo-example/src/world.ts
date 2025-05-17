@@ -20,8 +20,7 @@ export default class World {
     return this.done
   }
   
-  createCube(tp: TopoInstance) {
-
+  createPrimitives(tp: TopoInstance) {
     let params: VentilationPavilionParams = {
         topLength: 400.0,    // 顶长200mm
         middleLength: 300.0, // 中部长度300mm
@@ -59,7 +58,7 @@ export default class World {
   async TopoInit() {
     this.oc = await initTopo().then((tp) => {
       setTopo(tp);
-      this.createCube(tp);
+      this.createPrimitives(tp);
       return tp
     })
     console.log("open cascade ready!!!")

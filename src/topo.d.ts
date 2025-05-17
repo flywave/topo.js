@@ -201,11 +201,11 @@ export declare class Vector {
     delete(): void;
 }
 
-interface MeshData {
-    vertices: Array<Float32Array>;
-    normals?: Array<Float32Array>;
-    uvs?: Array<Float32Array>;
-    triangles: Array<Uint32Array>;
+export declare interface MeshData {
+    vertices: Array<Array<number>>;
+    normals?: Array<Array<number>>;
+    uvs?: Array<Array<number>>;
+    triangles: Array<Array<number>>;
     faceGroups: Array<{
         faceId: number;
         start: number;
@@ -213,8 +213,8 @@ interface MeshData {
     }>;
 }
 
-interface EdgeData {
-    lines: Array<Float32Array>;
+export declare interface EdgeData {
+    lines: Array<Array<number>>;
     edgeGroups: Array<{
         edgeId: number;
         start: number;

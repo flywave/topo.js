@@ -190,7 +190,6 @@ export function listTopo(shape: GenericTopo, topo: TopoEntity): TopoDS_Shape[] {
     });
 }
 
-
 export function getEdges(shape: GenericTopo): Edge[] {
     const oc = getTopo();
     return listTopo(shape, "edge").map((e) => new oc.Edge(e));
