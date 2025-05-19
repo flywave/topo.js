@@ -2170,3 +2170,260 @@ export declare function createWaterTunnelWithPosition(
     direction1: gp_Dir,
     direction2: gp_Dir
 ): TopoDS_Shape;
+
+// 剖面类型枚举
+export declare enum ProfileType {
+    NONE = 0,
+    TRIANGLE = 1,
+    RECTANGLE = 2,
+    CIRC = 3,
+    ELIPS = 4,
+    POLYGON = 5
+}
+
+// 三角形剖面
+export declare interface TriangleProfile {
+    type: ProfileType.TRIANGLE;
+    p1: gp_Pnt;
+    p2: gp_Pnt;
+    p3: gp_Pnt;
+}
+
+// 矩形剖面
+export declare interface RectangleProfile {
+    type: ProfileType.RECTANGLE;
+    p1: gp_Pnt;
+    p2: gp_Pnt;
+}
+
+// 圆形剖面
+export declare interface CircProfile {
+    type: ProfileType.CIRC;
+    center: gp_Pnt;
+    norm: gp_Pnt;
+    radius: number;
+}
+
+// 椭圆剖面
+export declare interface ElipsProfile {
+    type: ProfileType.ELIPS;
+    s1: gp_Pnt;
+    s2: gp_Pnt;
+    center: gp_Pnt;
+}
+
+// 多边形剖面
+export declare interface PolygonProfile {
+    type: ProfileType.POLYGON;
+    edges: gp_Pnt[];
+    inners: gp_Pnt[][];
+}
+
+// 剖面类型
+declare type ShapeProfile = TriangleProfile | RectangleProfile | CircProfile | ElipsProfile | PolygonProfile;
+
+// 旋转参数
+export declare interface RevolParams {
+    profile: ShapeProfile;
+    axis: gp_Ax1;
+    angle: number;
+}
+
+// 旋转创建函数
+export declare function createRevol(params: RevolParams): TopoDS_Shape;
+export declare function createRevolWithPosition(params: RevolParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 拉伸参数
+export declare interface PrismParams {
+    profile: ShapeProfile;
+    dir: gp_Dir;
+}
+
+// 拉伸创建函数
+export declare function createPrism(params: PrismParams): TopoDS_Shape;
+export declare function createPrismWithPosition(params: PrismParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 线段类型枚举
+declare enum SegmentType {
+    LINE = 0,
+    THREE_POINT_ARC = 1,
+    CIRCLE_CENTER_ARC = 2,
+    SPLINE = 3
+}
+
+// 过渡模式枚举
+declare enum TransitionMode {
+    RIGHT = 1,
+    ROUND = 2,
+    TRANS = 3
+}
+
+// 管道参数
+export declare interface PipeParams {
+    wire: gp_Pnt[];
+    profile: ShapeProfile;
+    inner_profile?: ShapeProfile;
+    segment_type: SegmentType;
+    transition_mode: TransitionMode;
+}
+
+// 管道创建函数
+export declare function createPipe(params: PipeParams): TopoDS_Shape;
+export declare function createPipeWithPosition(params: PipeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 多段管道参数
+export declare interface MultiSegmentPipeParams {
+    wires: Point[][];
+    profiles: Array<ShapeProfile>;
+    inner_profiles?: Array<ShapeProfile>;
+    segment_types?: SegmentType[];
+    transition_mode: TransitionMode;
+}
+
+// 连接形状模式枚举
+declare enum JointShapeMode {
+    SPHERE = 0,
+    BOX = 1
+}
+
+// 管道端点
+export declare interface PipeEndpoint {
+    offset: gp_Pnt;
+    normal: gp_Dir;
+    profile: ShapeProfile;
+    inner_profile?: ShapeProfile;
+}
+
+// 管道连接参数
+export declare interface PipeJointParams {
+    ins: PipeEndpoint[];
+    outs: PipeEndpoint[];
+    mode: JointShapeMode;
+    smooth_edge: boolean;
+}
+
+// 多段管道创建函数
+export declare function createMultiSegmentPipe(params: MultiSegmentPipeParams): TopoDS_Shape;
+export declare function createMultiSegmentPipeWithPosition(
+    params: MultiSegmentPipeParams,
+    position: gp_Pnt,
+    direction?: gp_Dir,
+    xDir?: gp_Dir
+): TopoDS_Shape;
+
+// 管道连接创建函数
+export declare function createPipeJoint(params: PipeJointParams): TopoDS_Shape;
+export declare function createPipeJointWithPosition(
+    params: PipeJointParams,
+    position: gp_Pnt,
+    direction?: gp_Dir,
+    xDir?: gp_Dir
+): TopoDS_Shape;
+
+
+// 悬链线参数
+export declare interface CatenaryParams {
+    p1: gp_Pnt;
+    p2: gp_Pnt;
+    profile: ShapeProfile;
+    slack: number;
+    max_sag: number;
+    tessellation: number;
+}
+
+// 悬链线
+export declare function createCatenary(params: CatenaryParams): TopoDS_Shape;
+export declare function createCatenaryWithPosition(params: CatenaryParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+
+// 长方体参数
+export declare interface BoxShapeParams {
+    point1: gp_Pnt;
+    point2: gp_Pnt;
+}
+
+// 长方体
+export declare function createBoxShape(params: BoxShapeParams): TopoDS_Shape;
+export declare function createBoxShapeWithPosition(params: BoxShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 圆锥参数
+export declare interface ConeShapeParams {
+    radius1: number;
+    radius2: number;
+    height: number;
+    angle?: number;
+}
+
+// 圆锥
+export declare function createConeShape(params: ConeShapeParams): TopoDS_Shape;
+export declare function createConeShapeWithPosition(params: ConeShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 圆柱参数
+export declare interface CylinderShapeParams {
+    radius: number;
+    height: number;
+    angle?: number;
+}
+
+// 圆柱
+export declare function createCylinderShape(params: CylinderShapeParams): TopoDS_Shape;
+export declare function createCylinderShapeWithPosition(params: CylinderShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 旋转体参数
+export declare interface RevolutionShapeParams {
+    meridian: gp_Pnt[];
+    angle?: number;
+    max?: number;
+    min?: number;
+}
+
+// 旋转体
+export declare function createRevolutionShape(params: RevolutionShapeParams): TopoDS_Shape;
+export declare function createRevolutionShapeWithPosition(params: RevolutionShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 球体参数
+export declare interface SphereShapeParams {
+    center?: gp_Pnt;
+    radius: number;
+    angle1?: number;
+    angle2?: number;
+    angle?: number;
+}
+
+// 球体
+export declare function createSphereShape(params: SphereShapeParams): TopoDS_Shape;
+export declare function createSphereShapeWithPosition(params: SphereShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 圆环体参数
+export declare interface TorusShapeParams {
+    radius1: number;
+    radius2: number;
+    angle1?: number;
+    angle2?: number;
+    angle?: number;
+}
+
+// 圆环体
+export declare function createTorusShape(params: TorusShapeParams): TopoDS_Shape;
+export declare function createTorusShapeWithPosition(params: TorusShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 楔形体参数
+export declare interface WedgeShapeParams {
+    edge: gp_Pnt;
+    limit?: [number, number, number, number];
+    ltx?: number;
+}
+
+// 楔形体
+export declare function createWedgeShape(params: WedgeShapeParams): TopoDS_Shape;
+export declare function createWedgeShapeWithPosition(params: WedgeShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// 管道形状参数
+export declare interface PipeShapeParams {
+    wire: [gp_Pnt, gp_Pnt];
+    profile: ShapeProfile;
+}
+
+// 管道形状
+export declare function createPipeShape(params: PipeShapeParams): TopoDS_Shape;
+export declare function createPipeShapeWithPosition(params: PipeShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;

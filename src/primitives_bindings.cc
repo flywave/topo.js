@@ -22,6 +22,624 @@ set_insulator_radius(flywave::topo::insulator_params::insulator_ &obj,
   }
 }
 
+static emscripten::val get_shape_profile(const shape_profile &profile) {
+  switch (profile.which()) {
+  case 0: // triangle_profile
+    return emscripten::val(boost::get<triangle_profile>(profile));
+  case 1: // rectangle_profile
+    return emscripten::val(boost::get<rectangle_profile>(profile));
+  case 2: // circ_profile
+    return emscripten::val(boost::get<circ_profile>(profile));
+  case 3: // elips_profile
+    return emscripten::val(boost::get<elips_profile>(profile));
+  case 4: // polygon_profile
+    return emscripten::val(boost::get<polygon_profile>(profile));
+  default:
+    throw std::runtime_error("Unknown shape profile type");
+  }
+}
+
+static void set_shape_profile(shape_profile &profile, emscripten::val val) {
+  if (val.hasOwnProperty("type")) {
+    auto type = val["type"].as<profile_type>();
+    switch (type) {
+    case profile_type::TYPE_TRIANGLE:
+      profile = val.as<triangle_profile>();
+      break;
+    case profile_type::TYPE_RECTANGLE:
+      profile = val.as<rectangle_profile>();
+      break;
+    case profile_type::TYPE_CIRC:
+      profile = val.as<circ_profile>();
+      break;
+    case profile_type::TYPE_ELIPS:
+      profile = val.as<elips_profile>();
+      break;
+    case profile_type::TYPE_POLYGON:
+      profile = val.as<polygon_profile>();
+      break;
+    default:
+      throw std::runtime_error("Unknown profile type");
+    }
+  } else {
+    throw std::runtime_error("Invalid shape profile object");
+  }
+}
+
+static emscripten::val
+get_shape_optional_profile(const boost::optional<shape_profile> &profile) {
+  if (profile) {
+    return get_shape_profile(*profile);
+  }
+  return emscripten::val::null();
+}
+
+static void set_shape_optional_profile(boost::optional<shape_profile> &profile,
+                                       emscripten::val val) {
+  if (val.isNull()) {
+    profile = boost::none;
+  } else {
+    profile = shape_profile();
+    set_shape_profile(*profile, val);
+  }
+}
+
+static emscripten::val
+get_shape_profiles(const std::vector<shape_profile> &profiles) {
+  emscripten::val result = emscripten::val::array();
+  for (size_t i = 0; i < profiles.size(); ++i) {
+    result.set(i, get_shape_profile(profiles[i]));
+  }
+  return result;
+}
+
+static void set_shape_profiles(std::vector<shape_profile> &profiles,
+                               emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for shape profiles");
+  }
+
+  const size_t length = val["length"].as<size_t>();
+  profiles.resize(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    set_shape_profile(profiles[i], val[i]);
+  }
+}
+
+// 添加辅助函数
+static emscripten::val
+get_multi_segment_inner_profiles(const multi_segment_pipe_params &params) {
+  if (!params.inner_profiles) {
+    return emscripten::val::null();
+  }
+  return get_shape_profiles(*params.inner_profiles);
+}
+
+static void set_multi_segment_inner_profiles(multi_segment_pipe_params &params,
+                                             emscripten::val val) {
+  if (val.isNull()) {
+    params.inner_profiles = boost::none;
+  } else {
+    if (!params.inner_profiles) {
+      params.inner_profiles = std::vector<shape_profile>();
+    }
+    set_shape_profiles(*params.inner_profiles, val);
+  }
+}
+
+// Helper functions for revol_params
+static emscripten::val get_revol_profile(const revol_params &params) {
+  return get_shape_profile(params.profile);
+}
+
+static void set_revol_profile(revol_params &params, emscripten::val val) {
+  set_shape_profile(params.profile, val);
+}
+
+// Helper functions for prism_params
+static emscripten::val get_prism_profile(const prism_params &params) {
+  return get_shape_profile(params.profile);
+}
+
+static void set_prism_profile(prism_params &params, emscripten::val val) {
+  set_shape_profile(params.profile, val);
+}
+
+// 添加这些辅助函数
+static emscripten::val get_pipe_profile(const pipe_params &params) {
+  return get_shape_profile(params.profile);
+}
+
+static void set_pipe_profile(pipe_params &params, emscripten::val val) {
+  set_shape_profile(params.profile, val);
+}
+
+static emscripten::val get_pipe_inner_profile(const pipe_params &params) {
+  return get_shape_optional_profile(params.inner_profile);
+}
+
+static void set_pipe_inner_profile(pipe_params &params, emscripten::val val) {
+  set_shape_optional_profile(params.inner_profile, val);
+}
+
+static emscripten::val
+get_multi_segment_profiles(const multi_segment_pipe_params &params) {
+  return get_shape_profiles(params.profiles);
+}
+
+static void set_multi_segment_profiles(multi_segment_pipe_params &params,
+                                       emscripten::val val) {
+  set_shape_profiles(params.profiles, val);
+}
+static emscripten::val
+get_pipe_endpoint_profile(const pipe_endpoint &endpoint) {
+  return get_shape_profile(endpoint.profile);
+}
+
+static void set_pipe_endpoint_profile(pipe_endpoint &endpoint,
+                                      emscripten::val val) {
+  set_shape_profile(endpoint.profile, val);
+}
+
+static emscripten::val
+get_pipe_endpoint_inner_profile(const pipe_endpoint &endpoint) {
+  return get_shape_optional_profile(endpoint.inner_profile);
+}
+
+static void set_pipe_endpoint_inner_profile(pipe_endpoint &endpoint,
+                                            emscripten::val val) {
+  set_shape_optional_profile(endpoint.inner_profile, val);
+}
+
+static emscripten::val get_catenary_profile(const catenary_params &params) {
+  return get_shape_profile(params.profile);
+}
+
+static void set_catenary_profile(catenary_params &params, emscripten::val val) {
+  set_shape_profile(params.profile, val);
+}
+
+static emscripten::val get_pipe_shape_profile(const pipe_shape_params &params) {
+  return get_shape_profile(params.profile);
+}
+
+static void set_pipe_shape_profile(pipe_shape_params &params,
+                                   emscripten::val val) {
+  set_shape_profile(params.profile, val);
+}
+
+static emscripten::val get_pipe_wire(const pipe_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.wire) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_pipe_wire(pipe_params &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for wire points");
+  }
+
+  const size_t length = val["length"].as<size_t>();
+  params.wire.clear();
+  params.wire.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    emscripten::val pointVal = val[i];
+    if (!pointVal.isUndefined()) {
+      params.wire.push_back(pointVal.as<gp_Pnt>());
+    }
+  }
+}
+
+// 添加辅助函数
+static emscripten::val
+get_multi_segment_wires(const multi_segment_pipe_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &wire : params.wires) {
+    emscripten::val wireArr = emscripten::val::array();
+    for (const auto &point : wire) {
+      wireArr.call<void>("push", emscripten::val(point));
+    }
+    arr.call<void>("push", wireArr);
+  }
+  return arr;
+}
+
+static void set_multi_segment_wires(multi_segment_pipe_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for wires");
+  }
+
+  params.wires.clear();
+  const size_t length = val["length"].as<size_t>();
+  params.wires.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    emscripten::val wireVal = val[i];
+    if (!wireVal.isArray()) {
+      throw std::runtime_error("Expected array for wire points");
+    }
+
+    std::vector<gp_Pnt> wire;
+    const size_t wireLength = wireVal["length"].as<size_t>();
+    wire.reserve(wireLength);
+
+    for (size_t j = 0; j < wireLength; ++j) {
+      emscripten::val pointVal = wireVal[j];
+      if (!pointVal.isUndefined()) {
+        wire.push_back(pointVal.as<gp_Pnt>());
+      }
+    }
+    params.wires.push_back(wire);
+  }
+}
+
+static emscripten::val
+get_multi_segment_types(const multi_segment_pipe_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  if (params.segment_types) {
+    for (const auto &type : *params.segment_types) {
+      arr.call<void>("push", emscripten::val(type));
+    }
+  }
+  return arr;
+}
+
+static void set_multi_segment_types(multi_segment_pipe_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for segment types");
+  }
+
+  const size_t length = val["length"].as<size_t>();
+  if (length > 0) {
+    params.segment_types = std::vector<segment_type>();
+    params.segment_types->reserve(length);
+
+    for (size_t i = 0; i < length; ++i) {
+      params.segment_types->push_back(val[i].as<segment_type>());
+    }
+  } else {
+    params.segment_types = boost::none;
+  }
+}
+
+static emscripten::val get_pipe_joint_ins(const pipe_joint_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &endpoint : params.ins) {
+    arr.call<void>("push", emscripten::val(endpoint));
+  }
+  return arr;
+}
+
+static void set_pipe_joint_ins(pipe_joint_params &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for ins");
+  }
+
+  params.ins.clear();
+  const size_t length = val["length"].as<size_t>();
+  params.ins.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    params.ins.push_back(val[i].as<pipe_endpoint>());
+  }
+}
+
+static emscripten::val get_pipe_joint_outs(const pipe_joint_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &endpoint : params.outs) {
+    arr.call<void>("push", emscripten::val(endpoint));
+  }
+  return arr;
+}
+
+static void set_pipe_joint_outs(pipe_joint_params &params,
+                                emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for outs");
+  }
+
+  params.outs.clear();
+  const size_t length = val["length"].as<size_t>();
+  params.outs.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    params.outs.push_back(val[i].as<pipe_endpoint>());
+  }
+}
+static emscripten::val get_cone_angle(const cone_shape_params &params) {
+  return params.angle ? emscripten::val(*params.angle)
+                      : emscripten::val::undefined();
+}
+
+static void set_cone_angle(cone_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle = boost::none;
+  } else {
+    params.angle = val.as<double>();
+  }
+}
+
+static emscripten::val get_cylinder_angle(const cylinder_shape_params &params) {
+  return params.angle ? emscripten::val(*params.angle)
+                      : emscripten::val::undefined();
+}
+
+static void set_cylinder_angle(cylinder_shape_params &params,
+                               emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle = boost::none;
+  } else {
+    params.angle = val.as<double>();
+  }
+}
+
+static emscripten::val
+get_revolution_angle(const revolution_shape_params &params) {
+  return params.angle ? emscripten::val(*params.angle)
+                      : emscripten::val::undefined();
+}
+
+static void set_revolution_angle(revolution_shape_params &params,
+                                 emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle = boost::none;
+  } else {
+    params.angle = val.as<double>();
+  }
+}
+
+static emscripten::val
+get_revolution_max(const revolution_shape_params &params) {
+  return params.max ? emscripten::val(*params.max)
+                    : emscripten::val::undefined();
+}
+
+static void set_revolution_max(revolution_shape_params &params,
+                               emscripten::val val) {
+  if (val.isUndefined()) {
+    params.max = boost::none;
+  } else {
+    params.max = val.as<double>();
+  }
+}
+
+static emscripten::val
+get_revolution_min(const revolution_shape_params &params) {
+  return params.min ? emscripten::val(*params.min)
+                    : emscripten::val::undefined();
+}
+
+static void set_revolution_min(revolution_shape_params &params,
+                               emscripten::val val) {
+  if (val.isUndefined()) {
+    params.min = boost::none;
+  } else {
+    params.min = val.as<double>();
+  }
+}
+
+static emscripten::val
+get_revolution_meridian(const revolution_shape_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.meridian) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_revolution_meridian(revolution_shape_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for meridian");
+  }
+
+  params.meridian.clear();
+  const size_t length = val["length"].as<size_t>();
+  params.meridian.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    params.meridian.push_back(val[i].as<gp_Pnt>());
+  }
+}
+
+static emscripten::val get_sphere_center(const sphere_shape_params &params) {
+  return params.center ? emscripten::val(*params.center)
+                       : emscripten::val::undefined();
+}
+
+static void set_sphere_center(sphere_shape_params &params,
+                              emscripten::val val) {
+  if (val.isUndefined()) {
+    params.center = boost::none;
+  } else {
+    params.center = val.as<gp_Pnt>();
+  }
+}
+
+static emscripten::val get_sphere_angle1(const sphere_shape_params &params) {
+  return params.angle1 ? emscripten::val(*params.angle1)
+                       : emscripten::val::undefined();
+}
+
+static void set_sphere_angle1(sphere_shape_params &params,
+                              emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle1 = boost::none;
+  } else {
+    params.angle1 = val.as<double>();
+  }
+}
+
+static emscripten::val get_sphere_angle2(const sphere_shape_params &params) {
+  return params.angle2 ? emscripten::val(*params.angle2)
+                       : emscripten::val::undefined();
+}
+
+static void set_sphere_angle2(sphere_shape_params &params,
+                              emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle2 = boost::none;
+  } else {
+    params.angle2 = val.as<double>();
+  }
+}
+
+static emscripten::val get_sphere_angle(const sphere_shape_params &params) {
+  return params.angle ? emscripten::val(*params.angle)
+                      : emscripten::val::undefined();
+}
+
+static void set_sphere_angle(sphere_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle = boost::none;
+  } else {
+    params.angle = val.as<double>();
+  }
+}
+
+static emscripten::val get_torus_angle1(const torus_shape_params &params) {
+  return params.angle1 ? emscripten::val(*params.angle1)
+                       : emscripten::val::undefined();
+}
+
+static void set_torus_angle1(torus_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle1 = boost::none;
+  } else {
+    params.angle1 = val.as<double>();
+  }
+}
+
+static emscripten::val get_torus_angle2(const torus_shape_params &params) {
+  return params.angle2 ? emscripten::val(*params.angle2)
+                       : emscripten::val::undefined();
+}
+
+static void set_torus_angle2(torus_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle2 = boost::none;
+  } else {
+    params.angle2 = val.as<double>();
+  }
+}
+
+static emscripten::val get_torus_angle(const torus_shape_params &params) {
+  return params.angle ? emscripten::val(*params.angle)
+                      : emscripten::val::undefined();
+}
+
+static void set_torus_angle(torus_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.angle = boost::none;
+  } else {
+    params.angle = val.as<double>();
+  }
+}
+
+static emscripten::val get_wedge_limit(const wedge_shape_params &params) {
+  if (!params.limit) {
+    return emscripten::val::undefined();
+  }
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &val : *params.limit) {
+    arr.call<void>("push", emscripten::val(val));
+  }
+  return arr;
+}
+
+static void set_wedge_limit(wedge_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.limit = boost::none;
+  } else {
+    wedge_face_limit limit;
+    for (size_t i = 0; i < 4; ++i) {
+      limit[i] = val[i].as<double>();
+    }
+    params.limit = limit;
+  }
+}
+
+static emscripten::val get_wedge_ltx(const wedge_shape_params &params) {
+  return params.ltx ? emscripten::val(*params.ltx)
+                    : emscripten::val::undefined();
+}
+
+static void set_wedge_ltx(wedge_shape_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.ltx = boost::none;
+  } else {
+    params.ltx = val.as<double>();
+  }
+}
+
+static emscripten::val get_pipe_shape_wire(const pipe_shape_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  arr.call<void>("push", emscripten::val(params.wire[0]));
+  arr.call<void>("push", emscripten::val(params.wire[1]));
+  return arr;
+}
+
+static void set_pipe_shape_wire(pipe_shape_params &params,
+                                emscripten::val val) {
+  if (!val.isArray() || val["length"].as<size_t>() != 2) {
+    throw std::runtime_error("Expected array of length 2 for wire");
+  }
+  params.wire[0] = val[0].as<gp_Pnt>();
+  params.wire[1] = val[1].as<gp_Pnt>();
+}
+static emscripten::val get_polygon_edges(const polygon_profile &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.edges) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_polygon_edges(polygon_profile &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for edges");
+  }
+  std::vector<gp_Pnt> edges;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    edges.push_back(val[i].as<gp_Pnt>());
+  }
+  params.edges = edges;
+}
+
+static emscripten::val get_polygon_inners(const polygon_profile &params) {
+  emscripten::val outerArr = emscripten::val::array();
+  for (const auto &inner : params.inners) {
+    emscripten::val innerArr = emscripten::val::array();
+    for (const auto &point : inner) {
+      innerArr.call<void>("push", emscripten::val(point));
+    }
+    outerArr.call<void>("push", innerArr);
+  }
+  return outerArr;
+}
+
+static void set_polygon_inners(polygon_profile &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for inners");
+  }
+  std::vector<std::vector<gp_Pnt>> inners;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    emscripten::val innerVal = val[i];
+    std::vector<gp_Pnt> inner;
+    for (size_t j = 0; j < innerVal["length"].as<size_t>(); ++j) {
+      inner.push_back(innerVal[j].as<gp_Pnt>());
+    }
+    inners.push_back(inner);
+  }
+  params.inners = inners;
+}
+
 EMSCRIPTEN_BINDINGS(Primitive) {
   // 球体参数结构体
   value_object<sphere_params>("SphereParams")
@@ -2230,4 +2848,300 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const water_tunnel_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_water_tunnel));
+
+  // 剖面类型枚举
+  enum_<profile_type>("ProfileType")
+      .value("NONE", profile_type::TYPE_NONE)
+      .value("TRIANGLE", profile_type::TYPE_TRIANGLE)
+      .value("RECTANGLE", profile_type::TYPE_RECTANGLE)
+      .value("CIRC", profile_type::TYPE_CIRC)
+      .value("ELIPS", profile_type::TYPE_ELIPS)
+      .value("POLYGON", profile_type::TYPE_POLYGON);
+
+  // 三角形剖面
+  value_object<triangle_profile>("TriangleProfile")
+      .field("type", &triangle_profile::type)
+      .field("p1", &triangle_profile::p1)
+      .field("p2", &triangle_profile::p2)
+      .field("p3", &triangle_profile::p3);
+
+  // 矩形剖面
+  value_object<rectangle_profile>("RectangleProfile")
+      .field("type", &rectangle_profile::type)
+      .field("p1", &rectangle_profile::p1)
+      .field("p2", &rectangle_profile::p2);
+
+  // 圆形剖面
+  value_object<circ_profile>("CircProfile")
+      .field("type", &circ_profile::type)
+      .field("center", &circ_profile::center)
+      .field("norm", &circ_profile::norm)
+      .field("radius", &circ_profile::radius);
+
+  // 椭圆剖面
+  value_object<elips_profile>("ElipsProfile")
+      .field("type", &elips_profile::type)
+      .field("s1", &elips_profile::s1)
+      .field("s2", &elips_profile::s2)
+      .field("center", &elips_profile::center);
+
+  // 多边形剖面
+  value_object<polygon_profile>("PolygonProfile")
+      .field("type", &polygon_profile::type)
+      .field("edges", &get_polygon_edges, &set_polygon_edges)
+      .field("inners", &get_polygon_inners, &set_polygon_inners);
+
+  // 旋转参数
+  value_object<revol_params>("RevolParams")
+      .field("profile", &get_revol_profile, &set_revol_profile)
+      .field("axis", &revol_params::axis)
+      .field("angle", &revol_params::angle);
+
+  // 旋转创建函数
+  function("createRevol",
+           select_overload<TopoDS_Shape(const revol_params &)>(&create_revol));
+  function("createRevolWithPosition",
+           select_overload<TopoDS_Shape(const revol_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_revol));
+
+  // 拉伸参数
+  value_object<prism_params>("PrismParams")
+      .field("profile", &get_prism_profile, &set_prism_profile)
+      .field("dir", &prism_params::dir);
+
+  // 拉伸创建函数
+  function("createPrism",
+           select_overload<TopoDS_Shape(const prism_params &)>(&create_prism));
+  function("createPrismWithPosition",
+           select_overload<TopoDS_Shape(const prism_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_prism));
+
+  // 线段类型枚举
+  enum_<segment_type>("SegmentType")
+      .value("LINE", segment_type::LINE)
+      .value("THREE_POINT_ARC", segment_type::THREE_POINT_ARC)
+      .value("CIRCLE_CENTER_ARC", segment_type::CIRCLE_CENTER_ARC)
+      .value("SPLINE", segment_type::SPLINE);
+
+  // 过渡模式枚举
+  enum_<transition_mode>("TransitionMode")
+      .value("RIGHT", transition_mode::RIGHT)
+      .value("ROUND", transition_mode::ROUND)
+      .value("TRANS", transition_mode::TRANS);
+
+  // 管道参数结构体
+  value_object<pipe_params>("PipeParams")
+      .field("wire", &get_pipe_wire, &set_pipe_wire)
+      .field("profile", &get_pipe_profile, &set_pipe_profile)
+      .field("inner_profile", &get_pipe_inner_profile, &set_pipe_inner_profile)
+      .field("segment_type", &pipe_params::segment_type)
+      .field("transition_mode", &pipe_params::transition_mode);
+
+  // 多段管道参数结构体
+  value_object<multi_segment_pipe_params>("MultiSegmentPipeParams")
+      .field("wires", &get_multi_segment_wires, &set_multi_segment_wires)
+      .field("profiles", &get_multi_segment_profiles,
+             &set_multi_segment_profiles)
+      .field("inner_profiles", &get_multi_segment_inner_profiles,
+             &set_multi_segment_inner_profiles)
+      .field("segment_types", &get_multi_segment_types,
+             &set_multi_segment_types)
+      .field("transition_mode", &multi_segment_pipe_params::transition_mode);
+
+  // 创建管道函数
+  function("createPipe",
+           select_overload<TopoDS_Shape(const pipe_params &)>(&create_pipe));
+  function("createPipeWithPosition",
+           select_overload<TopoDS_Shape(const pipe_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_pipe));
+
+  // 创建多段管道函数
+  function("createMultiSegmentPipe",
+           select_overload<TopoDS_Shape(const multi_segment_pipe_params &)>(
+               &create_multi_segment_pipe));
+  function("createMultiSegmentPipeWithPosition",
+           select_overload<TopoDS_Shape(
+               const multi_segment_pipe_params &, const gp_Pnt &,
+               const gp_Dir &, const gp_Dir &)>(&create_multi_segment_pipe));
+
+  // 连接形状模式枚举
+  enum_<joint_shape_mode>("JointShapeMode")
+      .value("SPHERE", joint_shape_mode::SPHERE)
+      .value("BOX", joint_shape_mode::BOX);
+
+  // 管道端点结构体
+  value_object<pipe_endpoint>("PipeEndpoint")
+      .field("offset", &pipe_endpoint::offset)
+      .field("normal", &pipe_endpoint::normal)
+      .field("profile", &get_pipe_endpoint_profile, &set_pipe_endpoint_profile)
+      .field("inner_profile", &get_pipe_endpoint_inner_profile,
+             &set_pipe_endpoint_inner_profile);
+
+  // 管道连接参数结构体
+  value_object<pipe_joint_params>("PipeJointParams")
+      .field("ins", &get_pipe_joint_ins, &set_pipe_joint_ins)
+      .field("outs", &get_pipe_joint_outs, &set_pipe_joint_outs)
+      .field("mode", &pipe_joint_params::mode)
+      .field("smooth_edge", &pipe_joint_params::smooth_edge);
+
+  // 创建管道连接函数
+  function("createPipeJoint",
+           select_overload<TopoDS_Shape(const pipe_joint_params &)>(
+               &create_pipe_joint));
+  function(
+      "createPipeJointWithPosition",
+      select_overload<TopoDS_Shape(const pipe_joint_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_pipe_joint));
+
+  // 悬链线参数结构体
+  value_object<catenary_params>("CatenaryParams")
+      .field("p1", &catenary_params::p1)
+      .field("p2", &catenary_params::p2)
+      .field("profile", &get_catenary_profile, &set_catenary_profile)
+      .field("slack", &catenary_params::slack)
+      .field("max_sag", &catenary_params::max_sag)
+      .field("tessellation", &catenary_params::tessellation);
+
+  // 创建悬链线函数
+  function(
+      "createCatenary",
+      select_overload<TopoDS_Shape(const catenary_params &)>(&create_catenary));
+  function("createCatenaryWithPosition",
+           select_overload<TopoDS_Shape(const catenary_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_catenary));
+
+  // 长方体参数结构体
+  value_object<box_shape_params>("BoxShapeParams")
+      .field("point1", &box_shape_params::point1)
+      .field("point2", &box_shape_params::point2);
+
+  // 创建长方体函数
+  function("createBoxShape",
+           select_overload<TopoDS_Shape(const box_shape_params &)>(
+               &create_box_shape));
+  function(
+      "createBoxShapeWithPosition",
+      select_overload<TopoDS_Shape(const box_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_box_shape));
+
+  // 圆锥参数结构体
+  value_object<cone_shape_params>("ConeShapeParams")
+      .field("radius1", &cone_shape_params::radius1)
+      .field("radius2", &cone_shape_params::radius2)
+      .field("height", &cone_shape_params::height)
+      .field("angle", &get_cone_angle, &set_cone_angle);
+
+  // 创建圆锥函数
+  function("createConeShape",
+           select_overload<TopoDS_Shape(const cone_shape_params &)>(
+               &create_cone_shape));
+  function(
+      "createConeShapeWithPosition",
+      select_overload<TopoDS_Shape(const cone_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_cone_shape));
+
+  // 圆柱参数结构体
+  value_object<cylinder_shape_params>("CylinderShapeParams")
+      .field("radius", &cylinder_shape_params::radius)
+      .field("height", &cylinder_shape_params::height)
+      .field("angle", &get_cylinder_angle, &set_cylinder_angle);
+
+  // 创建圆柱函数
+  function("createCylinderShape",
+           select_overload<TopoDS_Shape(const cylinder_shape_params &)>(
+               &create_cylinder_shape));
+  function("createCylinderShapeWithPosition",
+           select_overload<TopoDS_Shape(
+               const cylinder_shape_params &, const gp_Pnt &, const gp_Dir &,
+               const gp_Dir &)>(&create_cylinder_shape));
+
+  // 旋转体参数结构体
+  value_object<revolution_shape_params>("RevolutionShapeParams")
+      .field("meridian", &get_revolution_meridian, &set_revolution_meridian)
+      .field("angle", &get_revolution_angle, &set_revolution_angle)
+      .field("max", &get_revolution_max, &set_revolution_max)
+      .field("min", &get_revolution_min, &set_revolution_min);
+
+  // 创建旋转体函数
+  function("createRevolutionShape",
+           select_overload<TopoDS_Shape(const revolution_shape_params &)>(
+               &create_revolution_shape));
+  function("createRevolutionShapeWithPosition",
+           select_overload<TopoDS_Shape(
+               const revolution_shape_params &, const gp_Pnt &, const gp_Dir &,
+               const gp_Dir &)>(&create_revolution_shape));
+
+  // 球体参数结构体
+  value_object<sphere_shape_params>("SphereShapeParams")
+      .field("center", &get_sphere_center, &set_sphere_center)
+      .field("radius", &sphere_shape_params::radius)
+      .field("angle1", &get_sphere_angle1, &set_sphere_angle1)
+      .field("angle2", &get_sphere_angle2, &set_sphere_angle2)
+      .field("angle", &get_sphere_angle, &set_sphere_angle);
+
+  // 创建球体函数
+  function("createSphereShape",
+           select_overload<TopoDS_Shape(const sphere_shape_params &)>(
+               &create_sphere_shape));
+  function(
+      "createSphereShapeWithPosition",
+      select_overload<TopoDS_Shape(const sphere_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_sphere_shape));
+
+  // 圆环体参数结构体
+  value_object<torus_shape_params>("TorusShapeParams")
+      .field("radius1", &torus_shape_params::radius1)
+      .field("radius2", &torus_shape_params::radius2)
+      .field("angle1", &get_torus_angle1, &set_torus_angle1)
+      .field("angle2", &get_torus_angle2, &set_torus_angle2)
+      .field("angle", &get_torus_angle, &set_torus_angle);
+
+  // 创建圆环体函数
+  function("createTorusShape",
+           select_overload<TopoDS_Shape(const torus_shape_params &)>(
+               &create_torus_shape));
+  function(
+      "createTorusShapeWithPosition",
+      select_overload<TopoDS_Shape(const torus_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_torus_shape));
+
+  // 楔形体参数结构体
+  value_object<wedge_shape_params>("WedgeShapeParams")
+      .field("edge", &wedge_shape_params::edge)
+      .field("limit", &get_wedge_limit, &set_wedge_limit)
+      .field("ltx", &get_wedge_ltx, &set_wedge_ltx);
+
+  // 创建楔形体函数
+  function("createWedgeShape",
+           select_overload<TopoDS_Shape(const wedge_shape_params &)>(
+               &create_wedge_shape));
+  function(
+      "createWedgeShapeWithPosition",
+      select_overload<TopoDS_Shape(const wedge_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_wedge_shape));
+
+  // 管道形状参数结构体
+  value_object<pipe_shape_params>("PipeShapeParams")
+      .field("wire", &get_pipe_shape_wire, &set_pipe_shape_wire)
+      .field("profile", &get_pipe_shape_profile, &set_pipe_shape_profile);
+
+  // 创建管道形状函数
+  function("createPipeShape",
+           select_overload<TopoDS_Shape(const pipe_shape_params &)>(
+               &create_pipe_shape));
+  function(
+      "createPipeShapeWithPosition",
+      select_overload<TopoDS_Shape(const pipe_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_pipe_shape));
 }

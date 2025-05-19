@@ -87,7 +87,8 @@ EMSCRIPTEN_BINDINGS(Assembly) {
                                ? nullptr
                                : std::make_shared<Quantity_Color>(
                                      colorVal.as<Quantity_Color>());
-              return emscripten::val(self.add(subAssembly, loc, name, color));
+              auto &r = self.add(subAssembly, loc, name, color);
+              return emscripten::val(r.shared_from_this());
             } else {
               assembly_object obj = boost::blank{};
               if (!objVal.isUndefined()) {
