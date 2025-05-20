@@ -441,7 +441,7 @@ export declare class Shape extends GeometryObject {
 
     // 网格生成
     writeTriangulation(precision: number, deflection: number, angle: number, uvCoords: boolean): MeshData | null;
-    mesh(precision?: number, deflection?: number, angle?: number, uvCoords?: boolean):  MeshData | null;
+    mesh(precision?: number, deflection?: number, angle?: number, uvCoords?: boolean): MeshData | null;
     meshEdges(precision?: number, angle?: number): EdgeData | null;
 
     // 选择器相关
