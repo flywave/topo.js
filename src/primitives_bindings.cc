@@ -131,6 +131,23 @@ static void set_multi_segment_inner_profiles(multi_segment_pipe_params &params,
   }
 }
 
+static emscripten::val
+get_multi_segment_up_dir(const multi_segment_pipe_params &params) {
+  if (params.up_dir) {
+    return emscripten::val(*params.up_dir);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_multi_segment_up_dir(multi_segment_pipe_params &params,
+                                     emscripten::val val) {
+  if (val.isUndefined()) {
+    params.up_dir = boost::none;
+  } else {
+    params.up_dir = val.as<gp_Dir>();
+  }
+}
+
 // Helper functions for revol_params
 static emscripten::val get_revol_profile(const revol_params &params) {
   return get_shape_profile(params.profile);
@@ -150,20 +167,45 @@ static void set_prism_profile(prism_params &params, emscripten::val val) {
 }
 
 // 添加这些辅助函数
-static emscripten::val get_pipe_profile(const pipe_params &params) {
-  return get_shape_profile(params.profile);
+static emscripten::val get_pipe_profiles(const pipe_params &params) {
+  return get_shape_profiles(params.profiles);
 }
 
-static void set_pipe_profile(pipe_params &params, emscripten::val val) {
-  set_shape_profile(params.profile, val);
+static void set_pipe_profiles(pipe_params &params, emscripten::val val) {
+  set_shape_profiles(params.profiles, val);
 }
 
-static emscripten::val get_pipe_inner_profile(const pipe_params &params) {
-  return get_shape_optional_profile(params.inner_profile);
+static emscripten::val get_pipe_inner_profiles(const pipe_params &params) {
+  if (!params.inner_profiles) {
+    return emscripten::val::null();
+  }
+  return get_shape_profiles(*params.inner_profiles);
 }
 
-static void set_pipe_inner_profile(pipe_params &params, emscripten::val val) {
-  set_shape_optional_profile(params.inner_profile, val);
+static void set_pipe_inner_profiles(pipe_params &params, emscripten::val val) {
+  if (val.isNull()) {
+    params.inner_profiles = boost::none;
+  } else {
+    if (!params.inner_profiles) {
+      params.inner_profiles = std::vector<shape_profile>();
+    }
+    set_shape_profiles(*params.inner_profiles, val);
+  }
+}
+
+static emscripten::val get_pipe_up_dir(const pipe_params &params) {
+  if (params.up_dir) {
+    return emscripten::val(*params.up_dir);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_pipe_up_dir(pipe_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.up_dir = boost::none;
+  } else {
+    params.up_dir = val.as<gp_Dir>();
+  }
 }
 
 static emscripten::val
@@ -644,6 +686,21 @@ static void set_polygon_inners(polygon_profile &params, emscripten::val val) {
   params.inners = inners;
 }
 
+static emscripten::val get_pipe_shape_up_dir(const pipe_shape_params &params) {
+  if (params.up_dir) {
+    return emscripten::val(*params.up_dir);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_pipe_shape_up_dir(pipe_shape_params &params,
+                                  emscripten::val val) {
+  if (val.isUndefined()) {
+    params.up_dir = boost::none;
+  } else {
+    params.up_dir = val.as<gp_Dir>();
+  }
+}
 static emscripten::val
 get_stretched_body_points(const stretched_body_params &params) {
   emscripten::val arr = emscripten::val::array();
@@ -3745,10 +3802,12 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 管道参数结构体
   value_object<pipe_params>("PipeParams")
       .field("wire", &get_pipe_wire, &set_pipe_wire)
-      .field("profile", &get_pipe_profile, &set_pipe_profile)
-      .field("inner_profile", &get_pipe_inner_profile, &set_pipe_inner_profile)
+      .field("profile", &get_pipe_profiles, &set_pipe_profiles)
+      .field("inner_profile", &get_pipe_inner_profiles,
+             &set_pipe_inner_profiles)
       .field("segment_type", &pipe_params::segment_type)
-      .field("transition_mode", &pipe_params::transition_mode);
+      .field("transition_mode", &pipe_params::transition_mode)
+      .field("upDir", &get_pipe_up_dir, &set_pipe_up_dir);
 
   // 多段管道参数结构体
   value_object<multi_segment_pipe_params>("MultiSegmentPipeParams")
@@ -3759,7 +3818,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
              &set_multi_segment_inner_profiles)
       .field("segment_types", &get_multi_segment_types,
              &set_multi_segment_types)
-      .field("transition_mode", &multi_segment_pipe_params::transition_mode);
+      .field("transition_mode", &multi_segment_pipe_params::transition_mode)
+      .field("upDir", &get_multi_segment_up_dir, &set_multi_segment_up_dir);
 
   // 创建管道函数
   function("createPipe",
@@ -3944,7 +4004,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 管道形状参数结构体
   value_object<pipe_shape_params>("PipeShapeParams")
       .field("wire", &get_pipe_shape_wire, &set_pipe_shape_wire)
-      .field("profile", &get_pipe_shape_profile, &set_pipe_shape_profile);
+      .field("profile", &get_pipe_shape_profile, &set_pipe_shape_profile)
+      .field("upDir", &get_pipe_shape_up_dir, &set_pipe_shape_up_dir);
 
   // 创建管道形状函数
   function("createPipeShape",
