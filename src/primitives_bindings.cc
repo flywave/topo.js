@@ -3742,12 +3742,6 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .value("CIRCLE_CENTER_ARC", segment_type::CIRCLE_CENTER_ARC)
       .value("SPLINE", segment_type::SPLINE);
 
-  // 过渡模式枚举
-  enum_<transition_mode>("TransitionMode")
-      .value("RIGHT", transition_mode::RIGHT)
-      .value("ROUND", transition_mode::ROUND)
-      .value("TRANS", transition_mode::TRANS);
-
   // 管道参数结构体
   value_object<pipe_params>("PipeParams")
       .field("wire", &get_pipe_wire, &set_pipe_wire)

@@ -2245,13 +2245,6 @@ declare enum SegmentType {
     SPLINE = 3
 }
 
-// 过渡模式枚举
-declare enum TransitionMode {
-    RIGHT = 1,
-    ROUND = 2,
-    TRANS = 3
-}
-
 // 管道参数
 export declare interface PipeParams {
     wire: gp_Pnt[];
