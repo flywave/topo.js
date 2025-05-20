@@ -148,6 +148,22 @@ static void set_multi_segment_up_dir(multi_segment_pipe_params &params,
   }
 }
 
+static emscripten::val get_pipe_joint_up_dir(const pipe_joint_params &params) {
+  if (params.up_dir) {
+    return emscripten::val(*params.up_dir);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_pipe_joint_up_dir(pipe_joint_params &params,
+                                  emscripten::val val) {
+  if (val.isUndefined()) {
+    params.up_dir = boost::none;
+  } else {
+    params.up_dir = val.as<gp_Dir>();
+  }
+}
+
 // Helper functions for revol_params
 static emscripten::val get_revol_profile(const revol_params &params) {
   return get_shape_profile(params.profile);
@@ -3803,10 +3819,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   value_object<pipe_params>("PipeParams")
       .field("wire", &get_pipe_wire, &set_pipe_wire)
       .field("profile", &get_pipe_profiles, &set_pipe_profiles)
-      .field("inner_profile", &get_pipe_inner_profiles,
-             &set_pipe_inner_profiles)
-      .field("segment_type", &pipe_params::segment_type)
-      .field("transition_mode", &pipe_params::transition_mode)
+      .field("innerProfile", &get_pipe_inner_profiles, &set_pipe_inner_profiles)
+      .field("segmentType", &pipe_params::segment_type)
+      .field("transitionMode", &pipe_params::transition_mode)
       .field("upDir", &get_pipe_up_dir, &set_pipe_up_dir);
 
   // 多段管道参数结构体
@@ -3814,11 +3829,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("wires", &get_multi_segment_wires, &set_multi_segment_wires)
       .field("profiles", &get_multi_segment_profiles,
              &set_multi_segment_profiles)
-      .field("inner_profiles", &get_multi_segment_inner_profiles,
+      .field("innerProfiles", &get_multi_segment_inner_profiles,
              &set_multi_segment_inner_profiles)
-      .field("segment_types", &get_multi_segment_types,
-             &set_multi_segment_types)
-      .field("transition_mode", &multi_segment_pipe_params::transition_mode)
+      .field("segmentTypes", &get_multi_segment_types, &set_multi_segment_types)
+      .field("transitionMode", &multi_segment_pipe_params::transition_mode)
       .field("upDir", &get_multi_segment_up_dir, &set_multi_segment_up_dir);
 
   // 创建管道函数
@@ -3848,7 +3862,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("offset", &pipe_endpoint::offset)
       .field("normal", &pipe_endpoint::normal)
       .field("profile", &get_pipe_endpoint_profile, &set_pipe_endpoint_profile)
-      .field("inner_profile", &get_pipe_endpoint_inner_profile,
+      .field("innerProfile", &get_pipe_endpoint_inner_profile,
              &set_pipe_endpoint_inner_profile);
 
   // 管道连接参数结构体
@@ -3856,7 +3870,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("ins", &get_pipe_joint_ins, &set_pipe_joint_ins)
       .field("outs", &get_pipe_joint_outs, &set_pipe_joint_outs)
       .field("mode", &pipe_joint_params::mode)
-      .field("smooth_edge", &pipe_joint_params::smooth_edge);
+      .field("flanged", &pipe_joint_params::flanged)
+      .field("upDir", &get_pipe_joint_up_dir, &set_pipe_joint_up_dir);
 
   // 创建管道连接函数
   function("createPipeJoint",
@@ -3874,7 +3889,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("p2", &catenary_params::p2)
       .field("profile", &get_catenary_profile, &set_catenary_profile)
       .field("slack", &catenary_params::slack)
-      .field("max_sag", &catenary_params::max_sag)
+      .field("maxSag", &catenary_params::max_sag)
       .field("tessellation", &catenary_params::tessellation);
 
   // 创建悬链线函数

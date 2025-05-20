@@ -2249,9 +2249,10 @@ declare enum SegmentType {
 export declare interface PipeParams {
     wire: gp_Pnt[];
     profile: ShapeProfile;
-    inner_profile?: ShapeProfile;
-    segment_type: SegmentType;
-    transition_mode: TransitionMode;
+    innerProfile?: ShapeProfile;
+    segmentType: SegmentType;
+    transitionMode: TransitionMode;
+    upDir?: gp_Dir;
 }
 
 // 管道创建函数
@@ -2262,9 +2263,10 @@ export declare function createPipeWithPosition(params: PipeParams, position: gp_
 export declare interface MultiSegmentPipeParams {
     wires: Point[][];
     profiles: Array<ShapeProfile>;
-    inner_profiles?: Array<ShapeProfile>;
-    segment_types?: SegmentType[];
-    transition_mode: TransitionMode;
+    innerProfiles?: Array<ShapeProfile>;
+    segmentTypes?: SegmentType[];
+    transitionMode: TransitionMode;
+    upDir?: gp_Dir;
 }
 
 // 连接形状模式枚举
@@ -2278,7 +2280,7 @@ export declare interface PipeEndpoint {
     offset: gp_Pnt;
     normal: gp_Dir;
     profile: ShapeProfile;
-    inner_profile?: ShapeProfile;
+    innerProfile?: ShapeProfile;
 }
 
 // 管道连接参数
@@ -2286,7 +2288,8 @@ export declare interface PipeJointParams {
     ins: PipeEndpoint[];
     outs: PipeEndpoint[];
     mode: JointShapeMode;
-    smooth_edge: boolean;
+    flanged: boolean;
+    upDir?: gp_Dir;
 }
 
 // 多段管道创建函数
@@ -2314,7 +2317,7 @@ export declare interface CatenaryParams {
     p2: gp_Pnt;
     profile: ShapeProfile;
     slack: number;
-    max_sag: number;
+    maxSag: number;
     tessellation: number;
 }
 
@@ -2409,6 +2412,7 @@ export declare function createWedgeShapeWithPosition(params: WedgeShapeParams, p
 export declare interface PipeShapeParams {
     wire: [gp_Pnt, gp_Pnt];
     profile: ShapeProfile;
+    upDir?: gp_Dir;
 }
 
 // 管道形状
