@@ -4,6 +4,8 @@
 using namespace flywave;
 using namespace flywave::topo;
 
+namespace {
+
 static emscripten::val
 get_insulator_radius(const flywave::topo::insulator_params::insulator_ &obj) {
   if (obj.radius.which() == 0) { // double
@@ -12,6 +14,7 @@ get_insulator_radius(const flywave::topo::insulator_params::insulator_ &obj) {
     return emscripten::val(boost::get<composite_insulator_params>(obj.radius));
   }
 }
+
 static void
 set_insulator_radius(flywave::topo::insulator_params::insulator_ &obj,
                      emscripten::val val) {
@@ -593,6 +596,7 @@ static void set_pipe_shape_wire(pipe_shape_params &params,
   params.wire[0] = val[0].as<gp_Pnt>();
   params.wire[1] = val[1].as<gp_Pnt>();
 }
+
 static emscripten::val get_polygon_edges(const polygon_profile &params) {
   emscripten::val arr = emscripten::val::array();
   for (const auto &point : params.edges) {
@@ -639,6 +643,803 @@ static void set_polygon_inners(polygon_profile &params, emscripten::val val) {
   }
   params.inners = inners;
 }
+
+static emscripten::val
+get_stretched_body_points(const stretched_body_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_stretched_body_points(stretched_body_params &params,
+                                      emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.points = points;
+}
+
+static emscripten::val get_wire_fit_points(const wire_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.fitPoints) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_wire_fit_points(wire_params &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for fitPoints");
+  }
+  std::vector<gp_Pnt> fitPoints;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    fitPoints.push_back(val[i].as<gp_Pnt>());
+  }
+  params.fitPoints = fitPoints;
+}
+
+static emscripten::val get_cable_inflection_points(const cable_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.inflectionPoints) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_cable_inflection_points(cable_params &params,
+                                        emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for inflectionPoints");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.inflectionPoints = points;
+}
+
+static emscripten::val get_cable_radii(const cable_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &radius : params.radii) {
+    arr.call<void>("push", emscripten::val(radius));
+  }
+  return arr;
+}
+
+static void set_cable_radii(cable_params &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for radii");
+  }
+  std::vector<double> radii;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    radii.push_back(val[i].as<double>());
+  }
+  params.radii = radii;
+}
+
+static emscripten::val
+get_curve_cable_control_points(const curve_cable_params &params) {
+  emscripten::val outerArr = emscripten::val::array();
+  for (const auto &innerPoints : params.controlPoints) {
+    emscripten::val innerArr = emscripten::val::array();
+    for (const auto &point : innerPoints) {
+      innerArr.call<void>("push", emscripten::val(point));
+    }
+    outerArr.call<void>("push", innerArr);
+  }
+  return outerArr;
+}
+
+static void set_curve_cable_control_points(curve_cable_params &params,
+                                           emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for controlPoints");
+  }
+  std::vector<std::vector<gp_Pnt>> controlPoints;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    emscripten::val innerVal = val[i];
+    std::vector<gp_Pnt> innerPoints;
+    for (size_t j = 0; j < innerVal["length"].as<size_t>(); ++j) {
+      innerPoints.push_back(innerVal[j].as<gp_Pnt>());
+    }
+    controlPoints.push_back(innerPoints);
+  }
+  params.controlPoints = controlPoints;
+}
+
+static emscripten::val
+get_curve_cable_curve_types(const curve_cable_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &type : params.curveTypes) {
+    arr.call<void>("push", static_cast<int>(type));
+  }
+  return arr;
+}
+
+static void set_curve_cable_curve_types(curve_cable_params &params,
+                                        emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for curveTypes");
+  }
+  std::vector<curve_type> curveTypes;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    curveTypes.push_back(static_cast<curve_type>(val[i].as<int>()));
+  }
+  params.curveTypes = curveTypes;
+}
+
+static emscripten::val get_pile_cap_zposarray(const pile_cap_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.ZPOSTARRAY) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_pile_cap_zposarray(pile_cap_params &params,
+                                   emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for ZPOSTARRAY");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.ZPOSTARRAY = points;
+}
+
+static emscripten::val
+get_rock_anchor_zposarray(const rock_anchor_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.ZPOSTARRAY) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_rock_anchor_zposarray(rock_anchor_params &params,
+                                      emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for ZPOSTARRAY");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.ZPOSTARRAY = points;
+}
+
+static emscripten::val
+get_rock_pile_cap_zposarray(const rock_pile_cap_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.ZPOSTARRAY) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_rock_pile_cap_zposarray(rock_pile_cap_params &params,
+                                        emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for ZPOSTARRAY");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.ZPOSTARRAY = points;
+}
+
+static emscripten::val
+get_precast_metal_support_hx(const precast_metal_support_base_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &height : params.HX) {
+    arr.call<void>("push", height);
+  }
+  return arr;
+}
+
+static void
+set_precast_metal_support_hx(precast_metal_support_base_params &params,
+                             emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for HX");
+  }
+  std::vector<double> heights;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    heights.push_back(val[i].as<double>());
+  }
+  params.HX = heights;
+}
+
+static emscripten::val get_pole_tower_leg_nodes(const pole_tower_leg &leg) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &node : leg.nodes) {
+    arr.call<void>("push", emscripten::val(node));
+  }
+  return arr;
+}
+
+static void set_pole_tower_leg_nodes(pole_tower_leg &leg, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for nodes");
+  }
+  std::vector<pole_tower_node> nodes;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    nodes.push_back(val[i].as<pole_tower_node>());
+  }
+  leg.nodes = nodes;
+}
+
+static emscripten::val get_pole_tower_body_nodes(const pole_tower_body &body) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &node : body.nodes) {
+    arr.call<void>("push", emscripten::val(node));
+  }
+  return arr;
+}
+
+static void set_pole_tower_body_nodes(pole_tower_body &body,
+                                      emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for nodes");
+  }
+  std::vector<pole_tower_node> nodes;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    nodes.push_back(val[i].as<pole_tower_node>());
+  }
+  body.nodes = nodes;
+}
+
+static emscripten::val get_pole_tower_body_legs(const pole_tower_body &body) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &leg : body.legs) {
+    arr.call<void>("push", emscripten::val(leg));
+  }
+  return arr;
+}
+
+static void set_pole_tower_body_legs(pole_tower_body &body,
+                                     emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for legs");
+  }
+  std::vector<pole_tower_leg> legs;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    legs.push_back(val[i].as<pole_tower_leg>());
+  }
+  body.legs = legs;
+}
+
+static emscripten::val get_pole_tower_heights(const pole_tower_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &height : params.heights) {
+    arr.call<void>("push", emscripten::val(height));
+  }
+  return arr;
+}
+
+static void set_pole_tower_heights(pole_tower_params &params,
+                                   emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for heights");
+  std::vector<pole_tower_height> heights;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    heights.push_back(val[i].as<pole_tower_height>());
+  }
+  params.heights = heights;
+}
+
+static emscripten::val get_pole_tower_bodies(const pole_tower_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &body : params.bodies) {
+    arr.call<void>("push", emscripten::val(body));
+  }
+  return arr;
+}
+
+static void set_pole_tower_bodies(pole_tower_params &params,
+                                  emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for bodies");
+  std::vector<pole_tower_body> bodies;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    bodies.push_back(val[i].as<pole_tower_body>());
+  }
+  params.bodies = bodies;
+}
+
+static emscripten::val get_pole_tower_members(const pole_tower_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &member : params.members) {
+    arr.call<void>("push", emscripten::val(member));
+  }
+  return arr;
+}
+
+static void set_pole_tower_members(pole_tower_params &params,
+                                   emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for members");
+  std::vector<pole_tower_member> members;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    members.push_back(val[i].as<pole_tower_member>());
+  }
+  params.members = members;
+}
+
+static emscripten::val
+get_pole_tower_attachments(const pole_tower_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &attachment : params.attachments) {
+    arr.call<void>("push", emscripten::val(attachment));
+  }
+  return arr;
+}
+
+static void set_pole_tower_attachments(pole_tower_params &params,
+                                       emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for attachments");
+  std::vector<pole_tower_attachment> attachments;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    attachments.push_back(val[i].as<pole_tower_attachment>());
+  }
+  params.attachments = attachments;
+}
+
+static emscripten::val get_cable_wire_points(const cable_wire_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_cable_wire_points(cable_wire_params &params,
+                                  emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.points = points;
+}
+
+static emscripten::val
+get_column_mount_points(const cable_bracket_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.columnMountPoints) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_column_mount_points(cable_bracket_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for columnMountPoints");
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.columnMountPoints = points;
+}
+
+static emscripten::val
+get_clamp_mount_points(const cable_bracket_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.clampMountPoints) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_clamp_mount_points(cable_bracket_params &params,
+                                   emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for clampMountPoints");
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.clampMountPoints = points;
+}
+
+static emscripten::val
+get_cable_pole_mount_points(const cable_pole_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.mountPoints) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_cable_pole_mount_points(cable_pole_params &params,
+                                        emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for mountPoints");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.mountPoints = points;
+}
+
+static emscripten::val get_pipe_positions(const pipe_row_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &pos : params.pipePositions) {
+    arr.call<void>("push", emscripten::val(pos));
+  }
+  return arr;
+}
+
+static void set_pipe_positions(pipe_row_params &params, emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for pipePositions");
+  std::vector<gp_Pnt2d> positions;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    positions.push_back(val[i].as<gp_Pnt2d>());
+  }
+  params.pipePositions = positions;
+}
+
+static emscripten::val get_pipe_inner_diameters(const pipe_row_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &dia : params.pipeInnerDiameters) {
+    arr.call<void>("push", emscripten::val(dia));
+  }
+  return arr;
+}
+
+static void set_pipe_inner_diameters(pipe_row_params &params,
+                                     emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for pipeInnerDiameters");
+  std::vector<double> diameters;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    diameters.push_back(val[i].as<double>());
+  }
+  params.pipeInnerDiameters = diameters;
+}
+
+static emscripten::val
+get_pipe_wall_thicknesses(const pipe_row_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &thick : params.pipeWallThicknesses) {
+    arr.call<void>("push", emscripten::val(thick));
+  }
+  return arr;
+}
+
+static void set_pipe_wall_thicknesses(pipe_row_params &params,
+                                      emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for pipeWallThicknesses");
+  std::vector<double> thicknesses;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    thicknesses.push_back(val[i].as<double>());
+  }
+  params.pipeWallThicknesses = thicknesses;
+}
+
+static emscripten::val get_channel_points(const pipe_row_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    emscripten::val obj = emscripten::val::object();
+    obj.set("position", emscripten::val(point.position));
+    obj.set("type", emscripten::val(point.type));
+    arr.call<void>("push", obj);
+  }
+  return arr;
+}
+
+static void set_channel_points(pipe_row_params &params, emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for points");
+  std::vector<channel_point> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    channel_point point;
+    point.position = val[i]["position"].as<gp_Pnt>();
+    point.type = val[i]["type"].as<int>();
+    points.push_back(point);
+  }
+  params.points = points;
+}
+
+static emscripten::val
+get_cable_trench_points(const cable_trench_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    emscripten::val obj = emscripten::val::object();
+    obj.set("position", emscripten::val(point.position));
+    obj.set("type", emscripten::val(point.type));
+    arr.call<void>("push", obj);
+  }
+  return arr;
+}
+
+static void set_cable_trench_points(cable_trench_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<channel_point> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    channel_point point;
+    point.position = val[i]["position"].as<gp_Pnt>();
+    point.type = val[i]["type"].as<int>();
+    points.push_back(point);
+  }
+  params.points = points;
+}
+
+static emscripten::val
+get_cable_tray_pipe_positions(const cable_tray_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &pos : params.pipePositions) {
+    arr.call<void>("push", emscripten::val(pos));
+  }
+  return arr;
+}
+
+static void set_cable_tray_pipe_positions(cable_tray_params &params,
+                                          emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for pipePositions");
+  std::vector<gp_Pnt2d> positions;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    positions.push_back(val[i].as<gp_Pnt2d>());
+  }
+  params.pipePositions = positions;
+}
+
+static emscripten::val
+get_cable_tray_pipe_inner_diameters(const cable_tray_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &dia : params.pipeInnerDiameters) {
+    arr.call<void>("push", emscripten::val(dia));
+  }
+  return arr;
+}
+
+static void set_cable_tray_pipe_inner_diameters(cable_tray_params &params,
+                                                emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for pipeInnerDiameters");
+  std::vector<double> diameters;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    diameters.push_back(val[i].as<double>());
+  }
+  params.pipeInnerDiameters = diameters;
+}
+
+static emscripten::val
+get_cable_tray_pipe_wall_thicknesses(const cable_tray_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &thick : params.pipeWallThicknesses) {
+    arr.call<void>("push", emscripten::val(thick));
+  }
+  return arr;
+}
+
+static void set_cable_tray_pipe_wall_thicknesses(cable_tray_params &params,
+                                                 emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for pipeWallThicknesses");
+  std::vector<double> thicknesses;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    thicknesses.push_back(val[i].as<double>());
+  }
+  params.pipeWallThicknesses = thicknesses;
+}
+
+static emscripten::val get_cable_tray_points(const cable_tray_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    emscripten::val obj = emscripten::val::object();
+    obj.set("position", emscripten::val(point.position));
+    obj.set("type", emscripten::val(point.type));
+    arr.call<void>("push", obj);
+  }
+  return arr;
+}
+
+static void set_cable_tray_points(cable_tray_params &params,
+                                  emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for points");
+  std::vector<channel_point> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    channel_point point;
+    point.position = val[i]["position"].as<gp_Pnt>();
+    point.type = val[i]["type"].as<int>();
+    points.push_back(point);
+  }
+  params.points = points;
+}
+
+static emscripten::val get_footpath_points(const footpath_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    emscripten::val obj = emscripten::val::object();
+    obj.set("position", emscripten::val(point.position));
+    obj.set("type", emscripten::val(point.type));
+    arr.call<void>("push", obj);
+  }
+  return arr;
+}
+
+static void set_footpath_points(footpath_params &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<channel_point> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    channel_point point;
+    point.position = val[i]["position"].as<gp_Pnt>();
+    point.type = val[i]["type"].as<int>();
+    points.push_back(point);
+  }
+  params.points = points;
+}
+
+static emscripten::val
+get_hole_positions(const tunnel_partition_board_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &pos : params.holePositions) {
+    arr.call<void>("push", emscripten::val(pos));
+  }
+  return arr;
+}
+
+static void set_hole_positions(tunnel_partition_board_params &params,
+                               emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for holePositions");
+  std::vector<gp_Pnt2d> positions;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    positions.push_back(val[i].as<gp_Pnt2d>());
+  }
+  params.holePositions = positions;
+}
+
+static emscripten::val
+get_hole_styles(const tunnel_partition_board_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &style : params.holeStyles) {
+    arr.call<void>("push", emscripten::val(style));
+  }
+  return arr;
+}
+
+static void set_hole_styles(tunnel_partition_board_params &params,
+                            emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for holeStyles");
+  std::vector<int> styles;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    styles.push_back(val[i].as<int>());
+  }
+  params.holeStyles = styles;
+}
+
+static emscripten::val
+get_hole_diameters(const tunnel_partition_board_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &dia : params.holeDiameters) {
+    arr.call<void>("push", emscripten::val(dia));
+  }
+  return arr;
+}
+
+static void set_hole_diameters(tunnel_partition_board_params &params,
+                               emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for holeDiameters");
+  std::vector<double> diameters;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    diameters.push_back(val[i].as<double>());
+  }
+  params.holeDiameters = diameters;
+}
+
+static emscripten::val
+get_hole_widths(const tunnel_partition_board_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &width : params.holeWidths) {
+    arr.call<void>("push", emscripten::val(width));
+  }
+  return arr;
+}
+
+static void set_hole_widths(tunnel_partition_board_params &params,
+                            emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for holeWidths");
+  std::vector<double> widths;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    widths.push_back(val[i].as<double>());
+  }
+  params.holeWidths = widths;
+}
+
+static emscripten::val
+get_pipe_support_positions(const pipe_support_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &pos : params.positions) {
+    arr.call<void>("push", emscripten::val(pos));
+  }
+  return arr;
+}
+
+static void set_pipe_support_positions(pipe_support_params &params,
+                                       emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for positions");
+  std::vector<gp_Pnt2d> positions;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    positions.push_back(val[i].as<gp_Pnt2d>());
+  }
+  params.positions = positions;
+}
+
+static emscripten::val
+get_pipe_support_radii(const pipe_support_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &radius : params.radii) {
+    arr.call<void>("push", emscripten::val(radius));
+  }
+  return arr;
+}
+
+static void set_pipe_support_radii(pipe_support_params &params,
+                                   emscripten::val val) {
+  if (!val.isArray())
+    throw std::runtime_error("Expected array for radii");
+  std::vector<double> radii;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    radii.push_back(val[i].as<double>());
+  }
+  params.radii = radii;
+}
+
+static emscripten::val
+get_water_tunnel_points(const water_tunnel_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    emscripten::val obj = emscripten::val::object();
+    obj.set("position", emscripten::val(point.position));
+    obj.set("type", emscripten::val(point.type));
+    arr.call<void>("push", obj);
+  }
+  return arr;
+}
+
+static void set_water_tunnel_points(water_tunnel_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<channel_point> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    channel_point point;
+    point.position = val[i]["position"].as<gp_Pnt>();
+    point.type = val[i]["type"].as<int>();
+    points.push_back(point);
+  }
+  params.points = points;
+}
+} // namespace
 
 EMSCRIPTEN_BINDINGS(Primitive) {
   // 球体参数结构体
@@ -883,7 +1684,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   // 拉伸体参数结构体
   value_object<stretched_body_params>("StretchedBodyParams")
-      .field("points", &stretched_body_params::points)
+      .field("points", &get_stretched_body_points, &set_stretched_body_points)
       .field("normal", &stretched_body_params::normal)
       .field("length", &stretched_body_params::length);
 
@@ -1050,7 +1851,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("endDir", &wire_params::endDir)
       .field("sag", &wire_params::sag)
       .field("diameter", &wire_params::diameter)
-      .field("fitPoints", &wire_params::fitPoints);
+      .field("fitPoints", &get_wire_fit_points, &set_wire_fit_points);
 
   // 导线创建函数
   function("createWire",
@@ -1064,8 +1865,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   value_object<cable_params>("CableParams")
       .field("startPoint", &cable_params::startPoint)
       .field("endPoint", &cable_params::endPoint)
-      .field("inflectionPoints", &cable_params::inflectionPoints)
-      .field("radii", &cable_params::radii)
+      .field("inflectionPoints", &get_cable_inflection_points,
+             &set_cable_inflection_points)
+      .field("radii", &get_cable_radii, &set_cable_radii)
       .field("diameter", &cable_params::diameter);
 
   // 电缆创建函数
@@ -1084,8 +1886,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   // 曲线电缆参数结构体
   value_object<curve_cable_params>("CurveCableParams")
-      .field("controlPoints", &curve_cable_params::controlPoints)
-      .field("curveTypes", &curve_cable_params::curveTypes)
+      .field("controlPoints", &get_curve_cable_control_points,
+             &set_curve_cable_control_points)
+      .field("curveTypes", &get_curve_cable_curve_types,
+             &set_curve_cable_curve_types)
       .field("diameter", &curve_cable_params::diameter);
 
   // 曲线电缆创建函数
@@ -1202,7 +2006,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("e2", &pile_cap_params::e2)
       .field("cs", &pile_cap_params::cs)
       .field("ZCOUNT", &pile_cap_params::ZCOUNT)
-      .field("ZPOSTARRAY", &pile_cap_params::ZPOSTARRAY);
+      .field("ZPOSTARRAY", &get_pile_cap_zposarray, &set_pile_cap_zposarray);
 
   // 桩承台创建函数
   function("createPileCapBase",
@@ -1221,7 +2025,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("B1", &rock_anchor_params::B1)
       .field("L1", &rock_anchor_params::L1)
       .field("ZCOUNT", &rock_anchor_params::ZCOUNT)
-      .field("ZPOSTARRAY", &rock_anchor_params::ZPOSTARRAY);
+      .field("ZPOSTARRAY", &get_rock_anchor_zposarray,
+             &set_rock_anchor_zposarray);
 
   // 岩石锚杆创建函数
   function("createRockAnchorBase",
@@ -1245,7 +2050,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("e2", &rock_pile_cap_params::e2)
       .field("cs", &rock_pile_cap_params::cs)
       .field("ZCOUNT", &rock_pile_cap_params::ZCOUNT)
-      .field("ZPOSTARRAY", &rock_pile_cap_params::ZPOSTARRAY);
+      .field("ZPOSTARRAY", &get_rock_pile_cap_zposarray,
+             &set_rock_pile_cap_zposarray);
 
   // 岩石桩承台创建函数
   function("createRockPileCapBase",
@@ -1528,7 +2334,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("S2", &precast_metal_support_base_params::S2)
       .field("n1", &precast_metal_support_base_params::n1)
       .field("n2", &precast_metal_support_base_params::n2)
-      .field("HX", &precast_metal_support_base_params::HX);
+      .field("HX", &get_precast_metal_support_hx,
+             &set_precast_metal_support_hx);
 
   // 预制金属支撑基础创建函数
   function(
@@ -1712,14 +2519,14 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("id", &pole_tower_leg::id)
       .field("commonHeight", &pole_tower_leg::commonHeight)
       .field("specificHeight", &pole_tower_leg::specificHeight)
-      .field("nodes", &pole_tower_leg::nodes);
+      .field("nodes", &get_pole_tower_leg_nodes, &set_pole_tower_leg_nodes);
 
   // 杆塔本体结构体绑定
   value_object<pole_tower_body>("PoleTowerBody")
       .field("id", &pole_tower_body::id)
       .field("height", &pole_tower_body::height)
-      .field("nodes", &pole_tower_body::nodes)
-      .field("legs", &pole_tower_body::legs);
+      .field("nodes", &get_pole_tower_body_nodes, &set_pole_tower_body_nodes)
+      .field("legs", &get_pole_tower_body_legs, &set_pole_tower_body_legs);
 
   // 杆塔呼高结构体绑定
   value_object<pole_tower_height>("PoleTowerHeight")
@@ -1729,10 +2536,11 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   // 杆塔参数结构体绑定
   value_object<pole_tower_params>("PoleTowerParams")
-      .field("heights", &pole_tower_params::heights)
-      .field("bodies", &pole_tower_params::bodies)
-      .field("members", &pole_tower_params::members)
-      .field("attachments", &pole_tower_params::attachments);
+      .field("heights", &get_pole_tower_heights, &set_pole_tower_heights)
+      .field("bodies", &get_pole_tower_bodies, &set_pole_tower_bodies)
+      .field("members", &get_pole_tower_members, &set_pole_tower_members)
+      .field("attachments", &get_pole_tower_attachments,
+             &set_pole_tower_attachments);
 
   // 杆塔创建函数
   function("createPoleTower",
@@ -1949,7 +2757,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   // 电缆参数结构体绑定
   value_object<cable_wire_params>("CableWireParams")
-      .field("points", &cable_wire_params::points)
+      .field("points", &get_cable_wire_points, &set_cable_wire_points)
       .field("outsideDiameter", &cable_wire_params::outsideDiameter);
 
   // 电缆创建函数
@@ -2075,8 +2883,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("width", &cable_bracket_params::width)
       .field("topThickness", &cable_bracket_params::topThickness)
       .field("rootThickness", &cable_bracket_params::rootThickness)
-      .field("columnMountPoints", &cable_bracket_params::columnMountPoints)
-      .field("clampMountPoints", &cable_bracket_params::clampMountPoints);
+      .field("columnMountPoints", &get_column_mount_points,
+             &set_column_mount_points)
+      .field("clampMountPoints", &get_clamp_mount_points,
+             &set_clamp_mount_points);
 
   // 电缆支架创建函数
   function("createCableBracket",
@@ -2122,7 +2932,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("fixedLegLength", &cable_pole_params::fixedLegLength)
       .field("fixedLegWidth", &cable_pole_params::fixedLegWidth)
       .field("thickness", &cable_pole_params::thickness)
-      .field("mountPoints", &cable_pole_params::mountPoints);
+      .field("mountPoints", &get_cable_pole_mount_points,
+             &set_cable_pole_mount_points);
 
   // 电缆立柱创建函数
   function("createCablePole",
@@ -2402,12 +3213,14 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("baseThickness", &pipe_row_params::baseThickness)
       .field("cushionExtension", &pipe_row_params::cushionExtension)
       .field("cushionThickness", &pipe_row_params::cushionThickness)
-      .field("pipePositions", &pipe_row_params::pipePositions)
-      .field("pipeInnerDiameters", &pipe_row_params::pipeInnerDiameters)
-      .field("pipeWallThicknesses", &pipe_row_params::pipeWallThicknesses)
+      .field("pipePositions", &get_pipe_positions, &set_pipe_positions)
+      .field("pipeInnerDiameters", &get_pipe_inner_diameters,
+             &set_pipe_inner_diameters)
+      .field("pipeWallThicknesses", &get_pipe_wall_thicknesses,
+             &set_pipe_wall_thicknesses)
       .field("pullPipeInnerDiameter", &pipe_row_params::pullPipeInnerDiameter)
       .field("pullPipeThickness", &pipe_row_params::pullPipeThickness)
-      .field("points", &pipe_row_params::points);
+      .field("points", &get_channel_points, &set_channel_points);
 
   // 排管创建函数
   function(
@@ -2430,7 +3243,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("cushionThickness", &cable_trench_params::cushionThickness)
       .field("wallThickness", &cable_trench_params::wallThickness)
       .field("wallThickness2", &cable_trench_params::wallThickness2)
-      .field("points", &cable_trench_params::points);
+      .field("points", &get_cable_trench_points, &set_cable_trench_points);
 
   // 电缆沟创建函数
   function("createCableTrench",
@@ -2479,11 +3292,14 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("arcHeight", &cable_tray_params::arcHeight)
       .field("wallThickness", &cable_tray_params::wallThickness)
       .field("pipeCount", &cable_tray_params::pipeCount)
-      .field("pipePositions", &cable_tray_params::pipePositions)
-      .field("pipeInnerDiameters", &cable_tray_params::pipeInnerDiameters)
-      .field("pipeWallThicknesses", &cable_tray_params::pipeWallThicknesses)
+      .field("pipePositions", &get_cable_tray_pipe_positions,
+             &set_cable_tray_pipe_positions)
+      .field("pipeInnerDiameters", &get_cable_tray_pipe_inner_diameters,
+             &set_cable_tray_pipe_inner_diameters)
+      .field("pipeWallThicknesses", &get_cable_tray_pipe_wall_thicknesses,
+             &set_cable_tray_pipe_wall_thicknesses)
       .field("hasProtectionPlate", &cable_tray_params::hasProtectionPlate)
-      .field("points", &cable_tray_params::points);
+      .field("points", &get_cable_tray_points, &set_cable_tray_points);
 
   // 电缆桥架创建函数
   function("createCableTray",
@@ -2588,7 +3404,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   value_object<footpath_params>("FootpathParams")
       .field("height", &footpath_params::height)
       .field("width", &footpath_params::width)
-      .field("points", &footpath_params::points);
+      .field("points", &get_footpath_points, &set_footpath_points);
 
   // 步道创建函数
   function(
@@ -2645,10 +3461,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("width", &tunnel_partition_board_params::width)
       .field("thickness", &tunnel_partition_board_params::thickness)
       .field("holeCount", &tunnel_partition_board_params::holeCount)
-      .field("holePositions", &tunnel_partition_board_params::holePositions)
-      .field("holeStyles", &tunnel_partition_board_params::holeStyles)
-      .field("holeDiameters", &tunnel_partition_board_params::holeDiameters)
-      .field("holeWidths", &tunnel_partition_board_params::holeWidths);
+      .field("holePositions", &get_hole_positions, &set_hole_positions)
+      .field("holeStyles", &get_hole_styles, &set_hole_styles)
+      .field("holeDiameters", &get_hole_diameters, &set_hole_diameters)
+      .field("holeWidths", &get_hole_widths, &set_hole_widths);
 
   // 隧道分区板创建函数
   function("createTunnelPartitionBoard",
@@ -2762,8 +3578,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   value_object<pipe_support_params>("PipeSupportParams")
       .field("style", &pipe_support_params::style)
       .field("count", &pipe_support_params::count)
-      .field("positions", &pipe_support_params::positions)
-      .field("radii", &pipe_support_params::radii)
+      .field("positions", &get_pipe_support_positions,
+             &set_pipe_support_positions)
+      .field("radii", &get_pipe_support_radii, &set_pipe_support_radii)
       .field("length", &pipe_support_params::length)
       .field("width", &pipe_support_params::width)
       .field("height", &pipe_support_params::height);
@@ -2837,7 +3654,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("bottomPlatformHeight", &water_tunnel_params::bottomPlatformHeight)
       .field("cushionExtension", &water_tunnel_params::cushionExtension)
       .field("cushionThickness", &water_tunnel_params::cushionThickness)
-      .field("points", &water_tunnel_params::points);
+      .field("points", &get_water_tunnel_points, &set_water_tunnel_points);
 
   // 水隧道创建函数
   function("createWaterTunnel",

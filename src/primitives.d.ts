@@ -1554,12 +1554,6 @@ export declare function createCornerWellWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
-// 隧道井类型枚举
-export declare enum TunnelWellType {
-    STRAIGHT = "STRAIGHT",
-    STRAIGHT_TUNNEL = "STRAIGHT_TUNNEL"
-}
-
 // 隧道井参数结构体
 export declare interface TunnelWellParams {
     type: TunnelWellType;
