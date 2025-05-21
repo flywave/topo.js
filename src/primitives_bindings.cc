@@ -133,8 +133,8 @@ static void set_multi_segment_inner_profiles(multi_segment_pipe_params &params,
 
 static emscripten::val
 get_multi_segment_up_dir(const multi_segment_pipe_params &params) {
-  if (params.up_dir) {
-    return emscripten::val(*params.up_dir);
+  if (params.upDir) {
+    return emscripten::val(*params.upDir);
   }
   return emscripten::val::undefined();
 }
@@ -142,15 +142,15 @@ get_multi_segment_up_dir(const multi_segment_pipe_params &params) {
 static void set_multi_segment_up_dir(multi_segment_pipe_params &params,
                                      emscripten::val val) {
   if (val.isUndefined()) {
-    params.up_dir = boost::none;
+    params.upDir = boost::none;
   } else {
-    params.up_dir = val.as<gp_Dir>();
+    params.upDir = val.as<gp_Dir>();
   }
 }
 
 static emscripten::val get_pipe_joint_up_dir(const pipe_joint_params &params) {
-  if (params.up_dir) {
-    return emscripten::val(*params.up_dir);
+  if (params.upDir) {
+    return emscripten::val(*params.upDir);
   }
   return emscripten::val::undefined();
 }
@@ -158,9 +158,9 @@ static emscripten::val get_pipe_joint_up_dir(const pipe_joint_params &params) {
 static void set_pipe_joint_up_dir(pipe_joint_params &params,
                                   emscripten::val val) {
   if (val.isUndefined()) {
-    params.up_dir = boost::none;
+    params.upDir = boost::none;
   } else {
-    params.up_dir = val.as<gp_Dir>();
+    params.upDir = val.as<gp_Dir>();
   }
 }
 
@@ -210,17 +210,17 @@ static void set_pipe_inner_profiles(pipe_params &params, emscripten::val val) {
 }
 
 static emscripten::val get_pipe_up_dir(const pipe_params &params) {
-  if (params.up_dir) {
-    return emscripten::val(*params.up_dir);
+  if (params.upDir) {
+    return emscripten::val(*params.upDir);
   }
   return emscripten::val::undefined();
 }
 
 static void set_pipe_up_dir(pipe_params &params, emscripten::val val) {
   if (val.isUndefined()) {
-    params.up_dir = boost::none;
+    params.upDir = boost::none;
   } else {
-    params.up_dir = val.as<gp_Dir>();
+    params.upDir = val.as<gp_Dir>();
   }
 }
 
@@ -703,8 +703,8 @@ static void set_polygon_inners(polygon_profile &params, emscripten::val val) {
 }
 
 static emscripten::val get_pipe_shape_up_dir(const pipe_shape_params &params) {
-  if (params.up_dir) {
-    return emscripten::val(*params.up_dir);
+  if (params.upDir) {
+    return emscripten::val(*params.upDir);
   }
   return emscripten::val::undefined();
 }
@@ -712,9 +712,9 @@ static emscripten::val get_pipe_shape_up_dir(const pipe_shape_params &params) {
 static void set_pipe_shape_up_dir(pipe_shape_params &params,
                                   emscripten::val val) {
   if (val.isUndefined()) {
-    params.up_dir = boost::none;
+    params.upDir = boost::none;
   } else {
-    params.up_dir = val.as<gp_Dir>();
+    params.upDir = val.as<gp_Dir>();
   }
 }
 static emscripten::val
@@ -3889,7 +3889,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("p2", &catenary_params::p2)
       .field("profile", &get_catenary_profile, &set_catenary_profile)
       .field("slack", &catenary_params::slack)
-      .field("maxSag", &catenary_params::max_sag)
+      .field("maxSag", &catenary_params::maxSag)
       .field("tessellation", &catenary_params::tessellation);
 
   // 创建悬链线函数

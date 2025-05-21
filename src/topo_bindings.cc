@@ -2170,6 +2170,27 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 return edge::make_spline_approx(points, tolerance, smoothing,
                                                 minDegree, maxDegree);
               }))
+      .class_function(
+          "makeCatenary",
+          emscripten::optional_override(
+              [](emscripten::val p1Val, emscripten::val p2Val,
+                 emscripten::val orientationVal, emscripten::val slackVal,
+                 emscripten::val maxSagVal, emscripten::val tessellationVal) {
+                // 处理必需参数
+                gp_Pnt p1 = p1Val.as<gp_Pnt>();
+                gp_Pnt p2 = p2Val.as<gp_Pnt>();
+                gp_Ax3 orientation = orientationVal.as<gp_Ax3>();
+                double slack = slackVal.as<double>();
+                double maxSag = maxSagVal.as<double>();
+
+                // 处理可选参数tessellation
+                double tessellation = tessellationVal.isUndefined()
+                                          ? 0.0
+                                          : tessellationVal.as<double>();
+
+                return edge::make_catenary(p1, p2, orientation, slack, maxSag,
+                                           tessellation);
+              }))
       // 圆形创建方法
       .class_function(
           "makeCircle",

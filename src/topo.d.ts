@@ -726,6 +726,15 @@ export declare class Edge extends Shape1D {
     static makeSplineFromTangentsAndParameters(points: gp_Pnt[], tangents?: gp_Vec[], periodic?: boolean, parameters?: number[], scale?: boolean, tolerance?: number): Edge;
     static makeSplineApprox(points: gp_Pnt[], tolerance?: number, smoothing?: [number, number, number], minDegree?: number, maxDegree?: number): Edge;
 
+    static makeCatenary(
+        p1: gp_Pnt,
+        p2: gp_Pnt,
+        orientation: gp_Ax3,
+        slack: number,
+        maxSag: number,
+        tessellation?: number
+    ): Edge;
+
     // 圆形创建方法
     static makeCircle(
         radius: number,
