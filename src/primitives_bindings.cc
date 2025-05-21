@@ -3842,6 +3842,17 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const pipe_params &, const gp_Pnt &,
                                         const gp_Dir &, const gp_Dir &)>(
                &create_pipe));
+  function("createPipeWithSplitDistances",
+           emscripten::optional_override([](const pipe_params &params,
+                                            emscripten::val splitDistancesVal) {
+             std::array<double, 2> splitDistances = {0.0, -1};
+             if (splitDistancesVal.isArray() &&
+                 splitDistancesVal["length"].as<size_t>() == 2) {
+               splitDistances[0] = splitDistancesVal[0].as<double>();
+               splitDistances[1] = splitDistancesVal[1].as<double>();
+             }
+             return create_pipe_with_split_distances(params, splitDistances);
+           }));
 
   // 创建多段管道函数
   function("createMultiSegmentPipe",
@@ -3851,6 +3862,19 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(
                const multi_segment_pipe_params &, const gp_Pnt &,
                const gp_Dir &, const gp_Dir &)>(&create_multi_segment_pipe));
+  function(
+      "createMultiSegmentPipeWithSplitDistances",
+      emscripten::optional_override([](const multi_segment_pipe_params &params,
+                                       emscripten::val splitDistancesVal) {
+        std::array<double, 2> splitDistances = {0.0, -1};
+        if (splitDistancesVal.isArray() &&
+            splitDistancesVal["length"].as<size_t>() == 2) {
+          splitDistances[0] = splitDistancesVal[0].as<double>();
+          splitDistances[1] = splitDistancesVal[1].as<double>();
+        }
+        return create_multi_segment_pipe_with_split_distances(params,
+                                                              splitDistances);
+      }));
 
   // 连接形状模式枚举
   enum_<joint_shape_mode>("JointShapeMode")

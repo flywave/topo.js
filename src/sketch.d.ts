@@ -1,9 +1,9 @@
-declare enum SketchMode {
-  ADD,
-  SUBTRACT,
-  INTERSECT,
-  CONSTRUCT,
-  REPLACE,
+export declare type SketchMode = {
+  ADD: {},
+  SUBTRACT: {},
+  INTERSECT: {},
+  CONSTRUCT: {},
+  REPLACE: {},
 }
 
 declare type SketchVal  = Shape | Location

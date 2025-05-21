@@ -161,7 +161,7 @@ export function faceRadius(face: Face): null | number {
     const [r, gc] = localGC();
     const geomSurf = r(oc.BRep_Tool.Surface_2(face.value()));
 
-    if (face.geomType() !== ShapeGeomType.CYLINDER) return null;
+    if (face.geomType() !== oc.ShapeGeomType.CYLINDER) return null;
 
     const cylinder = r((geomSurf.get() as Geom_CylindricalSurface).Cylinder());
     const radius = cylinder.Radius();
@@ -188,8 +188,8 @@ export function curvesAsEdgesOnFace(
     const uAxis = r(axis2d([0, 0], [0, 1]));
     const vAxis = r(axis2d([0, 0], [1, 0]));
 
-    if (scale === "original" && face.geomType() !== ShapeGeomType.PLANE) {
-        if (face.geomType() !== ShapeGeomType.CYLINDER)
+    if (scale === "original" && face.geomType() !== oc.ShapeGeomType.PLANE) {
+        if (face.geomType() !== oc.ShapeGeomType.CYLINDER)
             throw new Error(
                 "Only planar and cylidrical faces can be unwrapped for sketching"
             );
@@ -245,7 +245,7 @@ export function edgeToCurve(e: Edge, face: Face): Curve2D {
         true
     );
 
-    if (e.getOrientation() === Orientation.REVERSED) {
+    if (e.getOrientation() === oc.Orientation.REVERSED) {
         trimmed.Reverse();
     }
 

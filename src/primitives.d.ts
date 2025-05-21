@@ -426,10 +426,10 @@ export declare function createCableWithPosition(
 ): TopoDS_Shape;
 
 // 曲线类型枚举
-export declare enum CurveType {
-    LINE = "LINE",
-    ARC = "ARC",
-    SPLINE = "SPLINE"
+export declare type CurveType  = {
+    LINE: {},
+    ARC: {},
+    SPLINE: {}
 }
 
 // 曲线电缆参数结构体
@@ -921,28 +921,28 @@ export declare function createTransmissionLine(
 ): TopoDS_Shape;
 
 // 绝缘子材质枚举
-export declare enum InsulatorMaterial {
-    CERAMIC = "CERAMIC",
-    GLASS = "GLASS",
-    COMPOSITE = "COMPOSITE"
+export declare type InsulatorMaterial = {
+    CERAMIC: {},
+    GLASS: {},
+    COMPOSITE: {}
 }
 
 // 排列方式枚举
-export declare enum ArrangementType {
-    HORIZONTAL = "HORIZONTAL",
-    VERTICAL = "VERTICAL"
+export declare type ArrangementType = {
+    HORIZONTAL: {},
+    VERTICAL: {}
 }
 
 // 串用途枚举
-export declare enum ApplicationType {
-    CONDUCTOR = "CONDUCTOR",
-    GROUND_WIRE = "GROUND_WIRE"
+export declare type ApplicationType = {
+    CONDUCTOR: {},
+    GROUND_WIRE: {}
 }
 
 // 串类型枚举
-export declare enum StringType {
-    SUSPENSION = "SUSPENSION",
-    TENSION = "TENSION"
+export declare type StringType  = {
+    SUSPENSION: {},
+    TENSION: {}
 }
 
 // 复合绝缘子参数结构体
@@ -998,17 +998,17 @@ export declare function createInsulatorWithPosition(
 
 
 // 杆件类型枚举
-export declare enum MemberType {
-    ANGLE = "ANGLE",
-    TUBE = "TUBE",
-    TAPERED_TUBE = "TAPERED_TUBE"
+export declare type MemberType = {
+    ANGLE: {},
+    TUBE: {},
+    TAPERED_TUBE: {}
 }
 
 // 挂点类型枚举
-export declare enum AttachmentType {
-    GROUND_WIRE = "GROUND_WIRE",
-    CONDUCTOR = "CONDUCTOR",
-    JUMPER = "JUMPER"
+export declare type AttachmentType = {
+    GROUND_WIRE: {},
+    CONDUCTOR: {},
+    JUMPER: {}
 }
 
 // 杆塔节点结构体
@@ -1361,10 +1361,10 @@ export declare function createCableTerminalWithPosition(
 ): TopoDS_Shape;
 
 // 接地箱类型枚举
-export declare enum CableBoxType {
-    DIRECT_GROUND = "DIRECT_GROUND",
-    PROTECTIVE_GROUND = "PROTECTIVE_GROUND",
-    CROSS_INTERCONNECT = "CROSS_INTERCONNECT"
+export declare type CableBoxType = {
+    DIRECT_GROUND: {},
+    PROTECTIVE_GROUND: {},
+    CROSS_INTERCONNECT: {}
 }
 
 // 接地箱参数结构体
@@ -1410,11 +1410,11 @@ export declare function createCableBracketWithPosition(
 ): TopoDS_Shape;
 
 // 电缆夹具类型枚举
-export declare enum CableClampType {
-    SINGLE = "SINGLE",
-    LINEAR = "LINEAR",
-    CONTACT_TRIPLE = "CONTACT_TRIPLE",
-    SEPARATE_TRIPLE = "SEPARATE_TRIPLE"
+export declare type CableClampType = {
+    SINGLE: {},
+    LINEAR: {},
+    CONTACT_TRIPLE: {},
+    SEPARATE_TRIPLE: {}
 }
 
 // 电缆夹具参数结构体
@@ -1519,16 +1519,16 @@ export declare function createLiftingEyeWithPosition(
 ): TopoDS_Shape;
 
 // 连接段截面样式枚举
-export declare enum ConnectionSectionStyle {
-    RECTANGULAR = "RECTANGULAR",
-    HORSESHOE = "HORSESHOE",
-    CIRCULAR = "CIRCULAR"
+export declare type ConnectionSectionStyle = {
+    RECTANGULAR: {},
+    HORSESHOE:{},
+    CIRCULAR: {}
 }
 
 // 井类型枚举
-export declare enum TunnelWellType {
-    STRAIGHT = "STRAIGHT",
-    STRAIGHT_TUNNEL = "STRAIGHT_TUNNEL"
+export declare type TunnelWellType = {
+    STRAIGHT: {},
+    STRAIGHT_TUNNEL: {}
 }
 
 // 转角井参数结构体
@@ -1589,22 +1589,22 @@ export declare function createTunnelWellWithPosition(
 ): TopoDS_Shape;
 
 // 三通井类型枚举
-export declare enum ThreeWayWellType {
-    WORKING_WELL = "WORKING_WELL",
-    OPEN_CUT_TUNNEL = "OPEN_CUT_TUNNEL",
-    UNDERGROUND_TUNNEL = "UNDERGROUND_TUNNEL"
+export declare type ThreeWayWellType  ={
+    WORKING_WELL: {},
+    OPEN_CUT_TUNNEL: {},
+    UNDERGROUND_TUNNEL: {}
 }
 
 // 转角样式枚举
-export declare enum CornerStyle {
-    ROUNDED = "ROUNDED",
-    ANGLED = "ANGLED"
+export declare type CornerStyle = {
+    ROUNDED: {},
+    ANGLED: {}
 }
 
 // 竖井样式枚举
-export declare enum ShaftStyle {
-    CIRCULAR = "CIRCULAR",
-    RECTANGULAR = "RECTANGULAR"
+export declare type ShaftStyle = {
+    CIRCULAR :{},
+    RECTANGULAR: {}
 }
 
 // 三通井参数结构体
@@ -1662,10 +1662,10 @@ export declare function createThreeWayWellWithPosition(
 
 
 // 四通井类型枚举
-export declare enum FourWayWellType {
-    WORKING_WELL = "WORKING_WELL",
-    OPEN_CUT_TUNNEL = "OPEN_CUT_TUNNEL",
-    UNDERGROUND_TUNNEL = "UNDERGROUND_TUNNEL"
+export declare type FourWayWellType = {
+    WORKING_WELL: {},
+    OPEN_CUT_TUNNEL: {},
+    UNDERGROUND_TUNNEL: {}
 }
 
 // 四通井参数结构体
@@ -1758,9 +1758,9 @@ export declare function createCableTrenchWithPosition(
 ): TopoDS_Shape;
 
 // 电缆隧道样式枚举
-export declare enum CableTunnelStyle {
-    ARCH = "ARCH",
-    BEAM = "BEAM"
+export declare type CableTunnelStyle = {
+    ARCH: {},
+    BEAM: {}
 }
 
 // 电缆隧道参数结构体
@@ -1788,9 +1788,9 @@ export declare function createCableTunnelWithPosition(
 ): TopoDS_Shape;
 
 // 电缆桥架样式枚举
-export declare enum CableTrayStyle {
-    ARCH = "ARCH",
-    BEAM = "BEAM"
+export declare type CableTrayStyle = {
+    ARCH : {},
+    BEAM: {}
 }
 
 // 电缆桥架参数结构体
@@ -1837,9 +1837,9 @@ export declare function createCableLBeamWithPosition(
 ): TopoDS_Shape;
 
 // 人孔样式枚举
-export declare enum ManholeStyle {
-    CIRCULAR = "CIRCULAR",
-    RECTANGULAR = "RECTANGULAR"
+export declare type ManholeStyle = {
+    CIRCULAR : {},
+    RECTANGULAR : {}
 }
 
 // 人孔参数结构体
@@ -1860,9 +1860,9 @@ export declare function createManholeWithPosition(
 ): TopoDS_Shape;
 
 // 井盖样式枚举
-export declare enum ManholeCoverStyle {
-    CIRCULAR = "CIRCULAR",
-    RECTANGULAR = "RECTANGULAR"
+export declare type ManholeCoverStyle = {
+    CIRCULAR: {},
+    RECTANGULAR: {}
 }
 
 // 井盖参数结构体
@@ -2132,11 +2132,11 @@ export declare function createCableRayWithPosition(
 ): TopoDS_Shape;
 
 // 水隧道截面样式枚举
-export declare enum WaterTunnelSectionStyle {
-    RECTANGULAR = "RECTANGULAR",
-    CITYOPENING = "CITYOPENING",
-    CIRCULAR = "CIRCULAR",
-    HORSESHOE = "HORSESHOE"
+export declare type WaterTunnelSectionStyle = {
+    RECTANGULAR: {},
+    CITYOPENING: {},
+    CIRCULAR: {},
+    HORSESHOE: {}
 }
 
 // 水隧道参数结构体
@@ -2166,13 +2166,13 @@ export declare function createWaterTunnelWithPosition(
 ): TopoDS_Shape;
 
 // 剖面类型枚举
-export declare enum ProfileType {
-    NONE = 0,
-    TRIANGLE = 1,
-    RECTANGLE = 2,
-    CIRC = 3,
-    ELIPS = 4,
-    POLYGON = 5
+export declare type ProfileType = {
+    NONE: {},
+    TRIANGLE: {},
+    RECTANGLE : {},
+    CIRC : {},
+    ELIPS : {},
+    POLYGON : {}
 }
 
 // 三角形剖面
@@ -2194,7 +2194,7 @@ export declare interface RectangleProfile {
 export declare interface CircProfile {
     type: ProfileType.CIRC;
     center: gp_Pnt;
-    norm: gp_Pnt;
+    norm: gp_Dir;
     radius: number;
 }
 
@@ -2214,7 +2214,7 @@ export declare interface PolygonProfile {
 }
 
 // 剖面类型
-declare type ShapeProfile = TriangleProfile | RectangleProfile | CircProfile | ElipsProfile | PolygonProfile;
+export declare type ShapeProfile = TriangleProfile | RectangleProfile | CircProfile | ElipsProfile | PolygonProfile;
 
 // 旋转参数
 export declare interface RevolParams {
@@ -2238,11 +2238,11 @@ export declare function createPrism(params: PrismParams): TopoDS_Shape;
 export declare function createPrismWithPosition(params: PrismParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
 
 // 线段类型枚举
-declare enum SegmentType {
-    LINE = 0,
-    THREE_POINT_ARC = 1,
-    CIRCLE_CENTER_ARC = 2,
-    SPLINE = 3
+export declare type SegmentType = {
+    LINE: {},
+    THREE_POINT_ARC: {},
+    CIRCLE_CENTER_ARC: {},
+    SPLINE: {}
 }
 
 // 管道参数
@@ -2257,6 +2257,10 @@ export declare interface PipeParams {
 
 // 管道创建函数
 export declare function createPipe(params: PipeParams): TopoDS_Shape;
+export declare function createPipeWithSplitDistances(
+    params: PipeParams,
+    splitDistances?: [number, number]
+): TopoDS_Shape;
 export declare function createPipeWithPosition(params: PipeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
 
 // 多段管道参数
@@ -2270,9 +2274,9 @@ export declare interface MultiSegmentPipeParams {
 }
 
 // 连接形状模式枚举
-declare enum JointShapeMode {
-    SPHERE = 0,
-    BOX = 1
+export declare type JointShapeMode = {
+    SPHERE: {},
+    BOX: {}
 }
 
 // 管道端点
@@ -2294,6 +2298,10 @@ export declare interface PipeJointParams {
 
 // 多段管道创建函数
 export declare function createMultiSegmentPipe(params: MultiSegmentPipeParams): TopoDS_Shape;
+export declare function createMultiSegmentPipeWithSplitDistances(
+    params: MultiSegmentPipeParams,
+    splitDistances?: [number, number]
+): TopoDS_Shape;
 export declare function createMultiSegmentPipeWithPosition(
     params: MultiSegmentPipeParams,
     position: gp_Pnt,

@@ -1,36 +1,37 @@
-declare enum ShapeObjectType {
-    COMPOUND,
-    COMPSOLID,
-    SOLID,
-    SHELL,
-    FACE,
-    WIRE,
-    EDGE,
-    VERTEX,
-    SHAPE,
-    VECTOR,
-    LOCATION,
-    SKETCH,
-    BLANK
+
+export declare type ShapeObjectType = {
+    COMPOUND: {},
+    COMPSOLID: {},
+    SOLID: {},
+    SHELL: {},
+    FACE: {},
+    WIRE: {},
+    EDGE: {},
+    VERTEX: {},
+    SHAPE: {},
+    VECTOR: {},
+    LOCATION: {},
+    SKETCH: {},
+    BLANK: {}
 }
 
-declare enum CombineModeType {
-    CUT,
-    ADDITIVE,
-    SUBTRACTIVE
+export declare type CombineModeType = {
+    CUT: {},
+    ADDITIVE: {},
+    SUBTRACTIVE: {}
 }
 
-declare type CombineMode = CombineModeType | boolean;
+export declare type CombineMode = CombineModeType | boolean;
 
-declare enum CenterOption {
-    CENTER_OF_MASS,
-    PROJECTED_ORIGIN,
-    CENTER_OF_BOUND_BOX
+export declare type CenterOption = {
+    CENTER_OF_MASS: {},
+    PROJECTED_ORIGIN: {},
+    CENTER_OF_BOUND_BOX: {}
 }
 
-declare enum FaceIndexType {
-    CURRENT = 0,
-    NEXT = -1
+export declare type FaceIndexType = {
+    CURRENT: {},
+    NEXT: {}
 }
 
 declare type ShapeObject = Shape | Vector | Location | Sketch | null

@@ -1,10 +1,10 @@
 
 declare type AssemblyObject = Shape | Workplane | null
 
-declare enum AssemblyExportMode {
-    DEFAULT,
-    FUSE,
-    PER_PART
+export declare type AssemblyExportMode = {
+    DEFAULT: {},
+    FUSE: {},
+    PER_PART: {}
 }
 
 declare interface AssemblyElement {

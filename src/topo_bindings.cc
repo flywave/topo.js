@@ -5741,5 +5741,32 @@ EMSCRIPTEN_BINDINGS(Topo) {
           emscripten::optional_override([](emscripten::val pathVal) -> double {
             auto path = pathVal.as<wire>();
             return flywave::topo::wrie_length(path);
-          }));
+          }))
+      .class_function(
+          "makeCatenary",
+          emscripten::optional_override(
+              [](emscripten::val p1Val, emscripten::val p2Val, double slack,
+                 double maxSag, emscripten::val orientationVal,
+                 emscripten::val tessellationVal) -> emscripten::val {
+                auto p1 = p1Val.as<gp_Pnt>();
+                auto p2 = p2Val.as<gp_Pnt>();
+
+                gp_Ax3 orientation;
+                if (!orientationVal.isUndefined()) {
+                  orientation = orientationVal.as<gp_Ax3>();
+                }
+
+                double tess = tessellationVal.isUndefined()
+                                  ? 0.0
+                                  : tessellationVal.as<double>();
+
+                auto points = flywave::topo::make_catenary(
+                    p1, p2, slack, maxSag, orientation, tess);
+
+                emscripten::val result = emscripten::val::array();
+                for (const auto &p : points) {
+                  result.call<void>("push", emscripten::val(p));
+                }
+                return result;
+              }));
 }

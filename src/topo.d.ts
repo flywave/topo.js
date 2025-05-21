@@ -222,16 +222,16 @@ export declare interface EdgeData {
     }>;
 }
 
-export declare enum GeometryObjectType {
-    Solid = 'Solid',
-    Shell = 'Shell',
-    Face = 'Face',
-    Edge = 'Edge',
-    Vertex = 'Vertex',
-    Wire = 'Wire',
-    Compound = 'Compound',
-    CompSolid = 'CompSolid',
-    Shape = 'Shape'
+export declare type GeometryObjectType = {
+    Solid: {},
+    Shell: {},
+    Face: {},
+    Edge: {},
+    Vertex: {},
+    Wire: {},
+    Compound: {},
+    CompSolid: {},
+    Shape: {}
 }
 
 export declare class GeometryObject {
@@ -252,48 +252,48 @@ export declare class GeometryObject {
     delete(): void;
 }
 
-export declare enum TextureMappingRule {
-    CUBE = 'CUBE',
-    NORMAL = 'NORMAL',
-    NORMAL_AUTO_SCALE = 'NORMAL_AUTO_SCALE'
+export declare type TextureMappingRule = {
+    CUBE: {},
+    NORMAL: {},
+    NORMAL_AUTO_SCALE: {}
 }
 
-export declare enum Orientation {
-    FORWARD = 'FORWARD',
-    REVERSED = 'REVERSED',
-    INTERNAL = 'INTERNAL',
-    EXTERNAL = 'EXTERNAL',
-    UNKNOW = 'UNKNOW'
+export declare type Orientation = {
+    FORWARD: {},
+    REVERSED: {},
+    INTERNAL: {},
+    EXTERNAL: {},
+    UNKNOW: {}
 }
 
-export declare enum ShapeGeomType {
-    NULL = 'NULL',
-    VERTEX = 'VERTEX',
-    WIRE = 'WIRE',
-    SHELL = 'SHELL',
-    SOLID = 'SOLID',
-    COMPSOLID = 'COMPSOLID',
-    COMPOUND = 'COMPOUND',
-    LINE = 'LINE',
-    CIRCLE = 'CIRCLE',
-    HYPERBOLA = 'HYPERBOLA',
-    PARABOLA = 'PARABOLA',
-    ELLIPSE = 'ELLIPSE',
-    BEZIER_CURVE = 'BEZIER_CURVE',
-    BSPLINE_CURVE = 'BSPLINE_CURVE',
-    OFFSET_CURVE = 'OFFSET_CURVE',
-    OTHER_CURVE = 'OTHER_CURVE',
-    PLANE = 'PLANE',
-    CYLINDER = 'CYLINDER',
-    CONE = 'CONE',
-    SPHERE = 'SPHERE',
-    TORUS = 'TORUS',
-    BEZIER_SURFACE = 'BEZIER_SURFACE',
-    BSPLINE_SURFACE = 'BSPLINE_SURFACE',
-    OFFSET_SURFACE = 'OFFSET_SURFACE',
-    OTHER_SURFACE = 'OTHER_SURFACE',
-    REVOLVED_SURFACE = 'REVOLVED_SURFACE',
-    EXTRUDED_SURFACE = 'EXTRUDED_SURFACE'
+export declare type ShapeGeomType = {
+    NULL: {},
+    VERTEX: {},
+    WIRE: {},
+    SHELL: {},
+    SOLID: {},
+    COMPSOLID: {},
+    COMPOUND: {},
+    LINE: {},
+    CIRCLE: {},
+    HYPERBOLA: {},
+    PARABOLA: {},
+    ELLIPSE: {},
+    BEZIER_CURVE: {},
+    BSPLINE_CURVE: {},
+    OFFSET_CURVE: {},
+    OTHER_CURVE: {},
+    PLANE: {},
+    CYLINDER: {},
+    CONE: {},
+    SPHERE: {},
+    TORUS: {},
+    BEZIER_SURFACE: {},
+    BSPLINE_SURFACE: {},
+    OFFSET_SURFACE: {},
+    OTHER_SURFACE: {},
+    REVOLVED_SURFACE: {},
+    EXTRUDED_SURFACE: {}
 }
 
 export declare class Shape extends GeometryObject {
@@ -496,14 +496,14 @@ export declare class VertexIterator {
     delete(): void;
 }
 
-export declare enum ParamMode {
-    LENGTH = 'LENGTH',
-    PARAM = 'PARAM'
+export declare type ParamMode = {
+    LENGTH: {},
+    PARAM: {}
 }
 
-export declare enum FrameMode {
-    FRENET = 'FRENET',
-    CORRECTED_FRENET = 'CORRECTED_FRENET'
+export declare type FrameMode = {
+    FRENET: {},
+    CORRECTED_FRENET: {}
 }
 
 export declare class Shape1D extends Shape {
@@ -784,11 +784,11 @@ export declare class EdgeIterator {
     delete(): void;
 }
 
-export declare enum WireCurveType {
-    LINE = 'LINE',
-    THREE_POINT_ARC = 'THREE_POINT_ARC',
-    CIRCLE_CENTER_ARC = 'CIRCLE_CENTER_ARC',
-    SPLINE = 'SPLINE'
+export declare type WireCurveType = {
+    LINE: {},
+    THREE_POINT_ARC: {},
+    CIRCLE_CENTER_ARC: {},
+    SPLINE: {}
 }
 
 export declare class Wire extends Shape1D {
@@ -857,10 +857,10 @@ export declare class WireIterator {
     delete(): void;
 }
 
-export declare enum BooleanOperationType {
-    FUSE = 'FUSE',
-    CUT = 'CUT',
-    COMMON = 'COMMON'
+export declare type BooleanOperationType = {
+    FUSE: {},
+    CUT: {},
+    COMMON: {}
 }
 
 export declare class Face extends Shape {
@@ -1396,16 +1396,16 @@ export declare class StringSyntaxSelector extends Selector {
     constructor(syntax: string);
 }
 
-export declare enum IntersectionDirection {
-    None = 0,
-    AlongAxis = 1,
-    Opposite = 2
+export declare type IntersectionDirection = {
+    None: {},
+    AlongAxis: {},
+    Opposite: {}
 }
 
-export declare enum TransitionMode {
-    TRANSFORMED = 0,
-    ROUND = 1,
-    RIGHT = 2
+export declare type TransitionMode = {
+    TRANSFORMED: {},
+    ROUND: {},
+    RIGHT: {}
 }
 
 export declare interface ShapeCheckResult {
@@ -1631,4 +1631,12 @@ export declare class ShapeOps {
     static calcProfileProjection(wire: Wire, upDir: gp_Dir, offset?: number): ProfileProjection;
     static profileProjectPoint(profile: ProfileProjection, point: gp_Pnt): gp_Pnt;
     static wireLength(wire: Wire): number;
+    static makeCatenary(
+        p1: gp_Pnt,
+        p2: gp_Pnt,
+        slack: number,
+        maxSag: number,
+        orientation?: gp_Ax3,
+        tessellation?: number
+    ): gp_Pnt[];
 }

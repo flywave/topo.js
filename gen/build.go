@@ -216,6 +216,8 @@ func runBuild(workDir string, build BuildSpec) error {
 	}
 	args = append(args, build.EmccFlags...)
 
+	fmt.Print("emcc " + strings.Join(args, " ") + "\n")
+
 	cmd := exec.Command("emcc", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("build failed: %v\n%s", err, output)

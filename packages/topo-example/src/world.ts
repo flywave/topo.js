@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import initTopo, { VentilationPavilionParams, TopoInstance } from "topo-wasm"
+import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
 
 export default class World {
@@ -19,22 +19,69 @@ export default class World {
   waitDone() {
     return this.done
   }
-  
-  createPrimitives(tp: TopoInstance) {
-    let params: VentilationPavilionParams = {
-        topLength: 400.0,    // 顶长200mm
-        middleLength: 300.0, // 中部长度300mm
-        bottomLength: 400.0, // 底长400mm
-        topWidth: 350.0,     // 顶宽150mm
-        middleWidth: 250.0,  // 中部宽度250mm
-        bottomWidth: 350.0,  // 底宽350mm
-        topHeight: 50.0,     // 顶高50mm
-        height: 150.0,       // 总高300mm
-        baseHeight: 30.0     // 基础高100mm
-    }
 
-    const shp =  tp.createVentilationPavilion(params as VentilationPavilionParams)
-    const shape = new tp.Shape(shp,false);
+  createPrimitives(tp: TopoInstance) {
+
+    // 准备测试数据 - 直线段
+    const linePoints: gp_Pnt[] = [
+      new tp.gp_Pnt_3(50, -50, 0),
+      new tp.gp_Pnt_3(100, 0, 0)
+    ];
+
+    // 准备测试数据 - 三点圆弧
+    const arcPoints: gp_Pnt[] = [
+      new tp.gp_Pnt_3(100, 0, 0),
+      new tp.gp_Pnt_3(150, 50, 0),
+      new tp.gp_Pnt_3(200, 0, 0)
+    ];
+
+    // 准备测试数据 - 圆心弧线
+    const centerArcPoints: gp_Pnt[] = [
+      new tp.gp_Pnt_3(200, 0, 0),
+      new tp.gp_Pnt_3(250, 0, 0), // 圆心
+      new tp.gp_Pnt_3(300, 0, 0)
+    ];
+
+    // 准备测试数据 - 样条曲线
+    const splinePoints: gp_Pnt[] = [
+      new tp.gp_Pnt_3(300, 0, 0),
+      new tp.gp_Pnt_3(350, 50, 50),
+      new tp.gp_Pnt_3(400, 0, 100)
+    ];
+
+    // 创建圆形剖面
+    const profile: CircProfile = {
+      type: tp.ProfileType.CIRC,
+      center: new tp.gp_Pnt_3(0, 0, 0),
+      norm: new tp.gp_Dir_4(0, 0, 1),
+      radius: 10.0
+    };
+
+    // 创建内孔剖面
+    const innerProfile: CircProfile = {
+      type: tp.ProfileType.CIRC,
+      center: new tp.gp_Pnt_3(0, 0, 0),
+      norm: new tp.gp_Dir_4(0, 0, 1),
+      radius: 8.0
+    };
+
+    // 设置多段管道参数
+    const params: MultiSegmentPipeParams = {
+      wires: [linePoints, arcPoints, centerArcPoints, splinePoints],
+      profiles: [profile, profile, profile, profile],
+      innerProfiles: [innerProfile, innerProfile, innerProfile, innerProfile],
+      segmentTypes: [
+        tp.SegmentType.LINE as any,
+        tp.SegmentType.THREE_POINT_ARC as any,
+        tp.SegmentType.CIRCLE_CENTER_ARC as any,
+        tp.SegmentType.SPLINE as any
+      ],
+      transitionMode: tp.TransitionMode.ROUND as any,
+      upDir: new tp.gp_Dir_4(0, 0, 1),
+    };
+
+    const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)
+    const shape = new tp.Shape(shp, false);
     const ff = shape.autoCast();
     const geometries = mesh(shape)
     const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 })
