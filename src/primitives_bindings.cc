@@ -1276,6 +1276,33 @@ static void set_cable_trench_points(cable_trench_params &params,
   params.points = points;
 }
 
+static emscripten::val 
+get_cable_tunnel_points(const cable_tunnel_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    emscripten::val obj = emscripten::val::object();
+    obj.set("position", emscripten::val(point.position));
+    obj.set("type", emscripten::val(point.type));
+    arr.call<void>("push", obj);
+  }
+  return arr;
+}
+
+static void set_cable_tunnel_points(cable_tunnel_params &params,
+                                   emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<channel_point> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    channel_point point;
+    point.position = val[i]["position"].as<gp_Pnt>();
+    point.type = val[i]["type"].as<int>();
+    points.push_back(point);
+  }
+  params.points = points;
+}
+
 static emscripten::val
 get_cable_tray_pipe_positions(const cable_tray_params &params) {
   emscripten::val arr = emscripten::val::array();
@@ -3420,7 +3447,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("bottomPlatformHeight", &cable_tunnel_params::bottomPlatformHeight)
       .field("cushionExtension", &cable_tunnel_params::cushionExtension)
       .field("cushionThickness", &cable_tunnel_params::cushionThickness)
-      .field("points", &cable_tunnel_params::points);
+      .field("points", &get_cable_tunnel_points, &set_cable_tunnel_points);
 
   // 电缆隧道创建函数
   function("createCableTunnel",

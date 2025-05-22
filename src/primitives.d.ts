@@ -551,7 +551,7 @@ export declare interface PileCapParams {
     e2: number;
     cs: number;
     ZCOUNT: number;
-    ZPOSTARRAY: number[];
+    ZPOSTARRAY: gp_Pnt[];
 }
 
 // 几何体创建函数
@@ -570,7 +570,7 @@ export declare interface RockAnchorParams {
     B1: number;
     L1: number;
     ZCOUNT: number;
-    ZPOSTARRAY: number[];
+    ZPOSTARRAY: gp_Pnt[];
 }
 
 export declare function createRockAnchorBase(params: RockAnchorParams): TopoDS_Shape;
@@ -593,7 +593,7 @@ export declare interface RockPileCapParams {
     e2: number;
     cs: number;
     ZCOUNT: number;
-    ZPOSTARRAY: number[];
+    ZPOSTARRAY: gp_Pnt[];
 }
 
 export declare function createRockPileCapBase(params: RockPileCapParams): TopoDS_Shape;
@@ -952,6 +952,34 @@ export declare interface CompositeInsulatorParams {
     gap: number;
 }
 
+export declare interface FittingLengths {
+    leftUpper: number;
+    rightUpper: number;
+    leftLower: number;
+    rightLower: number;
+}
+
+export declare interface MultiLink {
+    count: number;
+    spacing: number;
+    arrangement: ArrangementType;
+}
+
+export declare interface Insulator {
+    radius: number | CompositeInsulatorParams;
+    height: number;
+    leftCount: number;
+    rightCount: number;
+    material: InsulatorMaterial;
+}
+
+export declare interface GradingRing {
+    count: number;
+    position: number;
+    height: number;
+    radius: number;
+}
+
 export declare interface InsulatorParams {
     type: string;
     subNum: number;
@@ -961,30 +989,10 @@ export declare interface InsulatorParams {
     vAngleRight: number;
     uLinkLength: number;
     weight: number;
-    fittingLengths: {
-        leftUpper: number;
-        rightUpper: number;
-        leftLower: number;
-        rightLower: number;
-    };
-    multiLink: {
-        count: number;
-        spacing: number;
-        arrangement: ArrangementType;
-    };
-    insulator: {
-        radius: number | CompositeInsulatorParams;
-        height: number;
-        leftCount: number;
-        rightCount: number;
-        material: InsulatorMaterial;
-    };
-    gradingRing: {
-        count: number;
-        position: number;
-        height: number;
-        radius: number;
-    };
+    fittingLengths: FittingLengths;
+    multiLink: MultiLink;
+    insulator: Insulator;
+    gradingRing: GradingRing;
     application: ApplicationType;
     stringType: StringType;
 }
@@ -1964,13 +1972,13 @@ export declare function createTunnelCompartmentPartitionWithPosition(
 
 // 隧道分区板参数结构体
 export declare interface TunnelPartitionBoardParams {
-    style: string;
+    style: number;
     length: number;
     width: number;
     thickness: number;
     holeCount: number;
     holePositions: gp_Pnt2d[];
-    holeStyles: string[];
+    holeStyles: number[];
     holeDiameters: number[];
     holeWidths: number[];
 }
@@ -2149,7 +2157,7 @@ export declare interface WaterTunnelParams {
     bottomPlatformHeight: number;
     cushionExtension: number;
     cushionThickness: number;
-    points: gp_Pnt[];
+    points: ChannelPoint[];
 }
 
 export declare function createWaterTunnel(params: WaterTunnelParams): TopoDS_Shape;
