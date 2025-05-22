@@ -717,6 +717,22 @@ static void set_pipe_shape_up_dir(pipe_shape_params &params,
     params.upDir = val.as<gp_Dir>();
   }
 }
+
+static emscripten::val get_catenary_up_dir(const catenary_params &params) {
+  if (params.upDir) {
+    return emscripten::val(*params.upDir);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_catenary_up_dir(catenary_params &params, emscripten::val val) {
+  if (val.isUndefined()) {
+    params.upDir = boost::none;
+  } else {
+    params.upDir = val.as<gp_Dir>();
+  }
+}
+
 static emscripten::val
 get_stretched_body_points(const stretched_body_params &params) {
   emscripten::val arr = emscripten::val::array();
@@ -3914,7 +3930,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("profile", &get_catenary_profile, &set_catenary_profile)
       .field("slack", &catenary_params::slack)
       .field("maxSag", &catenary_params::maxSag)
-      .field("tessellation", &catenary_params::tessellation);
+      .field("tessellation", &catenary_params::tessellation)
+      .field("upDir", &get_catenary_up_dir, &set_catenary_up_dir);
 
   // 创建悬链线函数
   function(

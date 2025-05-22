@@ -2327,6 +2327,7 @@ export declare interface CatenaryParams {
     slack: number;
     maxSag: number;
     tessellation: number;
+    upDir?: gp_Dir;
 }
 
 // 悬链线

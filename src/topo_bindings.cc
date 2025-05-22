@@ -2174,21 +2174,25 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeCatenary",
           emscripten::optional_override(
               [](emscripten::val p1Val, emscripten::val p2Val,
-                 emscripten::val orientationVal, emscripten::val slackVal,
-                 emscripten::val maxSagVal, emscripten::val tessellationVal) {
+                 emscripten::val slackVal, emscripten::val maxSagVal,
+                 emscripten::val upDirVal, emscripten::val tessellationVal) {
                 // 处理必需参数
                 gp_Pnt p1 = p1Val.as<gp_Pnt>();
                 gp_Pnt p2 = p2Val.as<gp_Pnt>();
-                gp_Ax3 orientation = orientationVal.as<gp_Ax3>();
                 double slack = slackVal.as<double>();
                 double maxSag = maxSagVal.as<double>();
+
+                gp_Dir upDir;
+                if (!upDirVal.isUndefined()) {
+                  upDir = upDirVal.as<gp_Dir>();
+                }
 
                 // 处理可选参数tessellation
                 double tessellation = tessellationVal.isUndefined()
                                           ? 0.0
                                           : tessellationVal.as<double>();
 
-                return edge::make_catenary(p1, p2, orientation, slack, maxSag,
+                return edge::make_catenary(p1, p2, slack, maxSag, upDir,
                                            tessellation);
               }))
       // 圆形创建方法
@@ -5746,22 +5750,22 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "makeCatenary",
           emscripten::optional_override(
               [](emscripten::val p1Val, emscripten::val p2Val, double slack,
-                 double maxSag, emscripten::val orientationVal,
+                 double maxSag, emscripten::val upDirVal,
                  emscripten::val tessellationVal) -> emscripten::val {
                 auto p1 = p1Val.as<gp_Pnt>();
                 auto p2 = p2Val.as<gp_Pnt>();
 
-                gp_Ax3 orientation;
-                if (!orientationVal.isUndefined()) {
-                  orientation = orientationVal.as<gp_Ax3>();
+                gp_Dir upDir;
+                if (!upDirVal.isUndefined()) {
+                  upDir = upDirVal.as<gp_Dir>();
                 }
 
                 double tess = tessellationVal.isUndefined()
                                   ? 0.0
                                   : tessellationVal.as<double>();
 
-                auto points = flywave::topo::make_catenary(
-                    p1, p2, slack, maxSag, orientation, tess);
+                auto points = flywave::topo::make_catenary(p1, p2, slack,
+                                                           maxSag, upDir, tess);
 
                 emscripten::val result = emscripten::val::array();
                 for (const auto &p : points) {

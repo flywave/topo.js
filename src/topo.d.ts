@@ -729,9 +729,9 @@ export declare class Edge extends Shape1D {
     static makeCatenary(
         p1: gp_Pnt,
         p2: gp_Pnt,
-        orientation: gp_Ax3,
         slack: number,
         maxSag: number,
+        upDir: gp_Dir,
         tessellation?: number
     ): Edge;
 
@@ -1636,7 +1636,7 @@ export declare class ShapeOps {
         p2: gp_Pnt,
         slack: number,
         maxSag: number,
-        orientation?: gp_Ax3,
+        upDir?: gp_Dir,
         tessellation?: number
     ): gp_Pnt[];
 }
