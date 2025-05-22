@@ -2249,7 +2249,7 @@ export declare type SegmentType = {
 export declare interface PipeParams {
     wire: gp_Pnt[];
     profile: ShapeProfile;
-    innerProfile?: ShapeProfile;
+    innerProfile?: ShapeProfile  | null;
     segmentType: SegmentType;
     transitionMode: TransitionMode;
     upDir?: gp_Dir;
@@ -2267,8 +2267,8 @@ export declare function createPipeWithPosition(params: PipeParams, position: gp_
 export declare interface MultiSegmentPipeParams {
     wires: Point[][];
     profiles: Array<ShapeProfile>;
-    innerProfiles?: Array<ShapeProfile>;
-    segmentTypes?: SegmentType[];
+    innerProfiles?: Array<ShapeProfile> | null;
+    segmentTypes?: SegmentType[]  | null;
     transitionMode: TransitionMode;
     upDir?: gp_Dir;
 }

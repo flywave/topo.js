@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, TopoInstance } from "topo-wasm"
+import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
 
 export default class World {
@@ -21,6 +21,51 @@ export default class World {
   }
 
   createPrimitives(tp: TopoInstance) {
+    const pathPoints: gp_Pnt[][] = [
+      [
+        new tp.gp_Pnt_3(0, 0, 0),
+        new tp.gp_Pnt_3(13.363751136232167, -26.227833716198802, 40.422308564186096)
+      ],
+      [
+        new tp.gp_Pnt_3(13.363751136232167, -26.227833716198802, 40.422308564186096),
+        new tp.gp_Pnt_3(46.29231750732288, -90.69991450663656, 108.94551491551101)
+      ],
+      [
+        new tp.gp_Pnt_3(46.29231750732288, -90.69991450663656, 108.94551491551101),
+        new tp.gp_Pnt_3(132.02422594139352, -257.1274096108973, -1.525045077316463)
+      ],
+      [
+        new tp.gp_Pnt_3(132.02422594139352, -257.1274096108973, -1.525045077316463),
+        new tp.gp_Pnt_3(155.7862730268389, -461.9796159574762, 275.57995436759666)
+      ],
+      [
+        new tp.gp_Pnt_3(155.7862730268389, -461.9796159574762, 275.57995436759666),
+        new tp.gp_Pnt_3(277.5595232350752, -1029.277987377718, 560.3984563779086)
+      ]
+    ];
+    const polygonPoints: gp_Pnt[] = [
+      new tp.gp_Pnt_3(-3.171, 2.538, 0),
+      new tp.gp_Pnt_3(-3.136, 3.954, 0),
+      new tp.gp_Pnt_3(-2.498, 5.219, 0),
+      new tp.gp_Pnt_3(-1.382, 6.09, 0),
+      new tp.gp_Pnt_3(0, 6.4, 0),
+      new tp.gp_Pnt_3(1.382, 6.09, 0),
+      new tp.gp_Pnt_3(2.498, 5.219, 0),
+      new tp.gp_Pnt_3(3.136, 3.954, 0),
+      new tp.gp_Pnt_3(3.171, 2.538, 0),
+      new tp.gp_Pnt_3(2.5, 0, 0),
+      new tp.gp_Pnt_3(-2.5, 0, 0),
+      new tp.gp_Pnt_3(-3.171, 2.538, 0)
+    ];
+
+    let vec = new tp.gp_Vec_4(-2365550.686973459, 4588616.347934356, 3734082.7681595744).Normalized()
+
+    // 创建多边形剖面
+    const polygonProfile: PolygonProfile = {
+      type: tp.ProfileType.POLYGON,
+      edges: polygonPoints,
+      inners: [] // 无内轮廓
+    };
 
     // 准备测试数据 - 直线段
     const linePoints: gp_Pnt[] = [
@@ -67,17 +112,18 @@ export default class World {
 
     // 设置多段管道参数
     const params: MultiSegmentPipeParams = {
-      wires: [linePoints, arcPoints, centerArcPoints, splinePoints],
-      profiles: [profile, profile, profile, profile],
-      innerProfiles: [innerProfile, innerProfile, innerProfile, innerProfile],
+      wires: pathPoints,
+      profiles: [polygonProfile, polygonProfile, polygonProfile, polygonProfile, polygonProfile],
+      innerProfiles: null,
       segmentTypes: [
         tp.SegmentType.LINE as any,
-        tp.SegmentType.THREE_POINT_ARC as any,
-        tp.SegmentType.CIRCLE_CENTER_ARC as any,
-        tp.SegmentType.SPLINE as any
+        tp.SegmentType.LINE as any,
+        tp.SegmentType.LINE as any,
+        tp.SegmentType.LINE as any,
+        tp.SegmentType.LINE as any
       ],
       transitionMode: tp.TransitionMode.ROUND as any,
-      upDir: new tp.gp_Dir_4(0, 0, 1),
+      upDir: new tp.gp_Dir_2(vec),
     };
 
     const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)

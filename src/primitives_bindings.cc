@@ -79,7 +79,7 @@ get_shape_optional_profile(const boost::optional<shape_profile> &profile) {
 
 static void set_shape_optional_profile(boost::optional<shape_profile> &profile,
                                        emscripten::val val) {
-  if (val.isNull()) {
+  if (val.isNull() || val.isUndefined()) {
     profile = boost::none;
   } else {
     profile = shape_profile();
@@ -121,7 +121,7 @@ get_multi_segment_inner_profiles(const multi_segment_pipe_params &params) {
 
 static void set_multi_segment_inner_profiles(multi_segment_pipe_params &params,
                                              emscripten::val val) {
-  if (val.isNull()) {
+  if (val.isNull() || val.isUndefined()) {
     params.inner_profiles = boost::none;
   } else {
     if (!params.inner_profiles) {
@@ -199,7 +199,7 @@ static emscripten::val get_pipe_inner_profiles(const pipe_params &params) {
 }
 
 static void set_pipe_inner_profiles(pipe_params &params, emscripten::val val) {
-  if (val.isNull()) {
+  if (val.isNull() || val.isUndefined()) {
     params.inner_profiles = boost::none;
   } else {
     if (!params.inner_profiles) {
@@ -352,6 +352,10 @@ get_multi_segment_types(const multi_segment_pipe_params &params) {
 
 static void set_multi_segment_types(multi_segment_pipe_params &params,
                                     emscripten::val val) {
+  if (val.isNull() || val.isUndefined()) {
+    params.segment_types = boost::none;
+    return;
+  }
   if (!val.isArray()) {
     throw std::runtime_error("Expected array for segment types");
   }
