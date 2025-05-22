@@ -1532,6 +1532,61 @@ static void set_water_tunnel_points(water_tunnel_params &params,
   }
   params.points = points;
 }
+
+static emscripten::val
+get_pole_tower_member_end1Diameter(const pole_tower_member &m) {
+  return m.end1Diameter ? emscripten::val(*m.end1Diameter)
+                        : emscripten::val::undefined();
+}
+static void set_pole_tower_member_end1Diameter(pole_tower_member &m,
+                                               emscripten::val v) {
+  if (v.isUndefined()) {
+    m.end1Diameter.reset();
+  } else {
+    m.end1Diameter = v.as<double>();
+  }
+}
+
+static emscripten::val
+get_pole_tower_member_end2Diameter(const pole_tower_member &m) {
+  return m.end2Diameter ? emscripten::val(*m.end2Diameter)
+                        : emscripten::val::undefined();
+}
+static void set_pole_tower_member_end2Diameter(pole_tower_member &m,
+                                               emscripten::val v) {
+  if (v.isUndefined()) {
+    m.end2Diameter.reset();
+  } else {
+    m.end2Diameter = v.as<double>();
+  }
+}
+
+static emscripten::val
+get_pole_tower_member_thickness(const pole_tower_member &m) {
+  return m.thickness ? emscripten::val(*m.thickness)
+                     : emscripten::val::undefined();
+}
+static void set_pole_tower_member_thickness(pole_tower_member &m,
+                                            emscripten::val v) {
+  if (v.isUndefined()) {
+    m.thickness.reset();
+  } else {
+    m.thickness = v.as<double>();
+  }
+}
+
+static emscripten::val get_pole_tower_member_sides(const pole_tower_member &m) {
+  return m.sides ? emscripten::val(*m.sides) : emscripten::val::undefined();
+}
+static void set_pole_tower_member_sides(pole_tower_member &m,
+                                        emscripten::val v) {
+  if (v.isUndefined()) {
+    m.sides.reset();
+  } else {
+    m.sides = v.as<int>();
+  }
+}
+
 } // namespace
 
 EMSCRIPTEN_BINDINGS(Primitive) {
@@ -2596,10 +2651,14 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("material", &pole_tower_member::material)
       .field("xDirection", &pole_tower_member::xDirection)
       .field("yDirection", &pole_tower_member::yDirection)
-      .field("end1Diameter", &pole_tower_member::end1Diameter)
-      .field("end2Diameter", &pole_tower_member::end2Diameter)
-      .field("thickness", &pole_tower_member::thickness)
-      .field("sides", &pole_tower_member::sides);
+      .field("end1Diameter", &get_pole_tower_member_end1Diameter,
+             &set_pole_tower_member_end1Diameter)
+      .field("end2Diameter", &get_pole_tower_member_end2Diameter,
+             &set_pole_tower_member_end2Diameter)
+      .field("thickness", &get_pole_tower_member_thickness,
+             &set_pole_tower_member_thickness)
+      .field("sides", &get_pole_tower_member_sides,
+             &set_pole_tower_member_sides);
 
   // 杆塔挂点结构体绑定
   value_object<pole_tower_attachment>("PoleTowerAttachment")

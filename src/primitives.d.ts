@@ -426,7 +426,7 @@ export declare function createCableWithPosition(
 ): TopoDS_Shape;
 
 // 曲线类型枚举
-export declare type CurveType  = {
+export declare type CurveType = {
     LINE: {},
     ARC: {},
     SPLINE: {}
@@ -434,7 +434,7 @@ export declare type CurveType  = {
 
 // 曲线电缆参数结构体
 export declare interface CurveCableParams {
-    controlPoints: gp_Pnt[];
+    controlPoints: gp_Pnt[][];
     curveTypes: CurveType[];
     diameter: number;
 }
@@ -940,7 +940,7 @@ export declare type ApplicationType = {
 }
 
 // 串类型枚举
-export declare type StringType  = {
+export declare type StringType = {
     SUSPENSION: {},
     TENSION: {}
 }
@@ -1027,10 +1027,10 @@ export declare interface PoleTowerMember {
     material: string;
     xDirection: gp_Dir;
     yDirection: gp_Dir;
-    end1Diameter: number;
-    end2Diameter: number;
-    thickness: number;
-    sides: number;
+    end1Diameter?: number;
+    end2Diameter?: number;
+    thickness?: number;
+    sides?: number;
 }
 
 // 杆塔挂点结构体
@@ -1089,7 +1089,7 @@ export declare interface SingleHookAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: string;
+    washerShape: number;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -1114,7 +1114,7 @@ export declare interface TripleHookAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: string;
+    washerShape: number;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -1140,7 +1140,7 @@ export declare interface RibbedAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: string;
+    washerShape: number;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -1169,7 +1169,7 @@ export declare interface NutAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: string;
+    washerShape: number;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -1194,7 +1194,7 @@ export declare interface TripleArmAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: string;
+    washerShape: number;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -1221,7 +1221,7 @@ export declare interface PositioningPlateAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: string;
+    washerShape: number;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -1323,7 +1323,7 @@ export declare function createOpticalFiberBoxWithPosition(
 
 // 电缆终端参数结构体
 export declare interface CableTerminalParams {
-    sort: string;
+    sort: number;
     height: number;
     topDiameter: number;
     bottomDiameter: number;
@@ -1521,7 +1521,7 @@ export declare function createLiftingEyeWithPosition(
 // 连接段截面样式枚举
 export declare type ConnectionSectionStyle = {
     RECTANGULAR: {},
-    HORSESHOE:{},
+    HORSESHOE: {},
     CIRCULAR: {}
 }
 
@@ -1589,7 +1589,7 @@ export declare function createTunnelWellWithPosition(
 ): TopoDS_Shape;
 
 // 三通井类型枚举
-export declare type ThreeWayWellType  ={
+export declare type ThreeWayWellType = {
     WORKING_WELL: {},
     OPEN_CUT_TUNNEL: {},
     UNDERGROUND_TUNNEL: {}
@@ -1603,7 +1603,7 @@ export declare type CornerStyle = {
 
 // 竖井样式枚举
 export declare type ShaftStyle = {
-    CIRCULAR :{},
+    CIRCULAR: {},
     RECTANGULAR: {}
 }
 
@@ -1705,11 +1705,11 @@ export declare function createFourWayWellWithPosition(
 // 通道点结构体
 export declare interface ChannelPoint {
     position: gp_Pnt;
-    type: string;
+    type: number;
 }
 
 export declare interface PipeRowParams {
-    pipeType: string;
+    pipeType: number;
     hasEnclosure: boolean;
     enclosureWidth: number;
     enclosureHeight: number;
@@ -1717,12 +1717,12 @@ export declare interface PipeRowParams {
     baseThickness: number;
     cushionExtension: number;
     cushionThickness: number;
-    pipePositions: number[];
+    pipePositions: gp_Pnt2d[];
     pipeInnerDiameters: number[];
     pipeWallThicknesses: number[];
     pullPipeInnerDiameter: number;
     pullPipeThickness: number;
-    points: gp_Pnt[];
+    points: ChannelPoint[];
 }
 
 export declare function createPipeRow(params: PipeRowParams): TopoDS_Shape;
@@ -1745,7 +1745,7 @@ export declare interface CableTrenchParams {
     cushionThickness: number;
     wallThickness: number;
     wallThickness2: number;
-    points: gp_Pnt[];
+    points: ChannelPoint[];
 }
 
 // 几何体创建函数
@@ -1757,15 +1757,10 @@ export declare function createCableTrenchWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
-// 电缆隧道样式枚举
-export declare type CableTunnelStyle = {
-    ARCH: {},
-    BEAM: {}
-}
 
 // 电缆隧道参数结构体
 export declare interface CableTunnelParams {
-    style: CableTunnelStyle;
+    style: ConnectionSectionStyle;
     width: number;
     height: number;
     topThickness: number;
@@ -1776,7 +1771,7 @@ export declare interface CableTunnelParams {
     bottomPlatformHeight: number;
     cushionExtension: number;
     cushionThickness: number;
-    points: gp_Pnt[];
+    points: ChannelPoint[];
 }
 
 export declare function createCableTunnel(params: CableTunnelParams): TopoDS_Shape;
@@ -1789,7 +1784,7 @@ export declare function createCableTunnelWithPosition(
 
 // 电缆桥架样式枚举
 export declare type CableTrayStyle = {
-    ARCH : {},
+    ARCH: {},
     BEAM: {}
 }
 
@@ -1805,11 +1800,11 @@ export declare interface CableTrayParams {
     arcHeight: number;
     wallThickness: number;
     pipeCount: number;
-    pipePositions: number[];
+    pipePositions: gp_Pnt2d[];
     pipeInnerDiameters: number[];
     pipeWallThicknesses: number[];
     hasProtectionPlate: boolean;
-    points: gp_Pnt[];
+    points: ChannelPoint[];
 }
 
 // 几何体创建函数
@@ -1838,8 +1833,8 @@ export declare function createCableLBeamWithPosition(
 
 // 人孔样式枚举
 export declare type ManholeStyle = {
-    CIRCULAR : {},
-    RECTANGULAR : {}
+    CIRCULAR: {},
+    RECTANGULAR: {}
 }
 
 // 人孔参数结构体
@@ -1918,7 +1913,7 @@ export declare function createSumpWithPosition(
 export declare interface FootpathParams {
     height: number;
     width: number;
-    points: gp_Pnt[];
+    points: ChannelPoint[];
 }
 
 // 几何体创建函数
@@ -1974,7 +1969,7 @@ export declare interface TunnelPartitionBoardParams {
     width: number;
     thickness: number;
     holeCount: number;
-    holePositions: number[];
+    holePositions: gp_Pnt2d[];
     holeStyles: string[];
     holeDiameters: number[];
     holeWidths: number[];
@@ -2078,9 +2073,9 @@ export declare function createDrainageWellWithPosition(
 
 // 管枕参数结构体
 export declare interface PipeSupportParams {
-    style: string;
+    style: number;
     count: number;
-    positions: number[];
+    positions: gp_Pnt2d[];
     radii: number[];
     length: number;
     width: number;
@@ -2169,10 +2164,10 @@ export declare function createWaterTunnelWithPosition(
 export declare type ProfileType = {
     NONE: {},
     TRIANGLE: {},
-    RECTANGLE : {},
-    CIRC : {},
-    ELIPS : {},
-    POLYGON : {}
+    RECTANGLE: {},
+    CIRC: {},
+    ELIPS: {},
+    POLYGON: {}
 }
 
 // 三角形剖面
@@ -2249,7 +2244,7 @@ export declare type SegmentType = {
 export declare interface PipeParams {
     wire: gp_Pnt[];
     profile: ShapeProfile;
-    innerProfile?: ShapeProfile  | null;
+    innerProfile?: ShapeProfile | null;
     segmentType: SegmentType;
     transitionMode: TransitionMode;
     upDir?: gp_Dir;
@@ -2268,7 +2263,7 @@ export declare interface MultiSegmentPipeParams {
     wires: Point[][];
     profiles: Array<ShapeProfile>;
     innerProfiles?: Array<ShapeProfile> | null;
-    segmentTypes?: SegmentType[]  | null;
+    segmentTypes?: SegmentType[] | null;
     transitionMode: TransitionMode;
     upDir?: gp_Dir;
 }

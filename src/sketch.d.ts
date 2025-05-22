@@ -6,7 +6,7 @@ export declare type SketchMode = {
   REPLACE: {},
 }
 
-declare type SketchVal  = Shape | Location
+declare type SketchVal = Shape | Location
 
 declare class Sketch {
   constructor();
