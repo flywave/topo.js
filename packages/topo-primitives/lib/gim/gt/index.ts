@@ -1884,7 +1884,11 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
                 specification: "L5x1",
                 material: "Q345",
                 xDirection: new this.tp.gp_Dir_4(1, 0, 0),
-                yDirection: new this.tp.gp_Dir_4(0, 1, 0)
+                yDirection: new this.tp.gp_Dir_4(0, 1, 0),
+                end1Diameter: 0.0,
+                end2Diameter: 0.0,
+                thickness: 0.0,
+                sides: 0
             }],
             attachments: []
         };

@@ -867,7 +867,7 @@ export declare interface PrecastMetalSupportBaseParams {
     S2: number;
     n1: number;
     n2: number;
-    HX: number;
+    HX: number[];
 }
 
 export declare function createPrecastMetalSupportBase(params: PrecastMetalSupportBaseParams): TopoDS_Shape;
@@ -1035,10 +1035,10 @@ export declare interface PoleTowerMember {
     material: string;
     xDirection: gp_Dir;
     yDirection: gp_Dir;
-    end1Diameter?: number;
-    end2Diameter?: number;
-    thickness?: number;
-    sides?: number;
+    end1Diameter: number;
+    end2Diameter: number;
+    thickness: number;
+    sides: number;
 }
 
 // 杆塔挂点结构体
