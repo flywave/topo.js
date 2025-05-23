@@ -86,7 +86,7 @@ export interface PipeJointObject extends Version {
     type: 'PipeJoint';
     ins: PipeJointEndpoint[];
     outs: PipeJointEndpoint[];
-    mode: 'SPHERE' | 'BOX' | 'CONE';
+    mode: 'SPHERE' | 'BOX' | 'CYLINDER';
     flanged: boolean;
     upDir?: Dir | null;
 }

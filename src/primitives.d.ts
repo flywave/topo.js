@@ -2280,7 +2280,7 @@ export declare interface MultiSegmentPipeParams {
 export declare type JointShapeMode = {
     SPHERE: {},
     BOX: {},
-    CONE: {}
+    CYLINDER: {}
 }
 
 // 管道端点

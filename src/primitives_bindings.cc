@@ -3928,7 +3928,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   enum_<joint_shape_mode>("JointShapeMode")
       .value("SPHERE", joint_shape_mode::SPHERE)
       .value("BOX", joint_shape_mode::BOX),
-      .value("CONE", joint_shape_mode::CONE);
+      .value("CYLINDER", joint_shape_mode::CYLINDER);
 
   // 管道端点结构体
   value_object<pipe_endpoint>("PipeEndpoint")

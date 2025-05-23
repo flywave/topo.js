@@ -790,8 +790,8 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
             case 'BOX':
                 mode = this.tp.JointShapeMode.BOX as JointShapeMode;
                 break;
-            case 'CONE':
-                mode = this.tp.JointShapeMode.CONE as JointShapeMode;
+            case 'CYLINDER':
+                mode = this.tp.JointShapeMode.CYLINDER as JointShapeMode;
                 break;
         }
 
@@ -825,8 +825,8 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
             case this.tp.JointShapeMode.BOX:
                 mode = 'BOX';
                 break;
-            case this.tp.JointShapeMode.CONE:
-                mode = 'CONE';
+            case this.tp.JointShapeMode.CYLINDER:
+                mode = 'CYLINDER';
                 break;
         }
 
