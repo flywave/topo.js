@@ -445,12 +445,20 @@ declare namespace FS {
 }
 `
 
+const typescriptDefinitionHeader = `
+export type XCAFDoc_PartId = any
+export type Graphic3d_ZLayerId = any
+export type address = any
+`
+
 func GenerateTypescriptDefs(workDir string, defs []TypescriptDef, buildName string) error {
 	var output strings.Builder
 	var exports []struct {
 		Export string
 		Kind   string
 	}
+
+	output.WriteString(typescriptDefinitionHeader)
 
 	for _, dts := range defs {
 		output.WriteString(dts.Dts)
