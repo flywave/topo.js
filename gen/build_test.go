@@ -77,10 +77,10 @@ func TestGenTypescriptDefs(t *testing.T) {
 		t.Fail()
 	}
 
-	typescriptDefinitions, err := collectTypescriptDefs(buildConfig, workDir)
+	typescriptDefinitions, err := CollectTypescriptDefs(buildConfig, workDir)
 	if err != nil {
 		t.Fail()
 	}
 
-	generateTypescriptDefs(workDir, typescriptDefinitions, buildConfig.MainBuild.Name)
+	GenerateTypescriptDefs(workDir, typescriptDefinitions, buildConfig.MainBuild.Name)
 }

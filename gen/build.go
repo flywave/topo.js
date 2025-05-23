@@ -75,7 +75,7 @@ func RunBuild(workDir string, filename string) error {
 		}
 	}
 
-	typescriptDefinitions, err := collectTypescriptDefs(buildConfig, workDir)
+	typescriptDefinitions, err := CollectTypescriptDefs(buildConfig, workDir)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func RunBuild(workDir string, filename string) error {
 	}
 
 	if buildConfig.GenerateTypescriptDefs {
-		if err := generateTypescriptDefs(workDir, typescriptDefinitions, buildConfig.MainBuild.Name); err != nil {
+		if err := GenerateTypescriptDefs(workDir, typescriptDefinitions, buildConfig.MainBuild.Name); err != nil {
 			return err
 		}
 	}
@@ -138,7 +138,7 @@ func shouldProcessSymbol(symbol string, bindings []Binding) bool {
 	return false
 }
 
-func collectTypescriptDefs(buildConfig BuildConfig, workDir string) ([]TypescriptDef, error) {
+func CollectTypescriptDefs(buildConfig BuildConfig, workDir string) ([]TypescriptDef, error) {
 	var allBindings []Binding
 	allBindings = append(allBindings, buildConfig.MainBuild.Bindings...)
 	for _, extraBuild := range buildConfig.ExtraBuilds {
@@ -445,7 +445,7 @@ declare namespace FS {
 }
 `
 
-func generateTypescriptDefs(workDir string, defs []TypescriptDef, buildName string) error {
+func GenerateTypescriptDefs(workDir string, defs []TypescriptDef, buildName string) error {
 	var output strings.Builder
 	var exports []struct {
 		Export string

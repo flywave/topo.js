@@ -76,9 +76,20 @@ func BuildObjectFile(workDir string, buildDir string, basePath string, args map[
 	relFile := strings.TrimPrefix(srcFile, path.Join(workDir, basePath))
 	objFile := filepath.Join(libraryBasePath, relFile+".o")
 
-	if _, err := os.Stat(objFile); err == nil {
-		fmt.Printf("%s.o already exists, skipping\n", relFile)
-		return
+	// 检查目标文件是否存在
+	if objInfo, err := os.Stat(objFile); err == nil {
+		// 获取源文件修改时间
+		srcInfo, err := os.Stat(srcFile)
+		if err != nil {
+			errChan <- fmt.Errorf("failed to get source file info: %v", err)
+			return
+		}
+
+		// 如果源文件没有目标文件新，则跳过编译
+		if srcInfo.ModTime().Before(objInfo.ModTime()) {
+			fmt.Printf("%s.o is up to date, skipping\n", relFile)
+			return
+		}
 	}
 
 	os.MkdirAll(filepath.Dir(objFile), 0755)

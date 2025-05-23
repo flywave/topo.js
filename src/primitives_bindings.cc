@@ -3927,7 +3927,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 连接形状模式枚举
   enum_<joint_shape_mode>("JointShapeMode")
       .value("SPHERE", joint_shape_mode::SPHERE)
-      .value("BOX", joint_shape_mode::BOX),
+      .value("BOX", joint_shape_mode::BOX)
       .value("CYLINDER", joint_shape_mode::CYLINDER);
 
   // 管道端点结构体

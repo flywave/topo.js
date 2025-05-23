@@ -88,8 +88,8 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                                            : ignoreSelectionVal.as<bool>();
 
                 if (shp.instanceof(emscripten::val::global("Wire"))) {
-                  auto &w = shp.as<wire>();
-                  auto r = self.face(w, angle, mode, tag, ignoreSelection);
+                  auto w = shp.as<wire>();
+                  auto &r = self.face(w, angle, mode, tag, ignoreSelection);
                   return emscripten::val(r.shared_from_this());
                 } else if (shp.isArray()) { // vector<topo::edge>
                   std::vector<topo::edge> edges;
@@ -98,15 +98,15 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                   for (size_t i = 0; i < len; ++i) {
                     edges.push_back(shp[i].as<topo::edge>());
                   }
-                  auto r = self.face(edges, angle, mode, tag, ignoreSelection);
+                  auto &r = self.face(edges, angle, mode, tag, ignoreSelection);
                   return emscripten::val(r.shared_from_this());
                 } else if (shp.instanceof(emscripten::val::global("Shape"))) {
-                  auto &sh = shp.as<shape>();
-                  auto r = self.face(sh, angle, mode, tag, ignoreSelection);
+                  auto sh = shp.as<shape>();
+                  auto &r = self.face(sh, angle, mode, tag, ignoreSelection);
                   return emscripten::val(r.shared_from_this());
                 } else if (shp.instanceof(emscripten::val::global("Sketch"))) {
                   auto sk = shp.as<std::shared_ptr<sketch>>();
-                  auto r = self.face(sk, angle, mode, tag, ignoreSelection);
+                  auto &r = self.face(sk, angle, mode, tag, ignoreSelection);
                   return emscripten::val(r.shared_from_this());
                 } else {
                   throw std::runtime_error("Unsupported type for face()");
@@ -127,7 +127,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
 
-                      auto r = self.rect(w, h, angle, mode, tag);
+                      auto &r = self.rect(w, h, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -143,8 +143,8 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
 
-                      auto r = self.circle(r, mode, tag);
-                      return emscripten::val(r.shared_from_this());
+                      auto &rr = self.circle(r, mode, tag);
+                      return emscripten::val(rr.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
       // Ellipse
@@ -161,7 +161,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           tagVal.isUndefined()
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
-                      auto r = self.ellipse(a1, a2, angle, mode, tag);
+                      auto &r = self.ellipse(a1, a2, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -185,7 +185,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
 
-                      auto r = self.trapezoid(w, h, a1, a2, angle, mode, tag);
+                      auto &r = self.trapezoid(w, h, a1, a2, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -203,7 +203,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           tagVal.isUndefined()
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
-                      auto r = self.slot(w, h, angle, mode, tag);
+                      auto &r = self.slot(w, h, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -221,8 +221,8 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           tagVal.isUndefined()
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
-                      auto r = self.regular_polygon(r, n, angle, mode, tag);
-                      return emscripten::val(r.shared_from_this());
+                      auto &rr = self.regular_polygon(r, n, angle, mode, tag);
+                      return emscripten::val(rr.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
       // Polygon
@@ -246,7 +246,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
 
-                      auto r = self.polygon(pts, angle, mode, tag);
+                      auto &r = self.polygon(pts, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -254,7 +254,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
           "rarray",
           emscripten::optional_override([](sketch &self, double xs, double ys,
                                            int nx, int ny) -> emscripten::val {
-            auto r = self.rarray(xs, ys, nx, ny);
+            auto &r = self.rarray(xs, ys, nx, ny);
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -265,8 +265,8 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                        emscripten::val rotateVal) -> emscripten::val {
                       bool rotate =
                           rotateVal.isUndefined() ? true : rotateVal.as<bool>();
-                      auto r = self.parray(r, a1, da, n, rotate);
-                      return emscripten::val(r.shared_from_this());
+                      auto &rr = self.parray(r, a1, da, n, rotate);
+                      return emscripten::val(rr.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
       // Distribute
@@ -281,7 +281,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           stopVal.isUndefined() ? 1.0 : stopVal.as<double>();
                       bool rotate =
                           rotateVal.isUndefined() ? true : rotateVal.as<bool>();
-                      auto r = self.distribute(n, start, stop, rotate);
+                      auto &r = self.distribute(n, start, stop, rotate);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -304,7 +304,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
 
-                      auto r = self.push(locs, tag);
+                      auto &r = self.push(locs, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -327,7 +327,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? false
                               : ignoreSelectionVal.as<bool>();
 
-                      auto r = self.each(callback, mode, tag, ignoreSelection);
+                      auto &r = self.each(callback, mode, tag, ignoreSelection);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -350,7 +350,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? false
                               : ignoreSelectionVal.as<bool>();
 
-                      auto r = self.each(callback, mode, tag, ignoreSelection);
+                      auto &r = self.each(callback, mode, tag, ignoreSelection);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -373,7 +373,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? false
                               : ignoreSelectionVal.as<bool>();
 
-                      auto r = self.each(callback, mode, tag, ignoreSelection);
+                      auto &r = self.each(callback, mode, tag, ignoreSelection);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -387,7 +387,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           tagVal.isUndefined()
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
-                      auto r = self.hull(mode, tag);
+                      auto &r = self.hull(mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -403,7 +403,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           tagVal.isUndefined()
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
-                      auto r = self.offset(d, mode, tag);
+                      auto &r = self.offset(d, mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -412,7 +412,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function("fillet",
                 emscripten::optional_override(
                     [](sketch &self, double d) -> emscripten::val {
-                      auto r = self.fillet(d);
+                      auto &r = self.fillet(d);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -421,7 +421,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function("chamfer",
                 emscripten::optional_override(
                     [](sketch &self, double d) -> emscripten::val {
-                      auto r = self.chamfer(d);
+                      auto &r = self.chamfer(d);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -429,7 +429,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "clean",
           emscripten::optional_override([](sketch &self) -> emscripten::val {
-            auto r = self.clean();
+            auto &r = self.clean();
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -438,7 +438,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
           "tag",
           emscripten::optional_override(
               [](sketch &self, const std::string &tag) -> emscripten::val {
-                auto r = self.tag(tag);
+                auto &r = self.tag(tag);
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
@@ -454,7 +454,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 for (size_t i = 0; i < len; ++i) {
                   tags.push_back(tagsVal[i].as<std::string>());
                 }
-                auto r = self.select(tags);
+                auto &r = self.select(tags);
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
@@ -468,11 +468,11 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       if (selectorVal.isString()) {
                         std::string selector = selectorVal.as<std::string>();
-                        auto r = self.faces(selector, tag);
+                        auto &r = self.faces(selector, tag);
                         return emscripten::val(r.shared_from_this());
                       } else {
                         auto sel = selectorVal.as<selector_ptr>();
-                        auto r = self.faces(sel, tag);
+                        auto &r = self.faces(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
                     }),
@@ -487,11 +487,11 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       if (selectorVal.isString()) {
                         std::string selector = selectorVal.as<std::string>();
-                        auto r = self.wires(selector, tag);
+                        auto &r = self.wires(selector, tag);
                         return emscripten::val(r.shared_from_this());
                       } else {
                         auto sel = selectorVal.as<selector_ptr>();
-                        auto r = self.wires(sel, tag);
+                        auto &r = self.wires(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
                     }),
@@ -507,11 +507,11 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       if (selectorVal.isString()) {
                         std::string selector = selectorVal.as<std::string>();
-                        auto r = self.edges(selector, tag);
+                        auto &r = self.edges(selector, tag);
                         return emscripten::val(r.shared_from_this());
                       } else {
                         auto sel = selectorVal.as<selector_ptr>();
-                        auto r = self.edges(sel, tag);
+                        auto &r = self.edges(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
                     }),
@@ -527,11 +527,11 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       if (selectorVal.isString()) {
                         std::string selector = selectorVal.as<std::string>();
-                        auto r = self.vertices(selector, tag);
+                        auto &r = self.vertices(selector, tag);
                         return emscripten::val(r.shared_from_this());
                       } else {
                         auto sel = selectorVal.as<selector_ptr>();
-                        auto r = self.vertices(sel, tag);
+                        auto &r = self.vertices(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
                     }),
@@ -549,7 +549,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "deleteSelected",
           emscripten::optional_override([](sketch &self) -> emscripten::val {
-            auto r = self.delete_selected();
+            auto &r = self.delete_selected();
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -568,7 +568,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 bool forConstruction = forConstructionVal.isUndefined()
                                            ? false
                                            : forConstructionVal.as<bool>();
-                auto r = self.edge(edge, tag, forConstruction);
+                auto &r = self.edge(edge, tag, forConstruction);
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
@@ -588,7 +588,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           forConstructionVal.isUndefined()
                               ? false
                               : forConstructionVal.as<bool>();
-                      auto r = self.segment(p1, p2, tag, forConstruction);
+                      auto &r = self.segment(p1, p2, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -606,7 +606,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 bool forConstruction = forConstructionVal.isUndefined()
                                            ? false
                                            : forConstructionVal.as<bool>();
-                auto r = self.segment(p2, tag, forConstruction);
+                auto &r = self.segment(p2, tag, forConstruction);
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
@@ -623,7 +623,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           forConstructionVal.isUndefined()
                               ? false
                               : forConstructionVal.as<bool>();
-                      auto r = self.segment(l, a, tag, forConstruction);
+                      auto &r = self.segment(l, a, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -645,7 +645,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 bool forConstruction = forConstructionVal.isUndefined()
                                            ? false
                                            : forConstructionVal.as<bool>();
-                auto r = self.arc(p1, p2, p3, tag, forConstruction);
+                auto &r = self.arc(p1, p2, p3, tag, forConstruction);
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
@@ -666,7 +666,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           forConstructionVal.isUndefined()
                               ? false
                               : forConstructionVal.as<bool>();
-                      auto r = self.arc(p2, p3, tag, forConstruction);
+                      auto &r = self.arc(p2, p3, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -686,7 +686,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 bool forConstruction = forConstructionVal.isUndefined()
                                            ? false
                                            : forConstructionVal.as<bool>();
-                auto r = self.arc(center, radius, startAngle, deltaAngle, tag,
+                auto &r = self.arc(center, radius, startAngle, deltaAngle, tag,
                                   forConstruction);
                 return emscripten::val(r.shared_from_this());
               }),
@@ -723,7 +723,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                                            ? false
                                            : forConstructionVal.as<bool>();
 
-                auto r = self.spline(points, tangents, periodic, tag,
+                auto &r = self.spline(points, tangents, periodic, tag,
                                      forConstruction);
                 return emscripten::val(r.shared_from_this());
               }),
@@ -751,7 +751,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? false
                               : forConstructionVal.as<bool>();
 
-                      auto r = self.spline(points, tag, forConstruction);
+                      auto &r = self.spline(points, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -777,7 +777,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               ? false
                               : forConstructionVal.as<bool>();
 
-                      auto r = self.bezier(points, tag, forConstruction);
+                      auto &r = self.bezier(points, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -790,7 +790,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                     tagVal.isUndefined()
                         ? boost::none
                         : boost::make_optional(tagVal.as<std::string>());
-                auto r = self.close(tag);
+                auto &r = self.close(tag);
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
@@ -804,7 +804,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           tagVal.isUndefined()
                               ? boost::none
                               : boost::make_optional(tagVal.as<std::string>());
-                      auto r = self.assemble(mode, tag);
+                      auto &r = self.assemble(mode, tag);
                       return emscripten::val(r.shared_from_this());
                     }),
                 emscripten::allow_raw_pointers())
@@ -883,7 +883,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "add",
           emscripten::optional_override([](sketch &self) -> emscripten::val {
-            auto r = self.add();
+            auto &r = self.add();
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -892,7 +892,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "subtract",
           emscripten::optional_override([](sketch &self) -> emscripten::val {
-            auto r = self.subtract();
+            auto &r = self.subtract();
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -901,7 +901,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "replace",
           emscripten::optional_override([](sketch &self) -> emscripten::val {
-            auto r = self.replace();
+            auto &r = self.replace();
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -961,7 +961,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 for (size_t i = 0; i < len; ++i) {
                   indices.push_back(indicesVal[i].as<int>());
                 }
-                auto r = self[indices];
+                auto &r = self[indices];
                 return emscripten::val(r.shared_from_this());
               }),
           emscripten::allow_raw_pointers())

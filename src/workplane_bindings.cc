@@ -51,7 +51,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                            emscripten::val objVal) {
             topo_vector *origin = nullptr;
             if (!originVal.isUndefined() && !originVal.isNull()) {
-              origin = &originVal.as<topo_vector>();
+              auto or = originVal.as<topo_vector>();
+              origin = &or ;
             }
 
             shape_object obj;
@@ -116,7 +117,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
 
                 topo_vector *origin = nullptr;
                 if (!originVal.isUndefined() && !originVal.isNull()) {
-                  origin = &originVal.as<topo_vector>();
+                  auto or = originVal.as<topo_vector>();
+                  origin = &or ;
                 }
 
                 auto result = self.create(offset, invert, centerOpt, origin);
