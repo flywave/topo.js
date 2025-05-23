@@ -1427,7 +1427,7 @@ export declare type CableClampType = {
 
 // 电缆夹具参数结构体
 export declare interface CableClampParams {
-    type: CableClampType;
+    clampType: CableClampType;
     diameter: number;
     thickness: number;
     width: number;
@@ -2279,7 +2279,8 @@ export declare interface MultiSegmentPipeParams {
 // 连接形状模式枚举
 export declare type JointShapeMode = {
     SPHERE: {},
-    BOX: {}
+    BOX: {},
+    CONE: {}
 }
 
 // 管道端点

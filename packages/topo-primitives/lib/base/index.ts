@@ -20,9 +20,28 @@ import {
     SphereShapeParams,
     TorusShapeParams,
     WedgeShapeParams,
-    PipeShapeParams
+    PipeShapeParams,
+    TransitionMode,
+    SegmentType,
+    JointShapeMode
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
+import {
+    BoxShapeObject,
+    CatenaryObject,
+    ConeShapeObject,
+    CylinderShapeObject,
+    MultiSegmentPipePrimitiveObject,
+    PipeJointObject,
+    PipeObject,
+    PipeShapeObject,
+    PrismObject,
+    RevolObject,
+    RevolutionShapeObject,
+    SphereShapeObject,
+    TorusShapeObject,
+    WedgeShapeObject,
+} from "../types";
 
 export enum BasePrimitiveType {
     Revol = "Revol",
@@ -193,9 +212,9 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
     }
 }
 
-export class RevolPrimitive extends BasePrimitive<RevolParams> {
+export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
 
-    constructor(tp: TopoInstance, params?: RevolParams) {
+    constructor(tp: TopoInstance, params?: RevolObject) {
         super(tp, params);
     }
 
@@ -203,7 +222,7 @@ export class RevolPrimitive extends BasePrimitive<RevolParams> {
         return BasePrimitiveType.Revol;
     }
 
-    setDefault(): Primitive<RevolParams> {
+    setDefault(): Primitive<RevolParams, RevolObject> {
         this.params = {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
@@ -219,7 +238,7 @@ export class RevolPrimitive extends BasePrimitive<RevolParams> {
         return this;
     }
 
-    public setParams(params: RevolParams): Primitive<RevolParams> {
+    public setParams(params: RevolParams): Primitive<RevolParams, RevolObject> {
         this.params = params;
         return this;
     }
@@ -254,9 +273,12 @@ export class RevolPrimitive extends BasePrimitive<RevolParams> {
         throw new Error("Invalid parameters for Revol");
     }
 
-    fromObject(o: any): Primitive<RevolParams> {
+    fromObject(o?: RevolObject): Primitive<RevolParams, RevolObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         const profile = deserializeProfile(this.tp, o);
@@ -272,13 +294,14 @@ export class RevolPrimitive extends BasePrimitive<RevolParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RevolObject | undefined {
         const profileObj = serializeProfile(this.tp, this.params.profile);
         if (profileObj === undefined) {
             return undefined;
         }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['profile', profileObj],
             ['axis', {
                 location: {
@@ -293,14 +316,13 @@ export class RevolPrimitive extends BasePrimitive<RevolParams> {
                 }
             }],
             ['angle', this.params.angle]
-        ]));
+        ])) as RevolObject;
     }
 }
 
+export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
 
-export class PrismPrimitive extends BasePrimitive<PrismParams> {
-
-    constructor(tp: TopoInstance, params?: PrismParams) {
+    constructor(tp: TopoInstance, params?: PrismObject) {
         super(tp, params);
     }
 
@@ -308,7 +330,7 @@ export class PrismPrimitive extends BasePrimitive<PrismParams> {
         return BasePrimitiveType.Prism;
     }
 
-    setDefault(): Primitive<PrismParams> {
+    setDefault(): Primitive<PrismParams, PrismObject> {
         this.params = {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
@@ -320,7 +342,7 @@ export class PrismPrimitive extends BasePrimitive<PrismParams> {
         return this;
     }
 
-    public setParams(params: PrismParams): Primitive<PrismParams> {
+    public setParams(params: PrismParams): Primitive<PrismParams, PrismObject> {
         this.params = params;
         return this;
     }
@@ -349,9 +371,12 @@ export class PrismPrimitive extends BasePrimitive<PrismParams> {
         throw new Error("Invalid parameters for Prism");
     }
 
-    fromObject(o: any): Primitive<PrismParams> {
+    fromObject(o?: PrismObject): Primitive<PrismParams, PrismObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         const profile = deserializeProfile(this.tp, o);
@@ -363,26 +388,27 @@ export class PrismPrimitive extends BasePrimitive<PrismParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PrismObject | undefined {
         const profileObj = serializeProfile(this.tp, this.params.profile);
         if (profileObj === undefined) {
             return undefined;
         }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['profile', profileObj],
             ['dir', {
                 x: this.params.dir.X(),
                 y: this.params.dir.Y(),
                 z: this.params.dir.Z()
             }]
-        ]));
+        ])) as PrismObject;
     }
 }
 
-export class PipePrimitive extends BasePrimitive<PipeParams> {
+export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
 
-    constructor(tp: TopoInstance, params?: PipeParams) {
+    constructor(tp: TopoInstance, params?: PipeObject) {
         super(tp, params);
     }
 
@@ -390,7 +416,7 @@ export class PipePrimitive extends BasePrimitive<PipeParams> {
         return BasePrimitiveType.Pipe;
     }
 
-    setDefault(): Primitive<PipeParams> {
+    setDefault(): Primitive<PipeParams, PipeObject> {
         this.params = {
             wire: [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(100, 0, 0)],
             profile: {
@@ -405,7 +431,7 @@ export class PipePrimitive extends BasePrimitive<PipeParams> {
         return this;
     }
 
-    public setParams(params: PipeParams): Primitive<PipeParams> {
+    public setParams(params: PipeParams): Primitive<PipeParams, PipeObject> {
         this.params = params;
         return this;
     }
@@ -423,49 +449,110 @@ export class PipePrimitive extends BasePrimitive<PipeParams> {
         throw new Error("Invalid parameters for Pipe");
     }
 
-    fromObject(o: any): Primitive<PipeParams> {
+    fromObject(o?: PipeObject): Primitive<PipeParams, PipeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         const profile = deserializeProfile(this.tp, o);
         const innerProfile = o.innerProfile ? deserializeProfile(this.tp, { profile: o.innerProfile }) : null;
 
+        let transitionMode: TransitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
+        switch (o.transitionMode) {
+            case 'TRANSFORMED':
+                transitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
+                break;
+            case 'ROUND':
+                transitionMode = this.tp.TransitionMode.ROUND as TransitionMode;
+                break;
+            case 'RIGHT':
+                transitionMode = this.tp.TransitionMode.RIGHT as TransitionMode;
+        }
+
+        let segmentType: SegmentType = this.tp.SegmentType.LINE as SegmentType;
+        switch (o.segmentType) {
+            case 'LINE':
+                segmentType = this.tp.SegmentType.LINE as SegmentType;
+                break;
+            case 'THREE_POINT_ARC':
+                segmentType = this.tp.SegmentType.THREE_POINT_ARC as SegmentType;
+                break;
+            case 'CIRCLE_CENTER_ARC':
+                segmentType = this.tp.SegmentType.CIRCLE_CENTER_ARC as SegmentType;
+                break;
+            case 'SPLINE':
+                segmentType = this.tp.SegmentType.SPLINE as SegmentType;
+                break;
+        }
+
         this.params = {
             wire: o.wire.map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
             profile,
             innerProfile,
-            segmentType: o.segmentType,
-            transitionMode: o.transitionMode,
+            segmentType: segmentType,
+            transitionMode: transitionMode,
             upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PipeObject | undefined {
         const profileObj = serializeProfile(this.tp, this.params.profile);
         const innerProfileObj = this.params.innerProfile ?
             serializeProfile(this.tp, this.params.innerProfile) : null;
 
+        let transitionMode = 'TRANSFORMED';
+        switch (this.params.transitionMode) {
+            case this.tp.TransitionMode.TRANSFORMED:
+                transitionMode = 'TRANSFORMED';
+                break;
+            case this.tp.TransitionMode.ROUND:
+                transitionMode = 'ROUND';
+                break;
+            case this.tp.TransitionMode.RIGHT:
+                transitionMode = 'RIGHT';
+                break;
+        }
+
+        let segmentType = 'LINE';
+        switch (this.params.segmentType) {
+            case this.tp.SegmentType.LINE:
+                segmentType = 'LINE';
+                break;
+            case this.tp.SegmentType.THREE_POINT_ARC:
+                segmentType = 'THREE_POINT_ARC';
+                break;
+            case this.tp.SegmentType.CIRCLE_CENTER_ARC:
+                segmentType = 'CIRCLE_CENTER_ARC';
+                break;
+            case this.tp.SegmentType.SPLINE:
+                segmentType = 'SPLINE';
+                break;
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['wire', this.params.wire.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() }))],
             ['profile', profileObj],
             ['innerProfile', innerProfileObj],
-            ['segmentType', this.params.segmentType],
-            ['transitionMode', this.params.transitionMode],
+            ['segmentType', segmentType],
+            ['transitionMode', transitionMode],
             ['upDir', this.params.upDir ? {
                 x: this.params.upDir.X(),
                 y: this.params.upDir.Y(),
                 z: this.params.upDir.Z()
             } : null]
-        ]));
+        ])) as PipeObject;
     }
 }
 
-export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipeParams> {
+export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipeParams, MultiSegmentPipePrimitiveObject> {
 
-    constructor(tp: TopoInstance, params?: MultiSegmentPipeParams) {
+    constructor(tp: TopoInstance, params?: MultiSegmentPipePrimitiveObject) {
         super(tp, params);
     }
 
@@ -473,7 +560,7 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
         return BasePrimitiveType.MultiSegmentPipe;
     }
 
-    setDefault(): Primitive<MultiSegmentPipeParams> {
+    setDefault(): Primitive<MultiSegmentPipeParams, MultiSegmentPipePrimitiveObject> {
         // 默认直线段
         const linePoints = [
             new this.tp.gp_Pnt_3(50, -50, 0),
@@ -497,7 +584,7 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
         return this;
     }
 
-    public setParams(params: MultiSegmentPipeParams): Primitive<MultiSegmentPipeParams> {
+    public setParams(params: MultiSegmentPipeParams): Primitive<MultiSegmentPipeParams, MultiSegmentPipePrimitiveObject> {
         this.params = params;
         return this;
     }
@@ -517,54 +604,125 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
         throw new Error("Invalid parameters for MultiSegmentPipe");
     }
 
-    fromObject(o: any): Primitive<MultiSegmentPipeParams> {
+    fromObject(o?: MultiSegmentPipePrimitiveObject): Primitive<MultiSegmentPipeParams, MultiSegmentPipePrimitiveObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         const profiles = o.profiles.map((p: any) => deserializeProfile(this.tp, { profile: p }));
         const innerProfiles = o.innerProfiles ?
             o.innerProfiles.map((p: any) => deserializeProfile(this.tp, { profile: p })) : null;
 
+        let transitionMode: TransitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
+        switch (o.transitionMode) {
+            case 'TRANSFORMED':
+                transitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
+                break;
+            case 'ROUND':
+                transitionMode = this.tp.TransitionMode.ROUND as TransitionMode;
+                break;
+            case 'RIGHT':
+                transitionMode = this.tp.TransitionMode.RIGHT as TransitionMode;
+        }
+
+        const segmentTypes: SegmentType[] = [];
+        for (let i = 0; i < o.segmentTypes.length; i++) {
+            switch (o.segmentTypes[i]) {
+                case 'LINE':
+                    segmentTypes.push(this.tp.SegmentType.LINE as SegmentType);
+                    break;
+                case 'THREE_POINT_ARC':
+                    segmentTypes.push(this.tp.SegmentType.THREE_POINT_ARC as SegmentType);
+                    break;
+                case 'CIRCLE_CENTER_ARC':
+                    segmentTypes.push(this.tp.SegmentType.CIRCLE_CENTER_ARC as SegmentType);
+                    break;
+                case 'SPLINE':
+                    segmentTypes.push(this.tp.SegmentType.SPLINE as SegmentType);
+                    break;
+                default:
+                    segmentTypes.push(this.tp.SegmentType.LINE as SegmentType);
+            }
+        }
+
         this.params = {
             wires: o.wires.map((wire: any[]) =>
                 wire.map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z))),
             profiles,
             innerProfiles,
-            segmentTypes: o.segmentTypes,
-            transitionMode: o.transitionMode,
+            segmentTypes: segmentTypes,
+            transitionMode: transitionMode,
             upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): MultiSegmentPipePrimitiveObject | undefined {
         const profileObjs = this.params.profiles.map(p => serializeProfile(this.tp, p));
         const innerProfileObjs = this.params.innerProfiles ?
             this.params.innerProfiles.map(p => serializeProfile(this.tp, p)) : null;
 
+        let transitionMode = 'TRANSFORMED';
+        switch (this.params.transitionMode) {
+            case this.tp.TransitionMode.TRANSFORMED:
+                transitionMode = 'TRANSFORMED';
+                break;
+            case this.tp.TransitionMode.ROUND:
+                transitionMode = 'ROUND';
+                break;
+            case this.tp.TransitionMode.RIGHT:
+                transitionMode = 'RIGHT';
+                break;
+        }
+
+        const segmentTypes: string[] = [];
+        if (this.params.segmentTypes?.length) {
+            for (let i = 0; i < this.params.segmentTypes?.length; i++) {
+                switch (this.params.segmentTypes[i]) {
+                    case this.tp.SegmentType.LINE:
+                        segmentTypes.push('LINE');
+                        break;
+                    case this.tp.SegmentType.THREE_POINT_ARC:
+                        segmentTypes.push('THREE_POINT_ARC');
+                        break;
+                    case this.tp.SegmentType.CIRCLE_CENTER_ARC:
+                        segmentTypes.push('CIRCLE_CENTER_ARC');
+                        break;
+                    case this.tp.SegmentType.SPLINE:
+                        segmentTypes.push('SPLINE');
+                        break;
+                    default:
+                        segmentTypes.push('LINE');
+
+                }
+            }
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['wires', this.params.wires.map(wire =>
                 wire.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() })))],
             ['profiles', profileObjs],
             ['innerProfiles', innerProfileObjs],
-            ['segmentTypes', this.params.segmentTypes],
-            ['transitionMode', this.params.transitionMode],
+            ['segmentTypes', segmentTypes],
+            ['transitionMode', transitionMode],
             ['upDir', this.params.upDir ? {
                 x: this.params.upDir.X(),
                 y: this.params.upDir.Y(),
                 z: this.params.upDir.Z()
             } : null]
-        ]));
+        ])) as MultiSegmentPipePrimitiveObject;
     }
 }
 
 
+export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJointObject> {
 
-export class PipeJointPrimitive extends BasePrimitive<PipeJointParams> {
-
-    constructor(tp: TopoInstance, params?: PipeJointParams) {
+    constructor(tp: TopoInstance, params?: PipeJointObject) {
         super(tp, params);
     }
 
@@ -572,7 +730,7 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams> {
         return BasePrimitiveType.PipeJoint;
     }
 
-    setDefault(): Primitive<PipeJointParams> {
+    setDefault(): Primitive<PipeJointParams, PipeJointObject> {
         // 默认圆形剖面
         const profile = {
             type: this.tp.ProfileType.CIRC,
@@ -598,7 +756,7 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams> {
         return this;
     }
 
-    public setParams(params: PipeJointParams): Primitive<PipeJointParams> {
+    public setParams(params: PipeJointParams): Primitive<PipeJointParams, PipeJointObject> {
         this.params = params;
         return this;
     }
@@ -616,9 +774,25 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams> {
         throw new Error("Invalid parameters for PipeJoint");
     }
 
-    fromObject(o: any): Primitive<PipeJointParams> {
+    fromObject(o?: PipeJointObject): Primitive<PipeJointParams, PipeJointObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let mode: JointShapeMode = this.tp.JointShapeMode.SPHERE as JointShapeMode;
+        switch (o.mode) {
+            case 'SPHERE':
+                mode = this.tp.JointShapeMode.SPHERE as JointShapeMode;
+                break;
+            case 'BOX':
+                mode = this.tp.JointShapeMode.BOX as JointShapeMode;
+                break;
+            case 'CONE':
+                mode = this.tp.JointShapeMode.CONE as JointShapeMode;
+                break;
         }
 
         this.params = {
@@ -634,16 +808,31 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams> {
                 profile: deserializeProfile(this.tp, { profile: ep.profile }),
                 innerProfile: ep.innerProfile ? deserializeProfile(this.tp, { profile: ep.innerProfile }) : undefined
             })),
-            mode: o.mode,
+            mode: mode,
             flanged: o.flanged,
             upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PipeJointObject | undefined {
+
+        let mode = 'SPHERE';
+        switch (this.params.mode) {
+            case this.tp.JointShapeMode.SPHERE:
+                mode = 'SPHERE';
+                break;
+            case this.tp.JointShapeMode.BOX:
+                mode = 'BOX';
+                break;
+            case this.tp.JointShapeMode.CONE:
+                mode = 'CONE';
+                break;
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['ins', this.params.ins.map(ep => ({
                 offset: { x: ep.offset.X(), y: ep.offset.Y(), z: ep.offset.Z() },
                 normal: { x: ep.normal.X(), y: ep.normal.Y(), z: ep.normal.Z() },
@@ -656,20 +845,20 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams> {
                 profile: serializeProfile(this.tp, ep.profile),
                 innerProfile: ep.innerProfile ? serializeProfile(this.tp, ep.innerProfile) : null
             }))],
-            ['mode', this.params.mode],
+            ['mode', mode],
             ['flanged', this.params.flanged],
             ['upDir', this.params.upDir ? {
                 x: this.params.upDir.X(),
                 y: this.params.upDir.Y(),
                 z: this.params.upDir.Z()
             } : null]
-        ]));
+        ])) as PipeJointObject;
     }
 }
 
-export class CatenaryPrimitive extends BasePrimitive<CatenaryParams> {
+export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObject> {
 
-    constructor(tp: TopoInstance, params?: CatenaryParams) {
+    constructor(tp: TopoInstance, params?: CatenaryObject) {
         super(tp, params);
     }
 
@@ -677,7 +866,7 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams> {
         return BasePrimitiveType.Catenary;
     }
 
-    setDefault(): Primitive<CatenaryParams> {
+    setDefault(): Primitive<CatenaryParams, CatenaryObject> {
         this.params = {
             p1: new this.tp.gp_Pnt_3(0, 0, 0),
             p2: new this.tp.gp_Pnt_3(100, 0, 0),
@@ -694,7 +883,7 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams> {
         return this;
     }
 
-    public setParams(params: CatenaryParams): Primitive<CatenaryParams> {
+    public setParams(params: CatenaryParams): Primitive<CatenaryParams, CatenaryObject> {
         this.params = params;
         return this;
     }
@@ -714,9 +903,12 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams> {
         throw new Error("Invalid parameters for Catenary");
     }
 
-    fromObject(o: any): Primitive<CatenaryParams> {
+    fromObject(o?: CatenaryObject): Primitive<CatenaryParams, CatenaryObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         const profile = deserializeProfile(this.tp, o);
@@ -733,13 +925,14 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CatenaryObject | undefined {
         const profileObj = serializeProfile(this.tp, this.params.profile);
         if (profileObj === undefined) {
             return undefined;
         }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['p1', {
                 x: this.params.p1.X(),
                 y: this.params.p1.Y(),
@@ -759,14 +952,14 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams> {
                 y: this.params.upDir.Y(),
                 z: this.params.upDir.Z()
             } : null]
-        ]));
+        ])) as CatenaryObject;
     }
 }
 
 
-export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams> {
+export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams, BoxShapeObject> {
 
-    constructor(tp: TopoInstance, params?: BoxShapeParams) {
+    constructor(tp: TopoInstance, params?: BoxShapeObject) {
         super(tp, params);
     }
 
@@ -782,7 +975,7 @@ export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams> {
         return this;
     }
 
-    public setParams(params: BoxShapeParams): Primitive<BoxShapeParams> {
+    public setParams(params: BoxShapeParams): Primitive<BoxShapeParams, BoxShapeObject> {
         this.params = params;
         return this;
     }
@@ -799,9 +992,12 @@ export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams> {
         throw new Error("Invalid parameters for BoxShape");
     }
 
-    fromObject(o: any): Primitive<BoxShapeParams> {
+    fromObject(o?: BoxShapeObject): Primitive<BoxShapeParams, BoxShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -811,9 +1007,10 @@ export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): BoxShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['point1', {
                 x: this.params.point1.X(),
                 y: this.params.point1.Y(),
@@ -824,13 +1021,13 @@ export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams> {
                 y: this.params.point2.Y(),
                 z: this.params.point2.Z()
             }]
-        ]));
+        ])) as BoxShapeObject;
     }
 }
 
-export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams> {
+export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams, ConeShapeObject> {
 
-    constructor(tp: TopoInstance, params?: ConeShapeParams) {
+    constructor(tp: TopoInstance, params?: ConeShapeObject) {
         super(tp, params);
     }
 
@@ -838,7 +1035,7 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams> {
         return BasePrimitiveType.ConeShape;
     }
 
-    setDefault(): Primitive<ConeShapeParams> {
+    setDefault(): Primitive<ConeShapeParams, ConeShapeObject> {
         this.params = {
             radius1: 20.0,
             radius2: 10.0,
@@ -847,7 +1044,7 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams> {
         return this;
     }
 
-    public setParams(params: ConeShapeParams): Primitive<ConeShapeParams> {
+    public setParams(params: ConeShapeParams): Primitive<ConeShapeParams, ConeShapeObject> {
         this.params = params;
         return this;
     }
@@ -866,9 +1063,12 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams> {
         throw new Error("Invalid parameters for ConeShape");
     }
 
-    fromObject(o: any): Primitive<ConeShapeParams> {
+    fromObject(o?: ConeShapeObject): Primitive<ConeShapeParams, ConeShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -880,20 +1080,21 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ConeShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['radius1', this.params.radius1],
             ['radius2', this.params.radius2],
             ['height', this.params.height],
             ['angle', this.params.angle]
-        ]));
+        ])) as ConeShapeObject;
     }
 }
 
-export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams> {
+export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams, CylinderShapeObject> {
 
-    constructor(tp: TopoInstance, params?: CylinderShapeParams) {
+    constructor(tp: TopoInstance, params?: CylinderShapeObject) {
         super(tp, params);
     }
 
@@ -901,7 +1102,7 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams> {
         return BasePrimitiveType.CylinderShape;
     }
 
-    setDefault(): Primitive<CylinderShapeParams> {
+    setDefault(): Primitive<CylinderShapeParams, CylinderShapeObject> {
         this.params = {
             radius: 15.0,
             height: 25.0
@@ -909,7 +1110,7 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams> {
         return this;
     }
 
-    public setParams(params: CylinderShapeParams): Primitive<CylinderShapeParams> {
+    public setParams(params: CylinderShapeParams): Primitive<CylinderShapeParams, CylinderShapeObject> {
         this.params = params;
         return this;
     }
@@ -927,9 +1128,12 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams> {
         throw new Error("Invalid parameters for CylinderShape");
     }
 
-    fromObject(o: any): Primitive<CylinderShapeParams> {
+    fromObject(o?: CylinderShapeObject): Primitive<CylinderShapeParams, CylinderShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -940,19 +1144,20 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CylinderShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['radius', this.params.radius],
             ['height', this.params.height],
             ['angle', this.params.angle]
-        ]));
+        ])) as CylinderShapeObject;
     }
 }
 
-export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParams> {
+export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParams, RevolutionShapeObject> {
 
-    constructor(tp: TopoInstance, params?: RevolutionShapeParams) {
+    constructor(tp: TopoInstance, params?: RevolutionShapeObject) {
         super(tp, params);
     }
 
@@ -960,7 +1165,7 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
         return BasePrimitiveType.RevolutionShape;
     }
 
-    setDefault(): Primitive<RevolutionShapeParams> {
+    setDefault(): Primitive<RevolutionShapeParams, RevolutionShapeObject> {
         this.params = {
             meridian: [
                 new this.tp.gp_Pnt_3(0, 0, 0),
@@ -973,7 +1178,7 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
         return this;
     }
 
-    public setParams(params: RevolutionShapeParams): Primitive<RevolutionShapeParams> {
+    public setParams(params: RevolutionShapeParams): Primitive<RevolutionShapeParams, RevolutionShapeObject> {
         this.params = params;
         return this;
     }
@@ -990,9 +1195,12 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
         throw new Error("Invalid parameters for RevolutionShape");
     }
 
-    fromObject(o: any): Primitive<RevolutionShapeParams> {
+    fromObject(o?: RevolutionShapeObject): Primitive<RevolutionShapeParams, RevolutionShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -1005,9 +1213,10 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RevolutionShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['meridian', this.params.meridian.map(p => ({
                 x: p.X(),
                 y: p.Y(),
@@ -1016,14 +1225,14 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
             ['angle', this.params.angle],
             ['max', this.params.max],
             ['min', this.params.min]
-        ]));
+        ])) as RevolutionShapeObject;
     }
 }
 
 
-export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams> {
+export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams, SphereShapeObject> {
 
-    constructor(tp: TopoInstance, params?: SphereShapeParams) {
+    constructor(tp: TopoInstance, params?: SphereShapeObject) {
         super(tp, params);
     }
 
@@ -1031,14 +1240,14 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams> {
         return BasePrimitiveType.SphereShape;
     }
 
-    setDefault(): Primitive<SphereShapeParams> {
+    setDefault(): Primitive<SphereShapeParams, SphereShapeObject> {
         this.params = {
             radius: 20.0
         };
         return this;
     }
 
-    public setParams(params: SphereShapeParams): Primitive<SphereShapeParams> {
+    public setParams(params: SphereShapeParams): Primitive<SphereShapeParams, SphereShapeObject> {
         this.params = params;
         return this;
     }
@@ -1055,9 +1264,12 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams> {
         throw new Error("Invalid parameters for SphereShape");
     }
 
-    fromObject(o: any): Primitive<SphereShapeParams> {
+    fromObject(o?: SphereShapeObject): Primitive<SphereShapeParams, SphereShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -1070,9 +1282,10 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SphereShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['center', this.params.center ? {
                 x: this.params.center.X(),
                 y: this.params.center.Y(),
@@ -1082,14 +1295,14 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams> {
             ['angle1', this.params.angle1],
             ['angle2', this.params.angle2],
             ['angle', this.params.angle]
-        ]));
+        ])) as SphereShapeObject;
     }
 }
 
 
-export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams> {
+export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams, TorusShapeObject> {
 
-    constructor(tp: TopoInstance, params?: TorusShapeParams) {
+    constructor(tp: TopoInstance, params?: TorusShapeObject) {
         super(tp, params);
     }
 
@@ -1097,7 +1310,7 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams> {
         return BasePrimitiveType.TorusShape;
     }
 
-    setDefault(): Primitive<TorusShapeParams> {
+    setDefault(): Primitive<TorusShapeParams, TorusShapeObject> {
         this.params = {
             radius1: 30.0,
             radius2: 10.0
@@ -1105,7 +1318,7 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams> {
         return this;
     }
 
-    public setParams(params: TorusShapeParams): Primitive<TorusShapeParams> {
+    public setParams(params: TorusShapeParams): Primitive<TorusShapeParams, TorusShapeObject> {
         this.params = params;
         return this;
     }
@@ -1124,9 +1337,12 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams> {
         throw new Error("Invalid parameters for TorusShape");
     }
 
-    fromObject(o: any): Primitive<TorusShapeParams> {
+    fromObject(o?: TorusShapeObject): Primitive<TorusShapeParams, TorusShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -1139,22 +1355,23 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TorusShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['radius1', this.params.radius1],
             ['radius2', this.params.radius2],
             ['angle1', this.params.angle1],
             ['angle2', this.params.angle2],
             ['angle', this.params.angle]
-        ]));
+        ])) as TorusShapeObject;
     }
 }
 
 
-export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams> {
+export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams, WedgeShapeObject> {
 
-    constructor(tp: TopoInstance, params?: WedgeShapeParams) {
+    constructor(tp: TopoInstance, params?: WedgeShapeObject) {
         super(tp, params);
     }
 
@@ -1162,14 +1379,14 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams> {
         return BasePrimitiveType.WedgeShape;
     }
 
-    setDefault(): Primitive<WedgeShapeParams> {
+    setDefault(): Primitive<WedgeShapeParams, WedgeShapeObject> {
         this.params = {
             edge: new this.tp.gp_Pnt_3(30, 20, 10)
         };
         return this;
     }
 
-    public setParams(params: WedgeShapeParams): Primitive<WedgeShapeParams> {
+    public setParams(params: WedgeShapeParams): Primitive<WedgeShapeParams, WedgeShapeObject> {
         this.params = params;
         return this;
     }
@@ -1186,9 +1403,12 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams> {
         throw new Error("Invalid parameters for WedgeShape");
     }
 
-    fromObject(o: any): Primitive<WedgeShapeParams> {
+    fromObject(o?: WedgeShapeObject): Primitive<WedgeShapeParams, WedgeShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -1199,9 +1419,10 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): WedgeShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['edge', {
                 x: this.params.edge.X(),
                 y: this.params.edge.Y(),
@@ -1209,14 +1430,14 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams> {
             }],
             ['limit', this.params.limit],
             ['ltx', this.params.ltx]
-        ]));
+        ])) as WedgeShapeObject;
     }
 }
 
 
-export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams> {
+export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams, PipeShapeObject> {
 
-    constructor(tp: TopoInstance, params?: PipeShapeParams) {
+    constructor(tp: TopoInstance, params?: PipeShapeObject) {
         super(tp, params);
     }
 
@@ -1224,7 +1445,7 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams> {
         return BasePrimitiveType.PipeShape;
     }
 
-    setDefault(): Primitive<PipeShapeParams> {
+    setDefault(): Primitive<PipeShapeParams, PipeShapeObject> {
         this.params = {
             wire: [
                 new this.tp.gp_Pnt_3(0, 0, 0),
@@ -1240,7 +1461,7 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams> {
         return this;
     }
 
-    public setParams(params: PipeShapeParams): Primitive<PipeShapeParams> {
+    public setParams(params: PipeShapeParams): Primitive<PipeShapeParams, PipeShapeObject> {
         this.params = params;
         return this;
     }
@@ -1258,9 +1479,12 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams> {
         throw new Error("Invalid parameters for PipeShape");
     }
 
-    fromObject(o: any): Primitive<PipeShapeParams> {
+    fromObject(o?: PipeShapeObject): Primitive<PipeShapeParams, PipeShapeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
 
         this.params = {
@@ -1274,9 +1498,10 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PipeShapeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['wire', this.params.wire.map(p => ({
                 x: p.X(),
                 y: p.Y(),
@@ -1288,7 +1513,7 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams> {
                 y: this.params.upDir.Y(),
                 z: this.params.upDir.Z()
             } : undefined]
-        ]));
+        ])) as PipeShapeObject;
     }
 }
 

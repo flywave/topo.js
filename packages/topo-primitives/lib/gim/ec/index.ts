@@ -36,9 +36,57 @@ import {
     DrainageWellParams,
     PipeSupportParams,
     CoverPlateParams,
-    CableRayParams
+    CableRayParams,
+    CableClampType,
+    TunnelWellType,
+    ConnectionSectionStyle,
+    ThreeWayWellType,
+    CornerStyle,
+    ShaftStyle,
+    FourWayWellType,
+    CableTrayStyle,
+    ManholeStyle,
+    ManholeCoverStyle
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../../primitive";
+import {
+    CableAccessoryObject,
+    CableBracketObject,
+    CableClampObject,
+    CableJointObject,
+    CableLBeamObject,
+    CablePoleObject,
+    CableRayObject,
+    CableTerminalObject,
+    CableTrayObject,
+    CableTrenchObject,
+    CableTunnelObject,
+    CableWireObject,
+    CornerWellObject,
+    CoverPlateObject,
+    DrainageWellObject,
+    EmbeddedPartObject,
+    FootpathObject,
+    FourWayWellObject,
+    GroundFlatIronObject,
+    LadderObject,
+    LiftingEyeObject,
+    ManholeCoverObject,
+    ManholeObject,
+    ObliqueVentilationDuctObject,
+    OpticalFiberBoxObject,
+    PipeRowObject,
+    PipeSupportObject,
+    ShaftChamberObject,
+    StraightVentilationDuctObject,
+    SumpObject,
+    ThreeWayWellObject,
+    TunnelCompartmentPartitionObject,
+    TunnelPartitionBoardObject,
+    TunnelWellObject,
+    UShapedRingObject,
+    VentilationPavilionObject,
+} from "../../types/gim-ec";
 
 export enum ECPrimitiveType {
     CableWire = "GIM/EC/CableWire",
@@ -116,9 +164,9 @@ export type ECPrimitive = CableWirePrimitive
     | CoverPlatePrimitive
     | CableRayPrimitive;
 
-export class CableWirePrimitive extends BasePrimitive<CableWireParams> {
+export class CableWirePrimitive extends BasePrimitive<CableWireParams, CableWireObject> {
 
-    constructor(tp: TopoInstance, params?: CableWireParams) {
+    constructor(tp: TopoInstance, params?: CableWireObject) {
         super(tp, params);
     }
 
@@ -126,7 +174,7 @@ export class CableWirePrimitive extends BasePrimitive<CableWireParams> {
         return ECPrimitiveType.CableWire;
     }
 
-    setDefault(): Primitive<CableWireParams> {
+    setDefault(): Primitive<CableWireParams, CableWireObject> {
         this.params = {
             points: [
                 new this.tp.gp_Pnt_3(0, 0, 0),
@@ -137,7 +185,7 @@ export class CableWirePrimitive extends BasePrimitive<CableWireParams> {
         return this;
     }
 
-    public setParams(params: CableWireParams): Primitive<CableWireParams> {
+    public setParams(params: CableWireParams): Primitive<CableWireParams, CableWireObject> {
         this.params = params;
         return this;
     }
@@ -155,9 +203,12 @@ export class CableWirePrimitive extends BasePrimitive<CableWireParams> {
         throw new Error("Invalid parameters for CableWire");
     }
 
-    fromObject(o: any): Primitive<CableWireParams> {
+    fromObject(o?: CableWireObject): Primitive<CableWireParams, CableWireObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             points: o['points'].map((p: any) =>
@@ -167,20 +218,21 @@ export class CableWirePrimitive extends BasePrimitive<CableWireParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableWireObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['points', this.params.points.map(p =>
                 ({ x: p.X(), y: p.Y(), z: p.Z() }))],
             ['outsideDiameter', this.params.outsideDiameter]
-        ]));
+        ])) as CableWireObject;
     }
 }
 
 
-export class CableJointPrimitive extends BasePrimitive<CableJointParams> {
+export class CableJointPrimitive extends BasePrimitive<CableJointParams, CableJointObject> {
 
-    constructor(tp: TopoInstance, params?: CableJointParams) {
+    constructor(tp: TopoInstance, params?: CableJointObject) {
         super(tp, params);
     }
 
@@ -188,7 +240,7 @@ export class CableJointPrimitive extends BasePrimitive<CableJointParams> {
         return ECPrimitiveType.CableJoint;
     }
 
-    setDefault(): Primitive<CableJointParams> {
+    setDefault(): Primitive<CableJointParams, CableJointObject> {
         this.params = {
             length: 100.0,
             outerDiameter: 30.0,
@@ -198,7 +250,7 @@ export class CableJointPrimitive extends BasePrimitive<CableJointParams> {
         return this;
     }
 
-    public setParams(params: CableJointParams): Primitive<CableJointParams> {
+    public setParams(params: CableJointParams): Primitive<CableJointParams, CableJointObject> {
         this.params = params;
         return this;
     }
@@ -217,9 +269,12 @@ export class CableJointPrimitive extends BasePrimitive<CableJointParams> {
         throw new Error("Invalid parameters for CableJoint");
     }
 
-    fromObject(o: any): Primitive<CableJointParams> {
+    fromObject(o?: CableJointObject): Primitive<CableJointParams, CableJointObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -230,22 +285,23 @@ export class CableJointPrimitive extends BasePrimitive<CableJointParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableJointObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['outerDiameter', this.params.outerDiameter],
             ['terminalLength', this.params.terminalLength],
             ['innerDiameter', this.params.innerDiameter]
-        ]));
+        ])) as CableJointObject;
     }
 }
 
 
 // 添加光缆接头盒Primitive类
-export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParams> {
+export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParams, OpticalFiberBoxObject> {
 
-    constructor(tp: TopoInstance, params?: OpticalFiberBoxParams) {
+    constructor(tp: TopoInstance, params?: OpticalFiberBoxObject) {
         super(tp, params);
     }
 
@@ -253,7 +309,7 @@ export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParam
         return ECPrimitiveType.OpticalFiberBox;
     }
 
-    setDefault(): Primitive<OpticalFiberBoxParams> {
+    setDefault(): Primitive<OpticalFiberBoxParams, OpticalFiberBoxObject> {
         this.params = {
             length: 300.0,
             height: 150.0,
@@ -262,7 +318,7 @@ export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParam
         return this;
     }
 
-    public setParams(params: OpticalFiberBoxParams): Primitive<OpticalFiberBoxParams> {
+    public setParams(params: OpticalFiberBoxParams): Primitive<OpticalFiberBoxParams, OpticalFiberBoxObject> {
         this.params = params;
         return this;
     }
@@ -280,9 +336,12 @@ export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParam
         throw new Error("Invalid parameters for OpticalFiberBox");
     }
 
-    fromObject(o: any): Primitive<OpticalFiberBoxParams> {
+    fromObject(o?: OpticalFiberBoxObject): Primitive<OpticalFiberBoxParams, OpticalFiberBoxObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -292,20 +351,21 @@ export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParam
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): OpticalFiberBoxObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['height', this.params.height],
             ['width', this.params.width]
-        ]));
+        ])) as OpticalFiberBoxObject;
     }
 }
 
 
-export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams> {
+export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams, CableTerminalObject> {
 
-    constructor(tp: TopoInstance, params?: CableTerminalParams) {
+    constructor(tp: TopoInstance, params?: CableTerminalObject) {
         super(tp, params);
     }
 
@@ -313,7 +373,7 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams> {
         return ECPrimitiveType.CableTerminal;
     }
 
-    setDefault(): Primitive<CableTerminalParams> {
+    setDefault(): Primitive<CableTerminalParams, CableTerminalObject> {
         this.params = {
             sort: 1,
             height: 1000,
@@ -346,7 +406,7 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams> {
         return this;
     }
 
-    public setParams(params: CableTerminalParams): Primitive<CableTerminalParams> {
+    public setParams(params: CableTerminalParams): Primitive<CableTerminalParams, CableTerminalObject> {
         this.params = params;
         return this;
     }
@@ -366,9 +426,12 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams> {
         throw new Error("Invalid parameters for CableTerminal");
     }
 
-    fromObject(o: any): Primitive<CableTerminalParams> {
+    fromObject(o?: CableTerminalObject): Primitive<CableTerminalParams, CableTerminalObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             sort: o['sort'],
@@ -402,9 +465,10 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableTerminalObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['sort', this.params.sort],
             ['height', this.params.height],
             ['topDiameter', this.params.topDiameter],
@@ -432,13 +496,13 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams> {
             ['flangeChamferRadius', this.params.flangeChamferRadius],
             ['flangeOpeningWidth', this.params.flangeOpeningWidth],
             ['flangeBoltHeight', this.params.flangeBoltHeight]
-        ]));
+        ])) as CableTerminalObject;
     }
 }
 
-export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams> {
+export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams, CableAccessoryObject> {
 
-    constructor(tp: TopoInstance, params?: CableAccessoryParams) {
+    constructor(tp: TopoInstance, params?: CableAccessoryObject) {
         super(tp, params);
     }
 
@@ -446,7 +510,7 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams>
         return ECPrimitiveType.CableAccessory;
     }
 
-    setDefault(): Primitive<CableAccessoryParams> {
+    setDefault(): Primitive<CableAccessoryParams, CableAccessoryObject> {
         this.params = {
             type: this.tp.CableBoxType.DIRECT_GROUND as any, // DIRECT_GROUND
             length: 500.0,
@@ -461,7 +525,7 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams>
         return this;
     }
 
-    public setParams(params: CableAccessoryParams): Primitive<CableAccessoryParams> {
+    public setParams(params: CableAccessoryParams): Primitive<CableAccessoryParams, CableAccessoryObject> {
         this.params = params;
         return this;
     }
@@ -479,9 +543,12 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams>
         throw new Error("Invalid parameters for CableAccessory");
     }
 
-    fromObject(o: any): Primitive<CableAccessoryParams> {
+    fromObject(o: any): Primitive<CableAccessoryParams, CableAccessoryObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             type: o['type'],
@@ -497,9 +564,10 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams>
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableAccessoryObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height],
@@ -508,13 +576,13 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams>
             ['portSpacing', this.params.portSpacing],
             ['backPanelDistance', this.params.backPanelDistance],
             ['sidePanelDistance', this.params.sidePanelDistance]
-        ]));
+        ])) as CableAccessoryObject;
     }
 }
 
-export class CableBracketPrimitive extends BasePrimitive<CableBracketParams> {
+export class CableBracketPrimitive extends BasePrimitive<CableBracketParams, CableBracketObject> {
 
-    constructor(tp: TopoInstance, params?: CableBracketParams) {
+    constructor(tp: TopoInstance, params?: CableBracketObject) {
         super(tp, params);
     }
 
@@ -522,7 +590,7 @@ export class CableBracketPrimitive extends BasePrimitive<CableBracketParams> {
         return ECPrimitiveType.CableBracket;
     }
 
-    setDefault(): Primitive<CableBracketParams> {
+    setDefault(): Primitive<CableBracketParams, CableBracketObject> {
         this.params = {
             length: 100.0,
             rootHeight: 50.0,
@@ -542,7 +610,7 @@ export class CableBracketPrimitive extends BasePrimitive<CableBracketParams> {
         return this;
     }
 
-    public setParams(params: CableBracketParams): Primitive<CableBracketParams> {
+    public setParams(params: CableBracketParams): Primitive<CableBracketParams, CableBracketObject> {
         this.params = params;
         return this;
     }
@@ -563,9 +631,12 @@ export class CableBracketPrimitive extends BasePrimitive<CableBracketParams> {
         throw new Error("Invalid parameters for CableBracket");
     }
 
-    fromObject(o: any): Primitive<CableBracketParams> {
+    fromObject(o?: CableBracketObject): Primitive<CableBracketParams, CableBracketObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -574,30 +645,31 @@ export class CableBracketPrimitive extends BasePrimitive<CableBracketParams> {
             width: o['width'],
             topThickness: o['topThickness'],
             rootThickness: o['rootThickness'],
-            columnMountPoints: o['columnMountPoints'] || [],
-            clampMountPoints: o['clampMountPoints'] || []
+            columnMountPoints: o['columnMountPoints'].map((t) => new this.tp.gp_Pnt_3(t.x, t.y, t.z)) || [],
+            clampMountPoints: o['clampMountPoints'].map((t) => new this.tp.gp_Pnt_3(t.x, t.y, t.z)) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableBracketObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['rootHeight', this.params.rootHeight],
             ['rootWidth', this.params.rootWidth],
             ['width', this.params.width],
             ['topThickness', this.params.topThickness],
             ['rootThickness', this.params.rootThickness],
-            ['columnMountPoints', this.params.columnMountPoints],
-            ['clampMountPoints', this.params.clampMountPoints]
-        ]));
+            ['columnMountPoints', this.params.columnMountPoints.map((p) => ({ x: p.X(), y: p.Y(), z: p.Z() }))],
+            ['clampMountPoints', this.params.clampMountPoints.map((p) => ({ x: p.X(), y: p.Y(), z: p.Z() }))]
+        ])) as CableBracketObject;
     }
 }
 
-export class CableClampPrimitive extends BasePrimitive<CableClampParams> {
+export class CableClampPrimitive extends BasePrimitive<CableClampParams, CableClampObject> {
 
-    constructor(tp: TopoInstance, params?: CableClampParams) {
+    constructor(tp: TopoInstance, params?: CableClampObject) {
         super(tp, params);
     }
 
@@ -605,9 +677,9 @@ export class CableClampPrimitive extends BasePrimitive<CableClampParams> {
         return ECPrimitiveType.CableClamp;
     }
 
-    setDefault(): Primitive<CableClampParams> {
+    setDefault(): Primitive<CableClampParams, CableClampObject> {
         this.params = {
-            type: this.tp.CableClampType.SINGLE as any, // SINGLE
+            clampType: this.tp.CableClampType.SINGLE as any, // SINGLE
             diameter: 50.0,
             thickness: 10.0,
             width: 30.0
@@ -615,7 +687,7 @@ export class CableClampPrimitive extends BasePrimitive<CableClampParams> {
         return this;
     }
 
-    public setParams(params: CableClampParams): Primitive<CableClampParams> {
+    public setParams(params: CableClampParams): Primitive<CableClampParams, CableClampObject> {
         this.params = params;
         return this;
     }
@@ -633,12 +705,26 @@ export class CableClampPrimitive extends BasePrimitive<CableClampParams> {
         throw new Error("Invalid parameters for CableClamp");
     }
 
-    fromObject(o: any): Primitive<CableClampParams> {
+    fromObject(o?: CableClampObject): Primitive<CableClampParams, CableClampObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+        let clampType: CableClampType = this.tp.CableClampType.SINGLE as any;
+        if (o['clampType'] === 'SINGLE') {
+            clampType = this.tp.CableClampType.SINGLE as any;
+        } else if (o['clampType'] === 'LINEAR') {
+            clampType = this.tp.CableClampType.LINEAR as any;
+        } else if (o['clampType'] === 'CONTACT_TRIPLE') {
+            clampType = this.tp.CableClampType.CONTACT_TRIPLE as any;
+        } else if (o['clampType'] === 'SEPARATE_TRIPLE') {
+            clampType = this.tp.CableClampType.SEPARATE_TRIPLE as any;
+        }
+
         this.params = {
-            type: o['type'],
+            clampType: clampType,
             diameter: o['diameter'],
             thickness: o['thickness'],
             width: o['width']
@@ -646,20 +732,31 @@ export class CableClampPrimitive extends BasePrimitive<CableClampParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableClampObject | undefined {
+        let clampType: string = 'SINGLE';
+        if (this.params.clampType === this.tp.CableClampType.LINEAR as any) {
+            clampType = 'LINEAR';
+        } else if (this.params.clampType === this.tp.CableClampType.CONTACT_TRIPLE as any) {
+            clampType = 'CONTACT_TRIPLE';
+        } else if (this.params.clampType === this.tp.CableClampType.SEPARATE_TRIPLE as any) {
+            clampType = 'SEPARATE_TRIPLE';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['clampType', clampType],
             ['diameter', this.params.diameter],
             ['thickness', this.params.thickness],
             ['width', this.params.width]
-        ]));
+        ])) as CableClampObject;
     }
 }
 
 
-export class CablePolePrimitive extends BasePrimitive<CablePoleParams> {
+export class CablePolePrimitive extends BasePrimitive<CablePoleParams, CablePoleObject> {
 
-    constructor(tp: TopoInstance, params?: CablePoleParams) {
+    constructor(tp: TopoInstance, params?: CablePoleObject) {
         super(tp, params);
     }
 
@@ -667,7 +764,7 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams> {
         return ECPrimitiveType.CablePole;
     }
 
-    setDefault(): Primitive<CablePoleParams> {
+    setDefault(): Primitive<CablePoleParams, CablePoleObject> {
         this.params = {
             specification: "GJ-DLLZ-1",
             length: 200.0,
@@ -689,7 +786,7 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams> {
         return this;
     }
 
-    public setParams(params: CablePoleParams): Primitive<CablePoleParams> {
+    public setParams(params: CablePoleParams): Primitive<CablePoleParams, CablePoleObject> {
         this.params = params;
         return this;
     }
@@ -710,9 +807,12 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams> {
         throw new Error("Invalid parameters for CablePole");
     }
 
-    fromObject(o: any): Primitive<CablePoleParams> {
+    fromObject(o?: CablePoleObject): Primitive<CablePoleParams, CablePoleObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             specification: o['specification'],
@@ -723,14 +823,15 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams> {
             fixedLegLength: o['fixedLegLength'],
             fixedLegWidth: o['fixedLegWidth'],
             thickness: o['thickness'],
-            mountPoints: o['mountPoints'] || []
+            mountPoints: o['mountPoints'].map((t) => new this.tp.gp_Pnt_3(t.x, t.y, t.z)) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CablePoleObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['specification', this.params.specification],
             ['length', this.params.length],
             ['radius', this.params.radius],
@@ -739,14 +840,14 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams> {
             ['fixedLegLength', this.params.fixedLegLength],
             ['fixedLegWidth', this.params.fixedLegWidth],
             ['thickness', this.params.thickness],
-            ['mountPoints', this.params.mountPoints]
-        ]));
+            ['mountPoints', this.params.mountPoints.map((t) => ({ x: t.X(), y: t.Y(), z: t.Z() }))]
+        ])) as CablePoleObject;
     }
 }
 
-export class GroundFlatIronPrimitive extends BasePrimitive<GroundFlatIronParams> {
+export class GroundFlatIronPrimitive extends BasePrimitive<GroundFlatIronParams, GroundFlatIronObject> {
 
-    constructor(tp: TopoInstance, params?: GroundFlatIronParams) {
+    constructor(tp: TopoInstance, params?: GroundFlatIronObject) {
         super(tp, params);
     }
 
@@ -763,7 +864,7 @@ export class GroundFlatIronPrimitive extends BasePrimitive<GroundFlatIronParams>
         return this;
     }
 
-    public setParams(params: GroundFlatIronParams): Primitive<GroundFlatIronParams> {
+    public setParams(params: GroundFlatIronParams): Primitive<GroundFlatIronParams, GroundFlatIronObject> {
         this.params = params;
         return this;
     }
@@ -782,9 +883,12 @@ export class GroundFlatIronPrimitive extends BasePrimitive<GroundFlatIronParams>
         throw new Error("Invalid parameters for GroundFlatIron");
     }
 
-    fromObject(o: any): Primitive<GroundFlatIronParams> {
+    fromObject(o?: GroundFlatIronObject): Primitive<GroundFlatIronParams, GroundFlatIronObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -794,19 +898,20 @@ export class GroundFlatIronPrimitive extends BasePrimitive<GroundFlatIronParams>
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): GroundFlatIronObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['height', this.params.height],
             ['thickness', this.params.thickness]
-        ]));
+        ])) as GroundFlatIronObject;
     }
 }
 
-export class EmbeddedPartPrimitive extends BasePrimitive<EmbeddedPartParams> {
+export class EmbeddedPartPrimitive extends BasePrimitive<EmbeddedPartParams, EmbeddedPartObject> {
 
-    constructor(tp: TopoInstance, params?: EmbeddedPartParams) {
+    constructor(tp: TopoInstance, params?: EmbeddedPartObject) {
         super(tp, params);
     }
 
@@ -814,7 +919,7 @@ export class EmbeddedPartPrimitive extends BasePrimitive<EmbeddedPartParams> {
         return ECPrimitiveType.EmbeddedPart;
     }
 
-    setDefault(): Primitive<EmbeddedPartParams> {
+    setDefault(): Primitive<EmbeddedPartParams, EmbeddedPartObject> {
         this.params = {
             length: 100.0,
             radius: 20.0,
@@ -825,7 +930,7 @@ export class EmbeddedPartPrimitive extends BasePrimitive<EmbeddedPartParams> {
         return this;
     }
 
-    public setParams(params: EmbeddedPartParams): Primitive<EmbeddedPartParams> {
+    public setParams(params: EmbeddedPartParams): Primitive<EmbeddedPartParams, EmbeddedPartObject> {
         this.params = params;
         return this;
     }
@@ -846,9 +951,12 @@ export class EmbeddedPartPrimitive extends BasePrimitive<EmbeddedPartParams> {
         throw new Error("Invalid parameters for EmbeddedPart");
     }
 
-    fromObject(o: any): Primitive<EmbeddedPartParams> {
+    fromObject(o?: EmbeddedPartObject): Primitive<EmbeddedPartParams, EmbeddedPartObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -860,23 +968,24 @@ export class EmbeddedPartPrimitive extends BasePrimitive<EmbeddedPartParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): EmbeddedPartObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['radius', this.params.radius],
             ['height', this.params.height],
             ['materialRadius', this.params.materialRadius],
             ['lowerLength', this.params.lowerLength]
-        ]));
+        ])) as EmbeddedPartObject;
     }
 }
 
 
 // 添加U型拉环Primitive类
-export class UShapedRingPrimitive extends BasePrimitive<UShapedRingParams> {
+export class UShapedRingPrimitive extends BasePrimitive<UShapedRingParams, UShapedRingObject> {
 
-    constructor(tp: TopoInstance, params?: UShapedRingParams) {
+    constructor(tp: TopoInstance, params?: UShapedRingObject) {
         super(tp, params);
     }
 
@@ -884,7 +993,7 @@ export class UShapedRingPrimitive extends BasePrimitive<UShapedRingParams> {
         return ECPrimitiveType.UShapedRing;
     }
 
-    setDefault(): Primitive<UShapedRingParams> {
+    setDefault(): Primitive<UShapedRingParams, UShapedRingObject> {
         this.params = {
             thickness: 5.0,
             height: 30.0,
@@ -894,7 +1003,7 @@ export class UShapedRingPrimitive extends BasePrimitive<UShapedRingParams> {
         return this;
     }
 
-    public setParams(params: UShapedRingParams): Primitive<UShapedRingParams> {
+    public setParams(params: UShapedRingParams): Primitive<UShapedRingParams, UShapedRingObject> {
         this.params = params;
         return this;
     }
@@ -913,9 +1022,12 @@ export class UShapedRingPrimitive extends BasePrimitive<UShapedRingParams> {
         throw new Error("Invalid parameters for UShapedRing");
     }
 
-    fromObject(o: any): Primitive<UShapedRingParams> {
+    fromObject(o?: UShapedRingObject): Primitive<UShapedRingParams, UShapedRingObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             thickness: o['thickness'],
@@ -926,20 +1038,21 @@ export class UShapedRingPrimitive extends BasePrimitive<UShapedRingParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): UShapedRingObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['thickness', this.params.thickness],
             ['height', this.params.height],
             ['radius', this.params.radius],
             ['length', this.params.length]
-        ]));
+        ])) as UShapedRingObject;
     }
 }
 
-export class LiftingEyePrimitive extends BasePrimitive<LiftingEyeParams> {
+export class LiftingEyePrimitive extends BasePrimitive<LiftingEyeParams, LiftingEyeObject> {
 
-    constructor(tp: TopoInstance, params?: LiftingEyeParams) {
+    constructor(tp: TopoInstance, params?: LiftingEyeObject) {
         super(tp, params);
     }
 
@@ -947,7 +1060,7 @@ export class LiftingEyePrimitive extends BasePrimitive<LiftingEyeParams> {
         return ECPrimitiveType.LiftingEye;
     }
 
-    setDefault(): Primitive<LiftingEyeParams> {
+    setDefault(): Primitive<LiftingEyeParams, LiftingEyeObject> {
         this.params = {
             height: 100.0,
             ringRadius: 25.0,
@@ -956,7 +1069,7 @@ export class LiftingEyePrimitive extends BasePrimitive<LiftingEyeParams> {
         return this;
     }
 
-    public setParams(params: LiftingEyeParams): Primitive<LiftingEyeParams> {
+    public setParams(params: LiftingEyeParams): Primitive<LiftingEyeParams, LiftingEyeObject> {
         this.params = params;
         return this;
     }
@@ -975,9 +1088,12 @@ export class LiftingEyePrimitive extends BasePrimitive<LiftingEyeParams> {
         throw new Error("Invalid parameters for LiftingEye");
     }
 
-    fromObject(o: any): Primitive<LiftingEyeParams> {
+    fromObject(o?: LiftingEyeObject): Primitive<LiftingEyeParams, LiftingEyeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
@@ -987,19 +1103,20 @@ export class LiftingEyePrimitive extends BasePrimitive<LiftingEyeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): LiftingEyeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['ringRadius', this.params.ringRadius],
             ['pipeDiameter', this.params.pipeDiameter]
-        ]));
+        ])) as LiftingEyeObject;
     }
 }
 
-export class CornerWellPrimitive extends BasePrimitive<CornerWellParams> {
+export class CornerWellPrimitive extends BasePrimitive<CornerWellParams, CornerWellObject> {
 
-    constructor(tp: TopoInstance, params?: CornerWellParams) {
+    constructor(tp: TopoInstance, params?: CornerWellObject) {
         super(tp, params);
     }
 
@@ -1007,7 +1124,7 @@ export class CornerWellPrimitive extends BasePrimitive<CornerWellParams> {
         return ECPrimitiveType.CornerWell;
     }
 
-    setDefault(): Primitive<CornerWellParams> {
+    setDefault(): Primitive<CornerWellParams, CornerWellObject> {
         this.params = {
             leftLength: 800.0,
             rightLength: 600.0,
@@ -1024,7 +1141,7 @@ export class CornerWellPrimitive extends BasePrimitive<CornerWellParams> {
         return this;
     }
 
-    public setParams(params: CornerWellParams): Primitive<CornerWellParams> {
+    public setParams(params: CornerWellParams): Primitive<CornerWellParams, CornerWellObject> {
         this.params = params;
         return this;
     }
@@ -1050,9 +1167,12 @@ export class CornerWellPrimitive extends BasePrimitive<CornerWellParams> {
         throw new Error("Invalid parameters for CornerWell");
     }
 
-    fromObject(o: any): Primitive<CornerWellParams> {
+    fromObject(o?: CornerWellObject): Primitive<CornerWellParams, CornerWellObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             leftLength: o['leftLength'],
@@ -1070,9 +1190,10 @@ export class CornerWellPrimitive extends BasePrimitive<CornerWellParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CornerWellObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['leftLength', this.params.leftLength],
             ['rightLength', this.params.rightLength],
             ['width', this.params.width],
@@ -1084,13 +1205,13 @@ export class CornerWellPrimitive extends BasePrimitive<CornerWellParams> {
             ['cornerRadius', this.params.cornerRadius],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness]
-        ]));
+        ])) as CornerWellObject;
     }
 }
 
-export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
+export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams, TunnelWellObject> {
 
-    constructor(tp: TopoInstance, params?: TunnelWellParams) {
+    constructor(tp: TopoInstance, params?: TunnelWellObject) {
         super(tp, params);
     }
 
@@ -1098,7 +1219,7 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
         return ECPrimitiveType.TunnelWell;
     }
 
-    setDefault(): Primitive<TunnelWellParams> {
+    setDefault(): Primitive<TunnelWellParams, TunnelWellObject> {
         this.params = {
             type: this.tp.TunnelWellType.STRAIGHT as any, // STRAIGHT
             length: 800.0,
@@ -1125,7 +1246,7 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
         return this;
     }
 
-    public setParams(params: TunnelWellParams): Primitive<TunnelWellParams> {
+    public setParams(params: TunnelWellParams): Primitive<TunnelWellParams, TunnelWellObject> {
         this.params = params;
         return this;
     }
@@ -1148,12 +1269,41 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
         throw new Error("Invalid parameters for TunnelWell");
     }
 
-    fromObject(o: any): Primitive<TunnelWellParams> {
+    fromObject(o?: TunnelWellObject): Primitive<TunnelWellParams, TunnelWellObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let wellType: TunnelWellType = this.tp.TunnelWellType.STRAIGHT as any;
+        if (o['wellType'] === 'STRAIGHT') {
+            wellType = this.tp.TunnelWellType.STRAIGHT as any;
+        } else if (o['wellType'] === 'STRAIGHT_TUNNEL') {
+            wellType = this.tp.TunnelWellType.STRAIGHT_TUNNEL as any;
+        }
+
+        let leftSectionType: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['leftSectionType'] === 'RECTANGULAR') {
+            leftSectionType = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['leftSectionType'] === 'HORSESHOE') {
+            leftSectionType = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['leftSectionType'] === 'CIRCULAR') {
+            leftSectionType = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
+        let rightSectionType: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['rightSectionType'] === 'RECTANGULAR') {
+            rightSectionType = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['rightSectionType'] === 'HORSESHOE') {
+            rightSectionType = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['rightSectionType'] === 'CIRCULAR') {
+            rightSectionType = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
         this.params = {
-            type: o['type'],
+            type: wellType,
             length: o['length'],
             width: o['width'],
             height: o['height'],
@@ -1162,12 +1312,12 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
             outerWallThickness: o['outerWallThickness'],
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
-            leftSectionType: o['leftSectionType'],
+            leftSectionType: leftSectionType,
             leftLength: o['leftLength'],
             leftWidth: o['leftWidth'],
             leftHeight: o['leftHeight'],
             leftArcHeight: o['leftArcHeight'],
-            rightSectionType: o['rightSectionType'],
+            rightSectionType: rightSectionType,
             rightLength: o['rightLength'],
             rightWidth: o['rightWidth'],
             rightHeight: o['rightHeight'],
@@ -1178,10 +1328,32 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TunnelWellObject | undefined {
+        let wellType = 'STRAIGHT';
+        if (this.params.type === this.tp.TunnelWellType.STRAIGHT_TUNNEL as any) {
+            wellType = 'STRAIGHT_TUNNEL';
+        } else if (this.params.type === this.tp.TunnelWellType.STRAIGHT as any) {
+            wellType = 'STRAIGHT';
+        }
+
+        let leftSectionType = 'RECTANGULAR';
+        if (this.params.leftSectionType === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            leftSectionType = 'HORSESHOE';
+        } else if (this.params.leftSectionType === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            leftSectionType = 'CIRCULAR';
+        }
+
+        let rightSectionType = 'RECTANGULAR';
+        if (this.params.rightSectionType === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            rightSectionType = 'HORSESHOE';
+        } else if (this.params.rightSectionType === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            rightSectionType = 'CIRCULAR';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['type', this.params.type],
+            ['version', this.getVersion()],
+            ['wellType', wellType],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height],
@@ -1191,26 +1363,26 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams> {
             ['outerWallThickness', this.params.outerWallThickness],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
-            ['leftSectionType', this.params.leftSectionType],
+            ['leftSectionType', leftSectionType],
             ['leftLength', this.params.leftLength],
             ['leftWidth', this.params.leftWidth],
             ['leftHeight', this.params.leftHeight],
             ['leftArcHeight', this.params.leftArcHeight],
-            ['rightSectionType', this.params.rightSectionType],
+            ['rightSectionType', rightSectionType],
             ['rightLength', this.params.rightLength],
             ['rightWidth', this.params.rightWidth],
             ['rightHeight', this.params.rightHeight],
             ['rightArcHeight', this.params.rightArcHeight],
             ['innerWallThickness', this.params.innerWallThickness]
-        ]));
+        ])) as TunnelWellObject;
     }
 }
 
 
 // 添加三通井Primitive类
-export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
+export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams, ThreeWayWellObject> {
 
-    constructor(tp: TopoInstance, params?: ThreeWayWellParams) {
+    constructor(tp: TopoInstance, params?: ThreeWayWellObject) {
         super(tp, params);
     }
 
@@ -1265,7 +1437,7 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
         return this;
     }
 
-    public setParams(params: ThreeWayWellParams): Primitive<ThreeWayWellParams> {
+    public setParams(params: ThreeWayWellParams): Primitive<ThreeWayWellParams, ThreeWayWellObject> {
         this.params = params;
         return this;
     }
@@ -1284,14 +1456,67 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
         throw new Error("Invalid parameters for ThreeWayWell");
     }
 
-    fromObject(o: any): Primitive<ThreeWayWellParams> {
+    fromObject(o?: ThreeWayWellObject): Primitive<ThreeWayWellParams, ThreeWayWellObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+        let wellType: ThreeWayWellType = this.tp.ThreeWayWellType.UNDERGROUND_TUNNEL as any;
+        if (o['wellType'] === 'UNDERGROUND_TUNNEL') {
+            wellType = this.tp.ThreeWayWellType.UNDERGROUND_TUNNEL as any;
+        } else if (o['wellType'] === 'OPEN_CUT_TUNNEL') {
+            wellType = this.tp.ThreeWayWellType.OPEN_CUT_TUNNEL as any;
+        } else if (o['wellType'] === 'WORKING_WELL') {
+            wellType = this.tp.ThreeWayWellType.WORKING_WELL as any;
+        }
+
+        let cornerType: CornerStyle = this.tp.CornerStyle.ROUNDED as any;
+        if (o['cornerType'] === 'ROUNDED') {
+            cornerType = this.tp.CornerStyle.ROUNDED as any;
+        } else if (o['cornerType'] === 'ANGLED') {
+            cornerType = this.tp.CornerStyle.ANGLED as any;
+        }
+
+        let shaftType: ShaftStyle = this.tp.ShaftStyle.CIRCULAR as any;
+        if (o['shaftType'] === 'CIRCULAR') {
+            shaftType = this.tp.ShaftStyle.CIRCULAR as any;
+        } else if (o['shaftType'] === 'RECTANGULAR') {
+            shaftType = this.tp.ShaftStyle.RECTANGULAR as any;
+        }
+
+        let leftSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['leftSectionStyle'] === 'RECTANGULAR') {
+            leftSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['leftSectionStyle'] === 'HORSESHOE') {
+            leftSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['leftSectionStyle'] === 'CIRCULAR') {
+            leftSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
+        let rightSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['rightSectionStyle'] === 'RECTANGULAR') {
+            rightSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['rightSectionStyle'] === 'HORSESHOE') {
+            rightSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['rightSectionStyle'] === 'CIRCULAR') {
+            rightSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
+        let branchSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        if (o['branchSectionStyle'] === 'RECTANGULAR') {
+            branchSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['branchSectionStyle'] === 'HORSESHOE') {
+            branchSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['branchSectionStyle'] === 'CIRCULAR') {
+            branchSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
         this.params = {
-            type: o['type'],
-            cornerType: o['cornerType'],
-            shaftType: o['shaftType'],
+            type: wellType,
+            cornerType: cornerType,
+            shaftType: shaftType,
             length: o['length'],
             width: o['width'],
             height: o['height'],
@@ -1304,17 +1529,17 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
             branchWidth: o['branchWidth'],
             topThickness: o['topThickness'],
             bottomThickness: o['bottomThickness'],
-            leftSectionStyle: o['leftSectionStyle'],
+            leftSectionStyle: leftSectionStyle,
             leftSectionLength: o['leftSectionLength'],
             leftSectionWidth: o['leftSectionWidth'],
             leftSectionHeight: o['leftSectionHeight'],
             leftSectionArcHeight: o['leftSectionArcHeight'],
-            rightSectionStyle: o['rightSectionStyle'],
+            rightSectionStyle: rightSectionStyle,
             rightSectionLength: o['rightSectionLength'],
             rightSectionWidth: o['rightSectionWidth'],
             rightSectionHeight: o['rightSectionHeight'],
             rightSectionArcHeight: o['rightSectionArcHeight'],
-            branchSectionStyle: o['branchSectionStyle'],
+            branchSectionStyle: branchSectionStyle,
             branchSectionLength: o['branchSectionLength'],
             branchSectionWidth: o['branchSectionWidth'],
             branchSectionHeight: o['branchSectionHeight'],
@@ -1334,12 +1559,63 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ThreeWayWellObject | undefined {
+        let wellType = 'UNDERGROUND_TUNNEL';
+        if (this.params.type === this.tp.ThreeWayWellType.OPEN_CUT_TUNNEL as any) {
+            wellType = 'OPEN_CUT_TUNNEL';
+        } else if (this.params.type === this.tp.ThreeWayWellType.WORKING_WELL as any) {
+            wellType = 'WORKING_WELL';
+        } else if (this.params.type === this.tp.ThreeWayWellType.UNDERGROUND_TUNNEL as any) {
+            wellType = 'UNDERGROUND_TUNNEL';
+        }
+
+        let cornerType = 'ROUNDED';
+        if (this.params.cornerType === this.tp.CornerStyle.ANGLED as any) {
+            cornerType = 'ANGLED';
+        } else if (this.params.cornerType === this.tp.CornerStyle.ROUNDED as any) {
+            cornerType = 'ROUNDED';
+        }
+
+        let shaftType = 'CIRCULAR';
+        if (this.params.shaftType === this.tp.ShaftStyle.RECTANGULAR as any) {
+            shaftType = 'RECTANGULAR';
+        } else if (this.params.shaftType === this.tp.ShaftStyle.CIRCULAR as any) {
+            shaftType = 'CIRCULAR';
+        }
+
+        let leftSectionStyle = 'RECTANGULAR';
+        if (this.params.leftSectionStyle === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            leftSectionStyle = 'HORSESHOE';
+        } else if (this.params.leftSectionStyle === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            leftSectionStyle = 'CIRCULAR';
+        } else if (this.params.leftSectionStyle === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            leftSectionStyle = 'RECTANGULAR';
+        }
+
+        let rightSectionStyle = 'RECTANGULAR';
+        if (this.params.rightSectionStyle === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            rightSectionStyle = 'HORSESHOE';
+        } else if (this.params.rightSectionStyle === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            rightSectionStyle = 'CIRCULAR';
+        } else if (this.params.rightSectionStyle === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            rightSectionStyle = 'RECTANGULAR';
+        }
+
+        let branchSectionStyle = 'HORSESHOE';
+        if (this.params.branchSectionStyle === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            branchSectionStyle = 'RECTANGULAR';
+        } else if (this.params.branchSectionStyle === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            branchSectionStyle = 'CIRCULAR';
+        } else if (this.params.branchSectionStyle === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            branchSectionStyle = 'HORSESHOE';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['type', this.params.type],
-            ['cornerType', this.params.cornerType],
-            ['shaftType', this.params.shaftType],
+            ['version', this.getVersion()],
+            ['wellType', wellType],
+            ['cornerType', cornerType],
+            ['shaftType', shaftType],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height],
@@ -1352,17 +1628,17 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
             ['branchWidth', this.params.branchWidth],
             ['topThickness', this.params.topThickness],
             ['bottomThickness', this.params.bottomThickness],
-            ['leftSectionStyle', this.params.leftSectionStyle],
+            ['leftSectionStyle', leftSectionStyle],
             ['leftSectionLength', this.params.leftSectionLength],
             ['leftSectionWidth', this.params.leftSectionWidth],
             ['leftSectionHeight', this.params.leftSectionHeight],
             ['leftSectionArcHeight', this.params.leftSectionArcHeight],
-            ['rightSectionStyle', this.params.rightSectionStyle],
+            ['rightSectionStyle', rightSectionStyle],
             ['rightSectionLength', this.params.rightSectionLength],
             ['rightSectionWidth', this.params.rightSectionWidth],
             ['rightSectionHeight', this.params.rightSectionHeight],
             ['rightSectionArcHeight', this.params.rightSectionArcHeight],
-            ['branchSectionStyle', this.params.branchSectionStyle],
+            ['branchSectionStyle', branchSectionStyle],
             ['branchSectionLength', this.params.branchSectionLength],
             ['branchSectionWidth', this.params.branchSectionWidth],
             ['branchSectionHeight', this.params.branchSectionHeight],
@@ -1378,13 +1654,13 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams> {
             ['innerBottomThickness', this.params.innerBottomThickness],
             ['outerBottomThickness', this.params.outerBottomThickness],
             ['angle', this.params.angle],
-        ]));
+        ])) as ThreeWayWellObject;
     }
 }
 
-export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
+export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourWayWellObject> {
 
-    constructor(tp: TopoInstance, params?: FourWayWellParams) {
+    constructor(tp: TopoInstance, params?: FourWayWellObject) {
         super(tp, params);
     }
 
@@ -1392,7 +1668,7 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
         return ECPrimitiveType.FourWayWell;
     }
 
-    setDefault(): Primitive<FourWayWellParams> {
+    setDefault(): Primitive<FourWayWellParams, FourWayWellObject> {
         this.params = {
             type: this.tp.FourWayWellType.WORKING_WELL as any, // WORKING_WELL
             length: 200.0,
@@ -1419,7 +1695,7 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
         return this;
     }
 
-    public setParams(params: FourWayWellParams): Primitive<FourWayWellParams> {
+    public setParams(params: FourWayWellParams): Primitive<FourWayWellParams, FourWayWellObject> {
         this.params = params;
         return this;
     }
@@ -1438,16 +1714,73 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
         throw new Error("Invalid parameters for FourWayWell");
     }
 
-    fromObject(o: any): Primitive<FourWayWellParams> {
+    fromObject(o?: FourWayWellObject): Primitive<FourWayWellParams, FourWayWellObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let wellType: FourWayWellType = this.tp.FourWayWellType.UNDERGROUND_TUNNEL as any;
+        if (o['wellType'] === 'UNDERGROUND_TUNNEL') {
+            wellType = this.tp.FourWayWellType.UNDERGROUND_TUNNEL as any;
+        } else if (o['wellType'] === 'OPEN_CUT_TUNNEL') {
+            wellType = this.tp.FourWayWellType.OPEN_CUT_TUNNEL as any;
+        } else if (o['wellType'] === 'WORKING_WELL') {
+            wellType = this.tp.FourWayWellType.WORKING_WELL as any;
+        }
+
+
+        let cornerStyle: CornerStyle = this.tp.CornerStyle.ROUNDED as any;
+        if (o['cornerStyle'] === 'ROUNDED') {
+            cornerStyle = this.tp.CornerStyle.ROUNDED as any;
+        } else if (o['cornerStyle'] === 'ANGLED') {
+            cornerStyle = this.tp.CornerStyle.ANGLED as any;
+        }
+
+        let leftSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['leftSection'] === 'RECTANGULAR') {
+            leftSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['leftSection'] === 'HORSESHOE') {
+            leftSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['leftSection'] === 'CIRCULAR') {
+            leftSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
+        let rightSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['rightSection'] === 'RECTANGULAR') {
+            rightSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['rightSection'] === 'HORSESHOE') {
+            rightSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['rightSection'] === 'CIRCULAR') {
+            rightSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
+        let branchSection1Style: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        if (o['branchSection1'] === 'RECTANGULAR') {
+            branchSection1Style = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['branchSection1'] === 'HORSESHOE') {
+            branchSection1Style = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['branchSection1'] === 'CIRCULAR') {
+            branchSection1Style = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
+        let branchSection2Style: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        if (o['branchSection2'] === 'RECTANGULAR') {
+            branchSection2Style = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['branchSection2'] === 'HORSESHOE') {
+            branchSection2Style = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['branchSection2'] === 'CIRCULAR') {
+            branchSection2Style = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
+
         this.params = {
-            type: o['type'],
+            type: wellType,
             length: o['length'],
             width: o['width'],
             height: o['height'],
-            cornerStyle: o['cornerStyle'],
+            cornerStyle: cornerStyle,
             cornerRadius: o['cornerRadius'],
             branchLength: o['branchLength'],
             branchWidth: o['branchWidth'],
@@ -1457,10 +1790,10 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
             innerWallThickness: o['innerWallThickness'],
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
-            leftSection: o['leftSection'],
-            rightSection: o['rightSection'],
-            branchSection1: o['branchSection1'],
-            branchSection2: o['branchSection2'],
+            leftSection: leftSectionStyle,
+            rightSection: rightSectionStyle,
+            branchSection1: branchSection1Style,
+            branchSection2: branchSection2Style,
             shaftRadius: o['shaftRadius'],
             cornerLength: o['cornerLength'],
             cornerWidth: o['cornerWidth'],
@@ -1468,14 +1801,67 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): FourWayWellObject | undefined {
+        let wellType = 'WORKING_WELL';
+        if (this.params.type === this.tp.FourWayWellType.UNDERGROUND_TUNNEL as any) {
+            wellType = 'UNDERGROUND_TUNNEL';
+        } else if (this.params.type === this.tp.FourWayWellType.OPEN_CUT_TUNNEL as any) {
+            wellType = 'OPEN_CUT_TUNNEL';
+        } else if (this.params.type === this.tp.FourWayWellType.WORKING_WELL as any) {
+            wellType = 'WORKING_WELL';
+        }
+
+        let cornerStyle = 'ROUNDED';
+        if (this.params.cornerStyle === this.tp.CornerStyle.ANGLED as any) {
+            cornerStyle = 'ANGLED';
+        } else if (this.params.cornerStyle === this.tp.CornerStyle.ROUNDED as any) {
+            cornerStyle = 'ROUNDED';
+        }
+
+        let leftSectionType = 'RECTANGULAR';
+        if (this.params.leftSection === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            leftSectionType = 'HORSESHOE';
+        } else if (this.params.leftSection === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            leftSectionType = 'CIRCULAR';
+        } else if (this.params.leftSection === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            leftSectionType = 'RECTANGULAR';
+        }
+
+        let rightSectionType = 'RECTANGULAR';
+        if (this.params.rightSection === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            rightSectionType = 'HORSESHOE';
+        } else if (this.params.rightSection === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            rightSectionType = 'CIRCULAR';
+        } else if (this.params.rightSection === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            rightSectionType = 'RECTANGULAR';
+        }
+
+        let branchSection1Type = 'HORSESHOE';
+        if (this.params.branchSection1 === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            branchSection1Type = 'RECTANGULAR';
+        } else if (this.params.branchSection1 === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            branchSection1Type = 'CIRCULAR';
+        } else if (this.params.branchSection1 === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            branchSection1Type = 'HORSESHOE';
+        }
+
+        let branchSection2Type = 'HORSESHOE';
+        if (this.params.branchSection2 === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            branchSection2Type = 'RECTANGULAR';
+        } else if (this.params.branchSection2 === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            branchSection2Type = 'CIRCULAR';
+        } else if (this.params.branchSection2 === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            branchSection2Type = 'HORSESHOE';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['type', this.params.type],
+            ['version', this.getVersion()],
+            ['wellType', wellType],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height],
-            ['cornerStyle', this.params.cornerStyle],
+            ['cornerStyle', cornerStyle],
             ['cornerRadius', this.params.cornerRadius],
             ['branchLength', this.params.branchLength],
             ['branchWidth', this.params.branchWidth],
@@ -1485,20 +1871,20 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams> {
             ['innerWallThickness', this.params.innerWallThickness],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
-            ['leftSection', this.params.leftSection],
-            ['rightSection', this.params.rightSection],
-            ['branchSection1', this.params.branchSection1],
-            ['branchSection2', this.params.branchSection2],
+            ['leftSection', leftSectionType],
+            ['rightSection', rightSectionType],
+            ['branchSection1', branchSection1Type],
+            ['branchSection2', branchSection2Type],
             ['shaftRadius', this.params.shaftRadius],
             ['cornerLength', this.params.cornerLength],
             ['cornerWidth', this.params.cornerWidth],
-        ]));
+        ])) as FourWayWellObject;
     }
 }
 
-export class PipeRowPrimitive extends BasePrimitive<PipeRowParams> {
+export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject> {
 
-    constructor(tp: TopoInstance, params?: PipeRowParams) {
+    constructor(tp: TopoInstance, params?: PipeRowObject) {
         super(tp, params);
     }
 
@@ -1506,7 +1892,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams> {
         return ECPrimitiveType.PipeRow;
     }
 
-    setDefault(): Primitive<PipeRowParams> {
+    setDefault(): Primitive<PipeRowParams, PipeRowObject> {
         this.params = {
             pipeType: 1,
             hasEnclosure: false,
@@ -1535,7 +1921,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams> {
         return this;
     }
 
-    public setParams(params: PipeRowParams): Primitive<PipeRowParams> {
+    public setParams(params: PipeRowParams): Primitive<PipeRowParams, PipeRowObject> {
         this.params = params;
         return this;
     }
@@ -1558,9 +1944,12 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams> {
         throw new Error("Invalid parameters for PipeRow");
     }
 
-    fromObject(o: any): Primitive<PipeRowParams> {
+    fromObject(o?: PipeRowObject): Primitive<PipeRowParams, PipeRowObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             pipeType: o['pipeType'],
@@ -1571,22 +1960,23 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams> {
             baseThickness: o['baseThickness'],
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
-            pipePositions: o['pipePositions']?.map((p: any) => ({ x: p.x, y: p.y })) || [],
+            pipePositions: o['pipePositions']?.map((p: any) => new this.tp.gp_Pnt2d_3(p.x, p.y)) || [],
             pipeInnerDiameters: o['pipeInnerDiameters'] || [],
             pipeWallThicknesses: o['pipeWallThicknesses'] || [],
             pullPipeInnerDiameter: o['pullPipeInnerDiameter'],
             pullPipeThickness: o['pullPipeThickness'],
             points: o['points']?.map((p: any) => ({
-                position: { x: p.position.x, y: p.position.y, z: p.position.z },
+                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
                 type: p.type
             })) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PipeRowObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['pipeType', this.params.pipeType],
             ['hasEnclosure', this.params.hasEnclosure],
             ['enclosureWidth', this.params.enclosureWidth],
@@ -1595,19 +1985,22 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams> {
             ['baseThickness', this.params.baseThickness],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
-            ['pipePositions', this.params.pipePositions],
+            ['pipePositions', this.params.pipePositions.map((p) => ({ x: p.X(), y: p.Y() }))],
             ['pipeInnerDiameters', this.params.pipeInnerDiameters],
             ['pipeWallThicknesses', this.params.pipeWallThicknesses],
             ['pullPipeInnerDiameter', this.params.pullPipeInnerDiameter],
             ['pullPipeThickness', this.params.pullPipeThickness],
-            ['points', this.params.points]
-        ]));
+            ['points', this.params.points.map((p) => ({
+                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                type: p.type
+            }))]
+        ])) as PipeRowObject;
     }
 }
 
-export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams> {
+export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, CableTrenchObject> {
 
-    constructor(tp: TopoInstance, params?: CableTrenchParams) {
+    constructor(tp: TopoInstance, params?: CableTrenchObject) {
         super(tp, params);
     }
 
@@ -1615,7 +2008,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams> {
         return ECPrimitiveType.CableTrench;
     }
 
-    setDefault(): Primitive<CableTrenchParams> {
+    setDefault(): Primitive<CableTrenchParams, CableTrenchObject> {
         this.params = {
             width: 60.0,
             height: 80.0,
@@ -1638,7 +2031,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams> {
         return this;
     }
 
-    public setParams(params: CableTrenchParams): Primitive<CableTrenchParams> {
+    public setParams(params: CableTrenchParams): Primitive<CableTrenchParams, CableTrenchObject> {
         this.params = params;
         return this;
     }
@@ -1659,9 +2052,12 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams> {
         throw new Error("Invalid parameters for CableTrench");
     }
 
-    fromObject(o: any): Primitive<CableTrenchParams> {
+    fromObject(o?: CableTrenchObject): Primitive<CableTrenchParams, CableTrenchObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             width: o['width'],
@@ -1675,16 +2071,17 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams> {
             wallThickness: o['wallThickness'],
             wallThickness2: o['wallThickness2'],
             points: o['points']?.map((p: any) => ({
-                position: { x: p.position.x, y: p.position.y, z: p.position.z },
+                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
                 type: p.type
             })) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableTrenchObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['width', this.params.width],
             ['height', this.params.height],
             ['coverWidth', this.params.coverWidth],
@@ -1695,14 +2092,17 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams> {
             ['cushionThickness', this.params.cushionThickness],
             ['wallThickness', this.params.wallThickness],
             ['wallThickness2', this.params.wallThickness2],
-            ['points', this.params.points]
-        ]));
+            ['points', this.params.points.map((p) => ({
+                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                type: p.type
+            }))]
+        ])) as CableTrenchObject;
     }
 }
 
-export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams> {
+export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, CableTunnelObject> {
 
-    constructor(tp: TopoInstance, params?: CableTunnelParams) {
+    constructor(tp: TopoInstance, params?: CableTunnelObject) {
         super(tp, params);
     }
 
@@ -1710,7 +2110,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams> {
         return ECPrimitiveType.CableTunnel;
     }
 
-    setDefault(): Primitive<CableTunnelParams> {
+    setDefault(): Primitive<CableTunnelParams, CableTunnelObject> {
         this.params = {
             style: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
             width: 60.0,
@@ -1734,7 +2134,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams> {
         return this;
     }
 
-    public setParams(params: CableTunnelParams): Primitive<CableTunnelParams> {
+    public setParams(params: CableTunnelParams): Primitive<CableTunnelParams, CableTunnelObject> {
         this.params = params;
         return this;
     }
@@ -1752,12 +2152,24 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams> {
         throw new Error("Invalid parameters for CableTunnel");
     }
 
-    fromObject(o: any): Primitive<CableTunnelParams> {
+    fromObject(o?: CableTunnelObject): Primitive<CableTunnelParams, CableTunnelObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let style: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        if (o['style'] === 'RECTANGULAR') {
+            style = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
+        } else if (o['style'] === 'HORSESHOE') {
+            style = this.tp.ConnectionSectionStyle.HORSESHOE as any;
+        } else if (o['style'] === 'CIRCULAR') {
+            style = this.tp.ConnectionSectionStyle.CIRCULAR as any;
+        }
         this.params = {
-            style: o['style'],
+            style: style,
             width: o['width'],
             height: o['height'],
             topThickness: o['topThickness'],
@@ -1769,17 +2181,26 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams> {
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
             points: o['points']?.map((p: any) => ({
-                position: { x: p.position.x, y: p.position.y, z: p.position.z },
+                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
                 type: p.type
             })) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableTunnelObject | undefined {
+        let style = 'RECTANGULAR';
+        if (this.params.style === this.tp.ConnectionSectionStyle.HORSESHOE as any) {
+            style = 'HORSESHOE';
+        } else if (this.params.style === this.tp.ConnectionSectionStyle.CIRCULAR as any) {
+            style = 'CIRCULAR';
+        } else if (this.params.style === this.tp.ConnectionSectionStyle.RECTANGULAR as any) {
+            style = 'RECTANGULAR';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['style', this.params.style],
+            ['version', this.getVersion()],
+            ['style', style],
             ['width', this.params.width],
             ['height', this.params.height],
             ['topThickness', this.params.topThickness],
@@ -1790,16 +2211,19 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams> {
             ['bottomPlatformHeight', this.params.bottomPlatformHeight],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
-            ['points', this.params.points]
-        ]));
+            ['points', this.params.points.map((p) => ({
+                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                type: p.type
+            }))]
+        ])) as CableTunnelObject;
     }
 }
 
 
 // 添加桥架Primitive类
-export class CableTrayPrimitive extends BasePrimitive<CableTrayParams> {
+export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTrayObject> {
 
-    constructor(tp: TopoInstance, params?: CableTrayParams) {
+    constructor(tp: TopoInstance, params?: CableTrayObject) {
         super(tp, params);
     }
 
@@ -1807,7 +2231,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams> {
         return ECPrimitiveType.CableTray;
     }
 
-    setDefault(): Primitive<CableTrayParams> {
+    setDefault(): Primitive<CableTrayParams, CableTrayObject> {
         this.params = {
             style: this.tp.CableTrayStyle.ARCH as any, // ARCH
             columnDiameter: 40.0,
@@ -1835,7 +2259,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams> {
         return this;
     }
 
-    public setParams(params: CableTrayParams): Primitive<CableTrayParams> {
+    public setParams(params: CableTrayParams): Primitive<CableTrayParams, CableTrayObject> {
         this.params = params;
         return this;
     }
@@ -1857,12 +2281,22 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams> {
         throw new Error("Invalid parameters for CableTray");
     }
 
-    fromObject(o: any): Primitive<CableTrayParams> {
+    fromObject(o?: CableTrayObject): Primitive<CableTrayParams, CableTrayObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+        let style: CableTrayStyle = this.tp.CableTrayStyle.ARCH as any;
+        if (o['style'] === 'ARCH') {
+            style = this.tp.CableTrayStyle.ARCH as any;
+        } else if (o['style'] === 'BEAM') {
+            style = this.tp.CableTrayStyle.BEAM as any;
+        }
+
         this.params = {
-            style: o['style'],
+            style: style,
             columnDiameter: o['columnDiameter'],
             columnHeight: o['columnHeight'],
             span: o['span'],
@@ -1872,22 +2306,30 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams> {
             arcHeight: o['arcHeight'],
             wallThickness: o['wallThickness'],
             pipeCount: o['pipeCount'],
-            pipePositions: o['pipePositions']?.map((p: any) => ({ x: p.x, y: p.y })) || [],
+            pipePositions: o['pipePositions']?.map((p) => (new this.tp.gp_Pnt2d_3(p.x, p.y))) || [],
             pipeInnerDiameters: o['pipeInnerDiameters'] || [],
             pipeWallThicknesses: o['pipeWallThicknesses'] || [],
             hasProtectionPlate: o['hasProtectionPlate'],
             points: o['points']?.map((p: any) => ({
-                position: { x: p.position.x, y: p.position.y, z: p.position.z },
+                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
                 type: p.type
             })) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableTrayObject | undefined {
+        let style = 'ARCH';
+        if (this.params.style === this.tp.CableTrayStyle.BEAM as any) {
+            style = 'BEAM';
+        } else if (this.params.style === this.tp.CableTrayStyle.ARCH as any) {
+            style = 'ARCH';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['style', this.params.style],
+            ['version', this.getVersion()],
+            ['style', style],
             ['columnDiameter', this.params.columnDiameter],
             ['columnHeight', this.params.columnHeight],
             ['span', this.params.span],
@@ -1897,18 +2339,21 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams> {
             ['arcHeight', this.params.arcHeight],
             ['wallThickness', this.params.wallThickness],
             ['pipeCount', this.params.pipeCount],
-            ['pipePositions', this.params.pipePositions],
+            ['pipePositions', this.params.pipePositions.map((p) => ({ x: p.X(), y: p.Y() }))],
             ['pipeInnerDiameters', this.params.pipeInnerDiameters],
             ['pipeWallThicknesses', this.params.pipeWallThicknesses],
             ['hasProtectionPlate', this.params.hasProtectionPlate],
-            ['points', this.params.points]
-        ]));
+            ['points', this.params.points.map((p) => ({
+                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                type: p.type
+            }))]
+        ])) as CableTrayObject;
     }
 }
 
-export class CableLBeamPrimitive extends BasePrimitive<CableLBeamParams> {
+export class CableLBeamPrimitive extends BasePrimitive<CableLBeamParams, CableLBeamObject> {
 
-    constructor(tp: TopoInstance, params?: CableLBeamParams) {
+    constructor(tp: TopoInstance, params?: CableLBeamObject) {
         super(tp, params);
     }
 
@@ -1925,7 +2370,7 @@ export class CableLBeamPrimitive extends BasePrimitive<CableLBeamParams> {
         return this;
     }
 
-    public setParams(params: CableLBeamParams): Primitive<CableLBeamParams> {
+    public setParams(params: CableLBeamParams): Primitive<CableLBeamParams, CableLBeamObject> {
         this.params = params;
         return this;
     }
@@ -1944,9 +2389,12 @@ export class CableLBeamPrimitive extends BasePrimitive<CableLBeamParams> {
         throw new Error("Invalid parameters for CableLBeam");
     }
 
-    fromObject(o: any): Primitive<CableLBeamParams> {
+    fromObject(o?: CableLBeamObject): Primitive<CableLBeamParams, CableLBeamObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -1956,19 +2404,20 @@ export class CableLBeamPrimitive extends BasePrimitive<CableLBeamParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableLBeamObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height]
-        ]));
+        ])) as CableLBeamObject;
     }
 }
 
-export class ManholePrimitive extends BasePrimitive<ManholeParams> {
+export class ManholePrimitive extends BasePrimitive<ManholeParams, ManholeObject> {
 
-    constructor(tp: TopoInstance, params?: ManholeParams) {
+    constructor(tp: TopoInstance, params?: ManholeObject) {
         super(tp, params);
     }
 
@@ -1976,7 +2425,7 @@ export class ManholePrimitive extends BasePrimitive<ManholeParams> {
         return ECPrimitiveType.Manhole;
     }
 
-    setDefault(): Primitive<ManholeParams> {
+    setDefault(): Primitive<ManholeParams, ManholeObject> {
         this.params = {
             style: this.tp.ManholeStyle.CIRCULAR as any, // CIRCULAR
             length: 100.0,
@@ -1987,7 +2436,7 @@ export class ManholePrimitive extends BasePrimitive<ManholeParams> {
         return this;
     }
 
-    public setParams(params: ManholeParams): Primitive<ManholeParams> {
+    public setParams(params: ManholeParams): Primitive<ManholeParams, ManholeObject> {
         this.params = params;
         return this;
     }
@@ -2009,12 +2458,22 @@ export class ManholePrimitive extends BasePrimitive<ManholeParams> {
         throw new Error("Invalid parameters for Manhole");
     }
 
-    fromObject(o: any): Primitive<ManholeParams> {
+    fromObject(o?: ManholeObject): Primitive<ManholeParams, ManholeObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+        let style: ManholeStyle = this.tp.ManholeStyle.CIRCULAR as any;
+        if (o['style'] === 'RECTANGULAR') {
+            style = this.tp.ManholeStyle.RECTANGULAR as any;
+        } else if (o['style'] === 'CIRCULAR') {
+            style = this.tp.ManholeStyle.CIRCULAR as any;
+        }
+
         this.params = {
-            style: o['style'],
+            style: style,
             length: o['length'],
             width: o['width'],
             height: o['height'],
@@ -2023,21 +2482,22 @@ export class ManholePrimitive extends BasePrimitive<ManholeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ManholeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['style', this.params.style],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height],
             ['wallThickness', this.params.wallThickness]
-        ]));
+        ])) as ManholeObject;
     }
 }
 
-export class ManholeCoverPrimitive extends BasePrimitive<ManholeCoverParams> {
+export class ManholeCoverPrimitive extends BasePrimitive<ManholeCoverParams, ManholeCoverObject> {
 
-    constructor(tp: TopoInstance, params?: ManholeCoverParams) {
+    constructor(tp: TopoInstance, params?: ManholeCoverObject) {
         super(tp, params);
     }
 
@@ -2045,7 +2505,7 @@ export class ManholeCoverPrimitive extends BasePrimitive<ManholeCoverParams> {
         return ECPrimitiveType.ManholeCover;
     }
 
-    setDefault(): Primitive<ManholeCoverParams> {
+    setDefault(): Primitive<ManholeCoverParams, ManholeCoverObject> {
         this.params = {
             style: this.tp.ManholeStyle.CIRCULAR as any, // CIRCULAR
             length: 100.0,
@@ -2055,7 +2515,7 @@ export class ManholeCoverPrimitive extends BasePrimitive<ManholeCoverParams> {
         return this;
     }
 
-    public setParams(params: ManholeCoverParams): Primitive<ManholeCoverParams> {
+    public setParams(params: ManholeCoverParams): Primitive<ManholeCoverParams, ManholeCoverObject> {
         this.params = params;
         return this;
     }
@@ -2077,12 +2537,23 @@ export class ManholeCoverPrimitive extends BasePrimitive<ManholeCoverParams> {
         throw new Error("Invalid parameters for ManholeCover");
     }
 
-    fromObject(o: any): Primitive<ManholeCoverParams> {
+    fromObject(o?: ManholeCoverObject): Primitive<ManholeCoverParams, ManholeCoverObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let style: ManholeCoverStyle = this.tp.ManholeCoverStyle.CIRCULAR as any;
+        if (o['style'] === 'RECTANGULAR') {
+            style = this.tp.ManholeCoverStyle.RECTANGULAR as any;
+        } else if (o['style'] === 'CIRCULAR') {
+            style = this.tp.ManholeCoverStyle.CIRCULAR as any;
+        }
+
         this.params = {
-            style: o['style'],
+            style: style,
             length: o['length'],
             width: o['width'],
             thickness: o['thickness']
@@ -2090,20 +2561,27 @@ export class ManholeCoverPrimitive extends BasePrimitive<ManholeCoverParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ManholeCoverObject | undefined {
+        let style = 'CIRCULAR';
+        if (this.params.style === this.tp.ManholeCoverStyle.RECTANGULAR as any) {
+            style = 'RECTANGULAR';
+        } else if (this.params.style === this.tp.ManholeCoverStyle.CIRCULAR as any) {
+            style = 'CIRCULAR';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['style', this.params.style],
+            ['version', this.getVersion()],
+            ['style', style],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness]
-        ]));
+        ])) as ManholeCoverObject;
     }
 }
 
-export class LadderPrimitive extends BasePrimitive<LadderParams> {
+export class LadderPrimitive extends BasePrimitive<LadderParams, LadderObject> {
 
-    constructor(tp: TopoInstance, params?: LadderParams) {
+    constructor(tp: TopoInstance, params?: LadderObject) {
         super(tp, params);
     }
 
@@ -2120,7 +2598,7 @@ export class LadderPrimitive extends BasePrimitive<LadderParams> {
         return this;
     }
 
-    public setParams(params: LadderParams): Primitive<LadderParams> {
+    public setParams(params: LadderParams): Primitive<LadderParams, LadderObject> {
         this.params = params;
         return this;
     }
@@ -2139,9 +2617,12 @@ export class LadderPrimitive extends BasePrimitive<LadderParams> {
         throw new Error("Invalid parameters for Ladder");
     }
 
-    fromObject(o: any): Primitive<LadderParams> {
+    fromObject(o?: LadderObject): Primitive<LadderParams, LadderObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -2151,19 +2632,20 @@ export class LadderPrimitive extends BasePrimitive<LadderParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): LadderObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness]
-        ]));
+        ])) as LadderObject;
     }
 }
 
-export class SumpPrimitive extends BasePrimitive<SumpParams> {
+export class SumpPrimitive extends BasePrimitive<SumpParams, SumpObject> {
 
-    constructor(tp: TopoInstance, params?: SumpParams) {
+    constructor(tp: TopoInstance, params?: SumpObject) {
         super(tp, params);
     }
 
@@ -2171,7 +2653,7 @@ export class SumpPrimitive extends BasePrimitive<SumpParams> {
         return ECPrimitiveType.Sump;
     }
 
-    setDefault(): Primitive<SumpParams> {
+    setDefault(): Primitive<SumpParams, SumpObject> {
         this.params = {
             length: 500.0,
             width: 300.0,
@@ -2181,7 +2663,7 @@ export class SumpPrimitive extends BasePrimitive<SumpParams> {
         return this;
     }
 
-    public setParams(params: SumpParams): Primitive<SumpParams> {
+    public setParams(params: SumpParams): Primitive<SumpParams, SumpObject> {
         this.params = params;
         return this;
     }
@@ -2203,9 +2685,12 @@ export class SumpPrimitive extends BasePrimitive<SumpParams> {
         throw new Error("Invalid parameters for Sump");
     }
 
-    fromObject(o: any): Primitive<SumpParams> {
+    fromObject(o?: SumpObject): Primitive<SumpParams, SumpObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -2216,20 +2701,21 @@ export class SumpPrimitive extends BasePrimitive<SumpParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SumpObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['depth', this.params.depth],
             ['bottomThickness', this.params.bottomThickness]
-        ]));
+        ])) as SumpObject;
     }
 }
 
-export class FootpathPrimitive extends BasePrimitive<FootpathParams> {
+export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObject> {
 
-    constructor(tp: TopoInstance, params?: FootpathParams) {
+    constructor(tp: TopoInstance, params?: FootpathObject) {
         super(tp, params);
     }
 
@@ -2237,7 +2723,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams> {
         return ECPrimitiveType.Footpath;
     }
 
-    setDefault(): Primitive<FootpathParams> {
+    setDefault(): Primitive<FootpathParams, FootpathObject> {
         this.params = {
             height: 15.0,
             width: 80.0,
@@ -2249,7 +2735,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams> {
         return this;
     }
 
-    public setParams(params: FootpathParams): Primitive<FootpathParams> {
+    public setParams(params: FootpathParams): Primitive<FootpathParams, FootpathObject> {
         this.params = params;
         return this;
     }
@@ -2268,31 +2754,41 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams> {
         throw new Error("Invalid parameters for Footpath");
     }
 
-    fromObject(o: any): Primitive<FootpathParams> {
+    fromObject(o?: FootpathObject): Primitive<FootpathParams, FootpathObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
             width: o['width'],
-            points: o['points'] || []
+            points: o['points'].map((p) => ({
+                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+                type: p.type
+            })) || []
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): FootpathObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['width', this.params.width],
-            ['points', this.params.points]
-        ]));
+            ['points', this.params.points.map((t) => ({
+                position: { x: t.position.X(), y: t.position.Y(), z: t.position.Z() },
+                type: t.type
+            }))]
+        ])) as FootpathObject;
     }
 }
 
-export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams> {
+export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams, ShaftChamberObject> {
 
-    constructor(tp: TopoInstance, params?: ShaftChamberParams) {
+    constructor(tp: TopoInstance, params?: ShaftChamberObject) {
         super(tp, params);
     }
 
@@ -2300,7 +2796,7 @@ export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams> {
         return ECPrimitiveType.ShaftChamber;
     }
 
-    setDefault(): Primitive<ShaftChamberParams> {
+    setDefault(): Primitive<ShaftChamberParams, ShaftChamberObject> {
         this.params = {
             supportWallThickness: 20.0,
             supportDiameter: 110.0,
@@ -2314,7 +2810,7 @@ export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams> {
         return this;
     }
 
-    public setParams(params: ShaftChamberParams): Primitive<ShaftChamberParams> {
+    public setParams(params: ShaftChamberParams): Primitive<ShaftChamberParams, ShaftChamberObject> {
         this.params = params;
         return this;
     }
@@ -2339,9 +2835,12 @@ export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams> {
         throw new Error("Invalid parameters for ShaftChamber");
     }
 
-    fromObject(o: any): Primitive<ShaftChamberParams> {
+    fromObject(o?: ShaftChamberObject): Primitive<ShaftChamberParams, ShaftChamberObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             supportWallThickness: o['supportWallThickness'],
@@ -2356,9 +2855,10 @@ export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ShaftChamberObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['supportWallThickness', this.params.supportWallThickness],
             ['supportDiameter', this.params.supportDiameter],
             ['supportHeight', this.params.supportHeight],
@@ -2367,13 +2867,13 @@ export class ShaftChamberPrimitive extends BasePrimitive<ShaftChamberParams> {
             ['workingHeight', this.params.workingHeight],
             ['outerWallThickness', this.params.outerWallThickness],
             ['innerWallThickness', this.params.innerWallThickness]
-        ]));
+        ])) as ShaftChamberObject;
     }
 }
 
-export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCompartmentPartitionParams> {
+export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCompartmentPartitionParams, TunnelCompartmentPartitionObject> {
 
-    constructor(tp: TopoInstance, params?: TunnelCompartmentPartitionParams) {
+    constructor(tp: TopoInstance, params?: TunnelCompartmentPartitionObject) {
         super(tp, params);
     }
 
@@ -2381,7 +2881,7 @@ export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCom
         return ECPrimitiveType.TunnelCompartmentPartition;
     }
 
-    setDefault(): Primitive<TunnelCompartmentPartitionParams> {
+    setDefault(): Primitive<TunnelCompartmentPartitionParams, TunnelCompartmentPartitionObject> {
         this.params = {
             width: 300.0,
             thickness: 15.0
@@ -2389,7 +2889,7 @@ export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCom
         return this;
     }
 
-    public setParams(params: TunnelCompartmentPartitionParams): Primitive<TunnelCompartmentPartitionParams> {
+    public setParams(params: TunnelCompartmentPartitionParams): Primitive<TunnelCompartmentPartitionParams, TunnelCompartmentPartitionObject> {
         this.params = params;
         return this;
     }
@@ -2408,9 +2908,12 @@ export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCom
         throw new Error("Invalid parameters for TunnelCompartmentPartition");
     }
 
-    fromObject(o: any): Primitive<TunnelCompartmentPartitionParams> {
+    fromObject(o?: TunnelCompartmentPartitionObject): Primitive<TunnelCompartmentPartitionParams, TunnelCompartmentPartitionObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             width: o['width'],
@@ -2419,18 +2922,19 @@ export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCom
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TunnelCompartmentPartitionObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['width', this.params.width],
             ['thickness', this.params.thickness]
-        ]));
+        ])) as TunnelCompartmentPartitionObject;
     }
 }
 
-export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavilionParams> {
+export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavilionParams, VentilationPavilionObject> {
 
-    constructor(tp: TopoInstance, params?: VentilationPavilionParams) {
+    constructor(tp: TopoInstance, params?: VentilationPavilionObject) {
         super(tp, params);
     }
 
@@ -2438,7 +2942,7 @@ export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavil
         return ECPrimitiveType.VentilationPavilion;
     }
 
-    setDefault(): Primitive<VentilationPavilionParams> {
+    setDefault(): Primitive<VentilationPavilionParams, VentilationPavilionObject> {
         this.params = {
             topLength: 400.0,
             middleLength: 300.0,
@@ -2453,7 +2957,7 @@ export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavil
         return this;
     }
 
-    public setParams(params: VentilationPavilionParams): Primitive<VentilationPavilionParams> {
+    public setParams(params: VentilationPavilionParams): Primitive<VentilationPavilionParams, VentilationPavilionObject> {
         this.params = params;
         return this;
     }
@@ -2472,9 +2976,12 @@ export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavil
         throw new Error("Invalid parameters for VentilationPavilion");
     }
 
-    fromObject(o: any): Primitive<VentilationPavilionParams> {
+    fromObject(o?: VentilationPavilionObject): Primitive<VentilationPavilionParams, VentilationPavilionObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             topLength: o['topLength'],
@@ -2490,9 +2997,10 @@ export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavil
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): VentilationPavilionObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['topLength', this.params.topLength],
             ['middleLength', this.params.middleLength],
             ['bottomLength', this.params.bottomLength],
@@ -2502,13 +3010,13 @@ export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavil
             ['topHeight', this.params.topHeight],
             ['height', this.params.height],
             ['baseHeight', this.params.baseHeight]
-        ]));
+        ])) as VentilationPavilionObject;
     }
 }
 
-export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartitionBoardParams> {
+export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartitionBoardParams, TunnelPartitionBoardObject> {
 
-    constructor(tp: TopoInstance, params?: TunnelPartitionBoardParams) {
+    constructor(tp: TopoInstance, params?: TunnelPartitionBoardObject) {
         super(tp, params);
     }
 
@@ -2516,7 +3024,7 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
         return ECPrimitiveType.TunnelPartitionBoard;
     }
 
-    setDefault(): Primitive<TunnelPartitionBoardParams> {
+    setDefault(): Primitive<TunnelPartitionBoardParams, TunnelPartitionBoardObject> {
         this.params = {
             style: 1,
             length: 200.0,
@@ -2536,7 +3044,7 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
         return this;
     }
 
-    public setParams(params: TunnelPartitionBoardParams): Primitive<TunnelPartitionBoardParams> {
+    public setParams(params: TunnelPartitionBoardParams): Primitive<TunnelPartitionBoardParams, TunnelPartitionBoardObject> {
         this.params = params;
         return this;
     }
@@ -2564,9 +3072,12 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
         throw new Error("Invalid parameters for TunnelPartitionBoard");
     }
 
-    fromObject(o: any): Primitive<TunnelPartitionBoardParams> {
+    fromObject(o?: TunnelPartitionBoardObject): Primitive<TunnelPartitionBoardParams, TunnelPartitionBoardObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             style: o['style'],
@@ -2574,7 +3085,7 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
             width: o['width'],
             thickness: o['thickness'],
             holeCount: o['holeCount'],
-            holePositions: o['holePositions'] || [],
+            holePositions: o['holePositions'].map((t) => (new this.tp.gp_Pnt2d_3(t.x, t.y))) || [],
             holeStyles: o['holeStyles'] || [],
             holeDiameters: o['holeDiameters'] || [],
             holeWidths: o['holeWidths'] || []
@@ -2582,25 +3093,26 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TunnelPartitionBoardObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['style', this.params.style],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness],
             ['holeCount', this.params.holeCount],
-            ['holePositions', this.params.holePositions],
+            ['holePositions', this.params.holePositions.map((t) => ({ x: t.X(), y: t.Y() }))],
             ['holeStyles', this.params.holeStyles],
             ['holeDiameters', this.params.holeDiameters],
             ['holeWidths', this.params.holeWidths]
-        ]));
+        ])) as TunnelPartitionBoardObject;
     }
 }
 
-export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVentilationDuctParams> {
+export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVentilationDuctParams, StraightVentilationDuctObject> {
 
-    constructor(tp: TopoInstance, params?: StraightVentilationDuctParams) {
+    constructor(tp: TopoInstance, params?: StraightVentilationDuctObject) {
         super(tp, params);
     }
 
@@ -2608,7 +3120,7 @@ export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVent
         return ECPrimitiveType.StraightVentilationDuct;
     }
 
-    setDefault(): Primitive<StraightVentilationDuctParams> {
+    setDefault(): Primitive<StraightVentilationDuctParams, StraightVentilationDuctObject> {
         this.params = {
             diameter: 200.0,
             wallThickness: 10.0,
@@ -2617,7 +3129,7 @@ export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVent
         return this;
     }
 
-    public setParams(params: StraightVentilationDuctParams): Primitive<StraightVentilationDuctParams> {
+    public setParams(params: StraightVentilationDuctParams): Primitive<StraightVentilationDuctParams, StraightVentilationDuctObject> {
         this.params = params;
         return this;
     }
@@ -2639,9 +3151,12 @@ export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVent
         throw new Error("Invalid parameters for StraightVentilationDuct");
     }
 
-    fromObject(o: any): Primitive<StraightVentilationDuctParams> {
+    fromObject(o?: StraightVentilationDuctObject): Primitive<StraightVentilationDuctParams, StraightVentilationDuctObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             diameter: o['diameter'],
@@ -2651,19 +3166,20 @@ export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVent
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): StraightVentilationDuctObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['diameter', this.params.diameter],
             ['wallThickness', this.params.wallThickness],
             ['height', this.params.height]
-        ]));
+        ])) as StraightVentilationDuctObject;
     }
 }
 
-export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentilationDuctParams> {
+export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentilationDuctParams, ObliqueVentilationDuctObject> {
 
-    constructor(tp: TopoInstance, params?: ObliqueVentilationDuctParams) {
+    constructor(tp: TopoInstance, params?: ObliqueVentilationDuctObject) {
         super(tp, params);
     }
 
@@ -2671,7 +3187,7 @@ export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentil
         return ECPrimitiveType.ObliqueVentilationDuct;
     }
 
-    setDefault(): Primitive<ObliqueVentilationDuctParams> {
+    setDefault(): Primitive<ObliqueVentilationDuctParams, ObliqueVentilationDuctObject> {
         this.params = {
             hoodRoomLength: 200.0,
             hoodRoomWidth: 150.0,
@@ -2694,7 +3210,7 @@ export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentil
         return this;
     }
 
-    public setParams(params: ObliqueVentilationDuctParams): Primitive<ObliqueVentilationDuctParams> {
+    public setParams(params: ObliqueVentilationDuctParams): Primitive<ObliqueVentilationDuctParams, ObliqueVentilationDuctObject> {
         this.params = params;
         return this;
     }
@@ -2724,9 +3240,12 @@ export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentil
         throw new Error("Invalid parameters for ObliqueVentilationDuct");
     }
 
-    fromObject(o: any): Primitive<ObliqueVentilationDuctParams> {
+    fromObject(o?: ObliqueVentilationDuctObject): Primitive<ObliqueVentilationDuctParams, ObliqueVentilationDuctObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             hoodRoomLength: o['hoodRoomLength'],
@@ -2750,9 +3269,10 @@ export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentil
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ObliqueVentilationDuctObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['hoodRoomLength', this.params.hoodRoomLength],
             ['hoodRoomWidth', this.params.hoodRoomWidth],
             ['hoodRoomHeight', this.params.hoodRoomHeight],
@@ -2770,13 +3290,13 @@ export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentil
             ['baseRoomWallThickness', this.params.baseRoomWallThickness],
             ['baseRoomWidth', this.params.baseRoomWidth],
             ['baseRoomHeight', this.params.baseRoomHeight]
-        ]));
+        ])) as ObliqueVentilationDuctObject;
     }
 }
 
-export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams> {
+export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams, DrainageWellObject> {
 
-    constructor(tp: TopoInstance, params?: DrainageWellParams) {
+    constructor(tp: TopoInstance, params?: DrainageWellObject) {
         super(tp, params);
     }
 
@@ -2784,7 +3304,7 @@ export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams> {
         return ECPrimitiveType.DrainageWell;
     }
 
-    setDefault(): Primitive<DrainageWellParams> {
+    setDefault(): Primitive<DrainageWellParams, DrainageWellObject> {
         this.params = {
             length: 500.0,
             width: 300.0,
@@ -2798,7 +3318,7 @@ export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams> {
         return this;
     }
 
-    public setParams(params: DrainageWellParams): Primitive<DrainageWellParams> {
+    public setParams(params: DrainageWellParams): Primitive<DrainageWellParams, DrainageWellObject> {
         this.params = params;
         return this;
     }
@@ -2823,9 +3343,12 @@ export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams> {
         throw new Error("Invalid parameters for DrainageWell");
     }
 
-    fromObject(o: any): Primitive<DrainageWellParams> {
+    fromObject(o?: DrainageWellObject): Primitive<DrainageWellParams, DrainageWellObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -2840,9 +3363,10 @@ export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): DrainageWellObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height],
@@ -2851,14 +3375,14 @@ export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams> {
             ['cushionExtension', this.params.cushionExtension],
             ['bottomThickness', this.params.bottomThickness],
             ['wallThickness', this.params.wallThickness]
-        ]));
+        ])) as DrainageWellObject;
     }
 }
 
 // 添加管枕Primitive类
-export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams> {
+export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeSupportObject> {
 
-    constructor(tp: TopoInstance, params?: PipeSupportParams) {
+    constructor(tp: TopoInstance, params?: PipeSupportObject) {
         super(tp, params);
     }
 
@@ -2866,7 +3390,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams> {
         return ECPrimitiveType.PipeSupport;
     }
 
-    setDefault(): Primitive<PipeSupportParams> {
+    setDefault(): Primitive<PipeSupportParams, PipeSupportObject> {
         this.params = {
             style: 2,
             count: 8,
@@ -2888,7 +3412,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams> {
         return this;
     }
 
-    public setParams(params: PipeSupportParams): Primitive<PipeSupportParams> {
+    public setParams(params: PipeSupportParams): Primitive<PipeSupportParams, PipeSupportObject> {
         this.params = params;
         return this;
     }
@@ -2914,14 +3438,17 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams> {
         throw new Error("Invalid parameters for PipeSupport");
     }
 
-    fromObject(o: any): Primitive<PipeSupportParams> {
+    fromObject(o?: PipeSupportObject): Primitive<PipeSupportParams, PipeSupportObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             style: o['style'],
             count: o['count'],
-            positions: o['positions'].map((p: any) => ({ x: p.x, y: p.y })),
+            positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p.x, p.y))),
             radii: o['radii'],
             length: o['length'],
             width: o['width'],
@@ -2930,23 +3457,24 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PipeSupportObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['style', this.params.style],
             ['count', this.params.count],
-            ['positions', this.params.positions],
+            ['positions', this.params.positions.map((p: any) => ({ x: p.X(), y: p.Y() }))],
             ['radii', this.params.radii],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height]
-        ]));
+        ])) as PipeSupportObject;
     }
 }
 
-export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams> {
+export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPlateObject> {
 
-    constructor(tp: TopoInstance, params?: CoverPlateParams) {
+    constructor(tp: TopoInstance, params?: CoverPlateObject) {
         super(tp, params);
     }
 
@@ -2954,7 +3482,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams> {
         return ECPrimitiveType.CoverPlate;
     }
 
-    setDefault(): Primitive<CoverPlateParams> {
+    setDefault(): Primitive<CoverPlateParams, CoverPlateObject> {
         this.params = {
             style: "0",
             length: 200.0,
@@ -2966,7 +3494,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams> {
         return this;
     }
 
-    public setParams(params: CoverPlateParams): Primitive<CoverPlateParams> {
+    public setParams(params: CoverPlateParams): Primitive<CoverPlateParams, CoverPlateObject> {
         this.params = params;
         return this;
     }
@@ -2985,9 +3513,12 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams> {
         throw new Error("Invalid parameters for CoverPlate");
     }
 
-    fromObject(o: any): Primitive<CoverPlateParams> {
+    fromObject(o?: CoverPlateObject): Primitive<CoverPlateParams, CoverPlateObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             style: o['style'],
@@ -3000,22 +3531,23 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CoverPlateObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['style', this.params.style],
             ['length', this.params.length],
             ['width', this.params.width],
             ['smallRadius', this.params.smallRadius],
             ['largeRadius', this.params.largeRadius],
             ['thickness', this.params.thickness]
-        ]));
+        ])) as CoverPlateObject;
     }
 }
 
-export class CableRayPrimitive extends BasePrimitive<CableRayParams> {
+export class CableRayPrimitive extends BasePrimitive<CableRayParams, CableRayObject> {
 
-    constructor(tp: TopoInstance, params?: CableRayParams) {
+    constructor(tp: TopoInstance, params?: CableRayObject) {
         super(tp, params);
     }
 
@@ -3023,7 +3555,7 @@ export class CableRayPrimitive extends BasePrimitive<CableRayParams> {
         return ECPrimitiveType.CableRay;
     }
 
-    setDefault(): Primitive<CableRayParams> {
+    setDefault(): Primitive<CableRayParams, CableRayObject> {
         this.params = {
             outerLength: 300.0,
             outerHeight: 100.0,
@@ -3034,7 +3566,7 @@ export class CableRayPrimitive extends BasePrimitive<CableRayParams> {
         return this;
     }
 
-    public setParams(params: CableRayParams): Primitive<CableRayParams> {
+    public setParams(params: CableRayParams): Primitive<CableRayParams, CableRayObject> {
         this.params = params;
         return this;
     }
@@ -3061,9 +3593,12 @@ export class CableRayPrimitive extends BasePrimitive<CableRayParams> {
         throw new Error("Invalid parameters for CableRay");
     }
 
-    fromObject(o: any): Primitive<CableRayParams> {
+    fromObject(o?: CableRayObject): Primitive<CableRayParams, CableRayObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             outerLength: o['outerLength'],
@@ -3075,15 +3610,16 @@ export class CableRayPrimitive extends BasePrimitive<CableRayParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableRayObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['outerLength', this.params.outerLength],
             ['outerHeight', this.params.outerHeight],
             ['innerLength', this.params.innerLength],
             ['innerHeight', this.params.innerHeight],
             ['coverThickness', this.params.coverThickness]
-        ]));
+        ])) as CableRayObject;
     }
 }
 

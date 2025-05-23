@@ -1,9 +1,11 @@
 import {
     Shape,
     TopoInstance,
-    WaterTunnelParams
+    WaterTunnelParams,
+    WaterTunnelSectionStyle
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
+import { WaterTunnelObject } from "../types/hydropower";
 
 export enum HPPrimitiveType {
     WaterTunnel = "HP::water_tunnel"
@@ -11,9 +13,9 @@ export enum HPPrimitiveType {
 
 export type HPPrimitive = WaterTunnelPrimitive
 
-export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams> {
+export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams, WaterTunnelObject> {
 
-    constructor(tp: TopoInstance, params?: WaterTunnelParams) {
+    constructor(tp: TopoInstance, params?: WaterTunnelObject) {
         super(tp, params);
     }
 
@@ -21,7 +23,7 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams> {
         return HPPrimitiveType.WaterTunnel;
     }
 
-    setDefault(): Primitive<WaterTunnelParams> {
+    setDefault(): Primitive<WaterTunnelParams, WaterTunnelObject> {
         this.params = {
             style: this.tp.WaterTunnelSectionStyle.RECTANGULAR as any,
             width: 60.0,
@@ -44,7 +46,7 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams> {
         return this;
     }
 
-    public setParams(params: WaterTunnelParams): Primitive<WaterTunnelParams> {
+    public setParams(params: WaterTunnelParams): Primitive<WaterTunnelParams, WaterTunnelObject> {
         this.params = params;
         return this;
     }
@@ -62,24 +64,44 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams> {
         throw new Error("Invalid parameters for WaterTunnel");
     }
 
-    fromObject(o: any): Primitive<WaterTunnelParams> {
+    fromObject(o?: WaterTunnelObject): Primitive<WaterTunnelParams, WaterTunnelObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let style: WaterTunnelSectionStyle = this.tp.WaterTunnelSectionStyle.RECTANGULAR as any;
+        switch (o['style']) {
+            case 'RECTANGULAR':
+                style = this.tp.WaterTunnelSectionStyle.RECTANGULAR as any;
+                break;
+            case 'CITYOPENING':
+                style = this.tp.WaterTunnelSectionStyle.CITYOPENING as any;
+                break;
+            case 'CIRCULAR':
+                style = this.tp.WaterTunnelSectionStyle.CIRCULAR as any;
+                break;
+            case 'HORSESHOE':
+                style = this.tp.WaterTunnelSectionStyle.HORSESHOE as any;
+                break;
+        }
+
         this.params = {
-            style: o['style'],
+            style: style,
             width: o['width'],
             height: o['height'],
             topThickness: o['topThickness'],
             bottomThickness: o['bottomThickness'],
             outerWallThickness: o['outerWallThickness'],
             innerWallThickness: o['innerWallThickness'],
-            arcHeight: o['arcHeight'],
-            arcRadius: o['arcRadius'],
-            arcAngle: o['arcAngle'],
-            bottomPlatformHeight: o['bottomPlatformHeight'],
-            cushionExtension: o['cushionExtension'],
-            cushionThickness: o['cushionThickness'],
+            arcHeight: o['arcHeight'] || 0,
+            arcRadius: o['arcRadius'] || 0,
+            arcAngle: o['arcAngle'] || 0,
+            bottomPlatformHeight: o['bottomPlatformHeight'] || 0,
+            cushionExtension: o['cushionExtension'] || 0,
+            cushionThickness: o['cushionThickness'] || 0,
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
                 type: p.type
@@ -88,10 +110,28 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): WaterTunnelObject | undefined {
+
+        let style: string = 'RECTANGULAR';
+        switch (this.params.style) {
+            case this.tp.WaterTunnelSectionStyle.RECTANGULAR:
+                style = 'RECTANGULAR';
+                break;
+            case this.tp.WaterTunnelSectionStyle.CITYOPENING:
+                style = 'CITYOPENING';
+                break;
+            case this.tp.WaterTunnelSectionStyle.CIRCULAR:
+                style = 'CIRCULAR';
+                break;
+            case this.tp.WaterTunnelSectionStyle.HORSESHOE:
+                style = 'HORSESHOE';
+                break;
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
-            ['style', this.params.style],
+            ['version', this.getVersion()],
+            ['style', style],
             ['width', this.params.width],
             ['height', this.params.height],
             ['topThickness', this.params.topThickness],
@@ -112,7 +152,7 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams> {
                 },
                 type: p.type
             }))]
-        ]));
+        ])) as WaterTunnelObject;
     }
 }
 

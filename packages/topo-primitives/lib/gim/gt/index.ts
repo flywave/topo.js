@@ -29,9 +29,44 @@ import {
     TripleArmAnchorParams,
     PositioningPlateAnchorParams,
     StubAngleParams,
-    StubTubeParams
+    StubTubeParams,
+    ArrangementType,
+    InsulatorMaterial,
+    ApplicationType,
+    StringType
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../../primitive";
+import {
+    BoredPileBaseObject,
+    CompositeCaissonBaseObject,
+    DirectBuriedBaseObject,
+    EmbeddedRockAnchorBaseObject,
+    ExcavatedBaseObject,
+    InclinedRockAnchorBaseObject,
+    InsulatorObject,
+    NutAnchorObject,
+    PileCapBaseObject,
+    PoleTowerObject,
+    PositioningPlateAnchorObject,
+    PrecastColumnBaseObject,
+    PrecastConcreteSupportBaseObject,
+    PrecastMetalSupportBaseObject,
+    PrecastPinnedBaseObject,
+    RaftBaseObject,
+    RibbedAnchorObject,
+    RockAnchorBaseObject,
+    RockPileCapBaseObject,
+    SingleHookAnchorObject,
+    SlopedBaseBaseObject,
+    SteelSleeveBaseObject,
+    StepBaseObject,
+    StepPlateBaseObject,
+    StubAngleObject,
+    StubTubeObject,
+    TransmissionLineObject,
+    TripleArmAnchorObject,
+    TripleHookAnchorObject,
+} from "../../types/gim-gt";
 
 export enum GTPrimitiveType {
     BoredPileBase = "GIM/GT/BoredPileBase",
@@ -96,9 +131,9 @@ export type GTPrimitive =
     | StubAnglePrimitive
     | StubTubePrimitive;
 
-export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams> {
+export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams, BoredPileBaseObject> {
 
-    constructor(tp: TopoInstance, params?: BoredPileParams) {
+    constructor(tp: TopoInstance, params?: BoredPileBaseObject) {
         super(tp, params);
     }
 
@@ -106,7 +141,7 @@ export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams> {
         return GTPrimitiveType.BoredPileBase;
     }
 
-    setDefault(): Primitive<BoredPileParams> {
+    setDefault(): Primitive<BoredPileParams, BoredPileBaseObject> {
         this.params = {
             H1: 100.0,  // 上部圆柱高度
             H2: 30.0,   // 过渡段高度
@@ -118,7 +153,7 @@ export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams> {
         return this;
     }
 
-    public setParams(params: BoredPileParams): Primitive<BoredPileParams> {
+    public setParams(params: BoredPileParams): Primitive<BoredPileParams, BoredPileBaseObject> {
         this.params = params;
         return this;
     }
@@ -138,9 +173,12 @@ export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams> {
         throw new Error("Invalid parameters for BoredPile");
     }
 
-    fromObject(o: any): Primitive<BoredPileParams> {
+    fromObject(o?: BoredPileBaseObject): Primitive<BoredPileParams, BoredPileBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -153,22 +191,23 @@ export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): BoredPileBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
             ['H4', this.params.H4],
             ['d', this.params.d],
             ['D', this.params.D]
-        ]));
+        ])) as BoredPileBaseObject;
     }
 }
 
-export class PileCapBasePrimitive extends BasePrimitive<PileCapParams> {
+export class PileCapBasePrimitive extends BasePrimitive<PileCapParams, PileCapBaseObject> {
 
-    constructor(tp: TopoInstance, params?: PileCapParams) {
+    constructor(tp: TopoInstance, params?: PileCapBaseObject) {
         super(tp, params);
     }
 
@@ -176,7 +215,7 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams> {
         return GTPrimitiveType.PileCapBase;
     }
 
-    setDefault(): Primitive<PileCapParams> {
+    setDefault(): Primitive<PileCapParams, PileCapBaseObject> {
         this.params = {
             H1: 100.0,
             H2: 30.0,
@@ -202,7 +241,7 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams> {
         return this;
     }
 
-    public setParams(params: PileCapParams): Primitive<PileCapParams> {
+    public setParams(params: PileCapParams): Primitive<PileCapParams, PileCapBaseObject> {
         this.params = params;
         return this;
     }
@@ -223,9 +262,12 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams> {
         throw new Error("Invalid parameters for PileCap");
     }
 
-    fromObject(o: any): Primitive<PileCapParams> {
+    fromObject(o?: PileCapBaseObject): Primitive<PileCapParams, PileCapBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -249,9 +291,10 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PileCapBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -269,13 +312,13 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams> {
             ['ZCOUNT', this.params.ZCOUNT],
             ['ZPOSTARRAY', this.params.ZPOSTARRAY.map(p =>
                 ({ x: p.X(), y: p.Y(), z: p.Z() }))]
-        ]));
+        ])) as PileCapBaseObject;
     }
 }
 
-export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams> {
+export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams, RockAnchorBaseObject> {
 
-    constructor(tp: TopoInstance, params?: RockAnchorParams) {
+    constructor(tp: TopoInstance, params?: RockAnchorBaseObject) {
         super(tp, params);
     }
 
@@ -283,7 +326,7 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams> {
         return GTPrimitiveType.RockAnchorBase;
     }
 
-    setDefault(): Primitive<RockAnchorParams> {
+    setDefault(): Primitive<RockAnchorParams, RockAnchorBaseObject> {
         this.params = {
             H1: 20.0,
             H2: 50.0,
@@ -301,7 +344,7 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams> {
         return this;
     }
 
-    public setParams(params: RockAnchorParams): Primitive<RockAnchorParams> {
+    public setParams(params: RockAnchorParams): Primitive<RockAnchorParams, RockAnchorBaseObject> {
         this.params = params;
         return this;
     }
@@ -319,9 +362,12 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams> {
         throw new Error("Invalid parameters for RockAnchor");
     }
 
-    fromObject(o: any): Primitive<RockAnchorParams> {
+    fromObject(o: any): Primitive<RockAnchorParams, RockAnchorBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -336,9 +382,10 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RockAnchorBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['d', this.params.d],
@@ -347,13 +394,13 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams> {
             ['ZCOUNT', this.params.ZCOUNT],
             ['ZPOSTARRAY', this.params.ZPOSTARRAY.map(p =>
                 ({ x: p.X(), y: p.Y(), z: p.Z() }))]
-        ]));
+        ])) as RockAnchorBaseObject;
     }
 }
 
-export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams> {
+export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams, RockPileCapBaseObject> {
 
-    constructor(tp: TopoInstance, params?: RockPileCapParams) {
+    constructor(tp: TopoInstance, params?: RockPileCapBaseObject) {
         super(tp, params);
     }
 
@@ -361,7 +408,7 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams> {
         return GTPrimitiveType.RockPileCapBase;
     }
 
-    setDefault(): Primitive<RockPileCapParams> {
+    setDefault(): Primitive<RockPileCapParams, RockPileCapBaseObject> {
         this.params = {
             H1: 40.0,
             H2: 20.0,
@@ -384,7 +431,7 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams> {
         return this;
     }
 
-    public setParams(params: RockPileCapParams): Primitive<RockPileCapParams> {
+    public setParams(params: RockPileCapParams): Primitive<RockPileCapParams, RockPileCapBaseObject> {
         this.params = params;
         return this;
     }
@@ -403,9 +450,12 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams> {
         throw new Error("Invalid parameters for RockPileCap");
     }
 
-    fromObject(o: any): Primitive<RockPileCapParams> {
+    fromObject(o?: RockPileCapBaseObject): Primitive<RockPileCapParams, RockPileCapBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -425,9 +475,10 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RockPileCapBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -441,14 +492,14 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams> {
             ['ZCOUNT', this.params.ZCOUNT],
             ['ZPOSTARRAY', this.params.ZPOSTARRAY.map(p =>
                 ({ x: p.X(), y: p.Y(), z: p.Z() }))]
-        ]));
+        ])) as RockPileCapBaseObject;
     }
 }
 
 
-export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockAnchorParams> {
+export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockAnchorParams, EmbeddedRockAnchorBaseObject> {
 
-    constructor(tp: TopoInstance, params?: EmbeddedRockAnchorParams) {
+    constructor(tp: TopoInstance, params?: EmbeddedRockAnchorBaseObject) {
         super(tp, params);
     }
 
@@ -456,7 +507,7 @@ export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockA
         return GTPrimitiveType.EmbeddedRockAnchorBase;
     }
 
-    setDefault(): Primitive<EmbeddedRockAnchorParams> {
+    setDefault(): Primitive<EmbeddedRockAnchorParams, EmbeddedRockAnchorBaseObject> {
         this.params = {
             H1: 100.0,
             H2: 30.0,
@@ -467,7 +518,7 @@ export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockA
         return this;
     }
 
-    public setParams(params: EmbeddedRockAnchorParams): Primitive<EmbeddedRockAnchorParams> {
+    public setParams(params: EmbeddedRockAnchorParams): Primitive<EmbeddedRockAnchorParams, EmbeddedRockAnchorBaseObject> {
         this.params = params;
         return this;
     }
@@ -485,9 +536,12 @@ export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockA
         throw new Error("Invalid parameters for EmbeddedRockAnchor");
     }
 
-    fromObject(o: any): Primitive<EmbeddedRockAnchorParams> {
+    fromObject(o?: EmbeddedRockAnchorBaseObject): Primitive<EmbeddedRockAnchorParams, EmbeddedRockAnchorBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -499,22 +553,23 @@ export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockA
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): EmbeddedRockAnchorBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
             ['d', this.params.d],
             ['D', this.params.D]
-        ]));
+        ])) as EmbeddedRockAnchorBaseObject;
     }
 }
 
 
-export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockAnchorParams> {
+export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockAnchorParams, InclinedRockAnchorBaseObject> {
 
-    constructor(tp: TopoInstance, params?: InclinedRockAnchorParams) {
+    constructor(tp: TopoInstance, params?: InclinedRockAnchorBaseObject) {
         super(tp, params);
     }
 
@@ -522,7 +577,7 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
         return GTPrimitiveType.InclinedRockAnchorBase;
     }
 
-    setDefault(): Primitive<InclinedRockAnchorParams> {
+    setDefault(): Primitive<InclinedRockAnchorParams, InclinedRockAnchorBaseObject> {
         this.params = {
             H1: 20.0,
             H2: 50.0,
@@ -538,7 +593,7 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
         return this;
     }
 
-    public setParams(params: InclinedRockAnchorParams): Primitive<InclinedRockAnchorParams> {
+    public setParams(params: InclinedRockAnchorParams): Primitive<InclinedRockAnchorParams, InclinedRockAnchorBaseObject> {
         this.params = params;
         return this;
     }
@@ -557,9 +612,12 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
         throw new Error("Invalid parameters for InclinedRockAnchor");
     }
 
-    fromObject(o: any): Primitive<InclinedRockAnchorParams> {
+    fromObject(o?: InclinedRockAnchorBaseObject): Primitive<InclinedRockAnchorParams, InclinedRockAnchorBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -576,9 +634,10 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): InclinedRockAnchorBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['d', this.params.d],
@@ -589,14 +648,14 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
             ['e2', this.params.e2],
             ['alpha1', this.params.alpha1],
             ['alpha2', this.params.alpha2]
-        ]));
+        ])) as InclinedRockAnchorBaseObject;
     }
 }
 
 
-export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams> {
+export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams, ExcavatedBaseObject> {
 
-    constructor(tp: TopoInstance, params?: ExcavatedBaseParams) {
+    constructor(tp: TopoInstance, params?: ExcavatedBaseObject) {
         super(tp, params);
     }
 
@@ -604,7 +663,7 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams> {
         return GTPrimitiveType.ExcavatedBase;
     }
 
-    setDefault(): Primitive<ExcavatedBaseParams> {
+    setDefault(): Primitive<ExcavatedBaseParams, ExcavatedBaseObject> {
         this.params = {
             H1: 100.0,
             H2: 30.0,
@@ -617,7 +676,7 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams> {
         return this;
     }
 
-    public setParams(params: ExcavatedBaseParams): Primitive<ExcavatedBaseParams> {
+    public setParams(params: ExcavatedBaseParams): Primitive<ExcavatedBaseParams, ExcavatedBaseObject> {
         this.params = params;
         return this;
     }
@@ -635,9 +694,12 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams> {
         throw new Error("Invalid parameters for ExcavatedBase");
     }
 
-    fromObject(o: any): Primitive<ExcavatedBaseParams> {
+    fromObject(o?: ExcavatedBaseObject): Primitive<ExcavatedBaseParams, ExcavatedBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -651,9 +713,10 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ExcavatedBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -661,13 +724,13 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams> {
             ['D', this.params.D],
             ['alpha1', this.params.alpha1],
             ['alpha2', this.params.alpha2]
-        ]));
+        ])) as ExcavatedBaseObject;
     }
 }
 
-export class StepBasePrimitive extends BasePrimitive<StepBaseParams> {
+export class StepBasePrimitive extends BasePrimitive<StepBaseParams, StepBaseObject> {
 
-    constructor(tp: TopoInstance, params?: StepBaseParams) {
+    constructor(tp: TopoInstance, params?: StepBaseObject) {
         super(tp, params);
     }
 
@@ -675,7 +738,7 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams> {
         return GTPrimitiveType.StepBase;
     }
 
-    setDefault(): Primitive<StepBaseParams> {
+    setDefault(): Primitive<StepBaseParams, StepBaseObject> {
         this.params = {
             H: 150.0,
             H1: 50.0,
@@ -693,7 +756,7 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams> {
         return this;
     }
 
-    public setParams(params: StepBaseParams): Primitive<StepBaseParams> {
+    public setParams(params: StepBaseParams): Primitive<StepBaseParams, StepBaseObject> {
         this.params = params;
         return this;
     }
@@ -715,9 +778,12 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams> {
         throw new Error("Invalid parameters for StepBase");
     }
 
-    fromObject(o: any): Primitive<StepBaseParams> {
+    fromObject(o?: StepBaseObject): Primitive<StepBaseParams, StepBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H: o['H'],
@@ -736,9 +802,10 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): StepBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H', this.params.H],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
@@ -751,15 +818,15 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams> {
             ['L2', this.params.L2],
             ['L3', this.params.L3],
             ['N', this.params.N]
-        ]));
+        ])) as StepBaseObject;
     }
 }
 
 
 // 添加台阶板基础Primitive类
-export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams> {
+export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams, StepPlateBaseObject> {
 
-    constructor(tp: TopoInstance, params?: StepPlateBaseParams) {
+    constructor(tp: TopoInstance, params?: StepPlateBaseObject) {
         super(tp, params);
     }
 
@@ -767,7 +834,7 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams> {
         return GTPrimitiveType.StepPlateBase;
     }
 
-    setDefault(): Primitive<StepPlateBaseParams> {
+    setDefault(): Primitive<StepPlateBaseParams, StepPlateBaseObject> {
         this.params = {
             H: 150.0,
             H1: 50.0,
@@ -785,7 +852,7 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams> {
         return this;
     }
 
-    public setParams(params: StepPlateBaseParams): Primitive<StepPlateBaseParams> {
+    public setParams(params: StepPlateBaseParams): Primitive<StepPlateBaseParams, StepPlateBaseObject> {
         this.params = params;
         return this;
     }
@@ -806,9 +873,12 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams> {
         throw new Error("Invalid parameters for StepPlateBase");
     }
 
-    fromObject(o: any): Primitive<StepPlateBaseParams> {
+    fromObject(o?: StepPlateBaseObject): Primitive<StepPlateBaseParams, StepPlateBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H: o['H'],
@@ -827,9 +897,10 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): StepPlateBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H', this.params.H],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
@@ -842,13 +913,13 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams> {
             ['alpha1', this.params.alpha1],
             ['alpha2', this.params.alpha2],
             ['N', this.params.N]
-        ]));
+        ])) as StepPlateBaseObject;
     }
 }
 
-export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams> {
+export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams, SlopedBaseBaseObject> {
 
-    constructor(tp: TopoInstance, params?: SlopedBaseBaseParams) {
+    constructor(tp: TopoInstance, params?: SlopedBaseBaseObject) {
         super(tp, params);
     }
 
@@ -856,7 +927,7 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams>
         return GTPrimitiveType.SlopedBaseBase;
     }
 
-    setDefault(): Primitive<SlopedBaseBaseParams> {
+    setDefault(): Primitive<SlopedBaseBaseParams, SlopedBaseBaseObject> {
         this.params = {
             H1: 100.0,
             H2: 30.0,
@@ -872,7 +943,7 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams>
         return this;
     }
 
-    public setParams(params: SlopedBaseBaseParams): Primitive<SlopedBaseBaseParams> {
+    public setParams(params: SlopedBaseBaseParams): Primitive<SlopedBaseBaseParams, SlopedBaseBaseObject> {
         this.params = params;
         return this;
     }
@@ -892,9 +963,12 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams>
         throw new Error("Invalid parameters for SlopedBaseBase");
     }
 
-    fromObject(o: any): Primitive<SlopedBaseBaseParams> {
+    fromObject(o?: SlopedBaseBaseObject): Primitive<SlopedBaseBaseParams, SlopedBaseBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -911,9 +985,10 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams>
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SlopedBaseBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -924,14 +999,14 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams>
             ['B2', this.params.B2],
             ['alpha1', this.params.alpha1],
             ['alpha2', this.params.alpha2]
-        ]));
+        ])) as SlopedBaseBaseObject;
     }
 }
 
 
-export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaissonBaseParams> {
+export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaissonBaseParams, CompositeCaissonBaseObject> {
 
-    constructor(tp: TopoInstance, params?: CompositeCaissonBaseParams) {
+    constructor(tp: TopoInstance, params?: CompositeCaissonBaseObject) {
         super(tp, params);
     }
 
@@ -939,7 +1014,7 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
         return GTPrimitiveType.CompositeCaissonBase;
     }
 
-    setDefault(): Primitive<CompositeCaissonBaseParams> {
+    setDefault(): Primitive<CompositeCaissonBaseParams, CompositeCaissonBaseObject> {
         this.params = {
             H1: 100.0,
             H2: 30.0,
@@ -956,7 +1031,7 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
         return this;
     }
 
-    public setParams(params: CompositeCaissonBaseParams): Primitive<CompositeCaissonBaseParams> {
+    public setParams(params: CompositeCaissonBaseParams): Primitive<CompositeCaissonBaseParams, CompositeCaissonBaseObject> {
         this.params = params;
         return this;
     }
@@ -978,9 +1053,12 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
         throw new Error("Invalid parameters for CompositeCaissonBase");
     }
 
-    fromObject(o: any): Primitive<CompositeCaissonBaseParams> {
+    fromObject(o?: CompositeCaissonBaseObject): Primitive<CompositeCaissonBaseParams, CompositeCaissonBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -998,9 +1076,10 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CompositeCaissonBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1012,13 +1091,13 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
             ['B2', this.params.B2],
             ['L1', this.params.L1],
             ['L2', this.params.L2]
-        ]));
+        ])) as CompositeCaissonBaseObject;
     }
 }
 
-export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams> {
+export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams, RaftBaseObject> {
 
-    constructor(tp: TopoInstance, params?: RaftBaseParams) {
+    constructor(tp: TopoInstance, params?: RaftBaseObject) {
         super(tp, params);
     }
 
@@ -1026,7 +1105,7 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams> {
         return GTPrimitiveType.RaftBase;
     }
 
-    setDefault(): Primitive<RaftBaseParams> {
+    setDefault(): Primitive<RaftBaseParams, RaftBaseObject> {
         this.params = {
             H1: 100.0,
             H2: 100.0,
@@ -1041,7 +1120,7 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams> {
         return this;
     }
 
-    public setParams(params: RaftBaseParams): Primitive<RaftBaseParams> {
+    public setParams(params: RaftBaseParams): Primitive<RaftBaseParams, RaftBaseObject> {
         this.params = params;
         return this;
     }
@@ -1061,9 +1140,12 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams> {
         throw new Error("Invalid parameters for RaftBase");
     }
 
-    fromObject(o: any): Primitive<RaftBaseParams> {
+    fromObject(o?: RaftBaseObject): Primitive<RaftBaseParams, RaftBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1079,9 +1161,10 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RaftBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1091,14 +1174,14 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams> {
             ['B2', this.params.B2],
             ['L1', this.params.L1],
             ['L2', this.params.L2]
-        ]));
+        ])) as RaftBaseObject;
     }
 }
 
 
-export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBaseParams> {
+export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBaseParams, DirectBuriedBaseObject> {
 
-    constructor(tp: TopoInstance, params?: DirectBuriedBaseParams) {
+    constructor(tp: TopoInstance, params?: DirectBuriedBaseObject) {
         super(tp, params);
     }
 
@@ -1106,7 +1189,7 @@ export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBasePar
         return GTPrimitiveType.DirectBuriedBase;
     }
 
-    setDefault(): Primitive<DirectBuriedBaseParams> {
+    setDefault(): Primitive<DirectBuriedBaseParams, DirectBuriedBaseObject> {
         this.params = {
             H1: 500.0,
             H2: 100.0,
@@ -1118,7 +1201,7 @@ export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBasePar
         return this;
     }
 
-    public setParams(params: DirectBuriedBaseParams): Primitive<DirectBuriedBaseParams> {
+    public setParams(params: DirectBuriedBaseParams): Primitive<DirectBuriedBaseParams, DirectBuriedBaseObject> {
         this.params = params;
         return this;
     }
@@ -1135,9 +1218,12 @@ export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBasePar
         throw new Error("Invalid parameters for DirectBuriedBase");
     }
 
-    fromObject(o: any): Primitive<DirectBuriedBaseParams> {
+    fromObject(o?: DirectBuriedBaseObject): Primitive<DirectBuriedBaseParams, DirectBuriedBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1150,22 +1236,23 @@ export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBasePar
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): DirectBuriedBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['d', this.params.d],
             ['D', this.params.D],
             ['B', this.params.B],
             ['t', this.params.t]
-        ]));
+        ])) as DirectBuriedBaseObject;
     }
 }
 
-export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParams> {
+export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParams, SteelSleeveBaseObject> {
 
-    constructor(tp: TopoInstance, params?: SteelSleeveBaseParams) {
+    constructor(tp: TopoInstance, params?: SteelSleeveBaseObject) {
         super(tp, params);
     }
 
@@ -1173,7 +1260,7 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
         return GTPrimitiveType.SteelSleeveBase;
     }
 
-    setDefault(): Primitive<SteelSleeveBaseParams> {
+    setDefault(): Primitive<SteelSleeveBaseParams, SteelSleeveBaseObject> {
         this.params = {
             H1: 500.0,
             H2: 100.0,
@@ -1189,7 +1276,7 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
         return this;
     }
 
-    public setParams(params: SteelSleeveBaseParams): Primitive<SteelSleeveBaseParams> {
+    public setParams(params: SteelSleeveBaseParams): Primitive<SteelSleeveBaseParams, SteelSleeveBaseObject> {
         this.params = params;
         return this;
     }
@@ -1208,9 +1295,12 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
         throw new Error("Invalid parameters for SteelSleeveBase");
     }
 
-    fromObject(o: any): Primitive<SteelSleeveBaseParams> {
+    fromObject(o?: SteelSleeveBaseObject): Primitive<SteelSleeveBaseParams, SteelSleeveBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1227,9 +1317,10 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SteelSleeveBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1240,13 +1331,13 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
             ['t', this.params.t],
             ['B1', this.params.B1],
             ['B2', this.params.B2]
-        ]));
+        ])) as SteelSleeveBaseObject;
     }
 }
 
-export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseParams> {
+export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseParams, PrecastColumnBaseObject> {
 
-    constructor(tp: TopoInstance, params?: PrecastColumnBaseParams) {
+    constructor(tp: TopoInstance, params?: PrecastColumnBaseObject) {
         super(tp, params);
     }
 
@@ -1254,7 +1345,7 @@ export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseP
         return GTPrimitiveType.PrecastColumnBase;
     }
 
-    setDefault(): Primitive<PrecastColumnBaseParams> {
+    setDefault(): Primitive<PrecastColumnBaseParams, PrecastColumnBaseObject> {
         this.params = {
             H1: 500.0,
             H2: 200.0,
@@ -1268,7 +1359,7 @@ export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseP
         return this;
     }
 
-    public setParams(params: PrecastColumnBaseParams): Primitive<PrecastColumnBaseParams> {
+    public setParams(params: PrecastColumnBaseParams): Primitive<PrecastColumnBaseParams, PrecastColumnBaseObject> {
         this.params = params;
         return this;
     }
@@ -1288,9 +1379,12 @@ export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseP
         throw new Error("Invalid parameters for PrecastColumnBase");
     }
 
-    fromObject(o: any): Primitive<PrecastColumnBaseParams> {
+    fromObject(o?: PrecastColumnBaseObject): Primitive<PrecastColumnBaseParams, PrecastColumnBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1305,9 +1399,10 @@ export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseP
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PrecastColumnBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1316,15 +1411,15 @@ export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseP
             ['B2', this.params.B2],
             ['L1', this.params.L1],
             ['L2', this.params.L2]
-        ]));
+        ])) as PrecastColumnBaseObject;
     }
 }
 
 
 // 添加预制柱铰接基础Primitive类
-export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseParams> {
+export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseParams, PrecastPinnedBaseObject> {
 
-    constructor(tp: TopoInstance, params?: PrecastPinnedBaseParams) {
+    constructor(tp: TopoInstance, params?: PrecastPinnedBaseObject) {
         super(tp, params);
     }
 
@@ -1332,7 +1427,7 @@ export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseP
         return GTPrimitiveType.PrecastPinnedBase;
     }
 
-    setDefault(): Primitive<PrecastPinnedBaseParams> {
+    setDefault(): Primitive<PrecastPinnedBaseParams, PrecastPinnedBaseObject> {
         this.params = {
             H1: 500.0,
             H2: 200.0,
@@ -1349,7 +1444,7 @@ export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseP
         return this;
     }
 
-    public setParams(params: PrecastPinnedBaseParams): Primitive<PrecastPinnedBaseParams> {
+    public setParams(params: PrecastPinnedBaseParams): Primitive<PrecastPinnedBaseParams, PrecastPinnedBaseObject> {
         this.params = params;
         return this;
     }
@@ -1369,9 +1464,12 @@ export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseP
         throw new Error("Invalid parameters for PrecastPinnedBase");
     }
 
-    fromObject(o: any): Primitive<PrecastPinnedBaseParams> {
+    fromObject(o?: PrecastPinnedBaseObject): Primitive<PrecastPinnedBaseParams, PrecastPinnedBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1389,9 +1487,10 @@ export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseP
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PrecastPinnedBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1403,13 +1502,13 @@ export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseP
             ['B', this.params.B],
             ['H', this.params.H],
             ['L', this.params.L]
-        ]));
+        ])) as PrecastPinnedBaseObject;
     }
 }
 
-export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetalSupportBaseParams> {
+export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetalSupportBaseParams, PrecastMetalSupportBaseObject> {
 
-    constructor(tp: TopoInstance, params?: PrecastMetalSupportBaseParams) {
+    constructor(tp: TopoInstance, params?: PrecastMetalSupportBaseObject) {
         super(tp, params);
     }
 
@@ -1417,7 +1516,7 @@ export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetal
         return GTPrimitiveType.PrecastMetalSupportBase;
     }
 
-    setDefault(): Primitive<PrecastMetalSupportBaseParams> {
+    setDefault(): Primitive<PrecastMetalSupportBaseParams, PrecastMetalSupportBaseObject> {
         this.params = {
             H1: 40.0,
             H2: 400.0,
@@ -1438,7 +1537,7 @@ export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetal
         return this;
     }
 
-    public setParams(params: PrecastMetalSupportBaseParams): Primitive<PrecastMetalSupportBaseParams> {
+    public setParams(params: PrecastMetalSupportBaseParams): Primitive<PrecastMetalSupportBaseParams, PrecastMetalSupportBaseObject> {
         this.params = params;
         return this;
     }
@@ -1462,9 +1561,12 @@ export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetal
         throw new Error("Invalid parameters for PrecastMetalSupportBase");
     }
 
-    fromObject(o: any): Primitive<PrecastMetalSupportBaseParams> {
+    fromObject(o?: PrecastMetalSupportBaseObject): Primitive<PrecastMetalSupportBaseParams, PrecastMetalSupportBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1486,9 +1588,10 @@ export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetal
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PrecastMetalSupportBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1504,15 +1607,15 @@ export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetal
             ['n1', this.params.n1],
             ['n2', this.params.n2],
             ['HX', this.params.HX]
-        ]));
+        ])) as PrecastMetalSupportBaseObject;
     }
 }
 
 
 // 添加预制混凝土支撑基础Primitive类
-export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastConcreteSupportBaseParams> {
+export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastConcreteSupportBaseParams, PrecastConcreteSupportBaseObject> {
 
-    constructor(tp: TopoInstance, params?: PrecastConcreteSupportBaseParams) {
+    constructor(tp: TopoInstance, params?: PrecastConcreteSupportBaseObject) {
         super(tp, params);
     }
 
@@ -1520,7 +1623,7 @@ export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastCo
         return GTPrimitiveType.PrecastConcreteSupportBase;
     }
 
-    setDefault(): Primitive<PrecastConcreteSupportBaseParams> {
+    setDefault(): Primitive<PrecastConcreteSupportBaseParams, PrecastConcreteSupportBaseObject> {
         this.params = {
             H1: 40.0,
             H2: 400.0,
@@ -1540,7 +1643,7 @@ export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastCo
         return this;
     }
 
-    public setParams(params: PrecastConcreteSupportBaseParams): Primitive<PrecastConcreteSupportBaseParams> {
+    public setParams(params: PrecastConcreteSupportBaseParams): Primitive<PrecastConcreteSupportBaseParams, PrecastConcreteSupportBaseObject> {
         this.params = params;
         return this;
     }
@@ -1564,9 +1667,12 @@ export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastCo
         throw new Error("Invalid parameters for PrecastConcreteSupportBase");
     }
 
-    fromObject(o: any): Primitive<PrecastConcreteSupportBaseParams> {
+    fromObject(o?: PrecastConcreteSupportBaseObject): Primitive<PrecastConcreteSupportBaseParams, PrecastConcreteSupportBaseObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             H1: o['H1'],
@@ -1587,9 +1693,10 @@ export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastCo
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PrecastConcreteSupportBaseObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['H1', this.params.H1],
             ['H2', this.params.H2],
             ['H3', this.params.H3],
@@ -1604,15 +1711,15 @@ export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastCo
             ['L2', this.params.L2],
             ['S1', this.params.S1],
             ['n1', this.params.n1]
-        ]));
+        ])) as PrecastConcreteSupportBaseObject;
     }
 }
 
 
 // 添加输电线路Primitive类
-export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLineParams> {
+export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLineParams, TransmissionLineObject> {
 
-    constructor(tp: TopoInstance, params?: TransmissionLineParams) {
+    constructor(tp: TopoInstance, params?: TransmissionLineObject) {
         super(tp, params);
     }
 
@@ -1620,7 +1727,7 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
         return GTPrimitiveType.TransmissionLine;
     }
 
-    setDefault(): Primitive<TransmissionLineParams> {
+    setDefault(): Primitive<TransmissionLineParams, TransmissionLineObject> {
         this.params = {
             type: "LGJ-400/35",
             sectionalArea: 425.24,
@@ -1633,7 +1740,7 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
         return this;
     }
 
-    public setParams(params: TransmissionLineParams): Primitive<TransmissionLineParams> {
+    public setParams(params: TransmissionLineParams): Primitive<TransmissionLineParams, TransmissionLineObject> {
         this.params = params;
         return this;
     }
@@ -1657,9 +1764,12 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
         throw new Error("Invalid parameters for TransmissionLine");
     }
 
-    fromObject(o: any): Primitive<TransmissionLineParams> {
+    fromObject(o?: TransmissionLineObject): Primitive<TransmissionLineParams, TransmissionLineObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             type: o['type'],
@@ -1673,9 +1783,10 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TransmissionLineObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['type', this.params.type],
             ['sectionalArea', this.params.sectionalArea],
             ['outsideDiameter', this.params.outsideDiameter],
@@ -1683,15 +1794,15 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
             ['coefficientOfElasticity', this.params.coefficientOfElasticity],
             ['expansionCoefficient', this.params.expansionCoefficient],
             ['ratedStrength', this.params.ratedStrength],
-        ]));
+        ])) as TransmissionLineObject;
     }
 }
 
 
 // 添加绝缘子Primitive类
-export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
+export class InsulatorPrimitive extends BasePrimitive<InsulatorParams, InsulatorObject> {
 
-    constructor(tp: TopoInstance, params?: InsulatorParams) {
+    constructor(tp: TopoInstance, params?: InsulatorObject) {
         super(tp, params);
     }
 
@@ -1699,7 +1810,7 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
         return GTPrimitiveType.Insulator;
     }
 
-    setDefault(): Primitive<InsulatorParams> {
+    setDefault(): Primitive<InsulatorParams, InsulatorObject> {
         this.params = {
             type: "XWP-70",
             subNum: 1,
@@ -1739,7 +1850,7 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
         return this;
     }
 
-    public setParams(params: InsulatorParams): Primitive<InsulatorParams> {
+    public setParams(params: InsulatorParams): Primitive<InsulatorParams, InsulatorObject> {
         this.params = params;
         return this;
     }
@@ -1757,10 +1868,44 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
         throw new Error("Invalid parameters for Insulator");
     }
 
-    fromObject(o: any): Primitive<InsulatorParams> {
+    fromObject(o?: InsulatorObject): Primitive<InsulatorParams, InsulatorObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let arrangement: ArrangementType = this.tp.ArrangementType.VERTICAL as any;
+        if (o['multiLink']?.arrangement === 'HORIZONTAL') {
+            arrangement = this.tp.ArrangementType.HORIZONTAL as any;
+        } else if (o['multiLink']?.arrangement === 'VERTICAL') {
+            arrangement = this.tp.ArrangementType.VERTICAL as any;
+        }
+
+        let material: InsulatorMaterial = this.tp.InsulatorMaterial.CERAMIC as any;
+        if (o['insulator']?.material === 'CERAMIC') {
+            material = this.tp.InsulatorMaterial.CERAMIC as any;
+        } else if (o['insulator']?.material === 'GLASS') {
+            material = this.tp.InsulatorMaterial.GLASS as any;
+        } else if (o['insulator']?.material === 'COMPOSITE') {
+            material = this.tp.InsulatorMaterial.COMPOSITE as any;
+        }
+
+        let application: ApplicationType = this.tp.ApplicationType.CONDUCTOR as any;
+        if (o['application'] === 'CONDUCTOR') {
+            application = this.tp.ApplicationType.CONDUCTOR as any;
+        } else if (o['application'] === 'GROUND_WIRE') {
+            application = this.tp.ApplicationType.GROUND_WIRE as any;
+        }
+
+        let stringType: StringType = this.tp.StringType.SUSPENSION as any;
+        if (o['stringType'] === 'SUSPENSION') {
+            stringType = this.tp.StringType.SUSPENSION as any;
+        } else if (o['stringType'] === 'TENSION') {
+            stringType = this.tp.StringType.TENSION as any;
+        }
+
         this.params = {
             type: o['type'],
             subNum: o['subNum'],
@@ -1779,14 +1924,14 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
             multiLink: {
                 count: o['multiLink']?.count,
                 spacing: o['multiLink']?.spacing,
-                arrangement: o['multiLink']?.arrangement
+                arrangement: arrangement
             },
             insulator: {
                 radius: o['insulator']?.radius,
                 height: o['insulator']?.height,
                 leftCount: o['insulator']?.leftCount,
                 rightCount: o['insulator']?.rightCount,
-                material: o['insulator']?.material
+                material: material
             },
             gradingRing: {
                 count: o['gradingRing']?.count,
@@ -1794,15 +1939,45 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
                 height: o['gradingRing']?.height,
                 radius: o['gradingRing']?.radius
             },
-            application: o['application'],
-            stringType: o['stringType']
+            application: application,
+            stringType: stringType
         };
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): InsulatorObject | undefined {
+
+        let arrangement: string = 'VERTICAL';
+        if (this.params.multiLink.arrangement === this.tp.ArrangementType.HORIZONTAL) {
+            arrangement = 'HORIZONTAL';
+        } else if (this.params.multiLink.arrangement === this.tp.ArrangementType.VERTICAL) {
+            arrangement = 'VERTICAL';
+        }
+        let material: string = 'CERAMIC';
+        if (this.params.insulator.material === this.tp.InsulatorMaterial.GLASS) {
+            material = 'GLASS';
+        } else if (this.params.insulator.material === this.tp.InsulatorMaterial.COMPOSITE) {
+            material = 'COMPOSITE';
+        } else if (this.params.insulator.material === this.tp.InsulatorMaterial.CERAMIC) {
+            material = 'CERAMIC';
+        }
+
+        let application: string = 'CONDUCTOR';
+        if (this.params.application === this.tp.ApplicationType.GROUND_WIRE) {
+            application = 'GROUND_WIRE';
+        } else if (this.params.application === this.tp.ApplicationType.CONDUCTOR) {
+            application = 'CONDUCTOR';
+        }
+        let stringType: string = 'SUSPENSION';
+        if (this.params.stringType === this.tp.StringType.TENSION) {
+            stringType = 'TENSION';
+        } else if (this.params.stringType === this.tp.StringType.SUSPENSION) {
+            stringType = 'SUSPENSION';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['type', this.params.type],
             ['subNum', this.params.subNum],
             ['subType', this.params.subType],
@@ -1820,14 +1995,14 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
             ['multiLink', {
                 count: this.params.multiLink.count,
                 spacing: this.params.multiLink.spacing,
-                arrangement: this.params.multiLink.arrangement
+                arrangement: arrangement
             }],
             ['insulator', {
                 radius: this.params.insulator.radius,
                 height: this.params.insulator.height,
                 leftCount: this.params.insulator.leftCount,
                 rightCount: this.params.insulator.rightCount,
-                material: this.params.insulator.material
+                material: material
             }],
             ['gradingRing', {
                 count: this.params.gradingRing.count,
@@ -1835,15 +2010,15 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams> {
                 height: this.params.gradingRing.height,
                 radius: this.params.gradingRing.radius
             }],
-            ['application', this.params.application],
-            ['stringType', this.params.stringType]
-        ]));
+            ['application', application],
+            ['stringType', stringType]
+        ])) as InsulatorObject;
     }
 }
 
-export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
+export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTowerObject> {
 
-    constructor(tp: TopoInstance, params?: PoleTowerParams) {
+    constructor(tp: TopoInstance, params?: PoleTowerObject) {
         super(tp, params);
     }
 
@@ -1851,7 +2026,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
         return GTPrimitiveType.PoleTower;
     }
 
-    setDefault(): Primitive<PoleTowerParams> {
+    setDefault(): Primitive<PoleTowerParams, PoleTowerObject> {
         this.params = {
             heights: [{
                 value: 18.0,
@@ -1895,7 +2070,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
         return this;
     }
 
-    public setParams(params: PoleTowerParams): Primitive<PoleTowerParams> {
+    public setParams(params: PoleTowerParams): Primitive<PoleTowerParams, PoleTowerObject> {
         this.params = params;
         return this;
     }
@@ -1914,9 +2089,12 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
         throw new Error("Invalid parameters for PoleTower");
     }
 
-    fromObject(o: any): Primitive<PoleTowerParams> {
+    fromObject(o?: PoleTowerObject): Primitive<PoleTowerParams, PoleTowerObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             heights: o['heights']?.map((h: any) => ({
@@ -1964,9 +2142,10 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PoleTowerObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['heights', this.params.heights.map(h => ({
                 value: h.value,
                 bodyId: h.bodyId,
@@ -2028,14 +2207,14 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams> {
                     z: a.position.Z()
                 }
             }))]
-        ]));
+        ])) as PoleTowerObject;
     }
 }
 
 
-export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorParams> {
+export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorParams, SingleHookAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: TripleHookAnchorParams) {
+    constructor(tp: TopoInstance, params?: SingleHookAnchorObject) {
         super(tp, params);
     }
 
@@ -2043,7 +2222,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         return GTPrimitiveType.TripleHookAnchor;
     }
 
-    setDefault(): Primitive<TripleHookAnchorParams> {
+    setDefault(): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
         this.params = {
             boltDiameter: 0.24,
             exposedLength: 0.2,
@@ -2063,7 +2242,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         return this;
     }
 
-    public setParams(params: TripleHookAnchorParams): Primitive<TripleHookAnchorParams> {
+    public setParams(params: TripleHookAnchorParams): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
         this.params = params;
         return this;
     }
@@ -2093,9 +2272,12 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         throw new Error("Invalid parameters for TripleHookAnchor");
     }
 
-    fromObject(o: any): Primitive<TripleHookAnchorParams> {
+    fromObject(o?: SingleHookAnchorObject): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             boltDiameter: o['boltDiameter'],
@@ -2116,9 +2298,10 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SingleHookAnchorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['boltDiameter', this.params.boltDiameter],
             ['exposedLength', this.params.exposedLength],
             ['nutCount', this.params.nutCount],
@@ -2133,13 +2316,13 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
             ['hookStraightLengthB', this.params.hookStraightLengthB],
             ['hookDiameter', this.params.hookDiameter],
             ['anchorBarDiameter', this.params.anchorBarDiameter]
-        ]));
+        ])) as SingleHookAnchorObject;
     }
 }
 
-export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorParams> {
+export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorParams, TripleHookAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: SingleHookAnchorParams) {
+    constructor(tp: TopoInstance, params?: TripleHookAnchorObject) {
         super(tp, params);
     }
 
@@ -2147,7 +2330,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         return GTPrimitiveType.SingleHookAnchor;
     }
 
-    setDefault(): Primitive<SingleHookAnchorParams> {
+    setDefault(): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
         this.params = {
             boltDiameter: 0.24,
             exposedLength: 0.2,
@@ -2165,7 +2348,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         return this;
     }
 
-    public setParams(params: SingleHookAnchorParams): Primitive<SingleHookAnchorParams> {
+    public setParams(params: SingleHookAnchorParams): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
         this.params = params;
         return this;
     }
@@ -2193,9 +2376,12 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         throw new Error("Invalid parameters for SingleHookAnchor");
     }
 
-    fromObject(o: any): Primitive<SingleHookAnchorParams> {
+    fromObject(o: any): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             boltDiameter: o['boltDiameter'],
@@ -2214,9 +2400,10 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TripleHookAnchorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['boltDiameter', this.params.boltDiameter],
             ['exposedLength', this.params.exposedLength],
             ['nutCount', this.params.nutCount],
@@ -2229,13 +2416,13 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
             ['anchorLength', this.params.anchorLength],
             ['hookStraightLength', this.params.hookStraightLength],
             ['hookDiameter', this.params.hookDiameter]
-        ]));
+        ])) as TripleHookAnchorObject;
     }
 }
 
-export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams> {
+export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, RibbedAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: RibbedAnchorParams) {
+    constructor(tp: TopoInstance, params?: RibbedAnchorObject) {
         super(tp, params);
     }
 
@@ -2243,7 +2430,7 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams> {
         return GTPrimitiveType.RibbedAnchor;
     }
 
-    setDefault(): Primitive<RibbedAnchorParams> {
+    setDefault(): Primitive<RibbedAnchorParams, RibbedAnchorObject> {
         this.params = {
             boltDiameter: 0.2,
             exposedLength: 0.4,
@@ -2265,7 +2452,7 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams> {
         return this;
     }
 
-    public setParams(params: RibbedAnchorParams): Primitive<RibbedAnchorParams> {
+    public setParams(params: RibbedAnchorParams): Primitive<RibbedAnchorParams, RibbedAnchorObject> {
         this.params = params;
         return this;
     }
@@ -2290,9 +2477,12 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams> {
         throw new Error("Invalid parameters for RibbedAnchor");
     }
 
-    fromObject(o: any): Primitive<RibbedAnchorParams> {
+    fromObject(o?: RibbedAnchorObject): Primitive<RibbedAnchorParams, RibbedAnchorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             boltDiameter: o['boltDiameter'],
@@ -2315,9 +2505,10 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RibbedAnchorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['boltDiameter', this.params.boltDiameter],
             ['exposedLength', this.params.exposedLength],
             ['nutCount', this.params.nutCount],
@@ -2334,13 +2525,13 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams> {
             ['basePlateThickness', this.params.basePlateThickness],
             ['ribHeight', this.params.ribHeight],
             ['ribThickness', this.params.ribThickness]
-        ]));
+        ])) as RibbedAnchorObject;
     }
 }
 
-export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams> {
+export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: NutAnchorParams) {
+    constructor(tp: TopoInstance, params?: NutAnchorObject) {
         super(tp, params);
     }
 
@@ -2348,7 +2539,7 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams> {
         return GTPrimitiveType.NutAnchor;
     }
 
-    setDefault(): Primitive<NutAnchorParams> {
+    setDefault(): Primitive<NutAnchorParams, NutAnchorObject> {
         this.params = {
             boltDiameter: 0.2,
             exposedLength: 0.4,
@@ -2367,7 +2558,7 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams> {
         return this;
     }
 
-    public setParams(params: NutAnchorParams): Primitive<NutAnchorParams> {
+    public setParams(params: NutAnchorParams): Primitive<NutAnchorParams, NutAnchorObject> {
         this.params = params;
         return this;
     }
@@ -2396,9 +2587,12 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams> {
         throw new Error("Invalid parameters for NutAnchor");
     }
 
-    fromObject(o: any): Primitive<NutAnchorParams> {
+    fromObject(o: any): Primitive<NutAnchorParams, NutAnchorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             boltDiameter: o['boltDiameter'],
@@ -2418,9 +2612,10 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): NutAnchorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['boltDiameter', this.params.boltDiameter],
             ['exposedLength', this.params.exposedLength],
             ['nutCount', this.params.nutCount],
@@ -2434,14 +2629,14 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams> {
             ['basePlateSize', this.params.basePlateSize],
             ['basePlateThickness', this.params.basePlateThickness],
             ['boltToPlateDistance', this.params.boltToPlateDistance]
-        ]));
+        ])) as NutAnchorObject;
     }
 }
 
 
-export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParams> {
+export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParams, TripleArmAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: TripleArmAnchorParams) {
+    constructor(tp: TopoInstance, params?: TripleArmAnchorObject) {
         super(tp, params);
     }
 
@@ -2449,7 +2644,7 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
         return GTPrimitiveType.TripleArmAnchor;
     }
 
-    setDefault(): Primitive<TripleArmAnchorParams> {
+    setDefault(): Primitive<TripleArmAnchorParams, TripleArmAnchorObject> {
         this.params = {
             boltDiameter: 0.2,
             exposedLength: 0.4,
@@ -2469,7 +2664,7 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
         return this;
     }
 
-    public setParams(params: TripleArmAnchorParams): Primitive<TripleArmAnchorParams> {
+    public setParams(params: TripleArmAnchorParams): Primitive<TripleArmAnchorParams, TripleArmAnchorObject> {
         this.params = params;
         return this;
     }
@@ -2499,9 +2694,12 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
         throw new Error("Invalid parameters for TripleArmAnchor");
     }
 
-    fromObject(o: any): Primitive<TripleArmAnchorParams> {
+    fromObject(o?: TripleArmAnchorObject): Primitive<TripleArmAnchorParams, TripleArmAnchorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             boltDiameter: o['boltDiameter'],
@@ -2522,9 +2720,10 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TripleArmAnchorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['boltDiameter', this.params.boltDiameter],
             ['exposedLength', this.params.exposedLength],
             ['nutCount', this.params.nutCount],
@@ -2539,13 +2738,13 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
             ['armStraightLength', this.params.armStraightLength],
             ['armBendLength', this.params.armBendLength],
             ['armBendAngle', this.params.armBendAngle]
-        ]));
+        ])) as TripleArmAnchorObject;
     }
 }
 
-export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPlateAnchorParams> {
+export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPlateAnchorParams, PositioningPlateAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: PositioningPlateAnchorParams) {
+    constructor(tp: TopoInstance, params?: PositioningPlateAnchorObject) {
         super(tp, params);
     }
 
@@ -2553,7 +2752,7 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
         return GTPrimitiveType.PositioningPlateAnchor;
     }
 
-    setDefault(): Primitive<PositioningPlateAnchorParams> {
+    setDefault(): Primitive<PositioningPlateAnchorParams, PositioningPlateAnchorObject> {
         this.params = {
             boltDiameter: 0.2,
             exposedLength: 0.4,
@@ -2574,7 +2773,7 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
         return this;
     }
 
-    public setParams(params: PositioningPlateAnchorParams): Primitive<PositioningPlateAnchorParams> {
+    public setParams(params: PositioningPlateAnchorParams): Primitive<PositioningPlateAnchorParams, PositioningPlateAnchorObject> {
         this.params = params;
         return this;
     }
@@ -2605,9 +2804,12 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
         throw new Error("Invalid parameters for PositioningPlateAnchor");
     }
 
-    fromObject(o: any): Primitive<PositioningPlateAnchorParams> {
+    fromObject(o?: PositioningPlateAnchorObject): Primitive<PositioningPlateAnchorParams, PositioningPlateAnchorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             boltDiameter: o['boltDiameter'],
@@ -2629,9 +2831,10 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PositioningPlateAnchorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['boltDiameter', this.params.boltDiameter],
             ['exposedLength', this.params.exposedLength],
             ['nutCount', this.params.nutCount],
@@ -2647,13 +2850,13 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
             ['toBaseDistance', this.params.toBaseDistance],
             ['toBottomDistance', this.params.toBottomDistance],
             ['groutHoleDiameter', this.params.groutHoleDiameter]
-        ]));
+        ])) as PositioningPlateAnchorObject;
     }
 }
 
-export class StubAnglePrimitive extends BasePrimitive<StubAngleParams> {
+export class StubAnglePrimitive extends BasePrimitive<StubAngleParams, StubAngleObject> {
 
-    constructor(tp: TopoInstance, params?: StubAngleParams) {
+    constructor(tp: TopoInstance, params?: StubAngleObject) {
         super(tp, params);
     }
 
@@ -2661,7 +2864,7 @@ export class StubAnglePrimitive extends BasePrimitive<StubAngleParams> {
         return GTPrimitiveType.StubAngle;
     }
 
-    setDefault(): Primitive<StubAngleParams> {
+    setDefault(): Primitive<StubAngleParams, StubAngleObject> {
         this.params = {
             legWidth: 0.1,
             thickness: 0.01,
@@ -2672,7 +2875,7 @@ export class StubAnglePrimitive extends BasePrimitive<StubAngleParams> {
         return this;
     }
 
-    public setParams(params: StubAngleParams): Primitive<StubAngleParams> {
+    public setParams(params: StubAngleParams): Primitive<StubAngleParams, StubAngleObject> {
         this.params = params;
         return this;
     }
@@ -2693,9 +2896,12 @@ export class StubAnglePrimitive extends BasePrimitive<StubAngleParams> {
         throw new Error("Invalid parameters for StubAngle");
     }
 
-    fromObject(o: any): Primitive<StubAngleParams> {
+    fromObject(o?: StubAngleObject): Primitive<StubAngleParams, StubAngleObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             legWidth: o['legWidth'],
@@ -2707,21 +2913,22 @@ export class StubAnglePrimitive extends BasePrimitive<StubAngleParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): StubAngleObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['legWidth', this.params.legWidth],
             ['thickness', this.params.thickness],
             ['slope', this.params.slope],
             ['exposedLength', this.params.exposedLength],
             ['anchorLength', this.params.anchorLength]
-        ]));
+        ])) as StubAngleObject;
     }
 }
 
-export class StubTubePrimitive extends BasePrimitive<StubTubeParams> {
+export class StubTubePrimitive extends BasePrimitive<StubTubeParams, StubTubeObject> {
 
-    constructor(tp: TopoInstance, params?: StubTubeParams) {
+    constructor(tp: TopoInstance, params?: StubTubeObject) {
         super(tp, params);
     }
 
@@ -2729,7 +2936,7 @@ export class StubTubePrimitive extends BasePrimitive<StubTubeParams> {
         return GTPrimitiveType.StubTube;
     }
 
-    setDefault(): Primitive<StubTubeParams> {
+    setDefault(): Primitive<StubTubeParams, StubTubeObject> {
         this.params = {
             diameter: 0.6,
             thickness: 0.1,
@@ -2740,7 +2947,7 @@ export class StubTubePrimitive extends BasePrimitive<StubTubeParams> {
         return this;
     }
 
-    public setParams(params: StubTubeParams): Primitive<StubTubeParams> {
+    public setParams(params: StubTubeParams): Primitive<StubTubeParams, StubTubeObject> {
         this.params = params;
         return this;
     }
@@ -2761,9 +2968,12 @@ export class StubTubePrimitive extends BasePrimitive<StubTubeParams> {
         throw new Error("Invalid parameters for StubTube");
     }
 
-    fromObject(o: any): Primitive<StubTubeParams> {
+    fromObject(o?: StubTubeObject): Primitive<StubTubeParams, StubTubeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             diameter: o['diameter'],
@@ -2775,15 +2985,16 @@ export class StubTubePrimitive extends BasePrimitive<StubTubeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): StubTubeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['diameter', this.params.diameter],
             ['thickness', this.params.thickness],
             ['slope', this.params.slope],
             ['exposedLength', this.params.exposedLength],
             ['anchorLength', this.params.anchorLength]
-        ]));
+        ])) as StubTubeObject;
     }
 }
 

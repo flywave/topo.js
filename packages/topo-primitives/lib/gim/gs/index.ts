@@ -31,7 +31,40 @@ import {
     ChannelSteelParams,
     TSteelParams,
     TopoInstance,
+    CurveType,
 } from "topo-wasm";
+import {
+    AngleSteelObject,
+    CableObject,
+    ChannelSteelObject,
+    CircularFixedPlateObject,
+    CircularGasketObject,
+    ConePorcelainBushingObject,
+    CuboidObject,
+    CurveCableObject,
+    CylinderObject,
+    DiamondFrustumObject,
+    EccentricTruncatedConeObject,
+    EllipticRingObject,
+    InsulatorStringObject,
+    IShapedSteelObject,
+    OffsetRectangularTableObject,
+    PorcelainBushingObject,
+    RectangularHolePlateObject,
+    RectangularRingObject,
+    RingObject,
+    RotationalEllipsoidObject,
+    SharpBentCylinderObject,
+    SphereObject,
+    SquareGasketObject,
+    StretchedBodyObject,
+    TableGasketObject,
+    TerminalBlockObject,
+    TruncatedConeObject,
+    TSteelObject,
+    VTypeInsulatorObject,
+    WireObject,
+} from "../../types/gim-gs";
 import { BasePrimitive, Primitive } from "../../primitive";
 
 export enum GSPrimitiveType {
@@ -67,9 +100,9 @@ export enum GSPrimitiveType {
     TSteel = "GIM/GS/TSteel",
 }
 
-export class SpherePrimitive extends BasePrimitive<SphereParams> {
+export class SpherePrimitive extends BasePrimitive<SphereParams, SphereObject> {
 
-    constructor(tp: TopoInstance, params?: SphereParams) {
+    constructor(tp: TopoInstance, params?: SphereObject) {
         super(tp, params);
     }
 
@@ -77,12 +110,12 @@ export class SpherePrimitive extends BasePrimitive<SphereParams> {
         return GSPrimitiveType.Sphere;
     }
 
-    setDefault(): Primitive<SphereParams> {
+    setDefault(): Primitive<SphereParams, SphereObject> {
         this.params.radius = 10;
         return this;
     }
 
-    public setParams(params: SphereParams): Primitive<SphereParams> {
+    public setParams(params: SphereParams): Primitive<SphereParams, SphereObject> {
         this.params = params;
         return this;
     }
@@ -98,9 +131,12 @@ export class SpherePrimitive extends BasePrimitive<SphereParams> {
         }
     }
 
-    fromObject(o: any): Primitive<SphereParams> {
+    fromObject(o?: SphereObject): Primitive<SphereParams, SphereObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             radius: o['radius'],
@@ -108,17 +144,18 @@ export class SpherePrimitive extends BasePrimitive<SphereParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SphereObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['radius', this.params.radius],
-        ]));
+        ])) as SphereObject;
     }
 };
 
-export class RotationalEllipsoidPrimitive extends BasePrimitive<RotationalEllipsoidParams> {
+export class RotationalEllipsoidPrimitive extends BasePrimitive<RotationalEllipsoidParams, RotationalEllipsoidObject> {
 
-    constructor(tp: TopoInstance, params?: RotationalEllipsoidParams) {
+    constructor(tp: TopoInstance, params?: RotationalEllipsoidObject) {
         super(tp, params);
     }
 
@@ -126,14 +163,14 @@ export class RotationalEllipsoidPrimitive extends BasePrimitive<RotationalEllips
         return GSPrimitiveType.RotationalEllipsoid;
     }
 
-    setDefault(): Primitive<RotationalEllipsoidParams> {
+    setDefault(): Primitive<RotationalEllipsoidParams, RotationalEllipsoidObject> {
         this.params.polarRadius = 10.0;
         this.params.equatorialRadius = 5.0;
         this.params.height = 10.0;
         return this;
     }
 
-    public setParams(params: RotationalEllipsoidParams): Primitive<RotationalEllipsoidParams> {
+    public setParams(params: RotationalEllipsoidParams): Primitive<RotationalEllipsoidParams, RotationalEllipsoidObject> {
         this.params = params;
         return this;
     }
@@ -152,9 +189,12 @@ export class RotationalEllipsoidPrimitive extends BasePrimitive<RotationalEllips
         throw new Error("Invalid parameters for RotationalEllipsoid");
     }
 
-    fromObject(o: any): Primitive<RotationalEllipsoidParams> {
+    fromObject(o?: RotationalEllipsoidObject): Primitive<RotationalEllipsoidParams, RotationalEllipsoidObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             polarRadius: o['polarRadius'],
@@ -164,19 +204,20 @@ export class RotationalEllipsoidPrimitive extends BasePrimitive<RotationalEllips
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RotationalEllipsoidObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['polarRadius', this.params.polarRadius],
             ['equatorialRadius', this.params.equatorialRadius],
             ['height', this.params.height],
-        ]));
+        ])) as RotationalEllipsoidObject;
     }
 };
 
-export class CuboidPrimitive extends BasePrimitive<CuboidParams> {
+export class CuboidPrimitive extends BasePrimitive<CuboidParams, CuboidObject> {
 
-    constructor(tp: TopoInstance, params?: CuboidParams) {
+    constructor(tp: TopoInstance, params?: CuboidObject) {
         super(tp, params);
     }
 
@@ -184,14 +225,14 @@ export class CuboidPrimitive extends BasePrimitive<CuboidParams> {
         return GSPrimitiveType.Cuboid;
     }
 
-    setDefault(): Primitive<CuboidParams> {
+    setDefault(): Primitive<CuboidParams, CuboidObject> {
         this.params.length = 10.0;
         this.params.width = 5.0;
         this.params.height = 3.0;
         return this;
     }
 
-    public setParams(params: CuboidParams): Primitive<CuboidParams> {
+    public setParams(params: CuboidParams): Primitive<CuboidParams, CuboidObject> {
         this.params = params;
         return this;
     }
@@ -209,9 +250,12 @@ export class CuboidPrimitive extends BasePrimitive<CuboidParams> {
         throw new Error("Length, width and height must be positive");
     }
 
-    fromObject(o: any): Primitive<CuboidParams> {
+    fromObject(o?: CuboidObject): Primitive<CuboidParams, CuboidObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -221,19 +265,20 @@ export class CuboidPrimitive extends BasePrimitive<CuboidParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CuboidObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['height', this.params.height]
-        ]));
+        ])) as CuboidObject;
     }
 };
 
-export class DiamondFrustumPrimitive extends BasePrimitive<DiamondFrustumParams> {
+export class DiamondFrustumPrimitive extends BasePrimitive<DiamondFrustumParams, DiamondFrustumObject> {
 
-    constructor(tp: TopoInstance, params?: DiamondFrustumParams) {
+    constructor(tp: TopoInstance, params?: DiamondFrustumObject) {
         super(tp, params);
     }
 
@@ -241,7 +286,7 @@ export class DiamondFrustumPrimitive extends BasePrimitive<DiamondFrustumParams>
         return GSPrimitiveType.DiamondFrustum;
     }
 
-    setDefault(): Primitive<DiamondFrustumParams> {
+    setDefault(): Primitive<DiamondFrustumParams, DiamondFrustumObject> {
         this.params.topDiag1 = 10.0;
         this.params.topDiag2 = 7.5;
         this.params.bottomDiag1 = 20.0;
@@ -250,7 +295,7 @@ export class DiamondFrustumPrimitive extends BasePrimitive<DiamondFrustumParams>
         return this;
     }
 
-    public setParams(params: DiamondFrustumParams): Primitive<DiamondFrustumParams> {
+    public setParams(params: DiamondFrustumParams): Primitive<DiamondFrustumParams, DiamondFrustumObject> {
         this.params = params;
         return this;
     }
@@ -270,9 +315,12 @@ export class DiamondFrustumPrimitive extends BasePrimitive<DiamondFrustumParams>
         throw new Error("Invalid parameters for DiamondFrustum");
     }
 
-    fromObject(o: any): Primitive<DiamondFrustumParams> {
+    fromObject(o?: DiamondFrustumObject): Primitive<DiamondFrustumParams, DiamondFrustumObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             topDiag1: o['topDiag1'],
@@ -284,21 +332,22 @@ export class DiamondFrustumPrimitive extends BasePrimitive<DiamondFrustumParams>
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): DiamondFrustumObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['topDiag1', this.params.topDiag1],
             ['topDiag2', this.params.topDiag2],
             ['bottomDiag1', this.params.bottomDiag1],
             ['bottomDiag2', this.params.bottomDiag2],
             ['height', this.params.height]
-        ]));
+        ])) as DiamondFrustumObject;
     }
 };
 
-export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectangularTableParams> {
+export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectangularTableParams, OffsetRectangularTableObject> {
 
-    constructor(tp: TopoInstance, params?: OffsetRectangularTableParams) {
+    constructor(tp: TopoInstance, params?: OffsetRectangularTableObject) {
         super(tp, params);
     }
 
@@ -306,7 +355,7 @@ export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectang
         return GSPrimitiveType.OffsetRectangularTable;
     }
 
-    setDefault(): Primitive<OffsetRectangularTableParams> {
+    setDefault(): Primitive<OffsetRectangularTableParams, OffsetRectangularTableObject> {
         this.params.topLength = 15.0;
         this.params.topWidth = 10.0;
         this.params.bottomLength = 20.0;
@@ -317,7 +366,7 @@ export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectang
         return this;
     }
 
-    public setParams(params: OffsetRectangularTableParams): Primitive<OffsetRectangularTableParams> {
+    public setParams(params: OffsetRectangularTableParams): Primitive<OffsetRectangularTableParams, OffsetRectangularTableObject> {
         this.params = params;
         return this;
     }
@@ -337,9 +386,12 @@ export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectang
         throw new Error("Invalid parameters for OffsetRectangularTable");
     }
 
-    fromObject(o: any): Primitive<OffsetRectangularTableParams> {
+    fromObject(o?: OffsetRectangularTableObject): Primitive<OffsetRectangularTableParams, OffsetRectangularTableObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             topLength: o['topLength'],
@@ -353,9 +405,10 @@ export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectang
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): OffsetRectangularTableObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['topLength', this.params.topLength],
             ['topWidth', this.params.topWidth],
             ['bottomLength', this.params.bottomLength],
@@ -363,13 +416,13 @@ export class OffsetRectangularTablePrimitive extends BasePrimitive<OffsetRectang
             ['height', this.params.height],
             ['xOffset', this.params.xOffset],
             ['yOffset', this.params.yOffset]
-        ]));
+        ])) as OffsetRectangularTableObject;
     }
 };
 
-export class CylinderPrimitive extends BasePrimitive<CylinderParams> {
+export class CylinderPrimitive extends BasePrimitive<CylinderParams, CylinderObject> {
 
-    constructor(tp: TopoInstance, params?: CylinderParams) {
+    constructor(tp: TopoInstance, params?: CylinderObject) {
         super(tp, params);
     }
 
@@ -377,13 +430,13 @@ export class CylinderPrimitive extends BasePrimitive<CylinderParams> {
         return GSPrimitiveType.Cylinder;
     }
 
-    setDefault(): Primitive<CylinderParams> {
+    setDefault(): Primitive<CylinderParams, CylinderObject> {
         this.params.radius = 15.0;
         this.params.height = 25.0;
         return this;
     }
 
-    public setParams(params: CylinderParams): Primitive<CylinderParams> {
+    public setParams(params: CylinderParams): Primitive<CylinderParams, CylinderObject> {
         this.params = params;
         return this;
     }
@@ -400,9 +453,12 @@ export class CylinderPrimitive extends BasePrimitive<CylinderParams> {
         throw new Error("Radius and height must be positive");
     }
 
-    fromObject(o: any): Primitive<CylinderParams> {
+    fromObject(o?: CylinderObject): Primitive<CylinderParams, CylinderObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             radius: o['radius'],
@@ -411,18 +467,19 @@ export class CylinderPrimitive extends BasePrimitive<CylinderParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CylinderObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['radius', this.params.radius],
             ['height', this.params.height]
-        ]));
+        ])) as CylinderObject;
     }
 };
 
-export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderParams> {
+export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderParams, SharpBentCylinderObject> {
 
-    constructor(tp: TopoInstance, params?: SharpBentCylinderParams) {
+    constructor(tp: TopoInstance, params?: SharpBentCylinderObject) {
         super(tp, params);
     }
 
@@ -430,14 +487,14 @@ export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderP
         return GSPrimitiveType.SharpBentCylinder;
     }
 
-    setDefault(): Primitive<SharpBentCylinderParams> {
+    setDefault(): Primitive<SharpBentCylinderParams, SharpBentCylinderObject> {
         this.params.radius = 5.0;
         this.params.length = 70.0;
         this.params.bendAngle = Math.PI / 4;
         return this;
     }
 
-    public setParams(params: SharpBentCylinderParams): Primitive<SharpBentCylinderParams> {
+    public setParams(params: SharpBentCylinderParams): Primitive<SharpBentCylinderParams, SharpBentCylinderObject> {
         this.params = params;
         return this;
     }
@@ -456,9 +513,12 @@ export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderP
         throw new Error("Invalid parameters for SharpBentCylinder");
     }
 
-    fromObject(o: any): Primitive<SharpBentCylinderParams> {
+    fromObject(o?: SharpBentCylinderObject): Primitive<SharpBentCylinderParams, SharpBentCylinderObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             radius: o['radius'],
@@ -468,19 +528,20 @@ export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderP
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SharpBentCylinderObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['radius', this.params.radius],
             ['length', this.params.length],
             ['bendAngle', this.params.bendAngle]
-        ]));
+        ])) as SharpBentCylinderObject;
     }
 };
 
-export class TruncatedConePrimitive extends BasePrimitive<TruncatedConeParams> {
+export class TruncatedConePrimitive extends BasePrimitive<TruncatedConeParams, TruncatedConeObject> {
 
-    constructor(tp: TopoInstance, params?: TruncatedConeParams) {
+    constructor(tp: TopoInstance, params?: TruncatedConeObject) {
         super(tp, params);
     }
 
@@ -488,14 +549,14 @@ export class TruncatedConePrimitive extends BasePrimitive<TruncatedConeParams> {
         return GSPrimitiveType.TruncatedCone;
     }
 
-    setDefault(): Primitive<TruncatedConeParams> {
+    setDefault(): Primitive<TruncatedConeParams, TruncatedConeObject> {
         this.params.topRadius = 5.0;
         this.params.bottomRadius = 10.0;
         this.params.height = 15.0;
         return this;
     }
 
-    public setParams(params: TruncatedConeParams): Primitive<TruncatedConeParams> {
+    public setParams(params: TruncatedConeParams): Primitive<TruncatedConeParams, TruncatedConeObject> {
         this.params = params;
         return this;
     }
@@ -513,9 +574,12 @@ export class TruncatedConePrimitive extends BasePrimitive<TruncatedConeParams> {
         throw new Error("Invalid parameters for TruncatedCone");
     }
 
-    fromObject(o: any): Primitive<TruncatedConeParams> {
+    fromObject(o?: TruncatedConeObject): Primitive<TruncatedConeParams, TruncatedConeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             topRadius: o['topRadius'],
@@ -525,19 +589,20 @@ export class TruncatedConePrimitive extends BasePrimitive<TruncatedConeParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TruncatedConeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['topRadius', this.params.topRadius],
             ['bottomRadius', this.params.bottomRadius],
             ['height', this.params.height]
-        ]));
+        ])) as TruncatedConeObject;
     }
 };
 
-export class EccentricTruncatedConePrimitive extends BasePrimitive<EccentricTruncatedConeParams> {
+export class EccentricTruncatedConePrimitive extends BasePrimitive<EccentricTruncatedConeParams, EccentricTruncatedConeObject> {
 
-    constructor(tp: TopoInstance, params?: EccentricTruncatedConeParams) {
+    constructor(tp: TopoInstance, params?: EccentricTruncatedConeObject) {
         super(tp, params);
     }
 
@@ -545,7 +610,7 @@ export class EccentricTruncatedConePrimitive extends BasePrimitive<EccentricTrun
         return GSPrimitiveType.EccentricTruncatedCone;
     }
 
-    setDefault(): Primitive<EccentricTruncatedConeParams> {
+    setDefault(): Primitive<EccentricTruncatedConeParams, EccentricTruncatedConeObject> {
         this.params.topRadius = 5.0;
         this.params.bottomRadius = 10.0;
         this.params.height = 15.0;
@@ -554,7 +619,7 @@ export class EccentricTruncatedConePrimitive extends BasePrimitive<EccentricTrun
         return this;
     }
 
-    public setParams(params: EccentricTruncatedConeParams): Primitive<EccentricTruncatedConeParams> {
+    public setParams(params: EccentricTruncatedConeParams): Primitive<EccentricTruncatedConeParams, EccentricTruncatedConeObject> {
         this.params = params;
         return this;
     }
@@ -574,9 +639,12 @@ export class EccentricTruncatedConePrimitive extends BasePrimitive<EccentricTrun
         throw new Error("Invalid parameters for EccentricTruncatedCone");
     }
 
-    fromObject(o: any): Primitive<EccentricTruncatedConeParams> {
+    fromObject(o?: EccentricTruncatedConeObject): Primitive<EccentricTruncatedConeParams, EccentricTruncatedConeObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             topRadius: o['topRadius'],
@@ -588,21 +656,22 @@ export class EccentricTruncatedConePrimitive extends BasePrimitive<EccentricTrun
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): EccentricTruncatedConeObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['topRadius', this.params.topRadius],
             ['bottomRadius', this.params.bottomRadius],
             ['height', this.params.height],
             ['topXOffset', this.params.topXOffset],
             ['topYOffset', this.params.topYOffset]
-        ]));
+        ])) as EccentricTruncatedConeObject;
     }
 };
 
-export class RingPrimitive extends BasePrimitive<RingParams> {
+export class RingPrimitive extends BasePrimitive<RingParams, RingObject> {
 
-    constructor(tp: TopoInstance, params?: RingParams) {
+    constructor(tp: TopoInstance, params?: RingObject) {
         super(tp, params);
     }
 
@@ -610,14 +679,14 @@ export class RingPrimitive extends BasePrimitive<RingParams> {
         return GSPrimitiveType.Ring;
     }
 
-    setDefault(): Primitive<RingParams> {
+    setDefault(): Primitive<RingParams, RingObject> {
         this.params.ringRadius = 20.0;
         this.params.tubeRadius = 5.0;
         this.params.angle = Math.PI * 1.5;
         return this;
     }
 
-    public setParams(params: RingParams): Primitive<RingParams> {
+    public setParams(params: RingParams): Primitive<RingParams, RingObject> {
         this.params = params;
         return this;
     }
@@ -637,9 +706,12 @@ export class RingPrimitive extends BasePrimitive<RingParams> {
         throw new Error("Invalid parameters for Ring");
     }
 
-    fromObject(o: any): Primitive<RingParams> {
+    fromObject(o?: RingObject): Primitive<RingParams, RingObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             ringRadius: o['ringRadius'],
@@ -649,19 +721,20 @@ export class RingPrimitive extends BasePrimitive<RingParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RingObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['ringRadius', this.params.ringRadius],
             ['tubeRadius', this.params.tubeRadius],
             ['angle', this.params.angle]
-        ]));
+        ])) as RingObject;
     }
 };
 
-export class RectangularRingPrimitive extends BasePrimitive<RectangularRingParams> {
+export class RectangularRingPrimitive extends BasePrimitive<RectangularRingParams, RectangularRingObject> {
 
-    constructor(tp: TopoInstance, params?: RectangularRingParams) {
+    constructor(tp: TopoInstance, params?: RectangularRingObject) {
         super(tp, params);
     }
 
@@ -669,7 +742,7 @@ export class RectangularRingPrimitive extends BasePrimitive<RectangularRingParam
         return GSPrimitiveType.RectangularRing;
     }
 
-    setDefault(): Primitive<RectangularRingParams> {
+    setDefault(): Primitive<RectangularRingParams, RectangularRingObject> {
         this.params.tubeRadius = 5.0;
         this.params.filletRadius = 0.0;
         this.params.length = 100.0;
@@ -677,7 +750,7 @@ export class RectangularRingPrimitive extends BasePrimitive<RectangularRingParam
         return this;
     }
 
-    public setParams(params: RectangularRingParams): Primitive<RectangularRingParams> {
+    public setParams(params: RectangularRingParams): Primitive<RectangularRingParams, RectangularRingObject> {
         this.params = params;
         return this;
     }
@@ -698,9 +771,12 @@ export class RectangularRingPrimitive extends BasePrimitive<RectangularRingParam
         throw new Error("Invalid parameters for RectangularRing");
     }
 
-    fromObject(o: any): Primitive<RectangularRingParams> {
+    fromObject(o?: RectangularRingObject): Primitive<RectangularRingParams, RectangularRingObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             tubeRadius: o['tubeRadius'],
@@ -711,20 +787,21 @@ export class RectangularRingPrimitive extends BasePrimitive<RectangularRingParam
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RectangularRingObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['tubeRadius', this.params.tubeRadius],
             ['filletRadius', this.params.filletRadius],
             ['length', this.params.length],
             ['width', this.params.width]
-        ]));
+        ])) as RectangularRingObject;
     }
 };
 
-export class EllipticRingPrimitive extends BasePrimitive<EllipticRingParams> {
+export class EllipticRingPrimitive extends BasePrimitive<EllipticRingParams, EllipticRingObject> {
 
-    constructor(tp: TopoInstance, params?: EllipticRingParams) {
+    constructor(tp: TopoInstance, params?: EllipticRingObject) {
         super(tp, params);
     }
 
@@ -732,14 +809,14 @@ export class EllipticRingPrimitive extends BasePrimitive<EllipticRingParams> {
         return GSPrimitiveType.EllipticRing;
     }
 
-    setDefault(): Primitive<EllipticRingParams> {
+    setDefault(): Primitive<EllipticRingParams, EllipticRingObject> {
         this.params.tubeRadius = 3.0;
         this.params.majorRadius = 20.0;
         this.params.minorRadius = 10.0;
         return this;
     }
 
-    public setParams(params: EllipticRingParams): Primitive<EllipticRingParams> {
+    public setParams(params: EllipticRingParams): Primitive<EllipticRingParams, EllipticRingObject> {
         this.params = params;
         return this;
     }
@@ -758,9 +835,12 @@ export class EllipticRingPrimitive extends BasePrimitive<EllipticRingParams> {
         throw new Error("Invalid parameters for EllipticRing");
     }
 
-    fromObject(o: any): Primitive<EllipticRingParams> {
+    fromObject(o?: EllipticRingObject): Primitive<EllipticRingParams, EllipticRingObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             tubeRadius: o['tubeRadius'],
@@ -770,19 +850,20 @@ export class EllipticRingPrimitive extends BasePrimitive<EllipticRingParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): EllipticRingObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['tubeRadius', this.params.tubeRadius],
             ['majorRadius', this.params.majorRadius],
             ['minorRadius', this.params.minorRadius]
-        ]));
+        ])) as EllipticRingObject;
     }
 };
 
-export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams> {
+export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams, CircularGasketObject> {
 
-    constructor(tp: TopoInstance, params?: CircularGasketParams) {
+    constructor(tp: TopoInstance, params?: CircularGasketObject) {
         super(tp, params);
     }
 
@@ -790,7 +871,7 @@ export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams>
         return GSPrimitiveType.CircularGasket;
     }
 
-    setDefault(): Primitive<CircularGasketParams> {
+    setDefault(): Primitive<CircularGasketParams, CircularGasketObject> {
         this.params.outerRadius = 20.0;
         this.params.innerRadius = 15.0;
         this.params.height = 5.0;
@@ -798,7 +879,7 @@ export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams>
         return this;
     }
 
-    public setParams(params: CircularGasketParams): Primitive<CircularGasketParams> {
+    public setParams(params: CircularGasketParams): Primitive<CircularGasketParams, CircularGasketObject> {
         this.params = params;
         return this;
     }
@@ -818,9 +899,12 @@ export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams>
         throw new Error("Invalid parameters for CircularGasket");
     }
 
-    fromObject(o: any): Primitive<CircularGasketParams> {
+    fromObject(o?: CircularGasketObject): Primitive<CircularGasketParams, CircularGasketObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             outerRadius: o['outerRadius'],
@@ -831,20 +915,21 @@ export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams>
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CircularGasketObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['outerRadius', this.params.outerRadius],
             ['innerRadius', this.params.innerRadius],
             ['height', this.params.height],
             ['angle', this.params.angle]
-        ]));
+        ])) as CircularGasketObject;
     }
 };
 
-export class TableGasketPrimitive extends BasePrimitive<TableGasketParams> {
+export class TableGasketPrimitive extends BasePrimitive<TableGasketParams, TableGasketObject> {
 
-    constructor(tp: TopoInstance, params?: TableGasketParams) {
+    constructor(tp: TopoInstance, params?: TableGasketObject) {
         super(tp, params);
     }
 
@@ -852,7 +937,7 @@ export class TableGasketPrimitive extends BasePrimitive<TableGasketParams> {
         return GSPrimitiveType.TableGasket;
     }
 
-    setDefault(): Primitive<TableGasketParams> {
+    setDefault(): Primitive<TableGasketParams, TableGasketObject> {
         this.params.topRadius = 15.0;
         this.params.outerRadius = 20.0;
         this.params.innerRadius = 10.0;
@@ -861,7 +946,7 @@ export class TableGasketPrimitive extends BasePrimitive<TableGasketParams> {
         return this;
     }
 
-    public setParams(params: TableGasketParams): Primitive<TableGasketParams> {
+    public setParams(params: TableGasketParams): Primitive<TableGasketParams, TableGasketObject> {
         this.params = params;
         return this;
     }
@@ -882,9 +967,12 @@ export class TableGasketPrimitive extends BasePrimitive<TableGasketParams> {
         throw new Error("Invalid parameters for TableGasket");
     }
 
-    fromObject(o: any): Primitive<TableGasketParams> {
+    fromObject(o?: TableGasketObject): Primitive<TableGasketParams, TableGasketObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             topRadius: o['topRadius'],
@@ -896,21 +984,22 @@ export class TableGasketPrimitive extends BasePrimitive<TableGasketParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TableGasketObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['topRadius', this.params.topRadius],
             ['outerRadius', this.params.outerRadius],
             ['innerRadius', this.params.innerRadius],
             ['height', this.params.height],
             ['angle', this.params.angle]
-        ]));
+        ])) as TableGasketObject;
     }
 };
 
-export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams> {
+export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams, SquareGasketObject> {
 
-    constructor(tp: TopoInstance, params?: SquareGasketParams) {
+    constructor(tp: TopoInstance, params?: SquareGasketObject) {
         super(tp, params);
     }
 
@@ -918,7 +1007,7 @@ export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams> {
         return GSPrimitiveType.SquareGasket;
     }
 
-    setDefault(): Primitive<SquareGasketParams> {
+    setDefault(): Primitive<SquareGasketParams, SquareGasketObject> {
         this.params.outerLength = 30.0;
         this.params.outerWidth = 20.0;
         this.params.innerLength = 25.0;
@@ -929,7 +1018,7 @@ export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams> {
         return this;
     }
 
-    public setParams(params: SquareGasketParams): Primitive<SquareGasketParams> {
+    public setParams(params: SquareGasketParams): Primitive<SquareGasketParams, SquareGasketObject> {
         this.params = params;
         return this;
     }
@@ -951,9 +1040,12 @@ export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams> {
         throw new Error("Invalid parameters for SquareGasket");
     }
 
-    fromObject(o: any): Primitive<SquareGasketParams> {
+    fromObject(o?: SquareGasketObject): Primitive<SquareGasketParams, SquareGasketObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             outerLength: o['outerLength'],
@@ -967,9 +1059,10 @@ export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): SquareGasketObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['outerLength', this.params.outerLength],
             ['outerWidth', this.params.outerWidth],
             ['innerLength', this.params.innerLength],
@@ -977,13 +1070,13 @@ export class SquareGasketPrimitive extends BasePrimitive<SquareGasketParams> {
             ['height', this.params.height],
             ['cornerType', this.params.cornerType],
             ['cornerParam', this.params.cornerParam]
-        ]));
+        ])) as SquareGasketObject;
     }
 };
 
-export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams> {
+export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams, StretchedBodyObject> {
 
-    constructor(tp: TopoInstance, params?: StretchedBodyParams) {
+    constructor(tp: TopoInstance, params?: StretchedBodyObject) {
         super(tp, params);
     }
 
@@ -991,7 +1084,7 @@ export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams> {
         return GSPrimitiveType.StretchedBody;
     }
 
-    setDefault(): Primitive<StretchedBodyParams> {
+    setDefault(): Primitive<StretchedBodyParams, StretchedBodyObject> {
         this.params.points = [
             new this.tp.gp_Pnt_3(0, 0, 0),
             new this.tp.gp_Pnt_3(10, 0, 0),
@@ -1002,7 +1095,7 @@ export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams> {
         return this;
     }
 
-    public setParams(params: StretchedBodyParams): Primitive<StretchedBodyParams> {
+    public setParams(params: StretchedBodyParams): Primitive<StretchedBodyParams, StretchedBodyObject> {
         this.params = params;
         return this;
     }
@@ -1020,9 +1113,12 @@ export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams> {
         throw new Error("Invalid parameters for StretchedBody");
     }
 
-    fromObject(o: any): Primitive<StretchedBodyParams> {
+    fromObject(o?: StretchedBodyObject): Primitive<StretchedBodyParams, StretchedBodyObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             points: o['points'].map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
@@ -1032,19 +1128,20 @@ export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): StretchedBodyObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['points', this.params.points.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() }))],
             ['normal', { x: this.params.normal.X(), y: this.params.normal.Y(), z: this.params.normal.Z() }],
             ['length', this.params.length]
-        ]));
+        ])) as StretchedBodyObject;
     }
 };
 
-export class PorcelainBushingPrimitive extends BasePrimitive<PorcelainBushingParams> {
+export class PorcelainBushingPrimitive extends BasePrimitive<PorcelainBushingParams, PorcelainBushingObject> {
 
-    constructor(tp: TopoInstance, params?: PorcelainBushingParams) {
+    constructor(tp: TopoInstance, params?: PorcelainBushingObject) {
         super(tp, params);
     }
 
@@ -1052,7 +1149,7 @@ export class PorcelainBushingPrimitive extends BasePrimitive<PorcelainBushingPar
         return GSPrimitiveType.PorcelainBushing;
     }
 
-    setDefault(): Primitive<PorcelainBushingParams> {
+    setDefault(): Primitive<PorcelainBushingParams, PorcelainBushingObject> {
         this.params.height = 100.0;
         this.params.radius = 10.0;
         this.params.bigSkirtRadius = 15.0;
@@ -1061,7 +1158,7 @@ export class PorcelainBushingPrimitive extends BasePrimitive<PorcelainBushingPar
         return this;
     }
 
-    public setParams(params: PorcelainBushingParams): Primitive<PorcelainBushingParams> {
+    public setParams(params: PorcelainBushingParams): Primitive<PorcelainBushingParams, PorcelainBushingObject> {
         this.params = params;
         return this;
     }
@@ -1081,9 +1178,12 @@ export class PorcelainBushingPrimitive extends BasePrimitive<PorcelainBushingPar
         throw new Error("Invalid parameters for PorcelainBushing");
     }
 
-    fromObject(o: any): Primitive<PorcelainBushingParams> {
+    fromObject(o?: PorcelainBushingObject): Primitive<PorcelainBushingParams, PorcelainBushingObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
@@ -1095,21 +1195,22 @@ export class PorcelainBushingPrimitive extends BasePrimitive<PorcelainBushingPar
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): PorcelainBushingObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['radius', this.params.radius],
             ['bigSkirtRadius', this.params.bigSkirtRadius],
             ['smallSkirtRadius', this.params.smallSkirtRadius],
             ['count', this.params.count]
-        ]));
+        ])) as PorcelainBushingObject;
     }
 };
 
-export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBushingParams> {
+export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBushingParams, ConePorcelainBushingObject> {
 
-    constructor(tp: TopoInstance, params?: ConePorcelainBushingParams) {
+    constructor(tp: TopoInstance, params?: ConePorcelainBushingObject) {
         super(tp, params);
     }
 
@@ -1117,7 +1218,7 @@ export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBu
         return GSPrimitiveType.ConePorcelainBushing;
     }
 
-    setDefault(): Primitive<ConePorcelainBushingParams> {
+    setDefault(): Primitive<ConePorcelainBushingParams, ConePorcelainBushingObject> {
         this.params.height = 100.0;
         this.params.bottomRadius = 15.0;
         this.params.topRadius = 10.0;
@@ -1129,7 +1230,7 @@ export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBu
         return this;
     }
 
-    public setParams(params: ConePorcelainBushingParams): Primitive<ConePorcelainBushingParams> {
+    public setParams(params: ConePorcelainBushingParams): Primitive<ConePorcelainBushingParams, ConePorcelainBushingObject> {
         this.params = params;
         return this;
     }
@@ -1152,9 +1253,12 @@ export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBu
         throw new Error("Invalid parameters for ConePorcelainBushing");
     }
 
-    fromObject(o: any): Primitive<ConePorcelainBushingParams> {
+    fromObject(o?: ConePorcelainBushingObject): Primitive<ConePorcelainBushingParams, ConePorcelainBushingObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
@@ -1169,9 +1273,10 @@ export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBu
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ConePorcelainBushingObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['bottomRadius', this.params.bottomRadius],
             ['topRadius', this.params.topRadius],
@@ -1180,13 +1285,13 @@ export class ConePorcelainBushingPrimitive extends BasePrimitive<ConePorcelainBu
             ['topSkirtRadius1', this.params.topSkirtRadius1],
             ['topSkirtRadius2', this.params.topSkirtRadius2],
             ['count', this.params.count]
-        ]));
+        ])) as ConePorcelainBushingObject;
     }
 };
 
-export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParams> {
+export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParams, InsulatorStringObject> {
 
-    constructor(tp: TopoInstance, params?: InsulatorStringParams) {
+    constructor(tp: TopoInstance, params?: InsulatorStringObject) {
         super(tp, params);
     }
 
@@ -1194,7 +1299,7 @@ export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParam
         return GSPrimitiveType.InsulatorString;
     }
 
-    setDefault(): Primitive<InsulatorStringParams> {
+    setDefault(): Primitive<InsulatorStringParams, InsulatorStringObject> {
         this.params.count = 2;
         this.params.spacing = 30.0;
         this.params.insulatorCount = 22;
@@ -1208,7 +1313,7 @@ export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParam
         return this;
     }
 
-    public setParams(params: InsulatorStringParams): Primitive<InsulatorStringParams> {
+    public setParams(params: InsulatorStringParams): Primitive<InsulatorStringParams, InsulatorStringObject> {
         this.params = params;
         return this;
     }
@@ -1233,9 +1338,12 @@ export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParam
         throw new Error("Invalid parameters for InsulatorString");
     }
 
-    fromObject(o: any): Primitive<InsulatorStringParams> {
+    fromObject(o?: InsulatorStringObject): Primitive<InsulatorStringParams, InsulatorStringObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             count: o['count'],
@@ -1252,9 +1360,10 @@ export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParam
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): InsulatorStringObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['count', this.params.count],
             ['spacing', this.params.spacing],
             ['insulatorCount', this.params.insulatorCount],
@@ -1265,13 +1374,13 @@ export class InsulatorStringPrimitive extends BasePrimitive<InsulatorStringParam
             ['frontLength', this.params.frontLength],
             ['backLength', this.params.backLength],
             ['splitCount', this.params.splitCount]
-        ]));
+        ])) as InsulatorStringObject;
     }
 };
 
-export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams> {
+export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams, VTypeInsulatorObject> {
 
-    constructor(tp: TopoInstance, params?: VTypeInsulatorParams) {
+    constructor(tp: TopoInstance, params?: VTypeInsulatorObject) {
         super(tp, params);
     }
 
@@ -1279,7 +1388,7 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams>
         return GSPrimitiveType.VTypeInsulator;
     }
 
-    setDefault(): Primitive<VTypeInsulatorParams> {
+    setDefault(): Primitive<VTypeInsulatorParams, VTypeInsulatorObject> {
         this.params.frontSpacing = 30.0;
         this.params.backSpacing = 20.0;
         this.params.insulatorCount = 22;
@@ -1293,7 +1402,7 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams>
         return this;
     }
 
-    public setParams(params: VTypeInsulatorParams): Primitive<VTypeInsulatorParams> {
+    public setParams(params: VTypeInsulatorParams): Primitive<VTypeInsulatorParams, VTypeInsulatorObject> {
         this.params = params;
         return this;
     }
@@ -1318,9 +1427,12 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams>
         throw new Error("Invalid parameters for VTypeInsulator");
     }
 
-    fromObject(o: any): Primitive<VTypeInsulatorParams> {
+    fromObject(o?: VTypeInsulatorObject): Primitive<VTypeInsulatorParams, VTypeInsulatorObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             frontSpacing: o['frontSpacing'],
@@ -1337,9 +1449,10 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams>
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): VTypeInsulatorObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['frontSpacing', this.params.frontSpacing],
             ['backSpacing', this.params.backSpacing],
             ['insulatorCount', this.params.insulatorCount],
@@ -1350,13 +1463,13 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams>
             ['frontLength', this.params.frontLength],
             ['backLength', this.params.backLength],
             ['splitCount', this.params.splitCount]
-        ]));
+        ])) as VTypeInsulatorObject;
     }
 };
 
-export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams> {
+export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams, TerminalBlockObject> {
 
-    constructor(tp: TopoInstance, params?: TerminalBlockParams) {
+    constructor(tp: TopoInstance, params?: TerminalBlockObject) {
         super(tp, params);
     }
 
@@ -1364,7 +1477,7 @@ export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams> {
         return GSPrimitiveType.TerminalBlock;
     }
 
-    setDefault(): Primitive<TerminalBlockParams> {
+    setDefault(): Primitive<TerminalBlockParams, TerminalBlockObject> {
         this.params.length = 100.0;
         this.params.width = 50.0;
         this.params.thickness = 10.0;
@@ -1378,7 +1491,7 @@ export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams> {
         return this;
     }
 
-    public setParams(params: TerminalBlockParams): Primitive<TerminalBlockParams> {
+    public setParams(params: TerminalBlockParams): Primitive<TerminalBlockParams, TerminalBlockObject> {
         this.params = params;
         return this;
     }
@@ -1403,9 +1516,12 @@ export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams> {
         throw new Error("Invalid parameters for TerminalBlock");
     }
 
-    fromObject(o: any): Primitive<TerminalBlockParams> {
+    fromObject(o?: TerminalBlockObject): Primitive<TerminalBlockParams, TerminalBlockObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -1422,9 +1538,10 @@ export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TerminalBlockObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness],
@@ -1435,13 +1552,13 @@ export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams> {
             ['columnCount', this.params.columnCount],
             ['rowCount', this.params.rowCount],
             ['bottomOffset', this.params.bottomOffset]
-        ]));
+        ])) as TerminalBlockObject;
     }
 };
 
-export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHolePlateParams> {
+export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHolePlateParams, RectangularHolePlateObject> {
 
-    constructor(tp: TopoInstance, params?: RectangularHolePlateParams) {
+    constructor(tp: TopoInstance, params?: RectangularHolePlateObject) {
         super(tp, params);
     }
 
@@ -1449,7 +1566,7 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         return GSPrimitiveType.RectangularHolePlate;
     }
 
-    setDefault(): Primitive<RectangularHolePlateParams> {
+    setDefault(): Primitive<RectangularHolePlateParams, RectangularHolePlateObject> {
         this.params.length = 100.0;
         this.params.width = 80.0;
         this.params.thickness = 10.0;
@@ -1462,7 +1579,7 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         return this;
     }
 
-    public setParams(params: RectangularHolePlateParams): Primitive<RectangularHolePlateParams> {
+    public setParams(params: RectangularHolePlateParams): Primitive<RectangularHolePlateParams, RectangularHolePlateObject> {
         this.params = params;
         return this;
     }
@@ -1485,9 +1602,12 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         throw new Error("Invalid parameters for RectangularHolePlate");
     }
 
-    fromObject(o: any): Primitive<RectangularHolePlateParams> {
+    fromObject(o?: RectangularHolePlateObject): Primitive<RectangularHolePlateParams, RectangularHolePlateObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -1503,9 +1623,10 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): RectangularHolePlateObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness],
@@ -1515,13 +1636,13 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
             ['rowCount', this.params.rowCount],
             ['hasMiddleHole', this.params.hasMiddleHole],
             ['holeDiameter', this.params.holeDiameter]
-        ]));
+        ])) as RectangularHolePlateObject;
     }
 };
 
-export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlateParams> {
+export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlateParams, CircularFixedPlateObject> {
 
-    constructor(tp: TopoInstance, params?: CircularFixedPlateParams) {
+    constructor(tp: TopoInstance, params?: CircularFixedPlateObject) {
         super(tp, params);
     }
 
@@ -1529,7 +1650,7 @@ export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlat
         return GSPrimitiveType.CircularFixedPlate;
     }
 
-    setDefault(): Primitive<CircularFixedPlateParams> {
+    setDefault(): Primitive<CircularFixedPlateParams, CircularFixedPlateObject> {
         this.params.length = 200.0;
         this.params.width = 200.0;
         this.params.thickness = 12.0;
@@ -1540,7 +1661,7 @@ export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlat
         return this;
     }
 
-    public setParams(params: CircularFixedPlateParams): Primitive<CircularFixedPlateParams> {
+    public setParams(params: CircularFixedPlateParams): Primitive<CircularFixedPlateParams, CircularFixedPlateObject> {
         this.params = params;
         return this;
     }
@@ -1561,9 +1682,12 @@ export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlat
         throw new Error("Invalid parameters for CircularFixedPlate");
     }
 
-    fromObject(o: any): Primitive<CircularFixedPlateParams> {
+    fromObject(o?: CircularFixedPlateObject): Primitive<CircularFixedPlateParams, CircularFixedPlateObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             length: o['length'],
@@ -1577,9 +1701,10 @@ export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlat
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CircularFixedPlateObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness],
@@ -1587,13 +1712,13 @@ export class CircularFixedPlatePrimitive extends BasePrimitive<CircularFixedPlat
             ['holeCount', this.params.holeCount],
             ['hasMiddleHole', this.params.hasMiddleHole],
             ['holeDiameter', this.params.holeDiameter]
-        ]));
+        ])) as CircularFixedPlateObject;
     }
 };
 
-export class WirePrimitive extends BasePrimitive<WireParams> {
+export class WirePrimitive extends BasePrimitive<WireParams, WireObject> {
 
-    constructor(tp: TopoInstance, params?: WireParams) {
+    constructor(tp: TopoInstance, params?: WireObject) {
         super(tp, params);
     }
 
@@ -1601,7 +1726,7 @@ export class WirePrimitive extends BasePrimitive<WireParams> {
         return GSPrimitiveType.Wire;
     }
 
-    setDefault(): Primitive<WireParams> {
+    setDefault(): Primitive<WireParams, WireObject> {
         this.params.startPoint = new this.tp.gp_Pnt_3(0, 0, 0);
         this.params.endPoint = new this.tp.gp_Pnt_3(100, 0, 0);
         this.params.startDir = new this.tp.gp_Dir_4(1, 0, 0);
@@ -1612,7 +1737,7 @@ export class WirePrimitive extends BasePrimitive<WireParams> {
         return this;
     }
 
-    public setParams(params: WireParams): Primitive<WireParams> {
+    public setParams(params: WireParams): Primitive<WireParams, WireObject> {
         this.params = params;
         return this;
     }
@@ -1630,9 +1755,12 @@ export class WirePrimitive extends BasePrimitive<WireParams> {
         throw new Error("Invalid parameters for Wire");
     }
 
-    fromObject(o: any): Primitive<WireParams> {
+    fromObject(o?: WireObject): Primitive<WireParams, WireObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             startPoint: new this.tp.gp_Pnt_3(o['startPoint'].x, o['startPoint'].y, o['startPoint'].z),
@@ -1646,9 +1774,10 @@ export class WirePrimitive extends BasePrimitive<WireParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): WireObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['startPoint', { x: this.params.startPoint.X(), y: this.params.startPoint.Y(), z: this.params.startPoint.Z() }],
             ['endPoint', { x: this.params.endPoint.X(), y: this.params.endPoint.Y(), z: this.params.endPoint.Z() }],
             ['startDir', { x: this.params.startDir.X(), y: this.params.startDir.Y(), z: this.params.startDir.Z() }],
@@ -1656,13 +1785,13 @@ export class WirePrimitive extends BasePrimitive<WireParams> {
             ['sag', this.params.sag],
             ['diameter', this.params.diameter],
             ['fitPoints', this.params.fitPoints.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() }))]
-        ]));
+        ])) as WireObject;
     }
 };
 
-export class CablePrimitive extends BasePrimitive<CableParams> {
+export class CablePrimitive extends BasePrimitive<CableParams, CableObject> {
 
-    constructor(tp: TopoInstance, params?: CableParams) {
+    constructor(tp: TopoInstance, params?: CableObject) {
         super(tp, params);
     }
 
@@ -1670,7 +1799,7 @@ export class CablePrimitive extends BasePrimitive<CableParams> {
         return GSPrimitiveType.Cable;
     }
 
-    setDefault(): Primitive<CableParams> {
+    setDefault(): Primitive<CableParams, CableObject> {
         this.params.startPoint = new this.tp.gp_Pnt_3(0, 0, 0);
         this.params.endPoint = new this.tp.gp_Pnt_3(100, 0, 0);
         this.params.inflectionPoints = [];
@@ -1679,7 +1808,7 @@ export class CablePrimitive extends BasePrimitive<CableParams> {
         return this;
     }
 
-    public setParams(params: CableParams): Primitive<CableParams> {
+    public setParams(params: CableParams): Primitive<CableParams, CableObject> {
         this.params = params;
         return this;
     }
@@ -1697,9 +1826,12 @@ export class CablePrimitive extends BasePrimitive<CableParams> {
         throw new Error("Invalid parameters for Cable");
     }
 
-    fromObject(o: any): Primitive<CableParams> {
+    fromObject(o?: CableObject): Primitive<CableParams, CableObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             startPoint: new this.tp.gp_Pnt_3(o['startPoint'].x, o['startPoint'].y, o['startPoint'].z),
@@ -1712,22 +1844,23 @@ export class CablePrimitive extends BasePrimitive<CableParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CableObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['startPoint', { x: this.params.startPoint.X(), y: this.params.startPoint.Y(), z: this.params.startPoint.Z() }],
             ['endPoint', { x: this.params.endPoint.X(), y: this.params.endPoint.Y(), z: this.params.endPoint.Z() }],
             ['inflectionPoints', this.params.inflectionPoints.map(p =>
                 ({ x: p.X(), y: p.Y(), z: p.Z() }))],
             ['radii', this.params.radii],
             ['diameter', this.params.diameter]
-        ]));
+        ])) as CableObject;
     }
 };
 
-export class CurveCablePrimitive extends BasePrimitive<CurveCableParams> {
+export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCableObject> {
 
-    constructor(tp: TopoInstance, params?: CurveCableParams) {
+    constructor(tp: TopoInstance, params?: CurveCableObject) {
         super(tp, params);
     }
 
@@ -1735,7 +1868,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams> {
         return GSPrimitiveType.CurveCable;
     }
 
-    setDefault(): Primitive<CurveCableParams> {
+    setDefault(): Primitive<CurveCableParams, CurveCableObject> {
         this.params.controlPoints = [
             [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(100, 0, 0)]
         ];
@@ -1744,7 +1877,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams> {
         return this;
     }
 
-    public setParams(params: CurveCableParams): Primitive<CurveCableParams> {
+    public setParams(params: CurveCableParams): Primitive<CurveCableParams, CurveCableObject> {
         this.params = params;
         return this;
     }
@@ -1762,34 +1895,54 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams> {
         throw new Error("Invalid parameters for CurveCable");
     }
 
-    fromObject(o: any): Primitive<CurveCableParams> {
+    fromObject(o?: CurveCableObject): Primitive<CurveCableParams, CurveCableObject> {
         if (o === undefined) {
             return this;
         }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        const curveTypes: CurveType[] = [];
+        for (const type of o['curveTypes']) {
+            if (type === 'LINE') curveTypes.push(this.tp.CurveType.LINE as any);
+            else if (type === 'ARC') curveTypes.push(this.tp.CurveType.ARC as any);
+            else if (type === 'SPLINE') curveTypes.push(this.tp.CurveType.SPLINE as any);
+            else throw new Error(`Invalid curve type: ${type}`);
+        }
+
         this.params = {
             controlPoints: o['controlPoints'].map((pointGroup: any) =>
                 pointGroup.map((p: any) =>
                     new this.tp.gp_Pnt_3(p.x, p.y, p.z))),
-            curveTypes: o['curveTypes'],
+            curveTypes: curveTypes,
             diameter: o['diameter']
         }
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): CurveCableObject | undefined {
+        const curveTypes: string[] = [];
+        for (const type of this.params.curveTypes) {
+            if (type === this.tp.CurveType.LINE as any) curveTypes.push('LINE');
+            else if (type === this.tp.CurveType.ARC as any) curveTypes.push('ARC');
+            else if (type === this.tp.CurveType.SPLINE as any) curveTypes.push('SPLINE');
+            else throw new Error(`Invalid curve type: ${type}`);
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['controlPoints', this.params.controlPoints.map(pointGroup =>
                 pointGroup.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() })))],
-            ['curveTypes', this.params.curveTypes],
+            ['curveTypes', curveTypes],
             ['diameter', this.params.diameter]
-        ]));
+        ])) as CurveCableObject;
     }
 };
 
-export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams> {
+export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams, AngleSteelObject> {
 
-    constructor(tp: TopoInstance, params?: AngleSteelParams) {
+    constructor(tp: TopoInstance, params?: AngleSteelObject) {
         super(tp, params);
     }
 
@@ -1797,7 +1950,7 @@ export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams> {
         return GSPrimitiveType.AngleSteel;
     }
 
-    setDefault(): Primitive<AngleSteelParams> {
+    setDefault(): Primitive<AngleSteelParams, AngleSteelObject> {
         this.params.L1 = 60.0;
         this.params.L2 = 40.0;
         this.params.X = 5.0;
@@ -1805,7 +1958,7 @@ export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams> {
         return this;
     }
 
-    public setParams(params: AngleSteelParams): Primitive<AngleSteelParams> {
+    public setParams(params: AngleSteelParams): Primitive<AngleSteelParams, AngleSteelObject> {
         this.params = params;
         return this;
     }
@@ -1824,9 +1977,12 @@ export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams> {
         throw new Error("Invalid parameters for AngleSteel");
     }
 
-    fromObject(o: any): Primitive<AngleSteelParams> {
+    fromObject(o?: AngleSteelObject): Primitive<AngleSteelParams, AngleSteelObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             L1: o['L1'],
@@ -1837,20 +1993,21 @@ export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): AngleSteelObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['L1', this.params.L1],
             ['L2', this.params.L2],
             ['X', this.params.X],
             ['length', this.params.length]
-        ]));
+        ])) as AngleSteelObject;
     }
 };
 
-export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams> {
+export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams, IShapedSteelObject> {
 
-    constructor(tp: TopoInstance, params?: IShapedSteelParams) {
+    constructor(tp: TopoInstance, params?: IShapedSteelObject) {
         super(tp, params);
     }
 
@@ -1858,7 +2015,7 @@ export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams> {
         return GSPrimitiveType.IShapedSteel;
     }
 
-    setDefault(): Primitive<IShapedSteelParams> {
+    setDefault(): Primitive<IShapedSteelParams, IShapedSteelObject> {
         this.params.height = 200.0;
         this.params.flangeWidth = 150.0;
         this.params.webThickness = 12.0;
@@ -1867,7 +2024,7 @@ export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams> {
         return this;
     }
 
-    public setParams(params: IShapedSteelParams): Primitive<IShapedSteelParams> {
+    public setParams(params: IShapedSteelParams): Primitive<IShapedSteelParams, IShapedSteelObject> {
         this.params = params;
         return this;
     }
@@ -1887,9 +2044,12 @@ export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams> {
         throw new Error("Invalid parameters for IShapedSteel");
     }
 
-    fromObject(o: any): Primitive<IShapedSteelParams> {
+    fromObject(o?: IShapedSteelObject): Primitive<IShapedSteelParams, IShapedSteelObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
@@ -1901,21 +2061,22 @@ export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): IShapedSteelObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['flangeWidth', this.params.flangeWidth],
             ['webThickness', this.params.webThickness],
             ['flangeThickness', this.params.flangeThickness],
             ['length', this.params.length]
-        ]));
+        ])) as IShapedSteelObject;
     }
 };
 
-export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams> {
+export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams, ChannelSteelObject> {
 
-    constructor(tp: TopoInstance, params?: ChannelSteelParams) {
+    constructor(tp: TopoInstance, params?: ChannelSteelObject) {
         super(tp, params);
     }
 
@@ -1923,7 +2084,7 @@ export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams> {
         return GSPrimitiveType.ChannelSteel;
     }
 
-    setDefault(): Primitive<ChannelSteelParams> {
+    setDefault(): Primitive<ChannelSteelParams, ChannelSteelObject> {
         this.params.height = 100.0;
         this.params.flangeWidth = 50.0;
         this.params.webThickness = 6.0;
@@ -1932,7 +2093,7 @@ export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams> {
         return this;
     }
 
-    public setParams(params: ChannelSteelParams): Primitive<ChannelSteelParams> {
+    public setParams(params: ChannelSteelParams): Primitive<ChannelSteelParams, ChannelSteelObject> {
         this.params = params;
         return this;
     }
@@ -1952,9 +2113,12 @@ export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams> {
         throw new Error("Invalid parameters for ChannelSteel");
     }
 
-    fromObject(o: any): Primitive<ChannelSteelParams> {
+    fromObject(o?: ChannelSteelObject): Primitive<ChannelSteelParams, ChannelSteelObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
@@ -1966,21 +2130,22 @@ export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): ChannelSteelObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['flangeWidth', this.params.flangeWidth],
             ['webThickness', this.params.webThickness],
             ['flangeThickness', this.params.flangeThickness],
             ['length', this.params.length]
-        ]));
+        ])) as ChannelSteelObject;
     }
 };
 
-export class TSteelPrimitive extends BasePrimitive<TSteelParams> {
+export class TSteelPrimitive extends BasePrimitive<TSteelParams, TSteelObject> {
 
-    constructor(tp: TopoInstance, params?: TSteelParams) {
+    constructor(tp: TopoInstance, params?: TSteelObject) {
         super(tp, params);
     }
 
@@ -1988,7 +2153,7 @@ export class TSteelPrimitive extends BasePrimitive<TSteelParams> {
         return GSPrimitiveType.TSteel;
     }
 
-    setDefault(): Primitive<TSteelParams> {
+    setDefault(): Primitive<TSteelParams, TSteelObject> {
         this.params.height = 120.0;
         this.params.width = 60.0;
         this.params.webThickness = 8.0;
@@ -1997,7 +2162,7 @@ export class TSteelPrimitive extends BasePrimitive<TSteelParams> {
         return this;
     }
 
-    public setParams(params: TSteelParams): Primitive<TSteelParams> {
+    public setParams(params: TSteelParams): Primitive<TSteelParams, TSteelObject> {
         this.params = params;
         return this;
     }
@@ -2017,9 +2182,12 @@ export class TSteelPrimitive extends BasePrimitive<TSteelParams> {
         throw new Error("Invalid parameters for TSteel");
     }
 
-    fromObject(o: any): Primitive<TSteelParams> {
+    fromObject(o?: TSteelObject): Primitive<TSteelParams, TSteelObject> {
         if (o === undefined) {
             return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
         }
         this.params = {
             height: o['height'],
@@ -2031,15 +2199,16 @@ export class TSteelPrimitive extends BasePrimitive<TSteelParams> {
         return this;
     }
 
-    toObject(): Object | undefined {
+    toObject(): TSteelObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['version', this.getVersion()],
             ['height', this.params.height],
             ['width', this.params.width],
             ['webThickness', this.params.webThickness],
             ['flangeThickness', this.params.flangeThickness],
             ['length', this.params.length]
-        ]));
+        ])) as TSteelObject;
     }
 };
 

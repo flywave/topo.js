@@ -1276,7 +1276,7 @@ static void set_cable_trench_points(cable_trench_params &params,
   params.points = points;
 }
 
-static emscripten::val 
+static emscripten::val
 get_cable_tunnel_points(const cable_tunnel_params &params) {
   emscripten::val arr = emscripten::val::array();
   for (const auto &point : params.points) {
@@ -1289,7 +1289,7 @@ get_cable_tunnel_points(const cable_tunnel_params &params) {
 }
 
 static void set_cable_tunnel_points(cable_tunnel_params &params,
-                                   emscripten::val val) {
+                                    emscripten::val val) {
   if (!val.isArray()) {
     throw std::runtime_error("Expected array for points");
   }
@@ -3028,7 +3028,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   // 电缆夹具参数结构体绑定
   value_object<cable_clamp_params>("CableClampParams")
-      .field("type", &cable_clamp_params::type)
+      .field("clampType", &cable_clamp_params::type)
       .field("diameter", &cable_clamp_params::diameter)
       .field("thickness", &cable_clamp_params::thickness)
       .field("width", &cable_clamp_params::width);
@@ -3927,7 +3927,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 连接形状模式枚举
   enum_<joint_shape_mode>("JointShapeMode")
       .value("SPHERE", joint_shape_mode::SPHERE)
-      .value("BOX", joint_shape_mode::BOX);
+      .value("BOX", joint_shape_mode::BOX),
+      .value("CONE", joint_shape_mode::CONE);
 
   // 管道端点结构体
   value_object<pipe_endpoint>("PipeEndpoint")
