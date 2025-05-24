@@ -81,37 +81,37 @@ export function deserializeProfile(tp: TopoInstance, o: any): ShapeProfile {
         case tp.ProfileType.TRIANGLE:
             return {
                 type: tp.ProfileType.TRIANGLE,
-                p1: new tp.gp_Pnt_3(o.profile.p1.x, o.profile.p1.y, o.profile.p1.z),
-                p2: new tp.gp_Pnt_3(o.profile.p2.x, o.profile.p2.y, o.profile.p2.z),
-                p3: new tp.gp_Pnt_3(o.profile.p3.x, o.profile.p3.y, o.profile.p3.z)
+                p1: new tp.gp_Pnt_3(o.profile.p1[0], o.profile.p1[1], o.profile.p1[2]),
+                p2: new tp.gp_Pnt_3(o.profile.p2[0], o.profile.p2[1], o.profile.p2[2]),
+                p3: new tp.gp_Pnt_3(o.profile.p3[0], o.profile.p3[1], o.profile.p3[2])
             };
         case tp.ProfileType.RECTANGLE:
             return {
                 type: tp.ProfileType.RECTANGLE,
-                p1: new tp.gp_Pnt_3(o.profile.p1.x, o.profile.p1.y, o.profile.p1.z),
-                p2: new tp.gp_Pnt_3(o.profile.p2.x, o.profile.p2.y, o.profile.p2.z)
+                p1: new tp.gp_Pnt_3(o.profile.p1[0], o.profile.p1[1], o.profile.p1[2]),
+                p2: new tp.gp_Pnt_3(o.profile.p2[0], o.profile.p2[1], o.profile.p2[2])
             };
         case tp.ProfileType.CIRC:
             return {
                 type: tp.ProfileType.CIRC,
-                center: new tp.gp_Pnt_3(o.profile.center.x, o.profile.center.y, o.profile.center.z),
-                norm: new tp.gp_Dir_4(o.profile.norm.x, o.profile.norm.y, o.profile.norm.z),
+                center: new tp.gp_Pnt_3(o.profile.center[0], o.profile.center[1], o.profile.center[2]),
+                norm: new tp.gp_Dir_4(o.profile.norm[0], o.profile.norm[1], o.profile.norm[2]),
                 radius: o.profile.radius
             };
         case tp.ProfileType.ELIPS:
             return {
                 type: tp.ProfileType.ELIPS,
-                s1: new tp.gp_Pnt_3(o.profile.s1.x, o.profile.s1.y, o.profile.s1.z),
-                s2: new tp.gp_Pnt_3(o.profile.s2.x, o.profile.s2.y, o.profile.s2.z),
-                center: new tp.gp_Pnt_3(o.profile.center.x, o.profile.center.y, o.profile.center.z)
+                s1: new tp.gp_Pnt_3(o.profile.s1[0], o.profile.s1[1], o.profile.s1[2]),
+                s2: new tp.gp_Pnt_3(o.profile.s2[0], o.profile.s2[1], o.profile.s2[2]),
+                center: new tp.gp_Pnt_3(o.profile.center[0], o.profile.center[1], o.profile.center[2])
             };
         case tp.ProfileType.POLYGON:
             return {
                 type: tp.ProfileType.POLYGON,
                 edges: o.profile.edges.map((p: any) =>
-                    new tp.gp_Pnt_3(p.x, p.y, p.z)),
+                    new tp.gp_Pnt_3(p[0], p[1], p[2])),
                 inners: o.profile.inners?.map((inner: any[]) =>
-                    inner.map(p => new tp.gp_Pnt_3(p.x, p.y, p.z)))
+                    inner.map(p => new tp.gp_Pnt_3(p[0], p[1], p[2])))
             };
         default:
             throw new Error("Unsupported profile type");
@@ -124,88 +124,81 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
             const tprofile = profile as TriangleProfile;
             return {
                 type: tprofile.type,
-                p1: {
-                    x: tprofile.p1.X(),
-                    y: tprofile.p1.Y(),
-                    z: tprofile.p1.Z()
-                },
-                p2: {
-                    x: tprofile.p2.X(),
-                    y: tprofile.p2.Y(),
-                    z: tprofile.p2.Z()
-                },
-                p3: {
-                    x: tprofile.p3.X(),
-                    y: tprofile.p3.Y(),
-                    z: tprofile.p3.Z()
-                }
+                p1: [
+                    tprofile.p1.X(),
+                    tprofile.p1.Y(),
+                    tprofile.p1.Z()
+                ],
+                p2: [
+                    tprofile.p2.X(),
+                    tprofile.p2.Y(),
+                    tprofile.p2.Z()
+                ],
+                p3: [
+                    tprofile.p3.X(),
+                    tprofile.p3.Y(),
+                    tprofile.p3.Z()
+                ]
             };
         case tp.ProfileType.RECTANGLE:
             const rprofile = profile as RectangleProfile;
             return {
                 type: rprofile.type,
-                p1: {
-                    x: rprofile.p1.X(),
-                    y: rprofile.p1.Y(),
-                    z: rprofile.p1.Z()
-                },
-                p2: {
-                    x: rprofile.p2.X(),
-                    y: rprofile.p2.Y(),
-                    z: rprofile.p2.Z()
-                }
+                p1: [rprofile.p1.X(),
+                rprofile.p1.Y(),
+                rprofile.p1.Z()
+                ],
+                p2: [rprofile.p2.X(),
+                rprofile.p2.Y(),
+                rprofile.p2.Z()
+                ]
             };
         case tp.ProfileType.CIRC:
             const cprofile = profile as CircProfile;
             return {
                 type: cprofile.type,
-                center: {
-                    x: cprofile.center.X(),
-                    y: cprofile.center.Y(),
-                    z: cprofile.center.Z()
-                },
-                norm: {
-                    x: cprofile.norm.X(),
-                    y: cprofile.norm.Y(),
-                    z: cprofile.norm.Z()
-                },
+                center: [cprofile.center.X(),
+                cprofile.center.Y(),
+                cprofile.center.Z()
+                ],
+                norm: [cprofile.norm.X(),
+                cprofile.norm.Y(),
+                cprofile.norm.Z()
+                ],
                 radius: cprofile.radius
             };
         case tp.ProfileType.ELIPS:
             const eprofile = profile as ElipsProfile;
             return {
                 type: eprofile.type,
-                s1: {
-                    x: eprofile.s1.X(),
-                    y: eprofile.s1.Y(),
-                    z: eprofile.s1.Z()
-                },
-                s2: {
-                    x: eprofile.s2.X(),
-                    y: eprofile.s2.Y(),
-                    z: eprofile.s2.Z()
-                },
-                center: {
-                    x: eprofile.center.X(),
-                    y: eprofile.center.Y(),
-                    z: eprofile.center.Z()
-                }
+                s1: [eprofile.s1.X(),
+                eprofile.s1.Y(),
+                eprofile.s1.Z()
+                ],
+                s2: [eprofile.s2.X(),
+                eprofile.s2.Y(),
+                eprofile.s2.Z()
+                ],
+                center: [eprofile.center.X(),
+                eprofile.center.Y(),
+                eprofile.center.Z()
+
+                ]
             };
         case tp.ProfileType.POLYGON:
             const pprofile = profile as PolygonProfile;
             return {
                 type: pprofile.type,
-                edges: pprofile.edges.map(p => ({
-                    x: p.X(),
-                    y: p.Y(),
-                    z: p.Z()
-                })),
+                edges: pprofile.edges.map(p => ([p.X(),
+                p.Y(),
+                p.Z()
+                ])),
                 inners: pprofile.inners?.map(inner =>
-                    inner.map(p => ({
-                        x: p.X(),
-                        y: p.Y(),
-                        z: p.Z()
-                    })))
+                    inner.map(p => ([
+                        p.X(),
+                        p.Y(),
+                        p.Z()
+                    ])))
             };
         default:
             throw new Error("Unsupported profile type");
@@ -286,8 +279,8 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
         this.params = {
             profile,
             axis: new this.tp.gp_Ax1_2(
-                new this.tp.gp_Pnt_3(o.axis.location.x, o.axis.location.y, o.axis.location.z),
-                new this.tp.gp_Dir_4(o.axis.direction.x, o.axis.direction.y, o.axis.direction.z)
+                new this.tp.gp_Pnt_3(o.axis.location[0], o.axis.location[1], o.axis.location[2]),
+                new this.tp.gp_Dir_4(o.axis.direction[0], o.axis.direction[1], o.axis.direction[2])
             ),
             angle: o.angle
         };
@@ -304,16 +297,16 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
             ['version', this.getVersion()],
             ['profile', profileObj],
             ['axis', {
-                location: {
-                    x: this.params.axis.Location().X(),
-                    y: this.params.axis.Location().Y(),
-                    z: this.params.axis.Location().Z()
-                },
-                direction: {
-                    x: this.params.axis.Direction().X(),
-                    y: this.params.axis.Direction().Y(),
-                    z: this.params.axis.Direction().Z()
-                }
+                location: [
+                    this.params.axis.Location().X(),
+                    this.params.axis.Location().Y(),
+                    this.params.axis.Location().Z()
+                ],
+                direction: [
+                    this.params.axis.Direction().X(),
+                    this.params.axis.Direction().Y(),
+                    this.params.axis.Direction().Z()
+                ]
             }],
             ['angle', this.params.angle]
         ])) as RevolObject;
@@ -383,7 +376,7 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
 
         this.params = {
             profile,
-            dir: new this.tp.gp_Dir_4(o.dir.x, o.dir.y, o.dir.z)
+            dir: new this.tp.gp_Dir_4(o.dir[0], o.dir[1], o.dir[2])
         };
         return this;
     }
@@ -397,11 +390,11 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
             ['type', this.getType()],
             ['version', this.getVersion()],
             ['profile', profileObj],
-            ['dir', {
-                x: this.params.dir.X(),
-                y: this.params.dir.Y(),
-                z: this.params.dir.Z()
-            }]
+            ['dir', [
+                this.params.dir.X(),
+                this.params.dir.Y(),
+                this.params.dir.Z()
+            ]]
         ])) as PrismObject;
     }
 }
@@ -489,12 +482,12 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
         }
 
         this.params = {
-            wire: o.wire.map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
+            wire: o.wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
             profile,
             innerProfile,
             segmentType: segmentType,
             transitionMode: transitionMode,
-            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
         };
         return this;
     }
@@ -536,16 +529,16 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['wire', this.params.wire.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() }))],
+            ['wire', this.params.wire.map(p => ([p.X(), p.Y(), p.Z()]))],
             ['profile', profileObj],
             ['innerProfile', innerProfileObj],
             ['segmentType', segmentType],
             ['transitionMode', transitionMode],
-            ['upDir', this.params.upDir ? {
-                x: this.params.upDir.X(),
-                y: this.params.upDir.Y(),
-                z: this.params.upDir.Z()
-            } : null]
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : null]
         ])) as PipeObject;
     }
 }
@@ -650,12 +643,12 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
 
         this.params = {
             wires: o.wires.map((wire: any[]) =>
-                wire.map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z))),
+                wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2]))),
             profiles,
             innerProfiles,
             segmentTypes: segmentTypes,
             transitionMode: transitionMode,
-            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
         };
         return this;
     }
@@ -705,16 +698,16 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
             ['type', this.getType()],
             ['version', this.getVersion()],
             ['wires', this.params.wires.map(wire =>
-                wire.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() })))],
+                wire.map(p => ([p.X(), p.Y(), p.Z()])))],
             ['profiles', profileObjs],
             ['innerProfiles', innerProfileObjs],
             ['segmentTypes', segmentTypes],
             ['transitionMode', transitionMode],
-            ['upDir', this.params.upDir ? {
-                x: this.params.upDir.X(),
-                y: this.params.upDir.Y(),
-                z: this.params.upDir.Z()
-            } : null]
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : null]
         ])) as MultiSegmentPipePrimitiveObject;
     }
 }
@@ -797,20 +790,20 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
 
         this.params = {
             ins: o.ins.map((ep: any) => ({
-                offset: new this.tp.gp_Pnt_3(ep.offset.x, ep.offset.y, ep.offset.z),
-                normal: new this.tp.gp_Dir_4(ep.normal.x, ep.normal.y, ep.normal.z),
+                offset: new this.tp.gp_Pnt_3(ep.offset[0], ep.offset[1], ep.offset[2]),
+                normal: new this.tp.gp_Dir_4(ep.normal[0], ep.normal[1], ep.normal[2]),
                 profile: deserializeProfile(this.tp, { profile: ep.profile }),
                 innerProfile: ep.innerProfile ? deserializeProfile(this.tp, { profile: ep.innerProfile }) : undefined
             })),
             outs: o.outs.map((ep: any) => ({
-                offset: new this.tp.gp_Pnt_3(ep.offset.x, ep.offset.y, ep.offset.z),
-                normal: new this.tp.gp_Dir_4(ep.normal.x, ep.normal.y, ep.normal.z),
+                offset: new this.tp.gp_Pnt_3(ep.offset[0], ep.offset[1], ep.offset[2]),
+                normal: new this.tp.gp_Dir_4(ep.normal[0], ep.normal[1], ep.normal[2]),
                 profile: deserializeProfile(this.tp, { profile: ep.profile }),
                 innerProfile: ep.innerProfile ? deserializeProfile(this.tp, { profile: ep.innerProfile }) : undefined
             })),
             mode: mode,
             flanged: o.flanged,
-            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
         };
         return this;
     }
@@ -834,24 +827,24 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
             ['type', this.getType()],
             ['version', this.getVersion()],
             ['ins', this.params.ins.map(ep => ({
-                offset: { x: ep.offset.X(), y: ep.offset.Y(), z: ep.offset.Z() },
-                normal: { x: ep.normal.X(), y: ep.normal.Y(), z: ep.normal.Z() },
+                offset: [ep.offset.X(), ep.offset.Y(), ep.offset.Z()],
+                normal: [ep.normal.X(), ep.normal.Y(), ep.normal.Z()],
                 profile: serializeProfile(this.tp, ep.profile),
                 innerProfile: ep.innerProfile ? serializeProfile(this.tp, ep.innerProfile) : null
             }))],
             ['outs', this.params.outs.map(ep => ({
-                offset: { x: ep.offset.X(), y: ep.offset.Y(), z: ep.offset.Z() },
-                normal: { x: ep.normal.X(), y: ep.normal.Y(), z: ep.normal.Z() },
+                offset: [ep.offset.X(), ep.offset.Y(), ep.offset.Z()],
+                normal: [ep.normal.X(), ep.normal.Y(), ep.normal.Z()],
                 profile: serializeProfile(this.tp, ep.profile),
                 innerProfile: ep.innerProfile ? serializeProfile(this.tp, ep.innerProfile) : null
             }))],
             ['mode', mode],
             ['flanged', this.params.flanged],
-            ['upDir', this.params.upDir ? {
-                x: this.params.upDir.X(),
-                y: this.params.upDir.Y(),
-                z: this.params.upDir.Z()
-            } : null]
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : null]
         ])) as PipeJointObject;
     }
 }
@@ -914,13 +907,13 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
         const profile = deserializeProfile(this.tp, o);
 
         this.params = {
-            p1: new this.tp.gp_Pnt_3(o.p1.x, o.p1.y, o.p1.z),
-            p2: new this.tp.gp_Pnt_3(o.p2.x, o.p2.y, o.p2.z),
+            p1: new this.tp.gp_Pnt_3(o.p1[0], o.p1[1], o.p1[2]),
+            p2: new this.tp.gp_Pnt_3(o.p2[0], o.p2[1], o.p2[2]),
             profile,
             slack: o.slack,
             maxSag: o.maxSag,
             tessellation: o.tessellation,
-            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
         };
         return this;
     }
@@ -933,25 +926,25 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['p1', {
-                x: this.params.p1.X(),
-                y: this.params.p1.Y(),
-                z: this.params.p1.Z()
-            }],
-            ['p2', {
-                x: this.params.p2.X(),
-                y: this.params.p2.Y(),
-                z: this.params.p2.Z()
-            }],
+            ['p1', [
+                this.params.p1.X(),
+                this.params.p1.Y(),
+                this.params.p1.Z()
+            ]],
+            ['p2', [
+                this.params.p2.X(),
+                this.params.p2.Y(),
+                this.params.p2.Z()
+            ]],
             ['profile', profileObj],
             ['slack', this.params.slack],
             ['maxSag', this.params.maxSag],
             ['tessellation', this.params.tessellation],
-            ['upDir', this.params.upDir ? {
-                x: this.params.upDir.X(),
-                y: this.params.upDir.Y(),
-                z: this.params.upDir.Z()
-            } : null]
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : null]
         ])) as CatenaryObject;
     }
 }
@@ -1001,8 +994,8 @@ export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams, BoxShapeObj
         }
 
         this.params = {
-            point1: new this.tp.gp_Pnt_3(o.point1.x, o.point1.y, o.point1.z),
-            point2: new this.tp.gp_Pnt_3(o.point2.x, o.point2.y, o.point2.z)
+            point1: new this.tp.gp_Pnt_3(o.point1[0], o.point1[1], o.point1[2]),
+            point2: new this.tp.gp_Pnt_3(o.point2[0], o.point2[1], o.point2[2])
         };
         return this;
     }
@@ -1011,16 +1004,16 @@ export class BoxShapePrimitive extends BasePrimitive<BoxShapeParams, BoxShapeObj
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['point1', {
-                x: this.params.point1.X(),
-                y: this.params.point1.Y(),
-                z: this.params.point1.Z()
-            }],
-            ['point2', {
-                x: this.params.point2.X(),
-                y: this.params.point2.Y(),
-                z: this.params.point2.Z()
-            }]
+            ['point1', [
+                this.params.point1.X(),
+                this.params.point1.Y(),
+                this.params.point1.Z()
+            ]],
+            ['point2', [
+                this.params.point2.X(),
+                this.params.point2.Y(),
+                this.params.point2.Z()
+            ]]
         ])) as BoxShapeObject;
     }
 }
@@ -1205,7 +1198,7 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
 
         this.params = {
             meridian: o.meridian.map((p: any) =>
-                new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
+                new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
             angle: o.angle,
             max: o.max,
             min: o.min
@@ -1217,11 +1210,11 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['meridian', this.params.meridian.map(p => ({
-                x: p.X(),
-                y: p.Y(),
-                z: p.Z()
-            }))],
+            ['meridian', this.params.meridian.map(p => ([
+                p.X(),
+                p.Y(),
+                p.Z()
+            ]))],
             ['angle', this.params.angle],
             ['max', this.params.max],
             ['min', this.params.min]
@@ -1273,7 +1266,7 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams, Spher
         }
 
         this.params = {
-            center: o.center ? new this.tp.gp_Pnt_3(o.center.x, o.center.y, o.center.z) : undefined,
+            center: o.center ? new this.tp.gp_Pnt_3(o.center[0], o.center[1], o.center[2]) : undefined,
             radius: o.radius,
             angle1: o.angle1,
             angle2: o.angle2,
@@ -1286,11 +1279,11 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams, Spher
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['center', this.params.center ? {
-                x: this.params.center.X(),
-                y: this.params.center.Y(),
-                z: this.params.center.Z()
-            } : undefined],
+            ['center', this.params.center ? [
+                this.params.center.X(),
+                this.params.center.Y(),
+                this.params.center.Z()
+            ] : undefined],
             ['radius', this.params.radius],
             ['angle1', this.params.angle1],
             ['angle2', this.params.angle2],
@@ -1412,7 +1405,7 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams, WedgeSh
         }
 
         this.params = {
-            edge: new this.tp.gp_Pnt_3(o.edge.x, o.edge.y, o.edge.z),
+            edge: new this.tp.gp_Pnt_3(o.edge[0], o.edge[1], o.edge[2]),
             limit: o.limit,
             ltx: o.ltx
         };
@@ -1423,11 +1416,11 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams, WedgeSh
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['edge', {
-                x: this.params.edge.X(),
-                y: this.params.edge.Y(),
-                z: this.params.edge.Z()
-            }],
+            ['edge', [
+                this.params.edge.X(),
+                this.params.edge.Y(),
+                this.params.edge.Z()
+            ]],
             ['limit', this.params.limit],
             ['ltx', this.params.ltx]
         ])) as WedgeShapeObject;
@@ -1489,11 +1482,11 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams, PipeShape
 
         this.params = {
             wire: [
-                new this.tp.gp_Pnt_3(o.wire[0].x, o.wire[0].y, o.wire[0].z),
-                new this.tp.gp_Pnt_3(o.wire[1].x, o.wire[1].y, o.wire[1].z)
+                new this.tp.gp_Pnt_3(o.wire[0][0], o.wire[0][1], o.wire[0][2]),
+                new this.tp.gp_Pnt_3(o.wire[1][0], o.wire[1][1], o.wire[1][2])
             ],
             profile: deserializeProfile(this.tp, { profile: o.profile }),
-            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir.x, o.upDir.y, o.upDir.z) : undefined
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
         };
         return this;
     }
@@ -1502,17 +1495,17 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams, PipeShape
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['wire', this.params.wire.map(p => ({
-                x: p.X(),
-                y: p.Y(),
-                z: p.Z()
-            }))],
+            ['wire', this.params.wire.map(p => ([
+                p.X(),
+                p.Y(),
+                p.Z()
+            ]))],
             ['profile', serializeProfile(this.tp, this.params.profile)],
-            ['upDir', this.params.upDir ? {
-                x: this.params.upDir.X(),
-                y: this.params.upDir.Y(),
-                z: this.params.upDir.Z()
-            } : undefined]
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : undefined]
         ])) as PipeShapeObject;
     }
 }

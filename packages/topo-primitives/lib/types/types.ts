@@ -1,20 +1,9 @@
 
-export type Point = {
-    x: number;
-    y: number;
-    z: number;
-}
+export type Point = [number, number, number]
 
-export type Point2 = {
-    x: number;
-    y: number;
-}
+export type Point2 = [number, number]
 
-export type Dir = {
-    x: number;
-    y: number;
-    z: number;
-}
+export type Dir = [number, number, number]
 
 export interface Version {
     version: number;
