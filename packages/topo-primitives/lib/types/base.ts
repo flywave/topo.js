@@ -48,7 +48,7 @@ export interface RevolObject extends Version {
 export interface PrismObject extends Version {
     type: 'Prism';
     profile: ShapeProfile;
-    dir: Dir;
+    direction: Dir;
 }
 
 export type SegmentType = 'LINE' | 'THREE_POINT_ARC' | 'CIRCLE_CENTER_ARC' | 'SPLINE';

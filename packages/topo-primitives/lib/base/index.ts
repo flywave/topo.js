@@ -330,7 +330,7 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
                 p1: new this.tp.gp_Pnt_3(0, 0, 0),
                 p2: new this.tp.gp_Pnt_3(10, 5, 0)
             },
-            dir: new this.tp.gp_Dir_4(0, 0, 20)
+            direction: new this.tp.gp_Dir_4(0, 0, 20)
         };
         return this;
     }
@@ -342,7 +342,7 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
 
     public valid(): boolean {
         if (!this.params.profile) return false;
-        if (!this.params.dir) return false;
+        if (!this.params.direction) return false;
 
         // 根据不同的剖面类型进行验证
         switch (this.params.profile.type) {
@@ -376,7 +376,7 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
 
         this.params = {
             profile,
-            dir: new this.tp.gp_Dir_4(o.dir[0], o.dir[1], o.dir[2])
+            direction: new this.tp.gp_Dir_4(o.direction[0], o.direction[1], o.direction[2])
         };
         return this;
     }
@@ -390,10 +390,10 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
             ['type', this.getType()],
             ['version', this.getVersion()],
             ['profile', profileObj],
-            ['dir', [
-                this.params.dir.X(),
-                this.params.dir.Y(),
-                this.params.dir.Z()
+            ['direction', [
+                this.params.direction.X(),
+                this.params.direction.Y(),
+                this.params.direction.Z()
             ]]
         ])) as PrismObject;
     }
