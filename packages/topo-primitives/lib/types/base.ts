@@ -58,8 +58,8 @@ export type TransitionMode = 'TRANSFORMED' | 'ROUND' | 'RIGHT';
 export interface PipeObject extends Version {
     type: 'Pipe';
     wire: Point[];
-    profile: ShapeProfile;
-    innerProfile: ShapeProfile | null;
+    profile: [ShapeProfile, ShapeProfile];
+    innerProfile: [ShapeProfile, ShapeProfile] | null;
     segmentType: SegmentType;
     transitionMode: TransitionMode;
     upDir?: Dir | null;
