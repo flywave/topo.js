@@ -125,7 +125,7 @@ func newBuildBindingsCmd() *cobra.Command {
 func newBuildTopoBindingsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "build-topo-bindings",
-		Short: "构建Topo绑定源",
+		Short: "构建Topo绑定源码",
 		Run: func(cmd *cobra.Command, args []string) {
 			argsMap := map[string]string{"threading": threading}
 			gen.BuildTopoBindingsSource(dirPath, argsMap)
@@ -137,7 +137,7 @@ func newBuildTopoBindingsCmd() *cobra.Command {
 func newBuildTopoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "build-topo",
-		Short: "构建Topo源",
+		Short: "构建Topo源码",
 		Run: func(cmd *cobra.Command, args []string) {
 			argsMap := map[string]string{"threading": threading}
 			gen.BuildTopoSource(dirPath, argsMap)

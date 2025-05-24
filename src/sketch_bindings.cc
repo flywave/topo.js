@@ -540,7 +540,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "reset",
           emscripten::optional_override([](sketch &self) -> emscripten::val {
-            auto r = self.reset();
+            auto &r = self.reset();
             return emscripten::val(r.shared_from_this());
           }),
           emscripten::allow_raw_pointers())
@@ -913,7 +913,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
               [](sketch &self, emscripten::val otherVal) -> emscripten::val {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self + *other;
-                return emscripten::val(std::make_shared<sketch>(result));
+                return emscripten::val(result.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
 
@@ -924,7 +924,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
               [](sketch &self, emscripten::val otherVal) -> emscripten::val {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self - *other;
-                return emscripten::val(std::make_shared<sketch>(result));
+                return emscripten::val(result.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
 
@@ -935,7 +935,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
               [](sketch &self, emscripten::val otherVal) -> emscripten::val {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self * *other;
-                return emscripten::val(std::make_shared<sketch>(result));
+                return emscripten::val(result.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
 
@@ -946,7 +946,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
               [](sketch &self, emscripten::val otherVal) -> emscripten::val {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self / *other;
-                return emscripten::val(std::make_shared<sketch>(result));
+                return emscripten::val(result.shared_from_this());
               }),
           emscripten::allow_raw_pointers())
 

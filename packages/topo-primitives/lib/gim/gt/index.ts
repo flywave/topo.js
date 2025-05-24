@@ -143,12 +143,12 @@ export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams, Bored
 
     setDefault(): Primitive<BoredPileParams, BoredPileBaseObject> {
         this.params = {
-            H1: 100.0,  // 上部圆柱高度
-            H2: 30.0,   // 过渡段高度
-            H3: 50.0,   // 底部圆柱高度
-            H4: 3.0,    // 桩头高度
-            d: 5.0,     // 上部直径
-            D: 20.0     // 底部直径
+            H1: 10.0,  // 上部圆柱高度
+            H2: 3.0,   // 过渡段高度
+            H3: 5.0,   // 底部圆柱高度
+            H4: 0.3,    // 桩头高度
+            d: 0.5,     // 上部直径
+            D: 2.0     // 底部直径
         };
         return this;
     }
@@ -217,25 +217,25 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams, PileCapBa
 
     setDefault(): Primitive<PileCapParams, PileCapBaseObject> {
         this.params = {
-            H1: 100.0,
-            H2: 30.0,
-            H3: 50.0,
-            H4: 40.0,
-            H5: 20.0,
-            H6: 3.0,
-            d: 5.0,
-            D: 20.0,
-            b: 15.0,
-            B1: 200.0,
-            L1: 300.0,
-            e1: 10.0,
-            e2: 5.0,
+            H1: 10.0,
+            H2: 3.0,
+            H3: 5.0,
+            H4: 4.0,
+            H5: 2.0,
+            H6: 0.3,
+            d: 0.5,
+            D: 2.0,
+            b: 1.5,
+            B1: 20.0,
+            L1: 30.0,
+            e1: 1.0,
+            e2: 0.5,
             cs: 0,
             ZCOUNT: 3,
             ZPOSTARRAY: [
                 new this.tp.gp_Pnt_3(0, 0, 0),
-                new this.tp.gp_Pnt_3(100, 0, 0),
-                new this.tp.gp_Pnt_3(0, 100, 0)
+                new this.tp.gp_Pnt_3(10, 0, 0),
+                new this.tp.gp_Pnt_3(0, 10, 0)
             ]
         };
         return this;
@@ -328,17 +328,17 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams, Roc
 
     setDefault(): Primitive<RockAnchorParams, RockAnchorBaseObject> {
         this.params = {
-            H1: 20.0,
-            H2: 50.0,
-            d: 5.0,
-            B1: 100.0,
-            L1: 150.0,
+            H1: 2.0,
+            H2: 5.0,
+            d: 0.5,
+            B1: 10.0,
+            L1: 15.0,
             ZCOUNT: 4,
             ZPOSTARRAY: [
-                new this.tp.gp_Pnt_3(-40, -60, 0),
-                new this.tp.gp_Pnt_3(40, -60, 0),
-                new this.tp.gp_Pnt_3(40, 60, 0),
-                new this.tp.gp_Pnt_3(-40, 60, 0)
+                new this.tp.gp_Pnt_3(-4, -6, 0),
+                new this.tp.gp_Pnt_3(4, -6, 0),
+                new this.tp.gp_Pnt_3(4, 6, 0),
+                new this.tp.gp_Pnt_3(-4, 6, 0)
             ]
         };
         return this;
@@ -410,22 +410,22 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams, R
 
     setDefault(): Primitive<RockPileCapParams, RockPileCapBaseObject> {
         this.params = {
-            H1: 40.0,
-            H2: 20.0,
-            H3: 50.0,
-            d: 5.0,
-            b: 15.0,
-            B1: 200.0,
-            L1: 300.0,
-            e1: 10.0,
-            e2: 5.0,
+            H1: 4.0,
+            H2: 2.0,
+            H3: 5.0,
+            d: 0.5,
+            b: 1.5,
+            B1: 20.0,
+            L1: 30.0,
+            e1: 1.0,
+            e2: 0.5,
             cs: 0,
             ZCOUNT: 4,
             ZPOSTARRAY: [
-                new this.tp.gp_Pnt_3(-50, -50, 0),
-                new this.tp.gp_Pnt_3(50, -50, 0),
-                new this.tp.gp_Pnt_3(50, 50, 0),
-                new this.tp.gp_Pnt_3(-50, 50, 0)
+                new this.tp.gp_Pnt_3(-5, -5, 0),
+                new this.tp.gp_Pnt_3(5, -5, 0),
+                new this.tp.gp_Pnt_3(5, 5, 0),
+                new this.tp.gp_Pnt_3(-5, 5, 0)
             ]
         };
         return this;
@@ -509,11 +509,11 @@ export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockA
 
     setDefault(): Primitive<EmbeddedRockAnchorParams, EmbeddedRockAnchorBaseObject> {
         this.params = {
-            H1: 100.0,
-            H2: 30.0,
-            H3: 50.0,
-            d: 5.0,
-            D: 20.0
+            H1: 10.0,
+            H2: 3.0,
+            H3: 5.0,
+            d: 0.5,
+            D: 2.0
         };
         return this;
     }
@@ -579,16 +579,16 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
 
     setDefault(): Primitive<InclinedRockAnchorParams, InclinedRockAnchorBaseObject> {
         this.params = {
-            H1: 20.0,
-            H2: 50.0,
-            d: 5.0,
-            D: 15.0,
-            B: 100.0,
-            L: 150.0,
-            e1: 10.0,
-            e2: 5.0,
-            alpha1: 15.0,
-            alpha2: 10.0
+            H1: 2.0,
+            H2: 5.0,
+            d: 0.5,
+            D: 1.5,
+            B: 10.0,
+            L: 15.0,
+            e1: 1.0,
+            e2: 0.5,
+            alpha1: 1.5,
+            alpha2: 1.0
         };
         return this;
     }
@@ -665,11 +665,11 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams, E
 
     setDefault(): Primitive<ExcavatedBaseParams, ExcavatedBaseObject> {
         this.params = {
-            H1: 100.0,
-            H2: 30.0,
-            H3: 50.0,
-            d: 5.0,
-            D: 20.0,
+            H1: 10.0,
+            H2: 3.0,
+            H3: 5.0,
+            d: 0.5,
+            D: 2.0,
             alpha1: 0.0,
             alpha2: 0.0
         };
@@ -740,17 +740,17 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams, StepBaseObj
 
     setDefault(): Primitive<StepBaseParams, StepBaseObject> {
         this.params = {
-            H: 150.0,
-            H1: 50.0,
-            H2: 50.0,
-            H3: 50.0,
-            b: 30.0,
-            B1: 100.0,
-            B2: 150.0,
-            B3: 200.0,
-            L1: 100.0,
-            L2: 150.0,
-            L3: 200.0,
+            H: 15.0,
+            H1: 5.0,
+            H2: 5.0,
+            H3: 5.0,
+            b: 3.0,
+            B1: 10.0,
+            B2: 15.0,
+            B3: 20.0,
+            L1: 10.0,
+            L2: 15.0,
+            L3: 20.0,
             N: 3
         };
         return this;
@@ -836,17 +836,17 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams, S
 
     setDefault(): Primitive<StepPlateBaseParams, StepPlateBaseObject> {
         this.params = {
-            H: 150.0,
-            H1: 50.0,
-            H2: 50.0,
-            H3: 50.0,
-            b: 30.0,
-            L1: 100.0,
-            L2: 150.0,
-            B1: 200.0,
-            B2: 300.0,
-            alpha1: 15.0,
-            alpha2: 10.0,
+            H: 15.0,
+            H1: 5.0,
+            H2: 5.0,
+            H3: 5.0,
+            b: 3.0,
+            L1: 10.0,
+            L2: 15.0,
+            B1: 20.0,
+            B2: 30.0,
+            alpha1: 1.5,
+            alpha2: 1.0,
             N: 3
         };
         return this;
@@ -929,16 +929,16 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams,
 
     setDefault(): Primitive<SlopedBaseBaseParams, SlopedBaseBaseObject> {
         this.params = {
-            H1: 100.0,
-            H2: 30.0,
-            H3: 50.0,
-            b: 15.0,
-            L1: 200.0,
-            L2: 150.0,
-            B1: 100.0,
-            B2: 80.0,
-            alpha1: 15.0,
-            alpha2: 10.0
+            H1: 10.0,
+            H2: 3.0,
+            H3: 5.0,
+            b: 1.5,
+            L1: 20.0,
+            L2: 15.0,
+            B1: 10.0,
+            B2: 8.0,
+            alpha1: 1.5,
+            alpha2: 1.0
         };
         return this;
     }
@@ -1016,17 +1016,17 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
 
     setDefault(): Primitive<CompositeCaissonBaseParams, CompositeCaissonBaseObject> {
         this.params = {
-            H1: 100.0,
-            H2: 30.0,
-            H3: 50.0,
-            H4: 200.0,
-            b: 15.0,
-            D: 200.0,
-            t: 15.0,
-            B1: 200.0,
-            B2: 250.0,
-            L1: 300.0,
-            L2: 350.0
+            H1: 10.0,
+            H2: 3.0,
+            H3: 5.0,
+            H4: 20.0,
+            b: 1.5,
+            D: 20.0,
+            t: 1.5,
+            B1: 20.0,
+            B2: 25.0,
+            L1: 30.0,
+            L2: 35.0
         };
         return this;
     }
@@ -1107,15 +1107,15 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams, RaftBaseObj
 
     setDefault(): Primitive<RaftBaseParams, RaftBaseObject> {
         this.params = {
-            H1: 100.0,
-            H2: 100.0,
-            H3: 50.0,
-            b1: 30.0,
-            b2: 30.0,
-            B1: 500.0,
-            B2: 400.0,
-            L1: 800.0,
-            L2: 600.0
+            H1: 10.0,
+            H2: 10.0,
+            H3: 5.0,
+            b1: 3.0,
+            b2: 3.0,
+            B1: 50.0,
+            B2: 40.0,
+            L1: 80.0,
+            L2: 60.0
         };
         return this;
     }
@@ -1191,12 +1191,12 @@ export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBasePar
 
     setDefault(): Primitive<DirectBuriedBaseParams, DirectBuriedBaseObject> {
         this.params = {
-            H1: 500.0,
-            H2: 100.0,
-            d: 300.0,
-            D: 600.0,
+            H1: 50.0,
+            H2: 10.0,
+            d: 30.0,
+            D: 60.0,
             B: 0,
-            t: 20.0
+            t: 2.0
         };
         return this;
     }
@@ -1262,14 +1262,14 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
 
     setDefault(): Primitive<SteelSleeveBaseParams, SteelSleeveBaseObject> {
         this.params = {
-            H1: 500.0,
-            H2: 100.0,
-            H3: 150.0,
-            H4: 50.0,
-            d: 300.0,
-            D1: 600.0,
-            D2: 400.0,
-            t: 20.0,
+            H1: 50.0,
+            H2: 10.0,
+            H3: 15.0,
+            H4: 5.0,
+            d: 30.0,
+            D1: 60.0,
+            D2: 40.0,
+            t: 2.0,
             B1: 0,
             B2: 0
         };
@@ -1347,14 +1347,14 @@ export class PrecastColumnBasePrimitive extends BasePrimitive<PrecastColumnBaseP
 
     setDefault(): Primitive<PrecastColumnBaseParams, PrecastColumnBaseObject> {
         this.params = {
-            H1: 500.0,
-            H2: 200.0,
-            H3: 300.0,
-            d: 100.0,
-            B1: 200.0,
-            B2: 400.0,
-            L1: 300.0,
-            L2: 600.0
+            H1: 50.0,
+            H2: 20.0,
+            H3: 30.0,
+            d: 10.0,
+            B1: 20.0,
+            B2: 40.0,
+            L1: 30.0,
+            L2: 60.0
         };
         return this;
     }
@@ -1429,17 +1429,17 @@ export class PrecastPinnedBasePrimitive extends BasePrimitive<PrecastPinnedBaseP
 
     setDefault(): Primitive<PrecastPinnedBaseParams, PrecastPinnedBaseObject> {
         this.params = {
-            H1: 500.0,
-            H2: 200.0,
-            H3: 200.0,
-            d: 100.0,
-            B1: 200.0,
-            B2: 400.0,
-            L1: 300.0,
-            L2: 600.0,
-            B: 40.0,
-            H: 40.0,
-            L: 200.0
+            H1: 50.0,
+            H2: 20.0,
+            H3: 20.0,
+            d: 10.0,
+            B1: 20.0,
+            B2: 40.0,
+            L1: 30.0,
+            L2: 60.0,
+            B: 4.0,
+            H: 4.0,
+            L: 20.0
         };
         return this;
     }
@@ -1518,21 +1518,21 @@ export class PrecastMetalSupportBasePrimitive extends BasePrimitive<PrecastMetal
 
     setDefault(): Primitive<PrecastMetalSupportBaseParams, PrecastMetalSupportBaseObject> {
         this.params = {
-            H1: 40.0,
-            H2: 400.0,
-            H3: 20.0,
-            H4: 20.0,
-            b1: 30.0,
-            b2: 30.0,
-            B1: 800.0,
-            B2: 600.0,
-            L1: 1000.0,
-            L2: 800.0,
-            S1: 40.0,
-            S2: 20.0,
+            H1: 4.0,
+            H2: 40.0,
+            H3: 2.0,
+            H4: 2.0,
+            b1: 3.0,
+            b2: 3.0,
+            B1: 80.0,
+            B2: 60.0,
+            L1: 100.0,
+            L2: 80.0,
+            S1: 4.0,
+            S2: 2.0,
             n1: 3,
             n2: 9,
-            HX: [100.0, 100.0, 100.0]
+            HX: [10.0, 10.0, 10.0]
         };
         return this;
     }
@@ -1625,19 +1625,19 @@ export class PrecastConcreteSupportBasePrimitive extends BasePrimitive<PrecastCo
 
     setDefault(): Primitive<PrecastConcreteSupportBaseParams, PrecastConcreteSupportBaseObject> {
         this.params = {
-            H1: 40.0,
-            H2: 400.0,
-            H3: 20.0,
-            H4: 20.0,
-            H5: 20.0,
-            b1: 30.0,
-            b2: 40.0,
-            b3: 20.0,
-            B1: 800.0,
-            B2: 600.0,
-            L1: 1000.0,
-            L2: 800.0,
-            S1: 40.0,
+            H1: 4.0,
+            H2: 40.0,
+            H3: 2.0,
+            H4: 2.0,
+            H5: 2.0,
+            b1: 3.0,
+            b2: 4.0,
+            b3: 2.0,
+            B1: 80.0,
+            B2: 60.0,
+            L1: 100.0,
+            L2: 80.0,
+            S1: 4.0,
             n1: 9
         };
         return this;
@@ -1953,6 +1953,7 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams, Insulator
         } else if (this.params.multiLink.arrangement === this.tp.ArrangementType.VERTICAL) {
             arrangement = 'VERTICAL';
         }
+
         let material: string = 'CERAMIC';
         if (this.params.insulator.material === this.tp.InsulatorMaterial.GLASS) {
             material = 'GLASS';
@@ -1968,6 +1969,7 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams, Insulator
         } else if (this.params.application === this.tp.ApplicationType.CONDUCTOR) {
             application = 'CONDUCTOR';
         }
+
         let stringType: string = 'SUSPENSION';
         if (this.params.stringType === this.tp.StringType.TENSION) {
             stringType = 'TENSION';

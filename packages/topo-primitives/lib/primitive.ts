@@ -57,3 +57,12 @@ export abstract class BasePrimitive<T = any, O = any> implements Primitive<T, O>
     abstract fromObject(o?: O): Primitive<T, O>;
     abstract toObject(): O | undefined;
 }
+
+
+export function radToAngle(rad: number): number {
+    return rad * 180 / Math.PI;
+}
+
+export function angleToRad(angle: number): number {
+    return angle * Math.PI / 180;
+}
