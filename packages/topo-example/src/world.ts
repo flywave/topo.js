@@ -2,7 +2,7 @@ import * as THREE from "three"
 import Setup from "./setup"
 import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
-import { CableTrayPrimitive } from "topo-primitives"
+import { PipePrimitive } from "topo-primitives"
 
 export default class World {
   setup: Setup
@@ -134,7 +134,7 @@ export default class World {
       upDir: new tp.gp_Dir_2(vec),
     };
 
-    const primitive = new CableTrayPrimitive(tp)
+    const primitive = new PipePrimitive(tp)
 
     //const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)
     const shp = primitive.setDefault().build();

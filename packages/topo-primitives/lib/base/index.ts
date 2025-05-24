@@ -418,8 +418,17 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
                 radius: 5.0
             }],
+            innerProfile: [
+                {
+                    type: this.tp.ProfileType.CIRC,
+                    center: new this.tp.gp_Pnt_3(0, 0, 0),
+                    norm: new this.tp.gp_Dir_4(0, 0, 1),
+                    radius: 3.0
+                }
+            ],
             segmentType: this.tp.SegmentType.LINE as any,
-            transitionMode: this.tp.TransitionMode.TRANSFORMED as any
+            transitionMode: this.tp.TransitionMode.TRANSFORMED as any,
+            upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
         return this;
     }
