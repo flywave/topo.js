@@ -1121,8 +1121,8 @@ export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams, S
             this.version = o['version'];
         }
         this.params = {
-            points: o['points'].map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
-            normal: new this.tp.gp_Dir_4(o['normal'].x, o['normal'].y, o['normal'].z),
+            points: o['points'].map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
+            normal: new this.tp.gp_Dir_4(o['normal'][0], o['normal'][1], o['normal'][2]),
             length: o['length']
         }
         return this;
@@ -1132,8 +1132,8 @@ export class StretchedBodyPrimitive extends BasePrimitive<StretchedBodyParams, S
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['points', this.params.points.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() }))],
-            ['normal', { x: this.params.normal.X(), y: this.params.normal.Y(), z: this.params.normal.Z() }],
+            ['points', this.params.points.map(p => ([p.X(), p.Y(), p.Z()]))],
+            ['normal', [this.params.normal.X(), this.params.normal.Y(), this.params.normal.Z()]],
             ['length', this.params.length]
         ])) as StretchedBodyObject;
     }
@@ -1763,13 +1763,13 @@ export class WirePrimitive extends BasePrimitive<WireParams, WireObject> {
             this.version = o['version'];
         }
         this.params = {
-            startPoint: new this.tp.gp_Pnt_3(o['startPoint'].x, o['startPoint'].y, o['startPoint'].z),
-            endPoint: new this.tp.gp_Pnt_3(o['endPoint'].x, o['endPoint'].y, o['endPoint'].z),
-            startDir: new this.tp.gp_Dir_4(o['startDir'].x, o['startDir'].y, o['startDir'].z),
-            endDir: new this.tp.gp_Dir_4(o['endDir'].x, o['endDir'].y, o['endDir'].z),
+            startPoint: new this.tp.gp_Pnt_3(o['startPoint'][0], o['startPoint'][1], o['startPoint'][2]),
+            endPoint: new this.tp.gp_Pnt_3(o['endPoint'][0], o['endPoint'][1], o['endPoint'][2]),
+            startDir: new this.tp.gp_Dir_4(o['startDir'][0], o['startDir'][1], o['startDir'][2]),
+            endDir: new this.tp.gp_Dir_4(o['endDir'][0], o['endDir'][1], o['endDir'][2]),
             sag: o['sag'],
             diameter: o['diameter'],
-            fitPoints: o['fitPoints'].map((p: any) => new this.tp.gp_Pnt_3(p.x, p.y, p.z))
+            fitPoints: o['fitPoints'].map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2]))
         }
         return this;
     }
@@ -1778,13 +1778,13 @@ export class WirePrimitive extends BasePrimitive<WireParams, WireObject> {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['startPoint', { x: this.params.startPoint.X(), y: this.params.startPoint.Y(), z: this.params.startPoint.Z() }],
-            ['endPoint', { x: this.params.endPoint.X(), y: this.params.endPoint.Y(), z: this.params.endPoint.Z() }],
-            ['startDir', { x: this.params.startDir.X(), y: this.params.startDir.Y(), z: this.params.startDir.Z() }],
-            ['endDir', { x: this.params.endDir.X(), y: this.params.endDir.Y(), z: this.params.endDir.Z() }],
+            ['startPoint', [this.params.startPoint.X(), this.params.startPoint.Y(), this.params.startPoint.Z()]],
+            ['endPoint', [this.params.endPoint.X(), this.params.endPoint.Y(), this.params.endPoint.Z()]],
+            ['startDir', [this.params.startDir.X(), this.params.startDir.Y(), this.params.startDir.Z()]],
+            ['endDir', [this.params.endDir.X(), this.params.endDir.Y(), this.params.endDir.Z()]],
             ['sag', this.params.sag],
             ['diameter', this.params.diameter],
-            ['fitPoints', this.params.fitPoints.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() }))]
+            ['fitPoints', this.params.fitPoints.map(p => ([p.X(), p.Y(), p.Z()]))]
         ])) as WireObject;
     }
 };
@@ -1834,10 +1834,10 @@ export class CablePrimitive extends BasePrimitive<CableParams, CableObject> {
             this.version = o['version'];
         }
         this.params = {
-            startPoint: new this.tp.gp_Pnt_3(o['startPoint'].x, o['startPoint'].y, o['startPoint'].z),
-            endPoint: new this.tp.gp_Pnt_3(o['endPoint'].x, o['endPoint'].y, o['endPoint'].z),
+            startPoint: new this.tp.gp_Pnt_3(o['startPoint'][0], o['startPoint'][1], o['startPoint'][2]),
+            endPoint: new this.tp.gp_Pnt_3(o['endPoint'][0], o['endPoint'][1], o['endPoint'][2]),
             inflectionPoints: o['inflectionPoints'].map((p: any) =>
-                new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
+                new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
             radii: o['radii'],
             diameter: o['diameter']
         }
@@ -1848,10 +1848,10 @@ export class CablePrimitive extends BasePrimitive<CableParams, CableObject> {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['startPoint', { x: this.params.startPoint.X(), y: this.params.startPoint.Y(), z: this.params.startPoint.Z() }],
-            ['endPoint', { x: this.params.endPoint.X(), y: this.params.endPoint.Y(), z: this.params.endPoint.Z() }],
+            ['startPoint', [this.params.startPoint.X(), this.params.startPoint.Y(), this.params.startPoint.Z()]],
+            ['endPoint', [this.params.endPoint.X(), this.params.endPoint.Y(), this.params.endPoint.Z()]],
             ['inflectionPoints', this.params.inflectionPoints.map(p =>
-                ({ x: p.X(), y: p.Y(), z: p.Z() }))],
+                ([p.X(), p.Y(), p.Z()]))],
             ['radii', this.params.radii],
             ['diameter', this.params.diameter]
         ])) as CableObject;
@@ -1914,7 +1914,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCa
         this.params = {
             controlPoints: o['controlPoints'].map((pointGroup: any) =>
                 pointGroup.map((p: any) =>
-                    new this.tp.gp_Pnt_3(p.x, p.y, p.z))),
+                    new this.tp.gp_Pnt_3(p[0], p[1], p[2]))),
             curveTypes: curveTypes,
             diameter: o['diameter']
         }
@@ -1933,7 +1933,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCa
             ['type', this.getType()],
             ['version', this.getVersion()],
             ['controlPoints', this.params.controlPoints.map(pointGroup =>
-                pointGroup.map(p => ({ x: p.X(), y: p.Y(), z: p.Z() })))],
+                pointGroup.map(p => ([p.X(), p.Y(), p.Z()])))],
             ['curveTypes', curveTypes],
             ['diameter', this.params.diameter]
         ])) as CurveCableObject;

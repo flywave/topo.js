@@ -212,7 +212,7 @@ export class CableWirePrimitive extends BasePrimitive<CableWireParams, CableWire
         }
         this.params = {
             points: o['points'].map((p: any) =>
-                new this.tp.gp_Pnt_3(p.x, p.y, p.z)),
+                new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
             outsideDiameter: o['outsideDiameter']
         };
         return this;
@@ -223,7 +223,7 @@ export class CableWirePrimitive extends BasePrimitive<CableWireParams, CableWire
             ['type', this.getType()],
             ['version', this.getVersion()],
             ['points', this.params.points.map(p =>
-                ({ x: p.X(), y: p.Y(), z: p.Z() }))],
+                ([p.X(), p.Y(), p.Z()]))],
             ['outsideDiameter', this.params.outsideDiameter]
         ])) as CableWireObject;
     }
@@ -645,8 +645,8 @@ export class CableBracketPrimitive extends BasePrimitive<CableBracketParams, Cab
             width: o['width'],
             topThickness: o['topThickness'],
             rootThickness: o['rootThickness'],
-            columnMountPoints: o['columnMountPoints'].map((t) => new this.tp.gp_Pnt_3(t.x, t.y, t.z)) || [],
-            clampMountPoints: o['clampMountPoints'].map((t) => new this.tp.gp_Pnt_3(t.x, t.y, t.z)) || []
+            columnMountPoints: o['columnMountPoints'].map((t) => new this.tp.gp_Pnt_3(t[0], t[1], t[2])) || [],
+            clampMountPoints: o['clampMountPoints'].map((t) => new this.tp.gp_Pnt_3(t[0], t[1], t[2])) || []
         };
         return this;
     }
@@ -661,8 +661,8 @@ export class CableBracketPrimitive extends BasePrimitive<CableBracketParams, Cab
             ['width', this.params.width],
             ['topThickness', this.params.topThickness],
             ['rootThickness', this.params.rootThickness],
-            ['columnMountPoints', this.params.columnMountPoints.map((p) => ({ x: p.X(), y: p.Y(), z: p.Z() }))],
-            ['clampMountPoints', this.params.clampMountPoints.map((p) => ({ x: p.X(), y: p.Y(), z: p.Z() }))]
+            ['columnMountPoints', this.params.columnMountPoints.map((p) => ([p.X(), p.Y(), p.Z()]))],
+            ['clampMountPoints', this.params.clampMountPoints.map((p) => ([p.X(), p.Y(), p.Z()]))]
         ])) as CableBracketObject;
     }
 }
@@ -823,7 +823,7 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams, CablePole
             fixedLegLength: o['fixedLegLength'],
             fixedLegWidth: o['fixedLegWidth'],
             thickness: o['thickness'],
-            mountPoints: o['mountPoints'].map((t) => new this.tp.gp_Pnt_3(t.x, t.y, t.z)) || []
+            mountPoints: o['mountPoints'].map((t) => new this.tp.gp_Pnt_3(t[0], t[1], t[2])) || []
         };
         return this;
     }
@@ -840,7 +840,7 @@ export class CablePolePrimitive extends BasePrimitive<CablePoleParams, CablePole
             ['fixedLegLength', this.params.fixedLegLength],
             ['fixedLegWidth', this.params.fixedLegWidth],
             ['thickness', this.params.thickness],
-            ['mountPoints', this.params.mountPoints.map((t) => ({ x: t.X(), y: t.Y(), z: t.Z() }))]
+            ['mountPoints', this.params.mountPoints.map((t) => ([t.X(), t.Y(), t.Z()]))]
         ])) as CablePoleObject;
     }
 }
@@ -1960,13 +1960,13 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             baseThickness: o['baseThickness'],
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
-            pipePositions: o['pipePositions']?.map((p: any) => new this.tp.gp_Pnt2d_3(p.x, p.y)) || [],
+            pipePositions: o['pipePositions']?.map((p: any) => new this.tp.gp_Pnt2d_3(p[0], p[1])) || [],
             pipeInnerDiameters: o['pipeInnerDiameters'] || [],
             pipeWallThicknesses: o['pipeWallThicknesses'] || [],
             pullPipeInnerDiameter: o['pullPipeInnerDiameter'],
             pullPipeThickness: o['pullPipeThickness'],
             points: o['points']?.map((p: any) => ({
-                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+                position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
                 type: p.type
             })) || []
         };
@@ -1985,13 +1985,13 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             ['baseThickness', this.params.baseThickness],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
-            ['pipePositions', this.params.pipePositions.map((p) => ({ x: p.X(), y: p.Y() }))],
+            ['pipePositions', this.params.pipePositions.map((p) => ([p.X(), p.Y()]))],
             ['pipeInnerDiameters', this.params.pipeInnerDiameters],
             ['pipeWallThicknesses', this.params.pipeWallThicknesses],
             ['pullPipeInnerDiameter', this.params.pullPipeInnerDiameter],
             ['pullPipeThickness', this.params.pullPipeThickness],
             ['points', this.params.points.map((p) => ({
-                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                position: [p.position.X(), p.position.Y(), p.position.Z()],
                 type: p.type
             }))]
         ])) as PipeRowObject;
@@ -2071,7 +2071,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             wallThickness: o['wallThickness'],
             wallThickness2: o['wallThickness2'],
             points: o['points']?.map((p: any) => ({
-                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+                position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
                 type: p.type
             })) || []
         };
@@ -2093,7 +2093,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             ['wallThickness', this.params.wallThickness],
             ['wallThickness2', this.params.wallThickness2],
             ['points', this.params.points.map((p) => ({
-                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                position: [p.position.X(), p.position.Y(), p.position.Z()],
                 type: p.type
             }))]
         ])) as CableTrenchObject;
@@ -2181,7 +2181,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
             points: o['points']?.map((p: any) => ({
-                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+                position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
                 type: p.type
             })) || []
         };
@@ -2212,7 +2212,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
             ['points', this.params.points.map((p) => ({
-                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                position: [p.position.X(), p.position.Y(), p.position.Z()],
                 type: p.type
             }))]
         ])) as CableTunnelObject;
@@ -2306,12 +2306,12 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             arcHeight: o['arcHeight'],
             wallThickness: o['wallThickness'],
             pipeCount: o['pipeCount'],
-            pipePositions: o['pipePositions']?.map((p) => (new this.tp.gp_Pnt2d_3(p.x, p.y))) || [],
+            pipePositions: o['pipePositions']?.map((p) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))) || [],
             pipeInnerDiameters: o['pipeInnerDiameters'] || [],
             pipeWallThicknesses: o['pipeWallThicknesses'] || [],
             hasProtectionPlate: o['hasProtectionPlate'],
             points: o['points']?.map((p: any) => ({
-                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+                position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
                 type: p.type
             })) || []
         };
@@ -2339,12 +2339,12 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             ['arcHeight', this.params.arcHeight],
             ['wallThickness', this.params.wallThickness],
             ['pipeCount', this.params.pipeCount],
-            ['pipePositions', this.params.pipePositions.map((p) => ({ x: p.X(), y: p.Y() }))],
+            ['pipePositions', this.params.pipePositions.map((p) => ([p.X(), p.Y()]))],
             ['pipeInnerDiameters', this.params.pipeInnerDiameters],
             ['pipeWallThicknesses', this.params.pipeWallThicknesses],
             ['hasProtectionPlate', this.params.hasProtectionPlate],
             ['points', this.params.points.map((p) => ({
-                position: { x: p.position.X(), y: p.position.Y(), z: p.position.Z() },
+                position: [p.position.X(), p.position.Y(), p.position.Z()],
                 type: p.type
             }))]
         ])) as CableTrayObject;
@@ -2765,7 +2765,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             height: o['height'],
             width: o['width'],
             points: o['points'].map((p) => ({
-                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+                position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
                 type: p.type
             })) || []
         };
@@ -2779,7 +2779,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             ['height', this.params.height],
             ['width', this.params.width],
             ['points', this.params.points.map((t) => ({
-                position: { x: t.position.X(), y: t.position.Y(), z: t.position.Z() },
+                position: [t.position.X(), t.position.Y(), t.position.Z()],
                 type: t.type
             }))]
         ])) as FootpathObject;
@@ -3085,7 +3085,7 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
             width: o['width'],
             thickness: o['thickness'],
             holeCount: o['holeCount'],
-            holePositions: o['holePositions'].map((t) => (new this.tp.gp_Pnt2d_3(t.x, t.y))) || [],
+            holePositions: o['holePositions'].map((t) => (new this.tp.gp_Pnt2d_3(t[0], t[1]))) || [],
             holeStyles: o['holeStyles'] || [],
             holeDiameters: o['holeDiameters'] || [],
             holeWidths: o['holeWidths'] || []
@@ -3102,7 +3102,7 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
             ['width', this.params.width],
             ['thickness', this.params.thickness],
             ['holeCount', this.params.holeCount],
-            ['holePositions', this.params.holePositions.map((t) => ({ x: t.X(), y: t.Y() }))],
+            ['holePositions', this.params.holePositions.map((t) => ([t.X(), t.Y()]))],
             ['holeStyles', this.params.holeStyles],
             ['holeDiameters', this.params.holeDiameters],
             ['holeWidths', this.params.holeWidths]
@@ -3448,7 +3448,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
         this.params = {
             style: o['style'],
             count: o['count'],
-            positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p.x, p.y))),
+            positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))),
             radii: o['radii'],
             length: o['length'],
             width: o['width'],
@@ -3463,7 +3463,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
             ['version', this.getVersion()],
             ['style', this.params.style],
             ['count', this.params.count],
-            ['positions', this.params.positions.map((p: any) => ({ x: p.X(), y: p.Y() }))],
+            ['positions', this.params.positions.map((p: any) => ([p.X(), p.Y()]))],
             ['radii', this.params.radii],
             ['length', this.params.length],
             ['width', this.params.width],
