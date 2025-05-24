@@ -102,8 +102,8 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams, Water
             bottomPlatformHeight: o['bottomPlatformHeight'] || 0,
             cushionExtension: o['cushionExtension'] || 0,
             cushionThickness: o['cushionThickness'] || 0,
-            points: o['points']?.map((p: any) => ({
-                position: new this.tp.gp_Pnt_3(p.position.x, p.position.y, p.position.z),
+            points: o['points']?.map((p) => ({
+                position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
                 type: p.type
             })) || []
         };
@@ -145,11 +145,11 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams, Water
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
             ['points', this.params.points.map(p => ({
-                position: {
-                    x: p.position.X(),
-                    y: p.position.Y(),
-                    z: p.position.Z()
-                },
+                position: [
+                    p.position.X(),
+                    p.position.Y(),
+                    p.position.Z()
+                ],
                 type: p.type
             }))]
         ])) as WaterTunnelObject;

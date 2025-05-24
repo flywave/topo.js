@@ -285,8 +285,8 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams, PileCapBa
             e2: o['e2'],
             cs: o['cs'],
             ZCOUNT: o['ZCOUNT'],
-            ZPOSTARRAY: o['ZPOSTARRAY'].map((p: any) =>
-                new this.tp.gp_Pnt_3(p.x, p.y, p.z))
+            ZPOSTARRAY: o['ZPOSTARRAY'].map((p) =>
+                new this.tp.gp_Pnt_3(p[0], p[1], p[2]))
         };
         return this;
     }
@@ -311,7 +311,7 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams, PileCapBa
             ['cs', this.params.cs],
             ['ZCOUNT', this.params.ZCOUNT],
             ['ZPOSTARRAY', this.params.ZPOSTARRAY.map(p =>
-                ({ x: p.X(), y: p.Y(), z: p.Z() }))]
+                ([p.X(), p.Y(), p.Z()]))]
         ])) as PileCapBaseObject;
     }
 }
@@ -362,7 +362,7 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams, Roc
         throw new Error("Invalid parameters for RockAnchor");
     }
 
-    fromObject(o: any): Primitive<RockAnchorParams, RockAnchorBaseObject> {
+    fromObject(o?: RockAnchorBaseObject): Primitive<RockAnchorParams, RockAnchorBaseObject> {
         if (o === undefined) {
             return this;
         }
@@ -376,8 +376,8 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams, Roc
             B1: o['B1'],
             L1: o['L1'],
             ZCOUNT: o['ZCOUNT'],
-            ZPOSTARRAY: o['ZPOSTARRAY'].map((p: any) =>
-                new this.tp.gp_Pnt_3(p.x, p.y, p.z))
+            ZPOSTARRAY: o['ZPOSTARRAY'].map((p) =>
+                new this.tp.gp_Pnt_3(p[0], p[1], p[2]))
         };
         return this;
     }
@@ -393,7 +393,7 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams, Roc
             ['L1', this.params.L1],
             ['ZCOUNT', this.params.ZCOUNT],
             ['ZPOSTARRAY', this.params.ZPOSTARRAY.map(p =>
-                ({ x: p.X(), y: p.Y(), z: p.Z() }))]
+                ([p.X(), p.Y(), p.Z()]))]
         ])) as RockAnchorBaseObject;
     }
 }
@@ -470,7 +470,7 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams, R
             cs: o['cs'],
             ZCOUNT: o['ZCOUNT'],
             ZPOSTARRAY: o['ZPOSTARRAY'].map((p: any) =>
-                new this.tp.gp_Pnt_3(p.x, p.y, p.z))
+                new this.tp.gp_Pnt_3(p[0], p[1], p[2]))
         };
         return this;
     }
@@ -491,7 +491,7 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams, R
             ['cs', this.params.cs],
             ['ZCOUNT', this.params.ZCOUNT],
             ['ZPOSTARRAY', this.params.ZPOSTARRAY.map(p =>
-                ({ x: p.X(), y: p.Y(), z: p.Z() }))]
+                ([p.X(), p.Y(), p.Z()]))]
         ])) as RockPileCapBaseObject;
     }
 }
@@ -1754,8 +1754,8 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
 
     public build(args?: any[]): Shape | undefined {
         if (this.valid() && args && args.length === 2) {
-            const start = new this.tp.gp_Pnt_3(args[0].x, args[0].y, args[0].z);
-            const end = new this.tp.gp_Pnt_3(args[1].x, args[1].y, args[1].z);
+            const start = new this.tp.gp_Pnt_3(args[0][0], args[0][1], args[0].z);
+            const end = new this.tp.gp_Pnt_3(args[1][0], args[1][1], args[1].z);
             return new this.tp.Shape(
                 this.tp.createTransmissionLine(this.params, start, end),
                 false
@@ -2109,7 +2109,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                 height: b.height,
                 nodes: b.nodes?.map((n: any) => ({
                     id: n.id,
-                    position: new this.tp.gp_Pnt_3(n.position.x, n.position.y, n.position.z)
+                    position: new this.tp.gp_Pnt_3(n.position[0], n.position[1], n.position.z)
                 })) || [],
                 legs: b.legs?.map((l: any) => ({
                     id: l.id,
@@ -2117,7 +2117,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                     specificHeight: l.specificHeight,
                     nodes: l.nodes?.map((n: any) => ({
                         id: n.id,
-                        position: new this.tp.gp_Pnt_3(n.position.x, n.position.y, n.position.z)
+                        position: new this.tp.gp_Pnt_3(n.position[0], n.position[1], n.position.z)
                     })) || []
                 })) || []
             })) || [],
@@ -2128,8 +2128,8 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                 type: m.type,
                 specification: m.specification,
                 material: m.material,
-                xDirection: new this.tp.gp_Dir_4(m.xDirection.x, m.xDirection.y, m.xDirection.z),
-                yDirection: new this.tp.gp_Dir_4(m.yDirection.x, m.yDirection.y, m.yDirection.z),
+                xDirection: new this.tp.gp_Dir_4(m.xDirection[0], m.xDirection[1], m.xDirection.z),
+                yDirection: new this.tp.gp_Dir_4(m.yDirection[0], m.yDirection[1], m.yDirection.z),
                 end1Diameter: m.end1Diameter,
                 end2Diameter: m.end2Diameter,
                 thickness: m.thickness,
@@ -2138,7 +2138,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
             attachments: o['attachments']?.map((a: any) => ({
                 name: a.name,
                 type: a.type,
-                position: new this.tp.gp_Pnt_3(a.position.x, a.position.y, a.position.z)
+                position: new this.tp.gp_Pnt_3(a.position[0], a.position[1], a.position.z)
             })) || []
         };
         return this;
@@ -2158,11 +2158,11 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                 height: b.height,
                 nodes: b.nodes.map(n => ({
                     id: n.id,
-                    position: {
-                        x: n.position.X(),
-                        y: n.position.Y(),
-                        z: n.position.Z()
-                    }
+                    position: [
+                        n.position.X(),
+                        n.position.Y(),
+                        n.position.Z()
+                    ]
                 })),
                 legs: b.legs.map(l => ({
                     id: l.id,
@@ -2170,11 +2170,11 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                     specificHeight: l.specificHeight,
                     nodes: l.nodes.map(n => ({
                         id: n.id,
-                        position: {
-                            x: n.position.X(),
-                            y: n.position.Y(),
-                            z: n.position.Z()
-                        }
+                        position: [
+                            n.position.X(),
+                            n.position.Y(),
+                            n.position.Z()
+                        ]
                     }))
                 }))
             }))],
@@ -2185,16 +2185,16 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                 type: m.type,
                 specification: m.specification,
                 material: m.material,
-                xDirection: {
-                    x: m.xDirection.X(),
-                    y: m.xDirection.Y(),
-                    z: m.xDirection.Z()
-                },
-                yDirection: {
-                    x: m.yDirection.X(),
-                    y: m.yDirection.Y(),
-                    z: m.yDirection.Z()
-                },
+                xDirection: [
+                    m.xDirection.X(),
+                    m.xDirection.Y(),
+                    m.xDirection.Z()
+                ],
+                yDirection: [
+                    m.yDirection.X(),
+                    m.yDirection.Y(),
+                    m.yDirection.Z()
+                ],
                 end1Diameter: m.end1Diameter,
                 end2Diameter: m.end2Diameter,
                 thickness: m.thickness,
@@ -2203,11 +2203,11 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
             ['attachments', this.params.attachments.map(a => ({
                 name: a.name,
                 type: a.type,
-                position: {
-                    x: a.position.X(),
-                    y: a.position.Y(),
-                    z: a.position.Z()
-                }
+                position: [
+                    a.position.X(),
+                    a.position.Y(),
+                    a.position.Z()
+                ]
             }))]
         ])) as PoleTowerObject;
     }
