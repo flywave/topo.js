@@ -13,10 +13,8 @@ export default class World {
   oc: TopoInstance | null = null
   done: Promise<void> | null = null
   gui: GUI | null = null  // 新增GUI实例
-  selectedCategory: string = 'base'
-  selectedType: string = BasePrimitiveType.Pipe
+  selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType = BasePrimitiveType.Pipe
   group: THREE.Group | null = null  // 新增meshGroup
-  private typeController: any = null; // Add reference to type controller
 
   constructor() {
     this.setup = Setup.getInstance()
@@ -42,81 +40,28 @@ export default class World {
     }
     this.gui = new GUI({ width: 300 })
 
-    // 第一级选择：类别
-    const categoryOptions = {
-      category: this.selectedCategory,
-      categories: ['base', 'ec', 'gs', 'gt', 'hp']
+    // 合并所有图元类型选项
+    const allShapeTypes = [
+      ...Object.values(BasePrimitiveType),
+      ...Object.values(ECPrimitiveType),
+      ...Object.values(GSPrimitiveType),
+      ...Object.values(GTPrimitiveType),
+      ...Object.values(HPPrimitiveType)
+    ];
+
+    const options = {
+      shapeType: this.selectedShape,
+      shapes: allShapeTypes
     }
 
-    // 第二级选择：具体类型
-    const typeOptions = {
-      type: this.selectedType,
-      types: Object.values(BasePrimitiveType) // 默认显示base类型
-    }
-
-    // 添加类型选择器
-    this.typeController = this.gui.add(typeOptions, 'type', typeOptions.types)
-      .name('Type')
-      .onChange((value: string) => {
-        this.selectedType = value
-        this.updateShapeBasedOnSelection(value as BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType)
-      })
-
-    // 添加类别选择器
-    this.gui.add(categoryOptions, 'category', categoryOptions.categories)
-      .name('Category')
-      .onChange((value: string) => {
-        this.selectedCategory = value
-        this.updateTypeOptions(value)
-      })
-
-    // 初始化类型选项
-    this.updateTypeOptions(this.selectedCategory)
-  }
-
-
-  private updateTypeOptions(category: string, controller?: any) {
-    let types: string[] = []
-
-    switch (category) {
-      case 'base':
-        types = Object.values(BasePrimitiveType)
-        break
-      case 'ec':
-        types = Object.values(ECPrimitiveType)
-        break
-      case 'gs':
-        types = Object.values(GSPrimitiveType)
-        break
-      case 'gt':
-        types = Object.values(GTPrimitiveType)
-        break
-      case 'hp':
-        types = Object.values(HPPrimitiveType)
-        break
-    }
-
-    this.typeController.destroy()
-
-    // 第二级选择：具体类型
-    const typeOptions = {
-      type: this.selectedType,
-      types
-    }
-
-    this.typeController = this.gui!.add(typeOptions, 'type', typeOptions.types)
-      .name('Type')
-      .onChange((value: string) => {
-        this.selectedType = value
-        this.updateShapeBasedOnSelection(value as BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType)
-      })
-
-
-    if (this.typeController) {
-      this.typeController.options(types)
-      this.selectedType = types[0]
-      this.typeController.setValue(this.selectedType)
-    }
+    this.gui.add(options, 'shapeType', options.shapes)
+      .name('Shape Type')
+      .onChange((value: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType) => {
+        this.selectedShape = value;
+        console.log('Selected shape:', value);
+        // 这里可以添加形状切换逻辑
+        this.updateShapeBasedOnSelection(value);
+      });
   }
 
   // 新增方法 - 根据选择的类型更新形状
@@ -133,7 +78,7 @@ export default class World {
     if (!primitive) return;
 
     // 构建形状并添加到场景
-    const shape = primitive.build();
+    const shape = primitive.setDefault().build();
     if (shape) {
       const geometries = mesh(shape);
       const material = new THREE.MeshStandardMaterial({
