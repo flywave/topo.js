@@ -51,8 +51,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                            emscripten::val objVal) {
             topo_vector *origin = nullptr;
             if (!originVal.isUndefined() && !originVal.isNull()) {
-              auto or = originVal.as<topo_vector>();
-              origin = &or ;
+              static topo_vector orv = originVal.as<topo_vector>();
+              origin = &orv;
             }
 
             shape_object obj;
@@ -117,8 +117,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
 
                 topo_vector *origin = nullptr;
                 if (!originVal.isUndefined() && !originVal.isNull()) {
-                  auto or = originVal.as<topo_vector>();
-                  origin = &or ;
+                  static topo_vector orv = originVal.as<topo_vector>();
+                  origin = &orv;
                 }
 
                 auto result = self.create(offset, invert, centerOpt, origin);
@@ -151,7 +151,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                            emscripten::val arg) {
             if (arg.instanceof(emscripten::val::global("Workplane"))) {
               auto other = arg.as<std::shared_ptr<workplane>>();
-              return emscripten::val(self.add(*other));
+              auto &r = self.add(*other);
+              return emscripten::val(r.shared_from_this());
             } else if (arg.isArray()) {
               std::vector<shape_object> objs;
               const size_t len = arg["length"].as<size_t>();
@@ -169,7 +170,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   objs.push_back(item.as<std::shared_ptr<sketch>>());
                 }
               }
-              return emscripten::val(self.add(objs));
+              auto &r = self.add(objs);
+              return emscripten::val(r.shared_from_this());
             } else {
               shape_object obj;
               if (arg.instanceof(emscripten::val::global("Shape"))) {
@@ -181,7 +183,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
               } else if (arg.instanceof(emscripten::val::global("Sketch"))) {
                 obj = arg.as<std::shared_ptr<sketch>>();
               }
-              return emscripten::val(self.add(obj));
+              auto &r = self.add(obj);
+              return emscripten::val(r.shared_from_this());
             }
           }),
           emscripten::allow_raw_pointers())
@@ -367,9 +370,9 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   return emscripten::val(
                       self.mirror(mirrorFace, basePoint, unionResult));
                 } else {
-                  auto mirrorPlane = mirrorObj.as<workplane>();
+                  auto mirrorPlane = mirrorObj.as<std::shared_ptr<workplane>>();
                   return emscripten::val(
-                      self.mirror(mirrorPlane, basePoint, unionResult));
+                      self.mirror(*mirrorPlane, basePoint, unionResult));
                 }
               }))
       .function("translate", emscripten::optional_override(
@@ -411,7 +414,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                  int yCount, emscripten::val centerVal) {
                 if (centerVal.isUndefined()) {
                   return emscripten::val(
-                      self.rarray(xSpacing, ySpacing, xCount, yCount));
+                      self.rarray(xSpacing, ySpacing, xCount, yCount, false));
                 } else if (centerVal.typeOf().as<std::string>() == "boolean") {
                   bool centerAll = centerVal.as<bool>();
                   return emscripten::val(self.rarray(xSpacing, ySpacing, xCount,
@@ -716,9 +719,9 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   return emscripten::val(self.eachpoint(
                       shapeObj, useLocalCoordinates, combine, clean));
                 } else if (argVal.typeOf().as<std::string>() == "workplane") {
-                  auto wp = argVal.as<workplane>();
+                  auto wp = argVal.as<std::shared_ptr<workplane>>();
                   return emscripten::val(
-                      self.eachpoint(wp, useLocalCoordinates, combine, clean));
+                      self.eachpoint(*wp, useLocalCoordinates, combine, clean));
                 } else {
                   auto func = [argVal](topo_location loc) {
                     return argVal(loc).as<shape>();
@@ -863,9 +866,9 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                     return emscripten::val(
                         self.extrude(distance, combine, clean, both, taper));
                   } else if (argVal.typeOf().as<std::string>() == "face") {
-                    auto face = argVal.as<face>();
+                    auto f = argVal.as<topo::face>();
                     return emscripten::val(
-                        self.extrude(face, combine, clean, both, taper));
+                        self.extrude(f, combine, clean, both, taper));
                   } else {
                     auto faceType = argVal.as<face_index_type>();
                     return emscripten::val(
@@ -894,7 +897,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       }
 
                       if (pathVal.typeOf().as<std::string>() == "workplane") {
-                        auto wp = otherVal.as<std::shared_ptr<workplane>>();
+                        auto wp = pathVal.as<std::shared_ptr<workplane>>();
                         return emscripten::val(self.sweep(
                             *wp, multisection, makeSolid, isFrenet, combine,
                             clean, transition, normal, auxSpine));
@@ -919,11 +922,11 @@ EMSCRIPTEN_BINDINGS(Workplane) {
               auto wp = otherVal.as<std::shared_ptr<workplane>>();
               return emscripten::val(self.union_(*wp, clean, glue, tol));
             } else if (otherVal.typeOf().as<std::string>() == "solid") {
-              auto solid = otherVal.as<solid>();
-              return emscripten::val(self.union_(solid, clean, glue, tol));
+              auto s = otherVal.as<topo::solid>();
+              return emscripten::val(self.union_(s, clean, glue, tol));
             } else {
-              auto compound = otherVal.as<compound>();
-              return emscripten::val(self.union_(compound, clean, glue, tol));
+              auto com = otherVal.as<topo::compound>();
+              return emscripten::val(self.union_(com, clean, glue, tol));
             }
           }))
       .function("cut",
@@ -934,11 +937,11 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                     auto wp = otherVal.as<std::shared_ptr<workplane>>();
                     return emscripten::val(self.cut(*wp, clean, tol));
                   } else if (otherVal.typeOf().as<std::string>() == "solid") {
-                    auto solid = otherVal.as<solid>();
-                    return emscripten::val(self.cut(solid, clean, tol));
+                    auto s = otherVal.as<topo::solid>();
+                    return emscripten::val(self.cut(s, clean, tol));
                   } else {
-                    auto compound = otherVal.as<compound>();
-                    return emscripten::val(self.cut(compound, clean, tol));
+                    auto com = otherVal.as<topo::compound>();
+                    return emscripten::val(self.cut(com, clean, tol));
                   }
                 }))
       .function("intersect",
@@ -949,38 +952,36 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                     auto wp = otherVal.as<std::shared_ptr<workplane>>();
                     return emscripten::val(self.intersect(*wp, clean, tol));
                   } else if (otherVal.typeOf().as<std::string>() == "solid") {
-                    auto solid = otherVal.as<solid>();
-                    return emscripten::val(self.intersect(solid, clean, tol));
+                    auto s = otherVal.as<topo::solid>();
+                    return emscripten::val(self.intersect(s, clean, tol));
                   } else {
-                    auto compound = otherVal.as<compound>();
-                    return emscripten::val(
-                        self.intersect(compound, clean, tol));
+                    auto comp = otherVal.as<topo::compound>();
+                    return emscripten::val(self.intersect(comp, clean, tol));
                   }
                 }))
-      .function("cutBlind",
-                emscripten::optional_override(
-                    [](workplane &self, emscripten::val untilVal, bool clean,
-                       bool both, emscripten::val taperVal) {
-                      boost::optional<double> taper;
-                      if (!taperVal.isUndefined()) {
-                        taper = taperVal.as<double>();
-                      }
+      .function(
+          "cutBlind",
+          emscripten::optional_override(
+              [](workplane &self, emscripten::val untilVal, bool clean,
+                 bool both, emscripten::val taperVal) {
+                boost::optional<double> taper;
+                if (!taperVal.isUndefined()) {
+                  taper = taperVal.as<double>();
+                }
 
-                      if (untilVal.typeOf().as<std::string>() == "number") {
-                        double distance = untilVal.as<double>();
-                        return emscripten::val(
-                            self.cut_blind(distance, clean, both, taper));
-                      } else if (untilVal.typeOf().as<std::string>() ==
-                                 "face") {
-                        auto face = untilVal.as<face>();
-                        return emscripten::val(
-                            self.cut_blind(face, clean, both, taper));
-                      } else {
-                        auto faceType = untilVal.as<face_index_type>();
-                        return emscripten::val(
-                            self.cut_blind(faceType, clean, both, taper));
-                      }
-                    }))
+                if (untilVal.typeOf().as<std::string>() == "number") {
+                  double distance = untilVal.as<double>();
+                  return emscripten::val(
+                      self.cut_blind(distance, clean, both, taper));
+                } else if (untilVal.typeOf().as<std::string>() == "face") {
+                  auto f = untilVal.as<topo::face>();
+                  return emscripten::val(self.cut_blind(f, clean, both, taper));
+                } else {
+                  auto faceType = untilVal.as<face_index_type>();
+                  return emscripten::val(
+                      self.cut_blind(faceType, clean, both, taper));
+                }
+              }))
       .function("revolve",
                 emscripten::optional_override(
                     [](workplane &self, double angleDegrees,
@@ -1011,7 +1012,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                     pointsVal.as<std::vector<gp_Pnt>>();
 
                 if (edgesOrWpVal.typeOf().as<std::string>() == "workplane") {
-                  auto wp = otherVal.as<std::shared_ptr<workplane>>();
+                  auto wp = edgesOrWpVal.as<std::shared_ptr<workplane>>();
                   return emscripten::val(self.interp_plate(
                       *wp, points, thickness, combine, clean, degree,
                       nbPtsOnCur, nbIter, anisotropy, tol2d, tol3d, tolAng,
@@ -1131,7 +1132,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                  return emscripten::val(self.section(height));
                                }))
       .function("toPending", emscripten::optional_override([](workplane &self) {
-                  auto r = self.to_pending();
+                  auto &r = self.to_pending();
                   return emscripten::val(r.shared_from_this());
                 }))
       .function("offset2d",
@@ -1170,51 +1171,128 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   }
                   throw std::runtime_error("Invalid argument type for at()");
                 }))
-      .function(
-          "filter",
-          emscripten::optional_override(
-              [](workplane &self, emscripten::val predicate) {
-                auto func =
-                    emscripten::val_to_std_function<bool(const shape_object &)>(
-                        predicate);
-                return emscripten::val(self.filter(func));
-              }))
-      .function("map", emscripten::optional_override(
-                           [](workplane &self, emscripten::val mapper) {
-                             auto func =
-                                 emscripten::val_to_std_function<shape_object(
-                                     const shape_object &)>(mapper);
-                             return emscripten::val(self.map(func));
-                           }))
-      .function("apply",
+      .function("filter",
                 emscripten::optional_override([](workplane &self,
-                                                 emscripten::val applier) {
-                  auto func =
-                      emscripten::val_to_std_function<std::vector<shape_object>(
-                          const std::vector<shape_object> &)>(applier);
-                  return emscripten::val(self.apply(func));
-                }))
-      .function("sort",
-                emscripten::optional_override([](workplane &self,
-                                                 emscripten::val comparator) {
-                  auto func = emscripten::val_to_std_function<bool(
-                      const shape_object &, const shape_object &)>(comparator);
-                  return emscripten::val(self.sort(func));
+                                                 emscripten::val predicate) {
+                  auto pred = [predicate](const shape_object &obj) {
+                    emscripten::val jsVal;
+                    if (obj.type() == typeid(shape)) {
+                      jsVal = emscripten::val(boost::get<shape>(obj));
+                    } else if (obj.type() == typeid(topo_vector)) {
+                      jsVal = emscripten::val(boost::get<topo_vector>(obj));
+                    } else if (obj.type() == typeid(topo_location)) {
+                      jsVal = emscripten::val(boost::get<topo_location>(obj));
+                    } else if (obj.type() == typeid(std::shared_ptr<sketch>)) {
+                      jsVal = emscripten::val(
+                          boost::get<std::shared_ptr<sketch>>(obj));
+                    } else {
+                      jsVal = emscripten::val::null();
+                    }
+                    return predicate(jsVal).as<bool>();
+                  };
+                  return emscripten::val(self.filter(pred));
                 }))
       .function(
-          "invoke", emscripten::optional_override([](workplane &self,
-                                                     emscripten::val func) {
-            if (func.isCallable()) {
-              auto f =
-                  emscripten::val_to_std_function<emscripten::val(workplane &)>(
-                      func);
-              return emscripten::val(self.invoke(
-                  std::function<std::shared_ptr<workplane>(workplane &)>(
-                      [f](workplane &wp) {
-                        return f(wp).as<std::shared_ptr<workplane>>();
-                      })));
-            }
-            throw std::runtime_error("Invalid function type for invoke");
+          "map", emscripten::optional_override([](workplane &self,
+                                                  emscripten::val mapper) {
+            auto pred = [mapper](const shape_object &obj) -> shape_object {
+              emscripten::val jsVal;
+              if (obj.type() == typeid(shape)) {
+                jsVal = emscripten::val(boost::get<shape>(obj));
+              } else if (obj.type() == typeid(topo_vector)) {
+                jsVal = emscripten::val(boost::get<topo_vector>(obj));
+              } else if (obj.type() == typeid(topo_location)) {
+                jsVal = emscripten::val(boost::get<topo_location>(obj));
+              } else if (obj.type() == typeid(std::shared_ptr<sketch>)) {
+                jsVal =
+                    emscripten::val(boost::get<std::shared_ptr<sketch>>(obj));
+              } else {
+                jsVal = emscripten::val::null();
+              }
+              return mapper(jsVal).as<shape_object>();
+            };
+            return emscripten::val(self.map(pred));
+          }))
+      .function(
+          "apply", emscripten::optional_override([](workplane &self,
+                                                    emscripten::val applier) {
+            auto pred = [applier](const std::vector<shape_object> &objs) {
+              emscripten::val jsArr = emscripten::val::array();
+              for (const auto &obj : objs) {
+                emscripten::val jsVal;
+                if (obj.type() == typeid(shape)) {
+                  jsVal = emscripten::val(boost::get<shape>(obj));
+                } else if (obj.type() == typeid(topo_vector)) {
+                  jsVal = emscripten::val(boost::get<topo_vector>(obj));
+                } else if (obj.type() == typeid(topo_location)) {
+                  jsVal = emscripten::val(boost::get<topo_location>(obj));
+                } else if (obj.type() == typeid(std::shared_ptr<sketch>)) {
+                  jsVal =
+                      emscripten::val(boost::get<std::shared_ptr<sketch>>(obj));
+                } else {
+                  jsVal = emscripten::val::null();
+                }
+                jsArr.call<void>("push", jsVal);
+              }
+
+              // 处理从 JavaScript 数组到 std::vector<shape_object> 的转换
+              emscripten::val result = applier(jsArr);
+              std::vector<shape_object> vec;
+              for (unsigned i = 0; i < result["length"].as<unsigned>(); i++) {
+                emscripten::val item = result[i];
+                if (item.typeOf().as<std::string>() == "shape") {
+                  vec.emplace_back(item.as<shape>());
+                } else if (item.typeOf().as<std::string>() == "topo_vector") {
+                  vec.emplace_back(item.as<topo_vector>());
+                } else if (item.typeOf().as<std::string>() == "topo_location") {
+                  vec.emplace_back(item.as<topo_location>());
+                } else if (item.typeOf().as<std::string>() == "sketch") {
+                  vec.emplace_back(item.as<std::shared_ptr<sketch>>());
+                } else {
+                  vec.emplace_back(); // 默认构造一个空的 shape_object
+                }
+              }
+              return vec;
+            };
+            return emscripten::val(self.apply(pred));
+          }))
+      .function(
+          "sort", emscripten::optional_override([](workplane &self,
+                                                   emscripten::val comparator) {
+            auto pred = [comparator](const shape_object &a,
+                                     const shape_object &b) {
+              emscripten::val jsA, jsB;
+
+              // 处理第一个对象的类型转换
+              if (a.type() == typeid(shape)) {
+                jsA = emscripten::val(boost::get<shape>(a));
+              } else if (a.type() == typeid(topo_vector)) {
+                jsA = emscripten::val(boost::get<topo_vector>(a));
+              } else if (a.type() == typeid(topo_location)) {
+                jsA = emscripten::val(boost::get<topo_location>(a));
+              } else if (a.type() == typeid(std::shared_ptr<sketch>)) {
+                jsA = emscripten::val(boost::get<std::shared_ptr<sketch>>(a));
+              } else {
+                jsA = emscripten::val::null();
+              }
+
+              // 处理第二个对象的类型转换
+              if (b.type() == typeid(shape)) {
+                jsB = emscripten::val(boost::get<shape>(b));
+              } else if (b.type() == typeid(topo_vector)) {
+                jsB = emscripten::val(boost::get<topo_vector>(b));
+              } else if (b.type() == typeid(topo_location)) {
+                jsB = emscripten::val(boost::get<topo_location>(b));
+              } else if (b.type() == typeid(std::shared_ptr<sketch>)) {
+                jsB = emscripten::val(boost::get<std::shared_ptr<sketch>>(b));
+              } else {
+                jsB = emscripten::val::null();
+              }
+
+              return comparator(jsA, jsB).as<bool>();
+            };
+
+            return emscripten::val(self.sort(pred));
           }))
       .function("all", emscripten::optional_override([](workplane &self) {
                   auto allWps = self.all();
@@ -1247,9 +1325,9 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                 result.call<void>(
                     "push", emscripten::val(boost::get<topo_location>(val)));
               } else if (val.type() == typeid(std::shared_ptr<sketch>)) {
-                auto sketch = boost::get<std::shared_ptr<sketch>>(val);
-                if (sketch) {
-                  result.call<void>("push", emscripten::val(*sketch));
+                auto sk = boost::get<std::shared_ptr<sketch>>(val);
+                if (sk) {
+                  result.call<void>("push", emscripten::val(sk));
                 } else {
                   result.call<void>("push", emscripten::val::null());
                 }
@@ -1268,9 +1346,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   } else if (val.type() == typeid(topo_location)) {
                     return emscripten::val(boost::get<topo_location>(val));
                   } else if (val.type() == typeid(std::shared_ptr<sketch>)) {
-                    auto sketch = boost::get<std::shared_ptr<sketch>>(val);
-                    return sketch ? emscripten::val(*sketch)
-                                  : emscripten::val::null();
+                    auto sk = boost::get<std::shared_ptr<sketch>>(val);
+                    return sk ? emscripten::val(sk) : emscripten::val::null();
                   } else {
                     return emscripten::val::null();
                   }

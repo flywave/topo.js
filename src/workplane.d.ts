@@ -416,7 +416,6 @@ declare class Workplane {
     map(mapper: (obj: ShapeObject) => ShapeObject): Workplane;
     apply(applier: (objs: ShapeObject[]) => ShapeObject[]): Workplane;
     sort(comparator: (a: ShapeObject, b: ShapeObject) => boolean): Workplane;
-    invoke(func: (wp: Workplane) => Workplane): Workplane;
 
     all(): Workplane[];
     shapes(): Shape[];
