@@ -9,7 +9,7 @@ body {
 
 #three-js-container {
   width: 100%;
-  height: 600px;
+  height: 100%;
 }
 
 #webgl-canvas {

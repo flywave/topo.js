@@ -32,9 +32,11 @@ export default class Setup {
     this.time.on("tick", () => {
       this.update()
     })
+
     this.camera.createControls()
 
     this.world.waitDone()?.then(() => {
+      
     })
   }
 
@@ -48,6 +50,7 @@ export default class Setup {
   }
 
   update() {
+    this.camera.update()
     this.renderer.update()
   }
 }

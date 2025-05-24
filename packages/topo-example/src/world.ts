@@ -2,6 +2,7 @@ import * as THREE from "three"
 import Setup from "./setup"
 import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
+import { ConePorcelainBushingPrimitive } from "topo-primitives"
 
 export default class World {
   setup: Setup
@@ -126,10 +127,15 @@ export default class World {
       upDir: new tp.gp_Dir_2(vec),
     };
 
-    const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)
-    const shape = new tp.Shape(shp, false);
-    const ff = shape.autoCast();
-    const geometries = mesh(shape)
+    const primitive = new ConePorcelainBushingPrimitive(tp)
+
+    //const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)
+    const shp = primitive.setDefault().build();
+    if (shp === undefined) {
+      console.error("Failed to create shape");
+      return;
+    }
+    const geometries = mesh(shp)
     const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 
     const group = new THREE.Group()

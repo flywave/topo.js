@@ -65,7 +65,7 @@ import {
     VTypeInsulatorObject,
     WireObject,
 } from "../../types/gim-gs";
-import { BasePrimitive, Primitive } from "../../primitive";
+import { angleToRad, BasePrimitive, Primitive, radToAngle } from "../../primitive";
 
 export enum GSPrimitiveType {
     Sphere = "GIM/GS/Sphere",
@@ -523,7 +523,7 @@ export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderP
         this.params = {
             radius: o['radius'],
             length: o['length'],
-            bendAngle: o['bendAngle']
+            bendAngle: angleToRad(o['bendAngle'])
         }
         return this;
     }
@@ -534,7 +534,7 @@ export class SharpBentCylinderPrimitive extends BasePrimitive<SharpBentCylinderP
             ['version', this.getVersion()],
             ['radius', this.params.radius],
             ['length', this.params.length],
-            ['bendAngle', this.params.bendAngle]
+            ['bendAngle', radToAngle(this.params.bendAngle)]
         ])) as SharpBentCylinderObject;
     }
 };
@@ -716,7 +716,7 @@ export class RingPrimitive extends BasePrimitive<RingParams, RingObject> {
         this.params = {
             ringRadius: o['ringRadius'],
             tubeRadius: o['tubeRadius'],
-            angle: o['angle']
+            angle: angleToRad(o['angle'])
         }
         return this;
     }
@@ -727,7 +727,7 @@ export class RingPrimitive extends BasePrimitive<RingParams, RingObject> {
             ['version', this.getVersion()],
             ['ringRadius', this.params.ringRadius],
             ['tubeRadius', this.params.tubeRadius],
-            ['angle', this.params.angle]
+            ['angle', radToAngle(this.params.angle)]
         ])) as RingObject;
     }
 };
@@ -910,7 +910,7 @@ export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams,
             outerRadius: o['outerRadius'],
             innerRadius: o['innerRadius'],
             height: o['height'],
-            angle: o['angle']
+            angle: angleToRad(o['angle'])
         }
         return this;
     }
@@ -922,7 +922,7 @@ export class CircularGasketPrimitive extends BasePrimitive<CircularGasketParams,
             ['outerRadius', this.params.outerRadius],
             ['innerRadius', this.params.innerRadius],
             ['height', this.params.height],
-            ['angle', this.params.angle]
+            ['angle', radToAngle(this.params.angle)]
         ])) as CircularGasketObject;
     }
 };
@@ -979,7 +979,7 @@ export class TableGasketPrimitive extends BasePrimitive<TableGasketParams, Table
             outerRadius: o['outerRadius'],
             innerRadius: o['innerRadius'],
             height: o['height'],
-            angle: o['angle']
+            angle: angleToRad(o['angle'])
         }
         return this;
     }
@@ -992,7 +992,7 @@ export class TableGasketPrimitive extends BasePrimitive<TableGasketParams, Table
             ['outerRadius', this.params.outerRadius],
             ['innerRadius', this.params.innerRadius],
             ['height', this.params.height],
-            ['angle', this.params.angle]
+            ['angle', radToAngle(this.params.angle)]
         ])) as TableGasketObject;
     }
 };

@@ -28,7 +28,9 @@
     "webpack-dev-server": "^4.15.1"
   },
   "dependencies": {
+    "three-viewport-gizmo": "^2.2.0",
     "topo-js": "workspace:*",
+    "topo-primitives": "workspace:*",
     "topo-threejs": "workspace:*",
     "topo-wasm": "workspace:*",
     "vite-plugin-wasm": "^3.4.1"
