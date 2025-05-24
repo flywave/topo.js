@@ -3,6 +3,7 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import webpack from 'webpack';
 import { fileURLToPath } from 'url';
+import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'; // 新增导入
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -36,6 +37,7 @@ export default {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
+    plugins: [new TsconfigPathsPlugin()] 
   },
   output: {
     filename: "bundle.js",

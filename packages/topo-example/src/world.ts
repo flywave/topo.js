@@ -2,7 +2,9 @@ import * as THREE from "three"
 import Setup from "./setup"
 import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
-import { CableTrayPrimitive } from "topo-primitives"
+import { BasePrimitiveType, SphereShapePrimitive, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType } from "topo-primitives"
+import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
+import { createShapePrimitive } from "./primitives"
 
 export default class World {
   setup: Setup
@@ -10,6 +12,9 @@ export default class World {
   grid: THREE.GridHelper | null = null
   oc: TopoInstance | null = null
   done: Promise<void> | null = null
+  gui: GUI | null = null  // 新增GUI实例
+  selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType = BasePrimitiveType.Pipe
+  group: THREE.Group | null = null  // 新增meshGroup
 
   constructor() {
     this.setup = Setup.getInstance()
@@ -21,136 +26,93 @@ export default class World {
 
     this.addLights()
     this.done = this.TopoInit()
+
+    this.initUI()  // 初始化UI
   }
 
   waitDone() {
     return this.done
   }
 
-  createPrimitives(tp: TopoInstance) {
-    const pathPoints: gp_Pnt[][] = [
-      [
-        new tp.gp_Pnt_3(0, 0, 0),
-        new tp.gp_Pnt_3(13.363751136232167, -26.227833716198802, 40.422308564186096)
-      ],
-      [
-        new tp.gp_Pnt_3(13.363751136232167, -26.227833716198802, 40.422308564186096),
-        new tp.gp_Pnt_3(46.29231750732288, -90.69991450663656, 108.94551491551101)
-      ],
-      [
-        new tp.gp_Pnt_3(46.29231750732288, -90.69991450663656, 108.94551491551101),
-        new tp.gp_Pnt_3(132.02422594139352, -257.1274096108973, -1.525045077316463)
-      ],
-      [
-        new tp.gp_Pnt_3(132.02422594139352, -257.1274096108973, -1.525045077316463),
-        new tp.gp_Pnt_3(155.7862730268389, -461.9796159574762, 275.57995436759666)
-      ],
-      [
-        new tp.gp_Pnt_3(155.7862730268389, -461.9796159574762, 275.57995436759666),
-        new tp.gp_Pnt_3(277.5595232350752, -1029.277987377718, 560.3984563779086)
-      ]
-    ];
-    
-    const polygonPoints: gp_Pnt[] = [
-      new tp.gp_Pnt_3(-3.171, 2.538, 0),
-      new tp.gp_Pnt_3(-3.136, 3.954, 0),
-      new tp.gp_Pnt_3(-2.498, 5.219, 0),
-      new tp.gp_Pnt_3(-1.382, 6.09, 0),
-      new tp.gp_Pnt_3(0, 6.4, 0),
-      new tp.gp_Pnt_3(1.382, 6.09, 0),
-      new tp.gp_Pnt_3(2.498, 5.219, 0),
-      new tp.gp_Pnt_3(3.136, 3.954, 0),
-      new tp.gp_Pnt_3(3.171, 2.538, 0),
-      new tp.gp_Pnt_3(2.5, 0, 0),
-      new tp.gp_Pnt_3(-2.5, 0, 0),
-      new tp.gp_Pnt_3(-3.171, 2.538, 0)
-    ];
-
-    let vec = new tp.gp_Vec_4(-2365550.686973459, 4588616.347934356, 3734082.7681595744).Normalized()
-
-    // 创建多边形剖面
-    const polygonProfile: PolygonProfile = {
-      type: tp.ProfileType.POLYGON,
-      edges: polygonPoints,
-      inners: [] // 无内轮廓
-    };
-
-    // 准备测试数据 - 直线段
-    const linePoints: gp_Pnt[] = [
-      new tp.gp_Pnt_3(50, -50, 0),
-      new tp.gp_Pnt_3(100, 0, 0)
-    ];
-
-    // 准备测试数据 - 三点圆弧
-    const arcPoints: gp_Pnt[] = [
-      new tp.gp_Pnt_3(100, 0, 0),
-      new tp.gp_Pnt_3(150, 50, 0),
-      new tp.gp_Pnt_3(200, 0, 0)
-    ];
-
-    // 准备测试数据 - 圆心弧线
-    const centerArcPoints: gp_Pnt[] = [
-      new tp.gp_Pnt_3(200, 0, 0),
-      new tp.gp_Pnt_3(250, 0, 0), // 圆心
-      new tp.gp_Pnt_3(300, 0, 0)
-    ];
-
-    // 准备测试数据 - 样条曲线
-    const splinePoints: gp_Pnt[] = [
-      new tp.gp_Pnt_3(300, 0, 0),
-      new tp.gp_Pnt_3(350, 50, 50),
-      new tp.gp_Pnt_3(400, 0, 100)
-    ];
-
-    // 创建圆形剖面
-    const profile: CircProfile = {
-      type: tp.ProfileType.CIRC,
-      center: new tp.gp_Pnt_3(0, 0, 0),
-      norm: new tp.gp_Dir_4(0, 0, 1),
-      radius: 10.0
-    };
-
-    // 创建内孔剖面
-    const innerProfile: CircProfile = {
-      type: tp.ProfileType.CIRC,
-      center: new tp.gp_Pnt_3(0, 0, 0),
-      norm: new tp.gp_Dir_4(0, 0, 1),
-      radius: 8.0
-    };
-
-    // 设置多段管道参数
-    const params: MultiSegmentPipeParams = {
-      wires: pathPoints,
-      profiles: [polygonProfile, polygonProfile, polygonProfile, polygonProfile, polygonProfile],
-      innerProfiles: null,
-      segmentTypes: [
-        tp.SegmentType.LINE as any,
-        tp.SegmentType.LINE as any,
-        tp.SegmentType.LINE as any,
-        tp.SegmentType.LINE as any,
-        tp.SegmentType.LINE as any
-      ],
-      transitionMode: tp.TransitionMode.ROUND as any,
-      upDir: new tp.gp_Dir_2(vec),
-    };
-
-    const primitive = new CableTrayPrimitive(tp)
-
-    //const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)
-    const shp = primitive.setDefault().build();
-    if (shp === undefined) {
-      console.error("Failed to create shape");
-      return;
+  initUI() {
+    if (this.gui) {
+      this.gui.destroy(); // Clean up existing GUI
     }
-    const geometries = mesh(shp)
-    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+    this.gui = new GUI({ width: 300 })
 
-    const group = new THREE.Group()
-    geometries.forEach((geometry) => {
-      group.add(new THREE.Mesh(geometry, material))
-    })
+    // 合并所有图元类型选项
+    const allShapeTypes = [
+      ...Object.values(BasePrimitiveType),
+      ...Object.values(ECPrimitiveType),
+      ...Object.values(GSPrimitiveType),
+      ...Object.values(GTPrimitiveType),
+      ...Object.values(HPPrimitiveType)
+    ];
 
-    this.scene.add(group)
+    const options = {
+      shapeType: this.selectedShape,
+      shapes: allShapeTypes
+    }
+
+    this.gui.add(options, 'shapeType', options.shapes)
+      .name('Shape Type')
+      .onChange((value: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType) => {
+        this.selectedShape = value;
+        console.log('Selected shape:', value);
+        // 这里可以添加形状切换逻辑
+        this.updateShapeBasedOnSelection(value);
+      });
+  }
+
+  // 新增方法 - 根据选择的类型更新形状
+  private updateShapeBasedOnSelection(shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType) {
+    // 清除当前场景中的形状
+
+    this.group?.clear();
+
+    if (!this.oc) return;
+
+    // 创建选中的图元
+    const creator = createShapePrimitive(this.oc, shapeType);
+    const primitive = creator(); // 只有第一次或类型变化时会实际创建
+    if (!primitive) return;
+
+    // 构建形状并添加到场景
+    const shape = primitive.setDefault().build();
+    if (shape) {
+      const geometries = mesh(shape);
+      const material = new THREE.MeshStandardMaterial({
+        color: this.getColorForShapeType(shapeType),
+        metalness: 0.5,
+        roughness: 0.7
+      });
+
+      this.group = new THREE.Group();
+      geometries.forEach(geometry => {
+        this.group!.add(new THREE.Mesh(geometry, material));
+      });
+      this.scene.add(this.group);
+    }
+  }
+
+
+  private getColorForShapeType(shapeType: string): number {
+    // 根据不同类型返回不同颜色
+    if (shapeType.includes('GIM/GT')) {
+      return 0x4b0082; // 靛蓝色 - 其他GT类型
+    }
+    if (shapeType.includes('GIM/EC')) {
+      return 0x32cd32; // 黄绿色 - 电缆类
+    }
+    if (shapeType.includes('GIM/GS')) {
+      return 0xff4500; // 橙色 - 管道类
+    }
+    return 0x3498db; // 默认蓝色
+  }
+
+
+  dispose() {
+    this.gui?.destroy()  // 清理UI
   }
 
   addLights() {
@@ -164,7 +126,6 @@ export default class World {
   async TopoInit() {
     this.oc = await initTopo().then((tp) => {
       setTopo(tp);
-      this.createPrimitives(tp);
       return tp
     })
     console.log("open cascade ready!!!")
