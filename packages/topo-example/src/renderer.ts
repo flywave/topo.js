@@ -25,8 +25,6 @@ export default class Renderer {
     })
     this.renderer.setSize(this.sizes.width, this.sizes.height)
     this.renderer.setPixelRatio(this.sizes.pixelRatio)
-    this.renderer.setClearColor("#24273A")
-
   }
 
   resize() {

@@ -4,6 +4,7 @@ import Time from "./utils/time"
 import Camera from "./camera"
 import Renderer from "./renderer"
 import World from "./world"
+import Guizmo from "./guizmo"
 
 export default class Setup {
   private static instance: Setup
@@ -14,6 +15,7 @@ export default class Setup {
   camera: Camera
   renderer: Renderer
   world: World
+  guizmo: Guizmo
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -34,9 +36,11 @@ export default class Setup {
     })
 
     this.camera.createControls()
+    this.guizmo = new Guizmo()
+    this.guizmo.createGizmo()
 
     this.world.waitDone()?.then(() => {
-      
+
     })
   }
 
@@ -47,10 +51,11 @@ export default class Setup {
   resize() {
     this.camera.resize()
     this.renderer.resize()
+    this.guizmo.resize()
   }
 
   update() {
-    this.camera.update()
+    this.guizmo.update()
     this.renderer.update()
   }
 }

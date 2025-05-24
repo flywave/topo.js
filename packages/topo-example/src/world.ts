@@ -2,17 +2,23 @@ import * as THREE from "three"
 import Setup from "./setup"
 import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
 import { setTopo, mesh } from "topo-js"
-import { ConePorcelainBushingPrimitive } from "topo-primitives"
+import { CableTrayPrimitive } from "topo-primitives"
 
 export default class World {
   setup: Setup
   scene: THREE.Scene
+  grid: THREE.GridHelper | null = null
   oc: TopoInstance | null = null
   done: Promise<void> | null = null
 
   constructor() {
     this.setup = Setup.getInstance()
     this.scene = this.setup.scene
+    this.scene.background = new THREE.Color(0x333333);
+
+    this.grid = new THREE.GridHelper(1000, 100, 0x111111, 0x111111);
+    this.scene.add(this.grid);
+
     this.addLights()
     this.done = this.TopoInit()
   }
@@ -44,6 +50,7 @@ export default class World {
         new tp.gp_Pnt_3(277.5595232350752, -1029.277987377718, 560.3984563779086)
       ]
     ];
+    
     const polygonPoints: gp_Pnt[] = [
       new tp.gp_Pnt_3(-3.171, 2.538, 0),
       new tp.gp_Pnt_3(-3.136, 3.954, 0),
@@ -127,7 +134,7 @@ export default class World {
       upDir: new tp.gp_Dir_2(vec),
     };
 
-    const primitive = new ConePorcelainBushingPrimitive(tp)
+    const primitive = new CableTrayPrimitive(tp)
 
     //const shp = tp.createMultiSegmentPipe(params as MultiSegmentPipeParams)
     const shp = primitive.setDefault().build();

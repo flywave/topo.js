@@ -2,7 +2,7 @@ import { Point, Point2, Version } from "./types";
 
 export interface CableWireObject extends Version {
     type: "GIM/EC/CableWire";
-    points: Array<{ x: number, y: number, z: number }>; // 电缆路径点坐标
+    points: Array<Point>; // 电缆路径点坐标
     outsideDiameter: number; // 电缆外径
 }
 

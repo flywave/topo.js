@@ -2251,8 +2251,8 @@ export declare type SegmentType = {
 // 管道参数
 export declare interface PipeParams {
     wire: gp_Pnt[];
-    profile: ShapeProfile;
-    innerProfile?: ShapeProfile | null;
+    profile: [ShapeProfile, ShapeProfile] | [ShapeProfile];
+    innerProfile?: [ShapeProfile, ShapeProfile] | [ShapeProfile] | null;
     segmentType: SegmentType;
     transitionMode: TransitionMode;
     upDir?: gp_Dir;

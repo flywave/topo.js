@@ -412,12 +412,12 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
     setDefault(): Primitive<PipeParams, PipeObject> {
         this.params = {
             wire: [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(100, 0, 0)],
-            profile: {
+            profile: [{
                 type: this.tp.ProfileType.CIRC,
                 center: new this.tp.gp_Pnt_3(0, 0, 0),
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
                 radius: 5.0
-            },
+            }],
             segmentType: this.tp.SegmentType.LINE as any,
             transitionMode: this.tp.TransitionMode.TRANSFORMED as any
         };
@@ -450,8 +450,9 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
             this.version = o['version'];
         }
 
-        const profile = deserializeProfile(this.tp, o);
-        const innerProfile = o.innerProfile ? deserializeProfile(this.tp, { profile: o.innerProfile }) : null;
+        const profile = o.profile.map((p: any) => deserializeProfile(this.tp, { profile: p })) as any;
+        const innerProfile = o.innerProfile ?
+            o.innerProfile.map((p: any) => deserializeProfile(this.tp, { profile: p })) as any : null;
 
         let transitionMode: TransitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
         switch (o.transitionMode) {
@@ -493,9 +494,9 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
     }
 
     toObject(): PipeObject | undefined {
-        const profileObj = serializeProfile(this.tp, this.params.profile);
+        const profileObj = this.params.profile.map(p => serializeProfile(this.tp, p));
         const innerProfileObj = this.params.innerProfile ?
-            serializeProfile(this.tp, this.params.innerProfile) : null;
+            this.params.innerProfile.map(p => serializeProfile(this.tp, p)) : null;
 
         let transitionMode = 'TRANSFORMED';
         switch (this.params.transitionMode) {
