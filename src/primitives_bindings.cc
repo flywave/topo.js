@@ -3932,6 +3932,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   // 管道端点结构体
   value_object<pipe_endpoint>("PipeEndpoint")
+      .field("id", &pipe_endpoint::id)
       .field("offset", &pipe_endpoint::offset)
       .field("normal", &pipe_endpoint::normal)
       .field("profile", &get_pipe_endpoint_profile, &set_pipe_endpoint_profile)

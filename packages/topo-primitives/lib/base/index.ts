@@ -444,7 +444,16 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
         return true;
     }
 
-    public build(): Shape | undefined {
+    public build(args?: any[]): Shape | undefined {
+        if (args && args.length > 0) {
+            const p1 = args[0] as number[];
+            const p2 = args[1] as number[];
+            const wire = [new this.tp.gp_Pnt_3(p1[0], p1[1], p1[2]), new this.tp.gp_Pnt_3(p2[0], p2[1], p2[2])];
+            this.params = {
+                ...this.params,
+                wire: wire
+            }
+        }
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createPipe(this.params), false);
         }
@@ -492,7 +501,7 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
         }
 
         this.params = {
-            wire: o.wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
+            wire: o.wire?.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2])) || [],
             profile,
             innerProfile,
             segmentType: segmentType,
@@ -610,7 +619,15 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
         return true;
     }
 
-    public build(): Shape | undefined {
+    public build(args?: any[]): Shape | undefined {
+        if (args && args.length > 0) {
+            const wires = args[0]?.map((wire: any[]) =>
+                wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2])))
+            this.params = {
+                ...this.params,
+                wires: wires
+            }
+        }
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createMultiSegmentPipe(this.params), false);
         }
@@ -662,8 +679,8 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
         }
 
         this.params = {
-            wires: o.wires.map((wire: any[]) =>
-                wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2]))),
+            wires: o.wires?.map((wire: any[]) =>
+                wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2]))) || [],
             profiles,
             innerProfiles,
             segmentTypes: segmentTypes,
@@ -761,12 +778,14 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
 
         this.params = {
             ins: [{
+                id: 'in1',
                 offset: new this.tp.gp_Pnt_3(-50, 0, 0),
                 normal: new this.tp.gp_Dir_4(1, 0, 0),
                 profile: profile,
                 innerProfile: innerProfile
             }],
             outs: [{
+                id: 'out1',
                 offset: new this.tp.gp_Pnt_3(50, 0, 0),
                 normal: new this.tp.gp_Dir_4(-1, 0, 0),
                 profile: profile,
@@ -819,16 +838,18 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
         }
 
         this.params = {
-            ins: o.ins.map((ep: any) => ({
-                offset: new this.tp.gp_Pnt_3(ep.offset[0], ep.offset[1], ep.offset[2]),
-                normal: new this.tp.gp_Dir_4(ep.normal[0], ep.normal[1], ep.normal[2]),
-                profile: deserializeProfile(this.tp, { profile: ep.profile }),
+            ins: o.ins.map((ep) => ({
+                id: ep.id,
+                offset: ep.offset ? new this.tp.gp_Pnt_3(ep.offset[0], ep.offset[1], ep.offset[2]) : undefined,
+                normal: ep.normal ? new this.tp.gp_Dir_4(ep.normal[0], ep.normal[1], ep.normal[2]) : undefined,
+                profile: ep.profile ? deserializeProfile(this.tp, { profile: ep.profile }) : undefined,
                 innerProfile: ep.innerProfile ? deserializeProfile(this.tp, { profile: ep.innerProfile }) : undefined
             })),
-            outs: o.outs.map((ep: any) => ({
-                offset: new this.tp.gp_Pnt_3(ep.offset[0], ep.offset[1], ep.offset[2]),
-                normal: new this.tp.gp_Dir_4(ep.normal[0], ep.normal[1], ep.normal[2]),
-                profile: deserializeProfile(this.tp, { profile: ep.profile }),
+            outs: o.outs.map((ep) => ({
+                id: ep.id,
+                offset: ep.offset ? new this.tp.gp_Pnt_3(ep.offset[0], ep.offset[1], ep.offset[2]) : undefined,
+                normal: ep.normal ? new this.tp.gp_Dir_4(ep.normal[0], ep.normal[1], ep.normal[2]) : undefined,
+                profile: ep.profile ? deserializeProfile(this.tp, { profile: ep.profile }) : undefined,
                 innerProfile: ep.innerProfile ? deserializeProfile(this.tp, { profile: ep.innerProfile }) : undefined
             })),
             mode: mode,
@@ -856,16 +877,18 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['ins', this.params.ins.map(ep => ({
-                offset: [ep.offset.X(), ep.offset.Y(), ep.offset.Z()],
-                normal: [ep.normal.X(), ep.normal.Y(), ep.normal.Z()],
-                profile: serializeProfile(this.tp, ep.profile),
+            ['ins', this.params.ins?.map(ep => ({
+                id: ep.id,
+                offset: ep.offset ? [ep.offset.X(), ep.offset.Y(), ep.offset.Z()] : [0, 0, 0],
+                normal: ep.normal ? [ep.normal.X(), ep.normal.Y(), ep.normal.Z()] : [0, 0, 0],
+                profile: ep.profile ? serializeProfile(this.tp, ep.profile) : undefined,
                 innerProfile: ep.innerProfile ? serializeProfile(this.tp, ep.innerProfile) : null
             }))],
-            ['outs', this.params.outs.map(ep => ({
-                offset: [ep.offset.X(), ep.offset.Y(), ep.offset.Z()],
-                normal: [ep.normal.X(), ep.normal.Y(), ep.normal.Z()],
-                profile: serializeProfile(this.tp, ep.profile),
+            ['outs', this.params.outs?.map(ep => ({
+                id: ep.id,
+                offset: ep.offset ? [ep.offset.X(), ep.offset.Y(), ep.offset.Z()] : [0, 0, 0],
+                normal: ep.normal ? [ep.normal.X(), ep.normal.Y(), ep.normal.Z()] : [0, 0, 0],
+                profile: ep.profile ? serializeProfile(this.tp, ep.profile) : undefined,
                 innerProfile: ep.innerProfile ? serializeProfile(this.tp, ep.innerProfile) : null
             }))],
             ['mode', mode],
@@ -920,7 +943,16 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
         return true;
     }
 
-    public build(): Shape | undefined {
+    public build(args?: any[]): Shape | undefined {
+        if (args && args.length > 0) {
+            const p1 = args[0] as number[];
+            const p2 = args[1] as number[];
+            this.params = {
+                ...this.params,
+                p1: new this.tp.gp_Pnt_3(p1[0], p1[1], p1[2]),
+                p2: new this.tp.gp_Pnt_3(p2[0], p2[1], p2[2])
+            }
+        }
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCatenary(this.params), false);
         }
@@ -938,8 +970,8 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
         const profile = deserializeProfile(this.tp, o);
 
         this.params = {
-            p1: new this.tp.gp_Pnt_3(o.p1[0], o.p1[1], o.p1[2]),
-            p2: new this.tp.gp_Pnt_3(o.p2[0], o.p2[1], o.p2[2]),
+            p1: o.p1 ? new this.tp.gp_Pnt_3(o.p1[0], o.p1[1], o.p1[2]) : undefined,
+            p2: o.p2 ? new this.tp.gp_Pnt_3(o.p2[0], o.p2[1], o.p2[2]) : undefined,
             profile,
             slack: o.slack,
             maxSag: o.maxSag,
@@ -957,16 +989,16 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['p1', [
+            ['p1', this.params.p1 ? [
                 this.params.p1.X(),
                 this.params.p1.Y(),
                 this.params.p1.Z()
-            ]],
-            ['p2', [
+            ] : undefined],
+            ['p2', this.params.p2 ? [
                 this.params.p2.X(),
                 this.params.p2.Y(),
                 this.params.p2.Z()
-            ]],
+            ] : undefined],
             ['profile', profileObj],
             ['slack', this.params.slack],
             ['maxSag', this.params.maxSag],
@@ -1100,7 +1132,7 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams, ConeShape
             radius1: o.radius1,
             radius2: o.radius2,
             height: o.height,
-            angle: o.angle? angleToRad(o.angle) : Math.PI
+            angle: o.angle ? angleToRad(o.angle) : Math.PI
         };
         return this;
     }
@@ -1165,7 +1197,7 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams, C
         this.params = {
             radius: o.radius,
             height: o.height,
-            angle: o.angle? angleToRad(o.angle) : Math.PI
+            angle: o.angle ? angleToRad(o.angle) : Math.PI
         };
         return this;
     }
@@ -1349,7 +1381,7 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams, TorusSh
             radius2: 10.0,
             angle1: 0,
             angle2: Math.PI,
-            angle: Math.PI * 2  
+            angle: Math.PI * 2
         };
         return this;
     }

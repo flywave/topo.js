@@ -2285,9 +2285,10 @@ export declare type JointShapeMode = {
 
 // 管道端点
 export declare interface PipeEndpoint {
-    offset: gp_Pnt;
-    normal: gp_Dir;
-    profile: ShapeProfile;
+    id: string;
+    offset?: gp_Pnt;
+    normal?: gp_Dir;
+    profile?: ShapeProfile;
     innerProfile?: ShapeProfile;
 }
 
