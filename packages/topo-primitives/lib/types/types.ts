@@ -6,5 +6,5 @@ export type Point2 = [number, number]
 export type Dir = [number, number, number]
 
 export interface Version {
-    version: number;
+    version?: number;
 }
