@@ -1,20 +1,9 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "node",
-    "target": "es2016",
-    "module": "es2015",
-    "strict": true,
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "allowSyntheticDefaultImports": true
+    "composite": true,
+    "rootDir": "./lib",
+    "isolatedModules": true,
   },
-  "include": [
-    "lib"
-  ],
-  "typedocOptions": {
-    "watch": true,
-    "readme": "none",
-    "excludeProtected": true
-  }
+  "include": ["./lib/**/*"]
 }

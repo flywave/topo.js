@@ -7,14 +7,14 @@ import {
 import { CurveType, findCurveType } from "../definitionMaps";
 import precisionRound from "../utils/precisionRound";
 import { getTopo } from "../topolib";
-import { GCWithScope, localGC, WrappingObj } from "../register.js";
-import zip from "../utils/zip.js";
+import { GCWithScope, localGC, WrappingObj } from "../register";
+import zip from "../utils/zip";
 
-import { BoundingBox2d } from "./BoundingBox2d.js";
-import { isPoint2D, Point2D } from "./definitions.js";
-import { pnt } from "./ocWrapper.js";
-import { reprPnt } from "./utils.js";
-import { distance2d, samePoint } from "./vectorOperations.js";
+import { BoundingBox2d } from "./BoundingBox2d";
+import { isPoint2D, Point2D } from "./definitions";
+import { pnt } from "./ocWrapper";
+import { reprPnt } from "./utils";
+import { distance2d, samePoint } from "./vectorOperations";
 
 export class Curve2D extends WrappingObj<Handle_Geom2d_Curve> {
   _boundingBox: null | BoundingBox2d;
