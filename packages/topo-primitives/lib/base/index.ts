@@ -25,7 +25,7 @@ import {
     SegmentType,
     JointShapeMode
 } from "topo-wasm";
-import { BasePrimitive, Primitive } from "../primitive";
+import { angleToRad, BasePrimitive, Primitive, radToAngle } from "../primitive";
 import {
     BoxShapeObject,
     CatenaryObject,
@@ -224,9 +224,9 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
             },
             axis: new this.tp.gp_Ax1_2(
                 new this.tp.gp_Pnt_3(0, 0, 0),
-                new this.tp.gp_Dir_4(0, 0, 1)
+                new this.tp.gp_Dir_4(1, 0, 0)
             ),
-            angle: Math.PI / 4
+            angle: Math.PI / 2
         };
         return this;
     }
@@ -282,7 +282,7 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
                 new this.tp.gp_Pnt_3(o.axis.location[0], o.axis.location[1], o.axis.location[2]),
                 new this.tp.gp_Dir_4(o.axis.direction[0], o.axis.direction[1], o.axis.direction[2])
             ),
-            angle: o.angle
+            angle: angleToRad(o.angle)
         };
         return this;
     }
@@ -308,7 +308,7 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
                     this.params.axis.Direction().Z()
                 ]
             }],
-            ['angle', this.params.angle]
+            ['angle', radToAngle(this.params.angle)]
         ])) as RevolObject;
     }
 }
@@ -578,11 +578,21 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
             radius: 10.0
         };
 
+        // 默认直线段参数
+        const innerProfile = {
+            type: this.tp.ProfileType.CIRC,
+            center: new this.tp.gp_Pnt_3(0, 0, 0),
+            norm: new this.tp.gp_Dir_4(0, 0, 1),
+            radius: 8.0
+        };
+
         this.params = {
             wires: [linePoints],
             profiles: [profile],
+            innerProfiles: [innerProfile],
             segmentTypes: [this.tp.SegmentType.LINE as any],
-            transitionMode: this.tp.TransitionMode.ROUND as any
+            transitionMode: this.tp.TransitionMode.ROUND as any,
+            upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
         return this;
     }
@@ -742,19 +752,29 @@ export class PipeJointPrimitive extends BasePrimitive<PipeJointParams, PipeJoint
             radius: 10.0
         };
 
+        const innerProfile = {
+            type: this.tp.ProfileType.CIRC,
+            center: new this.tp.gp_Pnt_3(0, 0, 0),
+            norm: new this.tp.gp_Dir_4(0, 0, 1),
+            radius: 8.0
+        };
+
         this.params = {
             ins: [{
                 offset: new this.tp.gp_Pnt_3(-50, 0, 0),
                 normal: new this.tp.gp_Dir_4(1, 0, 0),
-                profile: profile
+                profile: profile,
+                innerProfile: innerProfile
             }],
             outs: [{
                 offset: new this.tp.gp_Pnt_3(50, 0, 0),
                 normal: new this.tp.gp_Dir_4(-1, 0, 0),
-                profile: profile
+                profile: profile,
+                innerProfile: innerProfile
             }],
             mode: this.tp.JointShapeMode.SPHERE as any,
-            flanged: true
+            flanged: true,
+            upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
         return this;
     }
@@ -881,7 +901,8 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
             },
             slack: 1.5,
             maxSag: 5.0,
-            tessellation: 0.0
+            tessellation: 0.0,
+            upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
         return this;
     }
@@ -1042,7 +1063,8 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams, ConeShape
         this.params = {
             radius1: 20.0,
             radius2: 10.0,
-            height: 30.0
+            height: 30.0,
+            angle: Math.PI * 2,
         };
         return this;
     }
@@ -1078,7 +1100,7 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams, ConeShape
             radius1: o.radius1,
             radius2: o.radius2,
             height: o.height,
-            angle: o.angle
+            angle: o.angle? angleToRad(o.angle) : Math.PI
         };
         return this;
     }
@@ -1090,7 +1112,7 @@ export class ConeShapePrimitive extends BasePrimitive<ConeShapeParams, ConeShape
             ['radius1', this.params.radius1],
             ['radius2', this.params.radius2],
             ['height', this.params.height],
-            ['angle', this.params.angle]
+            ['angle', this.params.angle ? radToAngle(this.params.angle) : 360]
         ])) as ConeShapeObject;
     }
 }
@@ -1108,7 +1130,8 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams, C
     setDefault(): Primitive<CylinderShapeParams, CylinderShapeObject> {
         this.params = {
             radius: 15.0,
-            height: 25.0
+            height: 25.0,
+            angle: Math.PI * 2,
         };
         return this;
     }
@@ -1142,7 +1165,7 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams, C
         this.params = {
             radius: o.radius,
             height: o.height,
-            angle: o.angle
+            angle: o.angle? angleToRad(o.angle) : Math.PI
         };
         return this;
     }
@@ -1153,7 +1176,7 @@ export class CylinderShapePrimitive extends BasePrimitive<CylinderShapeParams, C
             ['version', this.getVersion()],
             ['radius', this.params.radius],
             ['height', this.params.height],
-            ['angle', this.params.angle]
+            ['angle', this.params.angle ? radToAngle(this.params.angle) : 360]
         ])) as CylinderShapeObject;
     }
 }
@@ -1175,8 +1198,11 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
                 new this.tp.gp_Pnt_3(10, 0, 0),
                 new this.tp.gp_Pnt_3(15, 5, 0),
                 new this.tp.gp_Pnt_3(10, 10, 0),
-                new this.tp.gp_Pnt_3(0, 10, 0)
-            ]
+                new this.tp.gp_Pnt_3(0, 10, 0),
+            ],
+            angle: Math.PI * 2,
+            max: undefined,
+            min: undefined
         };
         return this;
     }
@@ -1211,7 +1237,7 @@ export class RevolutionShapePrimitive extends BasePrimitive<RevolutionShapeParam
                 new this.tp.gp_Pnt_3(p[0], p[1], p[2])),
             angle: o.angle,
             max: o.max,
-            min: o.min
+            min: o.min,
         };
         return this;
     }
@@ -1245,7 +1271,11 @@ export class SphereShapePrimitive extends BasePrimitive<SphereShapeParams, Spher
 
     setDefault(): Primitive<SphereShapeParams, SphereShapeObject> {
         this.params = {
-            radius: 20.0
+            radius: 20.0,
+            center: undefined,
+            angle1: undefined,
+            angle2: undefined,
+            angle: undefined
         };
         return this;
     }
@@ -1316,7 +1346,10 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams, TorusSh
     setDefault(): Primitive<TorusShapeParams, TorusShapeObject> {
         this.params = {
             radius1: 30.0,
-            radius2: 10.0
+            radius2: 10.0,
+            angle1: 0,
+            angle2: Math.PI,
+            angle: Math.PI * 2  
         };
         return this;
     }
@@ -1384,7 +1417,9 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams, WedgeSh
 
     setDefault(): Primitive<WedgeShapeParams, WedgeShapeObject> {
         this.params = {
-            edge: new this.tp.gp_Pnt_3(30, 20, 10)
+            edge: new this.tp.gp_Pnt_3(25, 15, 8),
+            limit: [10.0, 5.0, 15.0, 7.0],
+            ltx: 12
         };
         return this;
     }
@@ -1459,7 +1494,8 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams, PipeShape
                 center: new this.tp.gp_Pnt_3(0, 0, 0),
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
                 radius: 10.0
-            }
+            },
+            upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
         return this;
     }
