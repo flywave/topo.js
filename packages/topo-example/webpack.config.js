@@ -16,7 +16,8 @@ export default {
         test: /\.ts?$/,
         use: {
           loader: "ts-loader",
-          options: {
+          options: { 
+            transpileOnly: true,
             compilerOptions: {
               noEmit: false,  // Ensure TypeScript emits output
             }

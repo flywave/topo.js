@@ -1,7 +1,7 @@
 import * as THREE from "three"
 import Setup from "./setup"
 import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
-import { setTopo, mesh } from "topo-js"
+import {   mesh, requestTopoInstance } from "topo-js"
 import { BasePrimitiveType, SphereShapePrimitive, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType } from "topo-primitives"
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import { createShapePrimitive } from "./primitives"
@@ -124,10 +124,6 @@ export default class World {
   }
 
   async TopoInit() {
-    this.oc = await initTopo().then((tp) => {
-      setTopo(tp);
-      return tp
-    })
-    console.log("open cascade ready!!!")
+    this.oc = await requestTopoInstance()
   }
 }

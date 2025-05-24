@@ -1,4 +1,5 @@
-export { BasePrimitive, Primitive } from "./primitive";
+export { BasePrimitive } from "./primitive";
+export type { Primitive } from "./primitive";
 
 export * from "./base";
 export * from "./hydropower";
