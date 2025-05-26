@@ -1,26 +1,26 @@
 import { Point, Version } from "./types";
 
 export interface SphereObject extends Version {
-    type: 'GIM::GS::Sphere';
+    type: 'GIM/GS/Sphere';
     radius: number;
 }
 
 export interface RotationalEllipsoidObject extends Version {
-    type: 'GIM::GS::RotationalEllipsoid';
+    type: 'GIM/GS/RotationalEllipsoid';
     polarRadius: number;
     equatorialRadius: number;
     height: number;
 }
 
 export interface CuboidObject extends Version {
-    type: 'GIM::GS::Cuboid';
+    type: 'GIM/GS/Cuboid';
     length: number;
     width: number;
     height: number;
 }
 
 export interface DiamondFrustumObject extends Version {
-    type: 'GIM::GS::DiamondFrustum';
+    type: 'GIM/GS/DiamondFrustum';
     topDiag1: number;
     topDiag2: number;
     bottomDiag1: number;
@@ -29,7 +29,7 @@ export interface DiamondFrustumObject extends Version {
 }
 
 export interface OffsetRectangularTableObject extends Version {
-    type: 'GIM::GS::OffsetRectangularTable';
+    type: 'GIM/GS/OffsetRectangularTable';
     topLength: number;
     topWidth: number;
     bottomLength: number;
@@ -40,27 +40,27 @@ export interface OffsetRectangularTableObject extends Version {
 }
 
 export interface CylinderObject extends Version {
-    type: 'GIM::GS::Cylinder';
+    type: 'GIM/GS/Cylinder';
     radius: number;
     height: number;
 }
 
 export interface SharpBentCylinderObject extends Version {
-    type: 'GIM::GS::SharpBentCylinder';
+    type: 'GIM/GS/SharpBentCylinder';
     radius: number;
     length: number;
     bendAngle: number;
 }
 
 export interface TruncatedConeObject extends Version {
-    type: 'GIM::GS::TruncatedCone';
+    type: 'GIM/GS/TruncatedCone';
     topRadius: number;
     bottomRadius: number;
     height: number;
 }
 
 export interface EccentricTruncatedConeObject extends Version {
-    type: 'GIM::GS::EccentricTruncatedCone';
+    type: 'GIM/GS/EccentricTruncatedCone';
     topRadius: number;
     bottomRadius: number;
     height: number;
@@ -69,14 +69,14 @@ export interface EccentricTruncatedConeObject extends Version {
 }
 
 export interface RingObject extends Version {
-    type: 'GIM::GS::Ring';
+    type: 'GIM/GS/Ring';
     ringRadius: number;
     tubeRadius: number;
     angle: number;
 }
 
 export interface RectangularRingObject extends Version {
-    type: 'GIM::GS::RectangularRing';
+    type: 'GIM/GS/RectangularRing';
     tubeRadius: number;
     filletRadius: number;
     length: number;
@@ -84,14 +84,14 @@ export interface RectangularRingObject extends Version {
 }
 
 export interface EllipticRingObject extends Version {
-    type: 'GIM::GS::EllipticRing';
+    type: 'GIM/GS/EllipticRing';
     tubeRadius: number;
     majorRadius: number;
     minorRadius: number;
 }
 
 export interface CircularGasketObject extends Version {
-    type: 'GIM::GS::CircularGasket';
+    type: 'GIM/GS/CircularGasket';
     outerRadius: number;
     innerRadius: number;
     height: number;
@@ -99,7 +99,7 @@ export interface CircularGasketObject extends Version {
 }
 
 export interface TableGasketObject extends Version {
-    type: 'GIM::GS::TableGasket';
+    type: 'GIM/GS/TableGasket';
     topRadius: number;
     outerRadius: number;
     innerRadius: number;
@@ -108,7 +108,7 @@ export interface TableGasketObject extends Version {
 }
 
 export interface SquareGasketObject extends Version {
-    type: 'GIM::GS::SquareGasket';
+    type: 'GIM/GS/SquareGasket';
     outerLength: number;
     outerWidth: number;
     innerLength: number;
@@ -119,14 +119,14 @@ export interface SquareGasketObject extends Version {
 }
 
 export interface StretchedBodyObject extends Version {
-    type: 'GIM::GS::StretchedBody';
+    type: 'GIM/GS/StretchedBody';
     points: Array<Point>;
     normal: Point;
     length: number;
 }
 
 export interface PorcelainBushingObject extends Version {
-    type: 'GIM::GS::PorcelainBushing';
+    type: 'GIM/GS/PorcelainBushing';
     height: number;
     radius: number;
     bigSkirtRadius: number;
@@ -135,7 +135,7 @@ export interface PorcelainBushingObject extends Version {
 }
 
 export interface ConePorcelainBushingObject extends Version {
-    type: 'GIM::GS::ConePorcelainBushing';
+    type: 'GIM/GS/ConePorcelainBushing';
     height: number;
     bottomRadius: number;
     topRadius: number;
@@ -147,7 +147,7 @@ export interface ConePorcelainBushingObject extends Version {
 }
 
 export interface InsulatorStringObject extends Version {
-    type: 'GIM::GS::InsulatorString';
+    type: 'GIM/GS/InsulatorString';
     count: number;
     spacing: number;
     insulatorCount: number;
@@ -161,7 +161,7 @@ export interface InsulatorStringObject extends Version {
 }
 
 export interface VTypeInsulatorObject extends Version {
-    type: 'GIM::GS::VTypeInsulator';
+    type: 'GIM/GS/VTypeInsulator';
     frontSpacing: number;
     backSpacing: number;
     insulatorCount: number;
@@ -175,7 +175,7 @@ export interface VTypeInsulatorObject extends Version {
 }
 
 export interface TerminalBlockObject extends Version {
-    type: 'GIM::GS::TerminalBlock';
+    type: 'GIM/GS/TerminalBlock';
     length: number;
     width: number;
     thickness: number;
@@ -189,7 +189,7 @@ export interface TerminalBlockObject extends Version {
 }
 
 export interface RectangularHolePlateObject extends Version {
-    type: 'GIM::GS::RectangularHolePlate';
+    type: 'GIM/GS/RectangularHolePlate';
     length: number;
     width: number;
     thickness: number;
@@ -202,7 +202,7 @@ export interface RectangularHolePlateObject extends Version {
 }
 
 export interface CircularFixedPlateObject extends Version {
-    type: 'GIM::GS::CircularFixedPlate';
+    type: 'GIM/GS/CircularFixedPlate';
     length: number;
     width: number;
     thickness: number;
@@ -213,7 +213,7 @@ export interface CircularFixedPlateObject extends Version {
 }
 
 export interface WireObject extends Version {
-    type: 'GIM::GS::Wire';
+    type: 'GIM/GS/Wire';
     startPoint: Point;
     endPoint: Point;
     startDir: Point;
@@ -224,7 +224,7 @@ export interface WireObject extends Version {
 }
 
 export interface CableObject extends Version {
-    type: 'GIM::GS::Cable';
+    type: 'GIM/GS/Cable';
     startPoint: Point;
     endPoint: Point;
     inflectionPoints: Array<Point>;
@@ -235,14 +235,14 @@ export interface CableObject extends Version {
 export type CurveType = 'LINE' | 'ARC' | 'SPLINE';
 
 export interface CurveCableObject extends Version {
-    type: 'GIM::GS::CurveCable';
+    type: 'GIM/GS/CurveCable';
     controlPoints: Array<Array<Point>>;
     curveTypes: CurveType[];
     diameter: number;
 }
 
 export interface AngleSteelObject extends Version {
-    type: 'GIM::GS::AngleSteel';
+    type: 'GIM/GS/AngleSteel';
     L1: number;
     L2: number;
     X: number;
@@ -250,7 +250,7 @@ export interface AngleSteelObject extends Version {
 }
 
 export interface IShapedSteelObject extends Version {
-    type: 'GIM::GS::IShapedSteel';
+    type: 'GIM/GS/IShapedSteel';
     height: number;
     flangeWidth: number;
     webThickness: number;
@@ -259,7 +259,7 @@ export interface IShapedSteelObject extends Version {
 }
 
 export interface ChannelSteelObject extends Version {
-    type: 'GIM::GS::ChannelSteel';
+    type: 'GIM/GS/ChannelSteel';
     height: number;
     flangeWidth: number;
     webThickness: number;
@@ -268,7 +268,7 @@ export interface ChannelSteelObject extends Version {
 }
 
 export interface TSteelObject extends Version {
-    type: 'GIM::GS::TSteel';
+    type: 'GIM/GS/TSteel';
     height: number;
     width: number;
     webThickness: number;
