@@ -3858,7 +3858,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 拉伸参数
   value_object<prism_params>("PrismParams")
       .field("profile", &get_prism_profile, &set_prism_profile)
-      .field("direction", &prism_params::direction);
+      .field("direction", &prism_params::direction)
+      .field("height", &prism_params::height);
 
   // 拉伸创建函数
   function("createPrism",

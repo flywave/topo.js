@@ -49,6 +49,7 @@ export interface PrismObject extends Version {
     type: 'Prism';
     profile: ShapeProfile;
     direction: Dir;
+    height: number;
 }
 
 export type SegmentType = 'LINE' | 'THREE_POINT_ARC' | 'CIRCLE_CENTER_ARC' | 'SPLINE';
