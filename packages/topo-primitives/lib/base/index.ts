@@ -918,15 +918,15 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
     setDefault(): Primitive<CatenaryParams, CatenaryObject> {
         this.params = {
             p1: new this.tp.gp_Pnt_3(0, 0, 0),
-            p2: new this.tp.gp_Pnt_3(100, 0, 0),
+            p2: new this.tp.gp_Pnt_3(100, 100, 0),
             profile: {
                 type: this.tp.ProfileType.CIRC,
                 center: new this.tp.gp_Pnt_3(0, 0, 0),
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
                 radius: 2.0
             },
-            slack: 1.5,
-            maxSag: 5.0,
+            slack: 2,
+            maxSag: 10.0,
             tessellation: 0.0,
             upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
