@@ -219,12 +219,12 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
         this.params = {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
-                p1: new this.tp.gp_Pnt_3(0, 0, 5),
+                p1: new this.tp.gp_Pnt_3(0, 0, 0),
                 p2: new this.tp.gp_Pnt_3(10, 0, 5)
             },
             axis: new this.tp.gp_Ax1_2(
                 new this.tp.gp_Pnt_3(0, 0, 0),
-                new this.tp.gp_Dir_4(1, 0, 0)
+                new this.tp.gp_Dir_4(0, 0, 1)
             ),
             angle: Math.PI / 2
         };
@@ -327,10 +327,11 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
         this.params = {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
-                p1: new this.tp.gp_Pnt_3(0, 0, 0),
+                p1: new this.tp.gp_Pnt_3(-10, -5, 0),
                 p2: new this.tp.gp_Pnt_3(10, 5, 0)
             },
-            direction: new this.tp.gp_Dir_4(0, 0, 20)
+            direction: new this.tp.gp_Dir_4(0, 0, 1),
+            height: 20
         };
         return this;
     }
@@ -376,7 +377,8 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
 
         this.params = {
             profile,
-            direction: new this.tp.gp_Dir_4(o.direction[0], o.direction[1], o.direction[2])
+            direction: new this.tp.gp_Dir_4(o.direction[0], o.direction[1], o.direction[2]),
+            height: o.height
         };
         return this;
     }
@@ -394,7 +396,8 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
                 this.params.direction.X(),
                 this.params.direction.Y(),
                 this.params.direction.Z()
-            ]]
+            ],],
+            ['height', this.params.height]
         ])) as PrismObject;
     }
 }
@@ -1379,9 +1382,9 @@ export class TorusShapePrimitive extends BasePrimitive<TorusShapeParams, TorusSh
         this.params = {
             radius1: 30.0,
             radius2: 10.0,
-            angle1: 0,
-            angle2: Math.PI,
-            angle: Math.PI * 2
+            angle1: undefined,
+            angle2: undefined,
+            angle: undefined
         };
         return this;
     }

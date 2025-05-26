@@ -181368,6 +181368,7 @@ export declare function createRevolWithPosition(params: RevolParams, position: g
 export declare interface PrismParams {
     profile: ShapeProfile;
     direction: gp_Dir;
+    height: number;
 }
 
 // 拉伸创建函数
