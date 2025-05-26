@@ -1753,9 +1753,13 @@ export class TransmissionLinePrimitive extends BasePrimitive<TransmissionLinePar
     }
 
     public build(args?: any[]): Shape | undefined {
-        if (this.valid() && args && args.length === 2) {
-            const start = new this.tp.gp_Pnt_3(args[0][0], args[0][1], args[0].z);
-            const end = new this.tp.gp_Pnt_3(args[1][0], args[1][1], args[1].z);
+        if (this.valid()) {
+            var start = new this.tp.gp_Pnt_3(0, 0, 0);
+            var end = new this.tp.gp_Pnt_3(0, 100, 0);
+            if (args && args.length === 2) {
+                start = new this.tp.gp_Pnt_3(args[0][0], args[0][1], args[0].z);
+                end = new this.tp.gp_Pnt_3(args[1][0], args[1][1], args[1].z);
+            }
             return new this.tp.Shape(
                 this.tp.createTransmissionLine(this.params, start, end),
                 false
