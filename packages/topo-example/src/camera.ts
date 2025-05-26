@@ -2,7 +2,6 @@ import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/Addons.js"
 import Setup from "./setup"
 import Sizes from "./utils/sizes"
-import createAxisHelper from "./axes";
 
 export default class Camera {
   setup: Setup

@@ -220,7 +220,7 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
                 p1: new this.tp.gp_Pnt_3(0, 0, 0),
-                p2: new this.tp.gp_Pnt_3(10, 0, 5)
+                p2: new this.tp.gp_Pnt_3(100, 0, 50)
             },
             axis: new this.tp.gp_Ax1_2(
                 new this.tp.gp_Pnt_3(0, 0, 0),
@@ -327,11 +327,11 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
         this.params = {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
-                p1: new this.tp.gp_Pnt_3(-10, -5, 0),
-                p2: new this.tp.gp_Pnt_3(10, 5, 0)
+                p1: new this.tp.gp_Pnt_3(-100, -50, 0),
+                p2: new this.tp.gp_Pnt_3(100, 50, 0)
             },
             direction: new this.tp.gp_Dir_4(0, 0, 1),
-            height: 20
+            height: 40
         };
         return this;
     }
@@ -414,19 +414,19 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
 
     setDefault(): Primitive<PipeParams, PipeObject> {
         this.params = {
-            wire: [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(100, 0, 0)],
+            wire: [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(0, 100, 0)],
             profile: [{
                 type: this.tp.ProfileType.CIRC,
                 center: new this.tp.gp_Pnt_3(0, 0, 0),
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
-                radius: 5.0
+                radius: 10.0
             }],
             innerProfile: [
                 {
                     type: this.tp.ProfileType.CIRC,
                     center: new this.tp.gp_Pnt_3(0, 0, 0),
                     norm: new this.tp.gp_Dir_4(0, 0, 1),
-                    radius: 3.0
+                    radius: 8.0
                 }
             ],
             segmentType: this.tp.SegmentType.LINE as any,
@@ -578,8 +578,8 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
     setDefault(): Primitive<MultiSegmentPipeParams, MultiSegmentPipePrimitiveObject> {
         // 默认直线段
         const linePoints = [
-            new this.tp.gp_Pnt_3(50, -50, 0),
-            new this.tp.gp_Pnt_3(100, 0, 0)
+            new this.tp.gp_Pnt_3(0, 0, 0),
+            new this.tp.gp_Pnt_3(0, 100, 0)
         ];
 
         // 默认圆形剖面
@@ -1452,8 +1452,8 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams, WedgeSh
 
     setDefault(): Primitive<WedgeShapeParams, WedgeShapeObject> {
         this.params = {
-            edge: new this.tp.gp_Pnt_3(25, 15, 8),
-            limit: [10.0, 5.0, 15.0, 7.0],
+            edge: new this.tp.gp_Pnt_3(50, 30, 16),
+            limit: [20.0, 10.0, 30.0, 14.0],
             ltx: 12
         };
         return this;

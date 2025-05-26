@@ -1,11 +1,12 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
+import { TopoInstance } from "topo-wasm"
 import { mesh, requestTopoInstance } from "topo-js"
-import { BasePrimitiveType, SphereShapePrimitive, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType } from "topo-primitives"
+import { BasePrimitiveType, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType } from "topo-primitives"
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import { createShapePrimitive } from "./primitives"
 import createAxisHelper from "./axes"
+import { addLights } from "./lights"
 
 export default class World {
   setup: Setup
@@ -15,8 +16,8 @@ export default class World {
   done: Promise<void> | null = null
   gui: GUI | null = null  // 新增GUI实例
   selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType = BasePrimitiveType.Pipe
-  group: THREE.Group | null = null  // 新增meshGroup
-  axis: THREE.Group | null = null  // 新增meshGroup
+  group: THREE.Group | null = null
+  axis: THREE.Group | null = null
 
   constructor() {
     this.setup = Setup.getInstance()
@@ -30,7 +31,7 @@ export default class World {
     this.axis = createAxisHelper(200)
     this.scene.add(this.axis)
 
-    this.addLights()
+    addLights(this.scene)
     this.done = this.TopoInit()
 
     this.initUI()  // 初始化UI
@@ -134,27 +135,6 @@ export default class World {
 
   dispose() {
     this.gui?.destroy()  // 清理UI
-  }
-
-  addLights() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5) // 白色光，强度为0.6
-    this.scene.add(ambientLight)
-
-    // 添加半球光
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5) // 天空色为白色，地面色为灰色，强度为0.6
-    hemisphereLight.position.set(0, 1, 0)
-    this.scene.add(hemisphereLight)
-
-    // 添加方向光
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8) // 白色光，强度为0.8
-    directionalLight.position.set(105, 105, 105) // 光源位置
-    directionalLight.castShadow = true // 启用阴影
-    this.scene.add(directionalLight)
-    directionalLight.shadow.mapSize.width = 2048
-    directionalLight.shadow.mapSize.height = 2048
-    directionalLight.shadow.camera.near = 0.5
-    directionalLight.shadow.camera.far = 50
-    directionalLight.shadow.bias = -0.0001 // 解决阴影条纹问题
   }
 
   async TopoInit() {

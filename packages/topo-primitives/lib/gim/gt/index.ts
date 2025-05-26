@@ -143,12 +143,12 @@ export class BoredPileBasePrimitive extends BasePrimitive<BoredPileParams, Bored
 
     setDefault(): Primitive<BoredPileParams, BoredPileBaseObject> {
         this.params = {
-            H1: 10.0,  // 上部圆柱高度
-            H2: 3.0,   // 过渡段高度
-            H3: 5.0,   // 底部圆柱高度
-            H4: 0.3,    // 桩头高度
-            d: 0.5,     // 上部直径
-            D: 2.0     // 底部直径
+            H1: 40.0,  // 上部圆柱高度
+            H2: 12.0,   // 过渡段高度
+            H3: 20.0,  // 底部圆柱高度
+            H4: 1.2,   // 桩头高度
+            d: 2.0,    // 上部直径
+            D: 8.0     // 底部直径
         };
         return this;
     }
@@ -217,25 +217,25 @@ export class PileCapBasePrimitive extends BasePrimitive<PileCapParams, PileCapBa
 
     setDefault(): Primitive<PileCapParams, PileCapBaseObject> {
         this.params = {
-            H1: 10.0,
-            H2: 3.0,
-            H3: 5.0,
-            H4: 4.0,
-            H5: 2.0,
-            H6: 0.3,
-            d: 0.5,
-            D: 2.0,
-            b: 1.5,
-            B1: 20.0,
-            L1: 30.0,
-            e1: 1.0,
-            e2: 0.5,
+            H1: 20.0,
+            H2: 6.0,
+            H3: 10.0,
+            H4: 8.0,
+            H5: 4.0,
+            H6: 0.6,
+            d: 1.0,
+            D: 4.0,
+            b: 3.0,
+            B1: 40.0,
+            L1: 60.0,
+            e1: 2.0,
+            e2: 1.0,
             cs: 0,
             ZCOUNT: 3,
             ZPOSTARRAY: [
                 new this.tp.gp_Pnt_3(0, 0, 0),
-                new this.tp.gp_Pnt_3(10, 0, 0),
-                new this.tp.gp_Pnt_3(0, 10, 0)
+                new this.tp.gp_Pnt_3(20, 0, 0),
+                new this.tp.gp_Pnt_3(0, 20, 0)
             ]
         };
         return this;
@@ -328,17 +328,17 @@ export class RockAnchorBasePrimitive extends BasePrimitive<RockAnchorParams, Roc
 
     setDefault(): Primitive<RockAnchorParams, RockAnchorBaseObject> {
         this.params = {
-            H1: 2.0,
-            H2: 5.0,
-            d: 0.5,
-            B1: 10.0,
-            L1: 15.0,
+            H1: 8.0,
+            H2: 20.0,
+            d: 2.0,
+            B1: 40.0,
+            L1: 60.0,
             ZCOUNT: 4,
             ZPOSTARRAY: [
-                new this.tp.gp_Pnt_3(-4, -6, 0),
-                new this.tp.gp_Pnt_3(4, -6, 0),
-                new this.tp.gp_Pnt_3(4, 6, 0),
-                new this.tp.gp_Pnt_3(-4, 6, 0)
+                new this.tp.gp_Pnt_3(-16, -24, 0),
+                new this.tp.gp_Pnt_3(16, -24, 0),
+                new this.tp.gp_Pnt_3(16, 24, 0),
+                new this.tp.gp_Pnt_3(-16, 24, 0)
             ]
         };
         return this;
@@ -410,22 +410,22 @@ export class RockPileCapBasePrimitive extends BasePrimitive<RockPileCapParams, R
 
     setDefault(): Primitive<RockPileCapParams, RockPileCapBaseObject> {
         this.params = {
-            H1: 4.0,
-            H2: 2.0,
-            H3: 5.0,
-            d: 0.5,
-            b: 1.5,
-            B1: 20.0,
-            L1: 30.0,
-            e1: 1.0,
-            e2: 0.5,
+            H1: 16.0,
+            H2: 8.0,
+            H3: 40.0,
+            d: 2,
+            b: 6,
+            B1: 80.0,
+            L1: 120.0,
+            e1: 4.0,
+            e2: 2,
             cs: 0,
             ZCOUNT: 4,
             ZPOSTARRAY: [
-                new this.tp.gp_Pnt_3(-5, -5, 0),
-                new this.tp.gp_Pnt_3(5, -5, 0),
-                new this.tp.gp_Pnt_3(5, 5, 0),
-                new this.tp.gp_Pnt_3(-5, 5, 0)
+                new this.tp.gp_Pnt_3(-20, -20, 0),
+                new this.tp.gp_Pnt_3(20, -20, 0),
+                new this.tp.gp_Pnt_3(20, 20, 0),
+                new this.tp.gp_Pnt_3(-20, 20, 0)
             ]
         };
         return this;
@@ -509,11 +509,11 @@ export class EmbeddedRockAnchorBasePrimitive extends BasePrimitive<EmbeddedRockA
 
     setDefault(): Primitive<EmbeddedRockAnchorParams, EmbeddedRockAnchorBaseObject> {
         this.params = {
-            H1: 10.0,
-            H2: 3.0,
-            H3: 5.0,
-            d: 0.5,
-            D: 2.0
+            H1: 50.0,
+            H2: 15.0,
+            H3: 25.0,
+            d: 2.5,
+            D: 10.0
         };
         return this;
     }
@@ -579,16 +579,16 @@ export class InclinedRockAnchorBasePrimitive extends BasePrimitive<InclinedRockA
 
     setDefault(): Primitive<InclinedRockAnchorParams, InclinedRockAnchorBaseObject> {
         this.params = {
-            H1: 2.0,
-            H2: 5.0,
-            d: 0.5,
-            D: 1.5,
-            B: 10.0,
-            L: 15.0,
-            e1: 1.0,
-            e2: 0.5,
-            alpha1: 1.5,
-            alpha2: 1.0
+            H1: 20.0,
+            H2: 50.0,
+            d: 5.0,
+            D: 15,
+            B: 100.0,
+            L: 150.0,
+            e1: 10.0,
+            e2: 5,
+            alpha1: 15,
+            alpha2: 10
         };
         return this;
     }
@@ -665,11 +665,11 @@ export class ExcavatedBasePrimitive extends BasePrimitive<ExcavatedBaseParams, E
 
     setDefault(): Primitive<ExcavatedBaseParams, ExcavatedBaseObject> {
         this.params = {
-            H1: 10.0,
-            H2: 3.0,
-            H3: 5.0,
-            d: 0.5,
-            D: 2.0,
+            H1: 50.0,
+            H2: 15.0,
+            H3: 25.0,
+            d: 2.5,
+            D: 10.0,
             alpha1: 0.0,
             alpha2: 0.0
         };
@@ -740,17 +740,17 @@ export class StepBasePrimitive extends BasePrimitive<StepBaseParams, StepBaseObj
 
     setDefault(): Primitive<StepBaseParams, StepBaseObject> {
         this.params = {
-            H: 15.0,
-            H1: 5.0,
-            H2: 5.0,
-            H3: 5.0,
-            b: 3.0,
-            B1: 10.0,
-            B2: 15.0,
-            B3: 20.0,
-            L1: 10.0,
-            L2: 15.0,
-            L3: 20.0,
+            H: 150.0,
+            H1: 50.0,
+            H2: 50.0,
+            H3: 50.0,
+            b: 30.0,
+            B1: 100.0,
+            B2: 150.0,
+            B3: 200.0,
+            L1: 100.0,
+            L2: 150.0,
+            L3: 200.0,
             N: 3
         };
         return this;
@@ -836,17 +836,17 @@ export class StepPlateBasePrimitive extends BasePrimitive<StepPlateBaseParams, S
 
     setDefault(): Primitive<StepPlateBaseParams, StepPlateBaseObject> {
         this.params = {
-            H: 15.0,
-            H1: 5.0,
-            H2: 5.0,
-            H3: 5.0,
-            b: 3.0,
-            L1: 10.0,
-            L2: 15.0,
-            B1: 20.0,
-            B2: 30.0,
-            alpha1: 1.5,
-            alpha2: 1.0,
+            H: 150.0,
+            H1: 50.0,
+            H2: 50.0,
+            H3: 50.0,
+            b: 30.0,
+            L1: 100.0,
+            L2: 150.0,
+            B1: 200.0,
+            B2: 300.0,
+            alpha1: 15,
+            alpha2: 10,
             N: 3
         };
         return this;
@@ -929,16 +929,16 @@ export class SlopedBaseBasePrimitive extends BasePrimitive<SlopedBaseBaseParams,
 
     setDefault(): Primitive<SlopedBaseBaseParams, SlopedBaseBaseObject> {
         this.params = {
-            H1: 10.0,
-            H2: 3.0,
-            H3: 5.0,
-            b: 1.5,
-            L1: 20.0,
-            L2: 15.0,
-            B1: 10.0,
-            B2: 8.0,
-            alpha1: 1.5,
-            alpha2: 1.0
+            H1: 100.0,
+            H2: 30.0,
+            H3: 50.0,
+            b: 15,
+            L1: 200.0,
+            L2: 150.0,
+            B1: 100.0,
+            B2: 80.0,
+            alpha1: 15,
+            alpha2: 10
         };
         return this;
     }
@@ -1016,17 +1016,17 @@ export class CompositeCaissonBasePrimitive extends BasePrimitive<CompositeCaisso
 
     setDefault(): Primitive<CompositeCaissonBaseParams, CompositeCaissonBaseObject> {
         this.params = {
-            H1: 10.0,
-            H2: 3.0,
-            H3: 5.0,
-            H4: 20.0,
-            b: 1.5,
-            D: 20.0,
-            t: 1.5,
-            B1: 20.0,
-            B2: 25.0,
-            L1: 30.0,
-            L2: 35.0
+            H1: 100.0,
+            H2: 30.0,
+            H3: 50.0,
+            H4: 200.0,
+            b: 15,
+            D: 200.0,
+            t: 15,
+            B1: 200.0,
+            B2: 250.0,
+            L1: 300.0,
+            L2: 350.0
         };
         return this;
     }
@@ -1107,15 +1107,15 @@ export class RaftBasePrimitive extends BasePrimitive<RaftBaseParams, RaftBaseObj
 
     setDefault(): Primitive<RaftBaseParams, RaftBaseObject> {
         this.params = {
-            H1: 10.0,
-            H2: 10.0,
-            H3: 5.0,
-            b1: 3.0,
-            b2: 3.0,
-            B1: 50.0,
-            B2: 40.0,
-            L1: 80.0,
-            L2: 60.0
+            H1: 100.0,
+            H2: 100.0,
+            H3: 50.0,
+            b1: 30.0,
+            b2: 30.0,
+            B1: 500.0,
+            B2: 400.0,
+            L1: 800.0,
+            L2: 600.0
         };
         return this;
     }
@@ -1191,12 +1191,12 @@ export class DirectBuriedBasePrimitive extends BasePrimitive<DirectBuriedBasePar
 
     setDefault(): Primitive<DirectBuriedBaseParams, DirectBuriedBaseObject> {
         this.params = {
-            H1: 50.0,
-            H2: 10.0,
-            d: 30.0,
-            D: 60.0,
+            H1: 100.0,
+            H2: 20.0,
+            d: 60.0,
+            D: 120.0,
             B: 0,
-            t: 2.0
+            t: 4.0
         };
         return this;
     }
@@ -1262,14 +1262,14 @@ export class SteelSleeveBasePrimitive extends BasePrimitive<SteelSleeveBaseParam
 
     setDefault(): Primitive<SteelSleeveBaseParams, SteelSleeveBaseObject> {
         this.params = {
-            H1: 50.0,
-            H2: 10.0,
-            H3: 15.0,
-            H4: 5.0,
-            d: 30.0,
-            D1: 60.0,
-            D2: 40.0,
-            t: 2.0,
+            H1: 100.0,
+            H2: 20.0,
+            H3: 30.0,
+            H4: 10.0,
+            d: 60.0,
+            D1: 120.0,
+            D2: 80.0,
+            t: 4.0,
             B1: 0,
             B2: 0
         };
@@ -1825,10 +1825,10 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams, Insulator
             uLinkLength: 0,
             weight: 5.2,
             fittingLengths: {
-                leftUpper: 0.7,
-                rightUpper: 0.7,
-                leftLower: 1,
-                rightLower: 1
+                leftUpper: 3.5,
+                rightUpper: 3.5,
+                leftLower: 5,
+                rightLower: 5
             },
             multiLink: {
                 count: 1,
@@ -1836,8 +1836,8 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams, Insulator
                 arrangement: this.tp.ArrangementType.VERTICAL as any
             },
             insulator: {
-                radius: 0.475,
-                height: 10.146,
+                radius: 2.375,
+                height: 50.73,
                 leftCount: 20,
                 rightCount: 20,
                 material: this.tp.InsulatorMaterial.CERAMIC as any
@@ -1845,8 +1845,8 @@ export class InsulatorPrimitive extends BasePrimitive<InsulatorParams, Insulator
             gradingRing: {
                 count: 1,
                 position: 0.5,
-                height: 0.03,
-                radius: 0.15
+                height: 0.15,
+                radius: 0.75
             },
             application: this.tp.ApplicationType.CONDUCTOR as any,
             stringType: this.tp.StringType.SUSPENSION as any
@@ -2230,20 +2230,20 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
 
     setDefault(): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
         this.params = {
-            boltDiameter: 0.24,
-            exposedLength: 0.2,
+            boltDiameter: 24.0,
+            exposedLength: 20.0,
             nutCount: 2,
-            nutHeight: 0.1,
-            nutOD: 0.6,
+            nutHeight: 10.0,
+            nutOD: 60.0,
             washerCount: 2,
             washerShape: 2,
-            washerSize: 0.65,
-            washerThickness: 0.015,
-            anchorLength: 1.5,
-            hookStraightLengthA: 0.6,
-            hookStraightLengthB: 0.25,
-            hookDiameter: 0.6,
-            anchorBarDiameter: 0.1
+            washerSize: 65.0,
+            washerThickness: 1.5,
+            anchorLength: 150.0,
+            hookStraightLengthA: 60.0,
+            hookStraightLengthB: 25.0,
+            hookDiameter: 60.0,
+            anchorBarDiameter: 10.0
         };
         return this;
     }
@@ -2338,18 +2338,18 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
 
     setDefault(): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
         this.params = {
-            boltDiameter: 0.24,
-            exposedLength: 0.2,
+            boltDiameter: 24.0,
+            exposedLength: 20.0,
             nutCount: 2,
-            nutHeight: 0.075,
-            nutOD: 0.6,
+            nutHeight: 7.5,
+            nutOD: 60.0,
             washerCount: 2,
             washerShape: 2,
-            washerSize: 0.65,
-            washerThickness: 0.015,
-            anchorLength: 1.5,
-            hookStraightLength: 0.6,
-            hookDiameter: 0.6
+            washerSize: 65.0,
+            washerThickness: 1.5,
+            anchorLength: 150.0,
+            hookStraightLength: 60.0,
+            hookDiameter: 60.0
         };
         return this;
     }
@@ -2438,22 +2438,22 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, Rib
 
     setDefault(): Primitive<RibbedAnchorParams, RibbedAnchorObject> {
         this.params = {
-            boltDiameter: 0.2,
-            exposedLength: 0.4,
+            boltDiameter: 20.0,
+            exposedLength: 40.0,
             nutCount: 0,
-            nutHeight: 0.1,
-            nutOD: 0.6,
+            nutHeight: 10.0,
+            nutOD: 60.0,
             washerCount: 0,
             washerShape: 2,
-            washerSize: 0.65,
-            washerThickness: 0.015,
-            anchorLength: 1.5,
-            basePlateSize: 0.6,
-            ribTopWidth: 0.1,
-            ribBottomWidth: 0.2,
-            basePlateThickness: 0.03,
-            ribHeight: 0.2,
-            ribThickness: 0.025
+            washerSize: 65.0,
+            washerThickness: 1.5,
+            anchorLength: 150.0,
+            basePlateSize: 60.0,
+            ribTopWidth: 10.0,
+            ribBottomWidth: 20.0,
+            basePlateThickness: 3.0,
+            ribHeight: 20.0,
+            ribThickness: 2.5
         };
         return this;
     }
@@ -2547,19 +2547,19 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
 
     setDefault(): Primitive<NutAnchorParams, NutAnchorObject> {
         this.params = {
-            boltDiameter: 0.2,
-            exposedLength: 0.4,
+            boltDiameter: 20.0,
+            exposedLength: 40.0,
             nutCount: 2,
-            nutHeight: 0.1,
-            nutOD: 0.6,
+            nutHeight: 10.0,
+            nutOD: 60.0,
             washerCount: 2,
             washerShape: 2,
-            washerSize: 0.65,
-            washerThickness: 0.015,
-            anchorLength: 1.5,
-            basePlateSize: 0.6,
-            basePlateThickness: 0.03,
-            boltToPlateDistance: 1.4
+            washerSize: 65.0,
+            washerThickness: 1.5,
+            anchorLength: 150.0,
+            basePlateSize: 60.0,
+            basePlateThickness: 3.0,
+            boltToPlateDistance: 140.0
         };
         return this;
     }
@@ -2652,19 +2652,19 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
 
     setDefault(): Primitive<TripleArmAnchorParams, TripleArmAnchorObject> {
         this.params = {
-            boltDiameter: 0.2,
-            exposedLength: 0.4,
+            boltDiameter: 20.0,
+            exposedLength: 40.0,
             nutCount: 2,
-            nutHeight: 0.1,
-            nutOD: 0.6,
+            nutHeight: 10.0,
+            nutOD: 60.0,
             washerCount: 2,
             washerShape: 2,
-            washerSize: 0.65,
-            washerThickness: 0.015,
-            anchorLength: 1.5,
-            armDiameter: 0.12,
-            armStraightLength: 0.6,
-            armBendLength: 0.4,
+            washerSize: 65.0,
+            washerThickness: 1.5,
+            anchorLength: 150.0,
+            armDiameter: 12.0,
+            armStraightLength: 60.0,
+            armBendLength: 40.0,
             armBendAngle: Math.PI / 4
         };
         return this;
@@ -2760,21 +2760,21 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
 
     setDefault(): Primitive<PositioningPlateAnchorParams, PositioningPlateAnchorObject> {
         this.params = {
-            boltDiameter: 0.2,
-            exposedLength: 0.4,
+            boltDiameter: 20.0,
+            exposedLength: 40.0,
             nutCount: 2,
-            nutHeight: 0.1,
-            nutOD: 0.6,
+            nutHeight: 10.0,
+            nutOD: 60.0,
             washerCount: 2,
             washerShape: 2,
-            washerSize: 0.65,
-            washerThickness: 0.015,
-            anchorLength: 1.5,
-            plateLength: 0.6,
-            plateThickness: 0.03,
-            toBaseDistance: 0.2,
-            toBottomDistance: 0.2,
-            groutHoleDiameter: 0.3
+            washerSize: 65.0,
+            washerThickness: 1.5,
+            anchorLength: 150.0,
+            plateLength: 60.0,
+            plateThickness: 3.0,
+            toBaseDistance: 20.0,
+            toBottomDistance: 20.0,
+            groutHoleDiameter: 30.0
         };
         return this;
     }
@@ -2872,11 +2872,11 @@ export class StubAnglePrimitive extends BasePrimitive<StubAngleParams, StubAngle
 
     setDefault(): Primitive<StubAngleParams, StubAngleObject> {
         this.params = {
-            legWidth: 0.1,
-            thickness: 0.01,
+            legWidth: 50,
+            thickness: 5,
             slope: 0.1,
-            exposedLength: 2.0,
-            anchorLength: 5.0
+            exposedLength: 30.0,
+            anchorLength: 70.0
         };
         return this;
     }
@@ -2944,11 +2944,11 @@ export class StubTubePrimitive extends BasePrimitive<StubTubeParams, StubTubeObj
 
     setDefault(): Primitive<StubTubeParams, StubTubeObject> {
         this.params = {
-            diameter: 0.6,
-            thickness: 0.1,
+            diameter: 18.0,
+            thickness: 3.0,
             slope: 0.1,
-            exposedLength: 2.0,
-            anchorLength: 10.0
+            exposedLength: 40.0,
+            anchorLength: 60.0
         };
         return this;
     }
