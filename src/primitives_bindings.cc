@@ -3280,6 +3280,13 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .value("OPEN_CUT_TUNNEL", four_way_well_type::OPEN_CUT_TUNNEL)
       .value("UNDERGROUND_TUNNEL", four_way_well_type::UNDERGROUND_TUNNEL);
 
+  value_object<four_way_well_section>("FourWayWellSection")
+      .field("sectionType", &four_way_well_section::sectionType)
+      .field("length", &four_way_well_section::length)
+      .field("width", &four_way_well_section::width)
+      .field("height", &four_way_well_section::height)
+      .field("arcHeight", &four_way_well_section::arcHeight);
+
   // 四通井参数结构体绑定
   value_object<four_way_well_params>("FourWayWellParams")
       .field("type", &four_way_well_params::type)
@@ -3295,6 +3302,11 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("branchWidth", &four_way_well_params::branchWidth)
       .field("topThickness", &four_way_well_params::topThickness)
       .field("bottomThickness", &four_way_well_params::bottomThickness)
+      .field("outerWallThickness", &four_way_well_params::outerWallThickness)
+      .field("innerWallThickness", &four_way_well_params::innerWallThickness)
+      .field("cushionExtension", &four_way_well_params::cushionExtension)
+      .field("cushionThickness", &four_way_well_params::cushionThickness)
+      // 嵌套结构体字段绑定
       .field("leftSection", &four_way_well_params::leftSection)
       .field("rightSection", &four_way_well_params::rightSection)
       .field("branchSection1", &four_way_well_params::branchSection1)

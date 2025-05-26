@@ -1676,6 +1676,14 @@ export declare type FourWayWellType = {
     UNDERGROUND_TUNNEL: {}
 }
 
+export declare interface ConnectionSection {
+    sectionType: ConnectionSectionStyle;
+    length: number;
+    width: number;
+    height: number;
+    arcHeight: number;
+}
+
 // 四通井参数结构体
 export declare interface FourWayWellParams {
     type: FourWayWellType;
@@ -1691,10 +1699,10 @@ export declare interface FourWayWellParams {
     branchWidth: number;
     topThickness: number;
     bottomThickness: number;
-    leftSection: ConnectionSectionStyle;
-    rightSection: ConnectionSectionStyle;
-    branchSection1: ConnectionSectionStyle;
-    branchSection2: ConnectionSectionStyle;
+    leftSection: ConnectionSection;
+    rightSection: ConnectionSection;
+    branchSection1: ConnectionSection;
+    branchSection2: ConnectionSection;
     outerWallThickness: number;
     innerWallThickness: number;
     cushionExtension: number;

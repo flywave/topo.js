@@ -2,7 +2,7 @@ import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/Addons.js"
 import Setup from "./setup"
 import Sizes from "./utils/sizes"
-import { ViewportGizmo } from "three-viewport-gizmo";
+import createAxisHelper from "./axes";
 
 export default class Camera {
   setup: Setup
@@ -20,7 +20,8 @@ export default class Camera {
 
     this.camera = new THREE.PerspectiveCamera(50, this.sizes.aspect, 0.1, 1000)
 
-    this.camera.position.set(0, 50, 100)
+    this.camera.position.set(0, -200, 500)
+    this.camera.lookAt(0, 0, 0)
     this.scene.add(this.camera)
 
     this.controls = null

@@ -1,10 +1,11 @@
 import * as THREE from "three"
 import Setup from "./setup"
 import initTopo, { gp_Pnt, MultiSegmentPipeParams, CircProfile, PolygonProfile, TopoInstance } from "topo-wasm"
-import {   mesh, requestTopoInstance } from "topo-js"
+import { mesh, requestTopoInstance } from "topo-js"
 import { BasePrimitiveType, SphereShapePrimitive, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType } from "topo-primitives"
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import { createShapePrimitive } from "./primitives"
+import createAxisHelper from "./axes"
 
 export default class World {
   setup: Setup
@@ -15,6 +16,7 @@ export default class World {
   gui: GUI | null = null  // 新增GUI实例
   selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType = BasePrimitiveType.Pipe
   group: THREE.Group | null = null  // 新增meshGroup
+  axis: THREE.Group | null = null  // 新增meshGroup
 
   constructor() {
     this.setup = Setup.getInstance()
@@ -22,7 +24,11 @@ export default class World {
     this.scene.background = new THREE.Color(0x333333);
 
     this.grid = new THREE.GridHelper(1000, 100, 0x111111, 0x111111);
+    this.grid.rotation.x = Math.PI / 2; // 旋转90度使其位于XY平面
     this.scene.add(this.grid);
+
+    this.axis = createAxisHelper(200)
+    this.scene.add(this.axis)
 
     this.addLights()
     this.done = this.TopoInit()
@@ -92,6 +98,21 @@ export default class World {
         this.group!.add(new THREE.Mesh(geometry, material));
       });
       this.scene.add(this.group);
+
+      const bbox = new THREE.Box3().setFromObject(this.group);
+      const maxX = bbox.max.x;
+      const maxY = bbox.max.y;
+      const maxZ = bbox.max.z;
+
+      const maxDimension = Math.max(maxX, maxY, maxZ);
+
+      if (this.axis) {
+        this.scene.remove(this.axis);
+      }
+
+
+      this.axis = createAxisHelper(maxDimension * 1.2);
+      this.scene.add(this.axis)
     }
   }
 
@@ -116,11 +137,24 @@ export default class World {
   }
 
   addLights() {
-    const light = new THREE.AmbientLight(0x404040)
-    this.scene.add(light)
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5)
-    directionalLight.position.set(0.5, 0.5, 0.5)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5) // 白色光，强度为0.6
+    this.scene.add(ambientLight)
+
+    // 添加半球光
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5) // 天空色为白色，地面色为灰色，强度为0.6
+    hemisphereLight.position.set(0, 1, 0)
+    this.scene.add(hemisphereLight)
+
+    // 添加方向光
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8) // 白色光，强度为0.8
+    directionalLight.position.set(105, 105, 105) // 光源位置
+    directionalLight.castShadow = true // 启用阴影
     this.scene.add(directionalLight)
+    directionalLight.shadow.mapSize.width = 2048
+    directionalLight.shadow.mapSize.height = 2048
+    directionalLight.shadow.camera.near = 0.5
+    directionalLight.shadow.camera.far = 50
+    directionalLight.shadow.bias = -0.0001 // 解决阴影条纹问题
   }
 
   async TopoInit() {
