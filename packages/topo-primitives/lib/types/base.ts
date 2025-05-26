@@ -48,7 +48,7 @@ export interface RevolObject extends Version {
 export interface PrismObject extends Version {
     type: 'Prism';
     profile: ShapeProfile;
-    dir: Dir;
+    direction: Dir;
 }
 
 export type SegmentType = 'LINE' | 'THREE_POINT_ARC' | 'CIRCLE_CENTER_ARC' | 'SPLINE';
@@ -57,7 +57,7 @@ export type TransitionMode = 'TRANSFORMED' | 'ROUND' | 'RIGHT';
 
 export interface PipeObject extends Version {
     type: 'Pipe';
-    wire: Point[];
+    wire?: Point[];
     profile: [ShapeProfile, ShapeProfile];
     innerProfile: [ShapeProfile, ShapeProfile] | null;
     segmentType: SegmentType;
@@ -67,7 +67,7 @@ export interface PipeObject extends Version {
 
 export interface MultiSegmentPipePrimitiveObject extends Version {
     type: 'MultiSegmentPipe';
-    wires: Point[][];
+    wires?: Point[][];
     profiles: ShapeProfile[];
     innerProfiles: ShapeProfile[] | null;
     segmentTypes: SegmentType[];
@@ -76,10 +76,11 @@ export interface MultiSegmentPipePrimitiveObject extends Version {
 }
 
 export interface PipeJointEndpoint {
-    offset: Point;
-    normal: Dir;
-    profile: ShapeProfile;
-    innerProfile: ShapeProfile | null;
+    id: string;
+    offset?: Point;
+    normal?: Dir;
+    profile?: ShapeProfile;
+    innerProfile?: ShapeProfile | null;
 }
 
 export interface PipeJointObject extends Version {
@@ -93,8 +94,8 @@ export interface PipeJointObject extends Version {
 
 export interface CatenaryObject extends Version {
     type: 'Catenary';
-    p1: Point;
-    p2: Point;
+    p1?: Point;
+    p2?: Point;
     profile: ShapeProfile;
     slack: number;
     maxSag: number;

@@ -1684,10 +1684,34 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourW
             innerWallThickness: 3.0,
             cushionExtension: 10.0,
             cushionThickness: 15.0,
-            leftSection: this.tp.ConnectionSectionStyle.RECTANGULAR as any,
-            rightSection: this.tp.ConnectionSectionStyle.RECTANGULAR as any,
-            branchSection1: this.tp.ConnectionSectionStyle.HORSESHOE as any,
-            branchSection2: this.tp.ConnectionSectionStyle.HORSESHOE as any,
+            leftSection: {
+                sectionType: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
+                length: 60.0,
+                width: 80.0,
+                height: 90.0,
+                arcHeight: 15.0,
+            },
+            rightSection: {
+                sectionType: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
+                length: 60.0,
+                width: 80.0,
+                height: 90.0,
+                arcHeight: 15.0,
+            },
+            branchSection1: {
+                sectionType: this.tp.ConnectionSectionStyle.HORSESHOE as any, // HORSESHOE
+                length: 80.0,
+                width: 80.0,
+                height: 50.0,
+                arcHeight: 15.0,
+            },
+            branchSection2: {
+                sectionType: this.tp.ConnectionSectionStyle.HORSESHOE as any, // HORSESHOE
+                length: 80.0,
+                width: 80.0,
+                height: 50.0,
+                arcHeight: 15.0,
+            },
             shaftRadius: 0.0,
             cornerLength: 0.0,
             cornerWidth: 0.0,
@@ -1731,7 +1755,6 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourW
             wellType = this.tp.FourWayWellType.WORKING_WELL as any;
         }
 
-
         let cornerStyle: CornerStyle = this.tp.CornerStyle.ROUNDED as any;
         if (o['cornerStyle'] === 'ROUNDED') {
             cornerStyle = this.tp.CornerStyle.ROUNDED as any;
@@ -1740,38 +1763,38 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourW
         }
 
         let leftSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
-        if (o['leftSection'] === 'RECTANGULAR') {
+        if (o['leftSectionStyle'] === 'RECTANGULAR') {
             leftSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
-        } else if (o['leftSection'] === 'HORSESHOE') {
+        } else if (o['leftSectionStyle'] === 'HORSESHOE') {
             leftSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
-        } else if (o['leftSection'] === 'CIRCULAR') {
+        } else if (o['leftSectionStyle'] === 'CIRCULAR') {
             leftSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
         }
 
         let rightSectionStyle: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
-        if (o['rightSection'] === 'RECTANGULAR') {
+        if (o['rightSectionStyle'] === 'RECTANGULAR') {
             rightSectionStyle = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
-        } else if (o['rightSection'] === 'HORSESHOE') {
+        } else if (o['rightSectionStyle'] === 'HORSESHOE') {
             rightSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
-        } else if (o['rightSection'] === 'CIRCULAR') {
+        } else if (o['rightSectionStyle'] === 'CIRCULAR') {
             rightSectionStyle = this.tp.ConnectionSectionStyle.CIRCULAR as any;
         }
 
         let branchSection1Style: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
-        if (o['branchSection1'] === 'RECTANGULAR') {
+        if (o['branchSection1Style'] === 'RECTANGULAR') {
             branchSection1Style = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
-        } else if (o['branchSection1'] === 'HORSESHOE') {
+        } else if (o['branchSection1Style'] === 'HORSESHOE') {
             branchSection1Style = this.tp.ConnectionSectionStyle.HORSESHOE as any;
-        } else if (o['branchSection1'] === 'CIRCULAR') {
+        } else if (o['branchSection1Style'] === 'CIRCULAR') {
             branchSection1Style = this.tp.ConnectionSectionStyle.CIRCULAR as any;
         }
 
         let branchSection2Style: ConnectionSectionStyle = this.tp.ConnectionSectionStyle.HORSESHOE as any;
-        if (o['branchSection2'] === 'RECTANGULAR') {
+        if (o['branchSection2Style'] === 'RECTANGULAR') {
             branchSection2Style = this.tp.ConnectionSectionStyle.RECTANGULAR as any;
-        } else if (o['branchSection2'] === 'HORSESHOE') {
+        } else if (o['branchSection2Style'] === 'HORSESHOE') {
             branchSection2Style = this.tp.ConnectionSectionStyle.HORSESHOE as any;
-        } else if (o['branchSection2'] === 'CIRCULAR') {
+        } else if (o['branchSection2Style'] === 'CIRCULAR') {
             branchSection2Style = this.tp.ConnectionSectionStyle.CIRCULAR as any;
         }
 
@@ -1790,10 +1813,34 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourW
             innerWallThickness: o['innerWallThickness'],
             cushionExtension: o['cushionExtension'],
             cushionThickness: o['cushionThickness'],
-            leftSection: leftSectionStyle,
-            rightSection: rightSectionStyle,
-            branchSection1: branchSection1Style,
-            branchSection2: branchSection2Style,
+            leftSection: {
+                sectionType: leftSectionStyle,
+                length: o['leftSectionLength'],
+                width: o['leftSectionWidth'],
+                height: o['leftSectionHeight'],
+                arcHeight: o['leftSectionArcHeight']
+            },
+            rightSection: {
+                sectionType: rightSectionStyle,
+                length: o['rightSectionLength'],
+                width: o['rightSectionWidth'],
+                height: o['rightSectionHeight'],
+                arcHeight: o['rightSectionArcHeight']
+            },
+            branchSection1: {
+                sectionType: branchSection1Style,
+                length: o['branchSection1Length'],
+                width: o['branchSection1Width'],
+                height: o['branchSection1Height'],
+                arcHeight: o['branchSection1ArcHeight']
+            },
+            branchSection2: {
+                sectionType: branchSection2Style,
+                length: o['branchSection2Length'],
+                width: o['branchSection2Width'],
+                height: o['branchSection2Height'],
+                arcHeight: o['branchSection2ArcHeight']
+            },
             shaftRadius: o['shaftRadius'],
             cornerLength: o['cornerLength'],
             cornerWidth: o['cornerWidth'],
@@ -1871,10 +1918,26 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourW
             ['innerWallThickness', this.params.innerWallThickness],
             ['cushionExtension', this.params.cushionExtension],
             ['cushionThickness', this.params.cushionThickness],
-            ['leftSection', leftSectionType],
-            ['rightSection', rightSectionType],
-            ['branchSection1', branchSection1Type],
-            ['branchSection2', branchSection2Type],
+            ['leftSectionStyle', leftSectionType],
+            ['leftSectionLength', this.params.leftSection.length],
+            ['leftSectionWidth', this.params.leftSection.width],
+            ['leftSectionHeight', this.params.leftSection.height],
+            ['leftSectionArcHeight', this.params.leftSection.arcHeight],
+            ['rightSectionStyle', rightSectionType],
+            ['rightSectionLength', this.params.rightSection.length],
+            ['rightSectionWidth', this.params.rightSection.width],
+            ['rightSectionHeight', this.params.rightSection.height],
+            ['rightSectionArcHeight', this.params.rightSection.arcHeight],
+            ['branchSection1Style', branchSection1Type],
+            ['branchSection1Length', this.params.branchSection1.length],
+            ['branchSection1Width', this.params.branchSection1.width],
+            ['branchSection1Height', this.params.branchSection1.height],
+            ['branchSection1ArcHeight', this.params.branchSection1.arcHeight],
+            ['branchSection2Style', branchSection2Type],
+            ['branchSection2Length', this.params.branchSection2.length],
+            ['branchSection2Width', this.params.branchSection2.width],
+            ['branchSection2Height', this.params.branchSection2.height],
+            ['branchSection2ArcHeight', this.params.branchSection2.arcHeight],
             ['shaftRadius', this.params.shaftRadius],
             ['cornerLength', this.params.cornerLength],
             ['cornerWidth', this.params.cornerWidth],

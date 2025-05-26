@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "isolatedModules": true,
+    "moduleResolution": "node",
+    "allowJs": true,
+    "target": "es2016",
+    "module": "es2015",
+    "strict": true,
+    "lib": ["es2022", "DOM", "dom.iterable"],
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "typedocOptions": {
+    "watch": true,
+    "readme": "none",
+    "excludeProtected": true
+  },
+
+  "exclude": ["node_modules", "**/node_modules/*"]
+}

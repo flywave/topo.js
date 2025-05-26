@@ -1,20 +1,10 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "node",
-    "target": "es2022",
-    "module": "es2020",
-    "strict": true,
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "allowSyntheticDefaultImports": true
+    "composite": true, 
+    "isolatedModules": false,
+    "allowJs": true,
+    "rootDir": "./src",
   },
-  "include": [
-    "src"
-  ],
-  "typedocOptions": {
-    "watch": true,
-    "readme": "none",
-    "excludeProtected": true
-  }
+  "include": ["./src/**/*"], 
 }

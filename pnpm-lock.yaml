@@ -38,6 +38,9 @@ importers:
       topo-wasm:
         specifier: workspace:*
         version: link:../topo-wasm
+      tsconfig-paths-webpack-plugin:
+        specifier: ^4.2.0
+        version: 4.2.0
       vite-plugin-wasm:
         specifier: ^3.4.1
         version: 3.4.1(vite@4.5.14(@types/node@22.15.18)(terser@5.39.1))
@@ -175,6 +178,12 @@ importers:
       three:
         specifier: '>=0.174.0'
         version: 0.176.0
+      topo-threejs:
+        specifier: workspace:*
+        version: link:../topo-threejs
+      topo-wasm:
+        specifier: workspace:*
+        version: link:../topo-wasm
     devDependencies:
       '@rollup/plugin-commonjs':
         specifier: ^25.0.1
@@ -209,12 +218,6 @@ importers:
       rollup-plugin-ts:
         specifier: 3.1.1
         version: 3.1.1(@swc/core@1.11.24(@swc/helpers@0.4.37))(@swc/helpers@0.4.37)(rollup@3.10.1)(typescript@5.1.6)
-      topo-threejs:
-        specifier: workspace:*
-        version: link:../topo-threejs
-      topo-wasm:
-        specifier: workspace:*
-        version: link:../topo-wasm
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
@@ -224,6 +227,9 @@ importers:
       three:
         specifier: '>=0.174.0'
         version: 0.176.0
+      topo-wasm:
+        specifier: workspace:*
+        version: link:../topo-wasm
       ws:
         specifier: ^8.5.0
         version: 8.18.2
@@ -261,9 +267,6 @@ importers:
       rollup-plugin-ts:
         specifier: 3.1.1
         version: 3.1.1(@swc/core@1.11.24(@swc/helpers@0.4.37))(@swc/helpers@0.4.37)(rollup@3.10.1)(typescript@5.1.6)
-      topo-wasm:
-        specifier: workspace:*
-        version: link:../topo-wasm
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
@@ -4327,6 +4330,10 @@ packages:
       typescript: '*'
       webpack: ^5.0.0
 
+  tsconfig-paths-webpack-plugin@4.2.0:
+    resolution: {integrity: sha512-zbem3rfRS8BgeNK50Zz5SIQgXzLafiHjOwUAvk/38/o1jHn/V5QAgVUcz884or7WYcPaH3N2CIfUc2u0ul7UcA==}
+    engines: {node: '>=10.13.0'}
+
   tsconfig-paths@4.2.0:
     resolution: {integrity: sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==}
     engines: {node: '>=6'}
@@ -7555,7 +7562,7 @@ snapshots:
   jake@10.9.2:
     dependencies:
       async: 3.2.6
-      chalk: 4.1.0
+      chalk: 4.1.2
       filelist: 1.0.4
       minimatch: 3.1.2
 
@@ -9280,6 +9287,13 @@ snapshots:
       source-map: 0.7.4
       typescript: 5.1.6
       webpack: 5.99.8(@swc/core@1.11.24)(webpack-cli@5.1.4)
+
+  tsconfig-paths-webpack-plugin@4.2.0:
+    dependencies:
+      chalk: 4.1.2
+      enhanced-resolve: 5.18.1
+      tapable: 2.2.1
+      tsconfig-paths: 4.2.0
 
   tsconfig-paths@4.2.0:
     dependencies:

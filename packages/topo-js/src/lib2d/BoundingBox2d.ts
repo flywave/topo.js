@@ -1,10 +1,10 @@
-import { WrappingObj, GCWithScope } from "../register.js";
+import { WrappingObj, GCWithScope } from "../register";
 import { getTopo } from "../topolib";
 import { Bnd_Box2d } from "topo-wasm";
 
-import { Point2D } from "./definitions.js";
-import { reprPnt } from "./utils.js";
-import { pnt } from "./ocWrapper.js";
+import { Point2D } from "./definitions";
+import { reprPnt } from "./utils";
+import { pnt } from "./ocWrapper";
 
 export class BoundingBox2d extends WrappingObj<Bnd_Box2d> {
   constructor(wrapped?: Bnd_Box2d) {

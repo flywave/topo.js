@@ -229,10 +229,26 @@ export interface FourWayWellObject extends Version {
     innerWallThickness: number; // 内壁厚度
     cushionExtension: number; // 垫层延伸
     cushionThickness: number; // 垫层厚度
-    leftSection: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 左侧截面类型(1-矩形,2-马蹄形,3-圆形)
-    rightSection: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 右侧截面类型
-    branchSection1: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 分支1截面类型
-    branchSection2: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 分支2截面类型
+    leftSectionStyle: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 左侧截面类型(1-矩形,2-马蹄形,3-圆形)
+    leftSectionLength: number; // 左侧截面长度
+    leftSectionWidth: number; // 左侧截面宽度
+    leftSectionHeight: number; // 左侧截面高度
+    leftSectionArcHeight: number; // 左侧截面弧高
+    rightSectionStyle: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 右侧截面类型
+    rightSectionLength: number; // 右侧截面长度
+    rightSectionWidth: number; // 右侧截面宽度
+    rightSectionHeight: number; // 右侧截面高度
+    rightSectionArcHeight: number; // 右侧截面弧高
+    branchSection1Style: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 分支1截面类型
+    branchSection1Length: number; // 分支1截面长度
+    branchSection1Width: number; // 分支1截面宽度
+    branchSection1Height: number; // 分支1截面高度
+    branchSection1ArcHeight: number; // 分支1截面弧高
+    branchSection2Style: 'RECTANGULAR' | 'HORSESHOE' | 'CIRCULAR'; // 分支2截面类型
+    branchSection2Length: number; // 分支2截面长度
+    branchSection2Width: number; // 分支2截面宽度
+    branchSection2Height: number; // 分支2截面高度
+    branchSection2ArcHeight: number; // 分支2截面弧高
     shaftRadius: number; // 井筒半径
     cornerLength: number; // 转角长度
     cornerWidth: number; // 转角宽度

@@ -1676,6 +1676,14 @@ export declare type FourWayWellType = {
     UNDERGROUND_TUNNEL: {}
 }
 
+export declare interface ConnectionSection {
+    sectionType: ConnectionSectionStyle;
+    length: number;
+    width: number;
+    height: number;
+    arcHeight: number;
+}
+
 // 四通井参数结构体
 export declare interface FourWayWellParams {
     type: FourWayWellType;
@@ -1691,10 +1699,10 @@ export declare interface FourWayWellParams {
     branchWidth: number;
     topThickness: number;
     bottomThickness: number;
-    leftSection: ConnectionSectionStyle;
-    rightSection: ConnectionSectionStyle;
-    branchSection1: ConnectionSectionStyle;
-    branchSection2: ConnectionSectionStyle;
+    leftSection: ConnectionSection;
+    rightSection: ConnectionSection;
+    branchSection1: ConnectionSection;
+    branchSection2: ConnectionSection;
     outerWallThickness: number;
     innerWallThickness: number;
     cushionExtension: number;
@@ -2233,7 +2241,7 @@ export declare function createRevolWithPosition(params: RevolParams, position: g
 // 拉伸参数
 export declare interface PrismParams {
     profile: ShapeProfile;
-    dir: gp_Dir;
+    direction: gp_Dir;
 }
 
 // 拉伸创建函数
@@ -2285,9 +2293,10 @@ export declare type JointShapeMode = {
 
 // 管道端点
 export declare interface PipeEndpoint {
-    offset: gp_Pnt;
-    normal: gp_Dir;
-    profile: ShapeProfile;
+    id: string;
+    offset?: gp_Pnt;
+    normal?: gp_Dir;
+    profile?: ShapeProfile;
     innerProfile?: ShapeProfile;
 }
 

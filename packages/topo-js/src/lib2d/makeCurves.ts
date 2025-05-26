@@ -4,10 +4,10 @@ import {
   Handle_Geom2d_Curve,
 } from "topo-wasm";
 import { getTopo } from "../topolib";
-import { GCWithScope, localGC } from "../register.js";
+import { GCWithScope, localGC } from "../register";
 
-import { Point2D } from "./definitions.js";
-import { axis2d, pnt, vec } from "./ocWrapper.js";
+import { Point2D } from "./definitions";
+import { axis2d, pnt, vec } from "./ocWrapper";
 
 import { Curve2D } from "./Curve2D";
 import {
@@ -17,7 +17,7 @@ import {
   samePoint,
   scalarMultiply2d,
   subtract2d,
-} from "./vectorOperations.js";
+} from "./vectorOperations";
 
 /**
  * Creates a 2D segment curve between two points.
