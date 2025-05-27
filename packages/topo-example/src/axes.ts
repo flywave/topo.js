@@ -12,7 +12,7 @@ const createAxisHelper = (length: number) => {
     fontLoader.load("https://threejs.org/examples/fonts/helvetiker_regular.typeface.json", function (font) {
         const fontConfig = {
             font: font,
-            size: fontSize, // 使用计算后的字体大小
+            size: fontSize,
             depth: 0.1,
         };
         const xAxisGeometry = new TextGeometry("X", fontConfig);

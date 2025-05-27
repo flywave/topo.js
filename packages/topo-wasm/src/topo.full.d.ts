@@ -181380,7 +181380,8 @@ export declare type SegmentType = {
     LINE: {},
     THREE_POINT_ARC: {},
     CIRCLE_CENTER_ARC: {},
-    SPLINE: {}
+    SPLINE: {},
+    BEZIER: {}
 }
 
 // 管道参数

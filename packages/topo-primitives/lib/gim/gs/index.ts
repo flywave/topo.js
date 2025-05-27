@@ -2154,9 +2154,9 @@ export class TSteelPrimitive extends BasePrimitive<TSteelParams, TSteelObject> {
     }
 
     setDefault(): Primitive<TSteelParams, TSteelObject> {
-        this.params.height = 30.0;
-        this.params.width = 15.0;
-        this.params.webThickness = 2.0;
+        this.params.height = 20.0;
+        this.params.width = 30.0;
+        this.params.webThickness = 3.0;
         this.params.flangeThickness = 2.5;
         this.params.length = 150.0;
         return this;

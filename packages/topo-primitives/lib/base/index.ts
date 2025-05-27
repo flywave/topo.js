@@ -501,6 +501,9 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
             case 'SPLINE':
                 segmentType = this.tp.SegmentType.SPLINE as SegmentType;
                 break;
+            case 'BEZIER':
+                segmentType = this.tp.SegmentType.BEZIER as SegmentType;
+                break;
         }
 
         this.params = {
@@ -545,6 +548,9 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
                 break;
             case this.tp.SegmentType.SPLINE:
                 segmentType = 'SPLINE';
+                break;
+            case this.tp.SegmentType.BEZIER:
+                segmentType = 'BEZIER';
                 break;
         }
 
@@ -676,6 +682,9 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
                 case 'SPLINE':
                     segmentTypes.push(this.tp.SegmentType.SPLINE as SegmentType);
                     break;
+                case 'BEZIER':
+                    segmentTypes.push(this.tp.SegmentType.BEZIER as SegmentType);
+                    break;
                 default:
                     segmentTypes.push(this.tp.SegmentType.LINE as SegmentType);
             }
@@ -726,6 +735,9 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
                         break;
                     case this.tp.SegmentType.SPLINE:
                         segmentTypes.push('SPLINE');
+                        break;
+                    case this.tp.SegmentType.BEZIER:
+                        segmentTypes.push('BEZIER');
                         break;
                     default:
                         segmentTypes.push('LINE');

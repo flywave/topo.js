@@ -34,7 +34,7 @@ export default class World {
     addLights(this.scene)
     this.done = this.TopoInit()
 
-    this.initUI()  // 初始化UI
+    this.initUI()
   }
 
   waitDone() {
@@ -43,7 +43,7 @@ export default class World {
 
   initUI() {
     if (this.gui) {
-      this.gui.destroy(); // Clean up existing GUI
+      this.gui.destroy();
     }
     this.gui = new GUI({ width: 300 })
 
@@ -134,7 +134,7 @@ export default class World {
 
 
   dispose() {
-    this.gui?.destroy()  // 清理UI
+    this.gui?.destroy()
   }
 
   async TopoInit() {

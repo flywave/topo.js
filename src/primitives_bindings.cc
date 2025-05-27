@@ -3874,7 +3874,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .value("LINE", segment_type::LINE)
       .value("THREE_POINT_ARC", segment_type::THREE_POINT_ARC)
       .value("CIRCLE_CENTER_ARC", segment_type::CIRCLE_CENTER_ARC)
-      .value("SPLINE", segment_type::SPLINE);
+      .value("SPLINE", segment_type::SPLINE)
+      .value("BEZIER", segment_type::BEZIER);;
 
   // 管道参数结构体
   value_object<pipe_params>("PipeParams")

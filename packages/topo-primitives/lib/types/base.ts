@@ -52,7 +52,7 @@ export interface PrismObject extends Version {
     height: number;
 }
 
-export type SegmentType = 'LINE' | 'THREE_POINT_ARC' | 'CIRCLE_CENTER_ARC' | 'SPLINE';
+export type SegmentType = 'LINE' | 'THREE_POINT_ARC' | 'CIRCLE_CENTER_ARC' | 'SPLINE' | 'BEZIER'
 
 export type TransitionMode = 'TRANSFORMED' | 'ROUND' | 'RIGHT';
 
