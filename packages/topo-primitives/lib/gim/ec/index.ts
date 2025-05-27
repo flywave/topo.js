@@ -2011,8 +2011,14 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
         if (o['version']) {
             this.version = o['version'];
         }
+        let pipeType = 1;
+        if (o['pipeType'] === 'NORMAL') {
+            pipeType = 1;
+        } else if (o['pipeType'] === 'PULL') {
+            pipeType = 2;
+        }
         this.params = {
-            pipeType: o['pipeType'],
+            pipeType: pipeType,
             hasEnclosure: o['hasEnclosure'],
             enclosureWidth: o['enclosureWidth'],
             enclosureHeight: o['enclosureHeight'],
@@ -2027,17 +2033,23 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             pullPipeThickness: o['pullPipeThickness'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? 1 : 0
             })) || []
         };
         return this;
     }
 
     toObject(): PipeRowObject | undefined {
+
+        let pipeType = 'NORMAL';
+        if (this.params.pipeType === 2) {
+            pipeType = 'PULL';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['pipeType', this.params.pipeType],
+            ['pipeType', pipeType],
             ['hasEnclosure', this.params.hasEnclosure],
             ['enclosureWidth', this.params.enclosureWidth],
             ['enclosureHeight', this.params.enclosureHeight],
@@ -2052,7 +2064,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             ['pullPipeThickness', this.params.pullPipeThickness],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == 1 ? 'ARC' : 'LINE'
             }))]
         ])) as PipeRowObject;
     }
@@ -2129,7 +2141,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             wallThickness2: o['wallThickness2'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? 1 : 0
             })) || []
         };
         return this;
@@ -2151,7 +2163,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             ['wallThickness2', this.params.wallThickness2],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == 1 ? 'ARC' : 'LINE'
             }))]
         ])) as CableTrenchObject;
     }
@@ -2236,7 +2248,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             cushionThickness: o['cushionThickness'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? 1 : 0
             })) || []
         };
         return this;
@@ -2267,7 +2279,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             ['cushionThickness', this.params.cushionThickness],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == 1 ? 'ARC' : 'LINE'
             }))]
         ])) as CableTunnelObject;
     }
@@ -2366,7 +2378,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             hasProtectionPlate: o['hasProtectionPlate'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? 1 : 0
             })) || []
         };
         return this;
@@ -2399,7 +2411,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             ['hasProtectionPlate', this.params.hasProtectionPlate],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == 1 ? 'ARC' : 'LINE'
             }))]
         ])) as CableTrayObject;
     }
@@ -2820,7 +2832,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             width: o['width'],
             points: o['points'].map((p) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? 1 : 0
             })) || []
         };
         return this;
@@ -2834,7 +2846,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             ['width', this.params.width],
             ['points', this.params.points.map((t) => ({
                 position: [t.position.X(), t.position.Y(), t.position.Z()],
-                type: t.type
+                type: t.type == 1 ? 'ARC' : 'LINE'
             }))]
         ])) as FootpathObject;
     }
