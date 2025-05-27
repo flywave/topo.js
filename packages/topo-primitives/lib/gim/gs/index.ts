@@ -1389,7 +1389,7 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams,
     }
 
     setDefault(): Primitive<VTypeInsulatorParams, VTypeInsulatorObject> {
-        this.params.frontSpacing = 30.0;
+        this.params.frontSpacing = 50.0;
         this.params.backSpacing = 20.0;
         this.params.insulatorCount = 22;
         this.params.height = 5.0;
