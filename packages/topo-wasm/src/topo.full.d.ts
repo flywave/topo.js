@@ -181255,7 +181255,7 @@ export declare function createPipeSupportWithPosition(
 
 // 盖板参数结构体
 export declare interface CoverPlateParams {
-    style: string;
+    style: number;
     length: number;
     width: number;
     smallRadius: number;

@@ -3512,7 +3512,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'],
+            style: o['style'] == 'SINGLE_SIDE' ? 1 : 2,
             count: o['count'],
             positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))),
             radii: o['radii'],
@@ -3527,7 +3527,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style],
+            ['style', this.params.style == 1 ? 'SINGLE_SIDE' : 'DOUBLE_SIDE'],
             ['count', this.params.count],
             ['positions', this.params.positions.map((p: any) => ([p.X(), p.Y()]))],
             ['radii', this.params.radii],
@@ -3550,7 +3550,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
 
     setDefault(): Primitive<CoverPlateParams, CoverPlateObject> {
         this.params = {
-            style: "0",
+            style: 0,
             length: 200.0,
             width: 100.0,
             smallRadius: 0,
@@ -3587,7 +3587,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'],
+            style: o['style'] == 'RECTANGULAR' ? 0 : 1,
             length: o['length'],
             width: o['width'],
             smallRadius: o['smallRadius'],
@@ -3601,7 +3601,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style],
+            ['style', this.params.style == 0 ? 'RECTANGULAR' : 'ELLIPSE'],
             ['length', this.params.length],
             ['width', this.params.width],
             ['smallRadius', this.params.smallRadius],

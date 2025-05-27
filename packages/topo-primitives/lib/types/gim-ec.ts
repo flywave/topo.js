@@ -460,7 +460,7 @@ export interface DrainageWellObject extends Version {
 
 export interface PipeSupportObject extends Version {
     type: "GIM/EC/PipeSupport";
-    style: number; // 类型(1-2)
+    style: 'SINGLE_SIDE' | 'DOUBLE_SIDED'; // 类型(1-2)
     count: number; // 数量
     positions: Array<Point2>; // 位置坐标
     radii: number[]; // 半径数组
@@ -471,7 +471,7 @@ export interface PipeSupportObject extends Version {
 
 export interface CoverPlateObject extends Version {
     type: "GIM/EC/CoverPlate";
-    style: string; // 类型
+    style: 'RECTANGULAR' | 'SECTOR'; // 类型
     length: number; // 长度
     width: number; // 宽度
     smallRadius: number; // 小半径
