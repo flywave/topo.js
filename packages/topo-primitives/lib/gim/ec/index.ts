@@ -1957,7 +1957,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
 
     setDefault(): Primitive<PipeRowParams, PipeRowObject> {
         this.params = {
-            pipeType: 1,
+            pipeType: this.tp.PipeType.NORMAL as any,
             hasEnclosure: false,
             baseExtension: 20,
             baseThickness: 5,
@@ -2013,9 +2013,9 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
         }
         let pipeType = 1;
         if (o['pipeType'] === 'NORMAL') {
-            pipeType = 1;
+            pipeType = this.tp.PipeType.NORMAL as any;
         } else if (o['pipeType'] === 'PULL') {
-            pipeType = 2;
+            pipeType = this.tp.PipeType.PULL as any;
         }
         this.params = {
             pipeType: pipeType,
@@ -2033,7 +2033,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             pullPipeThickness: o['pullPipeThickness'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type === 'ARC' ? 1 : 0
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2042,7 +2042,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
     toObject(): PipeRowObject | undefined {
 
         let pipeType = 'NORMAL';
-        if (this.params.pipeType === 2) {
+        if (this.params.pipeType === this.tp.PipeType.PULL) {
             pipeType = 'PULL';
         }
 
@@ -2064,7 +2064,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             ['pullPipeThickness', this.params.pullPipeThickness],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type == 1 ? 'ARC' : 'LINE'
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as PipeRowObject;
     }
@@ -2141,7 +2141,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             wallThickness2: o['wallThickness2'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type === 'ARC' ? 1 : 0
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2163,7 +2163,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             ['wallThickness2', this.params.wallThickness2],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type == 1 ? 'ARC' : 'LINE'
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as CableTrenchObject;
     }
@@ -2248,7 +2248,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             cushionThickness: o['cushionThickness'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type === 'ARC' ? 1 : 0
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2279,7 +2279,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             ['cushionThickness', this.params.cushionThickness],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type == 1 ? 'ARC' : 'LINE'
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as CableTunnelObject;
     }
@@ -2378,7 +2378,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             hasProtectionPlate: o['hasProtectionPlate'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type === 'ARC' ? 1 : 0
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2411,7 +2411,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             ['hasProtectionPlate', this.params.hasProtectionPlate],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type == 1 ? 'ARC' : 'LINE'
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as CableTrayObject;
     }
@@ -2832,7 +2832,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             width: o['width'],
             points: o['points'].map((p) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type === 'ARC' ? 1 : 0
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2846,7 +2846,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             ['width', this.params.width],
             ['points', this.params.points.map((t) => ({
                 position: [t.position.X(), t.position.Y(), t.position.Z()],
-                type: t.type == 1 ? 'ARC' : 'LINE'
+                type: t.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as FootpathObject;
     }
@@ -3458,7 +3458,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
 
     setDefault(): Primitive<PipeSupportParams, PipeSupportObject> {
         this.params = {
-            style: 2,
+            style: this.tp.PipeSupportStyle.DOUBLE_SIDE as any,
             count: 8,
             positions: [
                 new this.tp.gp_Pnt2d_3(-10, 12),
@@ -3512,7 +3512,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'] == 'SINGLE_SIDE' ? 1 : 2,
+            style: o['style'] == 'SINGLE_SIDE' ? this.tp.PipeSupportStyle.SINGLE_SIDE as any : this.tp.PipeSupportStyle.DOUBLE_SIDE as any,
             count: o['count'],
             positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))),
             radii: o['radii'],
@@ -3527,7 +3527,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style == 1 ? 'SINGLE_SIDE' : 'DOUBLE_SIDE'],
+            ['style', this.params.style == this.tp.PipeSupportStyle.SINGLE_SIDE ? 'SINGLE_SIDE' : 'DOUBLE_SIDE'],
             ['count', this.params.count],
             ['positions', this.params.positions.map((p: any) => ([p.X(), p.Y()]))],
             ['radii', this.params.radii],
@@ -3550,7 +3550,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
 
     setDefault(): Primitive<CoverPlateParams, CoverPlateObject> {
         this.params = {
-            style: 0,
+            style: this.tp.CoverPlateStyle.RECTANGULAR as any,
             length: 200.0,
             width: 100.0,
             smallRadius: 0,
@@ -3587,7 +3587,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'] == 'RECTANGULAR' ? 0 : 1,
+            style: o['style'] == 'RECTANGULAR' ? this.tp.CoverPlateStyle.RECTANGULAR as any : this.tp.CoverPlateStyle.SECTOR as any,
             length: o['length'],
             width: o['width'],
             smallRadius: o['smallRadius'],
@@ -3601,7 +3601,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style == 0 ? 'RECTANGULAR' : 'ELLIPSE'],
+            ['style', this.params.style == this.tp.CoverPlateStyle.RECTANGULAR ? 'RECTANGULAR' : 'SECTOR'],
             ['length', this.params.length],
             ['width', this.params.width],
             ['smallRadius', this.params.smallRadius],

@@ -3408,6 +3408,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                    const gp_Dir &, const gp_Dir &)>(
           &create_four_way_well));
 
+  emscripten::enum_<channel_point_type>("ChannelPointType")
+      .value("LINE", channel_point_type::LINE)
+      .value("ARC", channel_point_type::ARC);
+
   // 通道点结构体绑定
   value_object<channel_point>("ChannelPoint")
       .field("position", &channel_point::position)
@@ -3441,6 +3445,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   enum_<cable_tray_style>("CableTrayStyle")
       .value("ARCH", cable_tray_style::ARCH)
       .value("BEAM", cable_tray_style::BEAM);
+
+  emscripten::enum_<pipe_row_type>("PipeRowType")
+      .value("NORMAL", pipe_row_type::NORMAL)
+      .value("PULL", pipe_row_type::PULL);
 
   // 排管参数结构体绑定
   value_object<pipe_row_params>("PipeRowParams")
@@ -3813,6 +3821,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                    const gp_Dir &, const gp_Dir &)>(
           &create_drainage_well));
 
+  emscripten::enum_<pipe_support_style>("PipeSupportStyle")
+      .value("SINGLE_SIDED", pipe_support_style::SINGLE_SIDED)
+      .value("DOUBLE_SIDED", pipe_support_style::DOUBLE_SIDED);
+
   // 管枕参数结构体绑定
   value_object<pipe_support_params>("PipeSupportParams")
       .field("style", &pipe_support_params::style)
@@ -3833,6 +3845,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const pipe_support_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_pipe_support));
+
+  emscripten::enum_<cover_plate_style>("CoverPlateStyle")
+      .value("RECTANGULAR", cover_plate_style::RECTANGULAR)
+      .value("SECTOR", cover_plate_style::SECTOR);
 
   // 盖板参数结构体绑定
   value_object<cover_plate_params>("CoverPlateParams")

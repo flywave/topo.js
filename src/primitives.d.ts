@@ -1732,10 +1732,16 @@ export declare function createFourWayWellWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+
+export declare type ChannelPointType = {
+    LINE: {}, // 圆形转角
+    ARC: {}   // 折角形转角
+};
+
 // 通道点结构体
 export declare interface ChannelPoint {
     position: gp_Pnt;
-    type: number;
+    type: ChannelPointType;
 }
 
 declare function sampleChannelPoints(
@@ -1743,8 +1749,14 @@ declare function sampleChannelPoints(
     tessellation?: number
 ): Array<gp_Pnt>;
 
+
+export declare type PipeRowType = {
+    NORMAL: {}, // 圆形转角
+    PULL: {}   // 折角形转角
+};
+
 export declare interface PipeRowParams {
-    pipeType: number;
+    pipeType: PipeRowType;
     hasEnclosure: boolean;
     enclosureWidth: number;
     enclosureHeight: number;
@@ -2106,9 +2118,16 @@ export declare function createDrainageWellWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+
+export declare type PipeSupportStyle = {
+    SINGLE_SIDED: {},   // 圆形竖井
+    DOUBLE_SIDED: {} // 矩形竖井
+};
+
+
 // 管枕参数结构体
 export declare interface PipeSupportParams {
-    style: number;
+    style: PipeSupportStyle;
     count: number;
     positions: gp_Pnt2d[];
     radii: number[];
@@ -2125,9 +2144,14 @@ export declare function createPipeSupportWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+export declare type CoverPlateStyle = {
+    RECTANGULAR: {},   // 圆形竖井
+    SECTOR: {} // 矩形竖井
+};
+
 // 盖板参数结构体
 export declare interface CoverPlateParams {
-    style: number;
+    style: CoverPlateStyle;
     length: number;
     width: number;
     smallRadius: number;
