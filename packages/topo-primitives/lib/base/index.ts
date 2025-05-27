@@ -220,7 +220,7 @@ export class RevolPrimitive extends BasePrimitive<RevolParams, RevolObject> {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
                 p1: new this.tp.gp_Pnt_3(0, 0, 0),
-                p2: new this.tp.gp_Pnt_3(10, 0, 5)
+                p2: new this.tp.gp_Pnt_3(100, 0, 50)
             },
             axis: new this.tp.gp_Ax1_2(
                 new this.tp.gp_Pnt_3(0, 0, 0),
@@ -327,11 +327,11 @@ export class PrismPrimitive extends BasePrimitive<PrismParams, PrismObject> {
         this.params = {
             profile: {
                 type: this.tp.ProfileType.RECTANGLE,
-                p1: new this.tp.gp_Pnt_3(-10, -5, 0),
-                p2: new this.tp.gp_Pnt_3(10, 5, 0)
+                p1: new this.tp.gp_Pnt_3(-100, -50, 0),
+                p2: new this.tp.gp_Pnt_3(100, 50, 0)
             },
             direction: new this.tp.gp_Dir_4(0, 0, 1),
-            height: 20
+            height: 40
         };
         return this;
     }
@@ -414,19 +414,19 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
 
     setDefault(): Primitive<PipeParams, PipeObject> {
         this.params = {
-            wire: [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(100, 0, 0)],
+            wire: [new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(0, 100, 0)],
             profile: [{
                 type: this.tp.ProfileType.CIRC,
                 center: new this.tp.gp_Pnt_3(0, 0, 0),
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
-                radius: 5.0
+                radius: 10.0
             }],
             innerProfile: [
                 {
                     type: this.tp.ProfileType.CIRC,
                     center: new this.tp.gp_Pnt_3(0, 0, 0),
                     norm: new this.tp.gp_Dir_4(0, 0, 1),
-                    radius: 3.0
+                    radius: 8.0
                 }
             ],
             segmentType: this.tp.SegmentType.LINE as any,
@@ -501,6 +501,9 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
             case 'SPLINE':
                 segmentType = this.tp.SegmentType.SPLINE as SegmentType;
                 break;
+            case 'BEZIER':
+                segmentType = this.tp.SegmentType.BEZIER as SegmentType;
+                break;
         }
 
         this.params = {
@@ -546,6 +549,9 @@ export class PipePrimitive extends BasePrimitive<PipeParams, PipeObject> {
             case this.tp.SegmentType.SPLINE:
                 segmentType = 'SPLINE';
                 break;
+            case this.tp.SegmentType.BEZIER:
+                segmentType = 'BEZIER';
+                break;
         }
 
         return BasePrimitive.buildObject(new Map<string, any>([
@@ -578,8 +584,8 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
     setDefault(): Primitive<MultiSegmentPipeParams, MultiSegmentPipePrimitiveObject> {
         // 默认直线段
         const linePoints = [
-            new this.tp.gp_Pnt_3(50, -50, 0),
-            new this.tp.gp_Pnt_3(100, 0, 0)
+            new this.tp.gp_Pnt_3(0, 0, 0),
+            new this.tp.gp_Pnt_3(0, 100, 0)
         ];
 
         // 默认圆形剖面
@@ -676,6 +682,9 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
                 case 'SPLINE':
                     segmentTypes.push(this.tp.SegmentType.SPLINE as SegmentType);
                     break;
+                case 'BEZIER':
+                    segmentTypes.push(this.tp.SegmentType.BEZIER as SegmentType);
+                    break;
                 default:
                     segmentTypes.push(this.tp.SegmentType.LINE as SegmentType);
             }
@@ -726,6 +735,9 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
                         break;
                     case this.tp.SegmentType.SPLINE:
                         segmentTypes.push('SPLINE');
+                        break;
+                    case this.tp.SegmentType.BEZIER:
+                        segmentTypes.push('BEZIER');
                         break;
                     default:
                         segmentTypes.push('LINE');
@@ -918,15 +930,15 @@ export class CatenaryPrimitive extends BasePrimitive<CatenaryParams, CatenaryObj
     setDefault(): Primitive<CatenaryParams, CatenaryObject> {
         this.params = {
             p1: new this.tp.gp_Pnt_3(0, 0, 0),
-            p2: new this.tp.gp_Pnt_3(100, 0, 0),
+            p2: new this.tp.gp_Pnt_3(100, 100, 40),
             profile: {
                 type: this.tp.ProfileType.CIRC,
                 center: new this.tp.gp_Pnt_3(0, 0, 0),
                 norm: new this.tp.gp_Dir_4(0, 0, 1),
-                radius: 2.0
+                radius: 1.0
             },
-            slack: 1.5,
-            maxSag: 5.0,
+            slack: 2,
+            maxSag: 10.0,
             tessellation: 0.0,
             upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
@@ -1452,8 +1464,8 @@ export class WedgeShapePrimitive extends BasePrimitive<WedgeShapeParams, WedgeSh
 
     setDefault(): Primitive<WedgeShapeParams, WedgeShapeObject> {
         this.params = {
-            edge: new this.tp.gp_Pnt_3(25, 15, 8),
-            limit: [10.0, 5.0, 15.0, 7.0],
+            edge: new this.tp.gp_Pnt_3(50, 30, 16),
+            limit: [20.0, 10.0, 30.0, 14.0],
             ltx: 12
         };
         return this;

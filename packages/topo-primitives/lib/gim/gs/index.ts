@@ -1389,7 +1389,7 @@ export class VTypeInsulatorPrimitive extends BasePrimitive<VTypeInsulatorParams,
     }
 
     setDefault(): Primitive<VTypeInsulatorParams, VTypeInsulatorObject> {
-        this.params.frontSpacing = 30.0;
+        this.params.frontSpacing = 50.0;
         this.params.backSpacing = 20.0;
         this.params.insulatorCount = 22;
         this.params.height = 5.0;
@@ -1907,7 +1907,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCa
         for (const type of o['curveTypes']) {
             if (type === 'LINE') curveTypes.push(this.tp.CurveType.LINE as any);
             else if (type === 'ARC') curveTypes.push(this.tp.CurveType.ARC as any);
-            else if (type === 'SPLINE') curveTypes.push(this.tp.CurveType.SPLINE as any);
+            else if (type === 'BEZIER') curveTypes.push(this.tp.CurveType.BEZIER as any);
             else throw new Error(`Invalid curve type: ${type}`);
         }
 
@@ -1926,7 +1926,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCa
         for (const type of this.params.curveTypes) {
             if (type === this.tp.CurveType.LINE as any) curveTypes.push('LINE');
             else if (type === this.tp.CurveType.ARC as any) curveTypes.push('ARC');
-            else if (type === this.tp.CurveType.SPLINE as any) curveTypes.push('SPLINE');
+            else if (type === this.tp.CurveType.BEZIER as any) curveTypes.push('BEZIER');
             else throw new Error(`Invalid curve type: ${type}`);
         }
         return BasePrimitive.buildObject(new Map<string, any>([
@@ -1951,10 +1951,10 @@ export class AngleSteelPrimitive extends BasePrimitive<AngleSteelParams, AngleSt
     }
 
     setDefault(): Primitive<AngleSteelParams, AngleSteelObject> {
-        this.params.L1 = 60.0;
-        this.params.L2 = 40.0;
-        this.params.X = 5.0;
-        this.params.length = 200.0;
+        this.params.L1 = 30.0;
+        this.params.L2 = 20.0;
+        this.params.X = 3.0;
+        this.params.length = 100.0;
         return this;
     }
 
@@ -2016,11 +2016,11 @@ export class IShapedSteelPrimitive extends BasePrimitive<IShapedSteelParams, ISh
     }
 
     setDefault(): Primitive<IShapedSteelParams, IShapedSteelObject> {
-        this.params.height = 200.0;
-        this.params.flangeWidth = 150.0;
-        this.params.webThickness = 12.0;
-        this.params.flangeThickness = 8.0;
-        this.params.length = 1000.0;
+        this.params.height = 50.0;
+        this.params.flangeWidth = 37.5;
+        this.params.webThickness = 3.0;
+        this.params.flangeThickness = 2.0;
+        this.params.length = 120.0;
         return this;
     }
 
@@ -2085,11 +2085,11 @@ export class ChannelSteelPrimitive extends BasePrimitive<ChannelSteelParams, Cha
     }
 
     setDefault(): Primitive<ChannelSteelParams, ChannelSteelObject> {
-        this.params.height = 100.0;
-        this.params.flangeWidth = 50.0;
-        this.params.webThickness = 6.0;
-        this.params.flangeThickness = 8.0;
-        this.params.length = 500.0;
+        this.params.height = 25.0;
+        this.params.flangeWidth = 12.5;
+        this.params.webThickness = 1.5;
+        this.params.flangeThickness = 2.0;
+        this.params.length = 125.0;
         return this;
     }
 
@@ -2154,11 +2154,11 @@ export class TSteelPrimitive extends BasePrimitive<TSteelParams, TSteelObject> {
     }
 
     setDefault(): Primitive<TSteelParams, TSteelObject> {
-        this.params.height = 120.0;
-        this.params.width = 60.0;
-        this.params.webThickness = 8.0;
-        this.params.flangeThickness = 10.0;
-        this.params.length = 600.0;
+        this.params.height = 20.0;
+        this.params.width = 30.0;
+        this.params.webThickness = 3.0;
+        this.params.flangeThickness = 2.5;
+        this.params.length = 150.0;
         return this;
     }
 

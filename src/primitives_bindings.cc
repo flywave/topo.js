@@ -1981,6 +1981,19 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const wire_params &, const gp_Pnt &,
                                         const gp_Dir &, const gp_Dir &)>(
                &create_wire));
+  function("sampleWire",
+           emscripten::optional_override(
+               [](emscripten::val paramsVal, double tessellation) {
+                 wire_params params = paramsVal.as<wire_params>();
+
+                 auto sampledPoints = sample_wire(params, tessellation);
+
+                 emscripten::val result = emscripten::val::array();
+                 for (size_t i = 0; i < sampledPoints.size(); i++) {
+                   result.set(i, sampledPoints[i]);
+                 }
+                 return result;
+               }));
 
   // 电缆参数结构体
   value_object<cable_params>("CableParams")
@@ -1998,12 +2011,24 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const cable_params &, const gp_Pnt &,
                                         const gp_Dir &, const gp_Dir &)>(
                &create_cable));
+  function("sampleCable",
+           emscripten::optional_override(
+               [](emscripten::val paramsVal, double tessellation) {
+                 cable_params params = paramsVal.as<cable_params>();
 
+                 auto sampledPoints = sample_cable(params, tessellation);
+
+                 emscripten::val result = emscripten::val::array();
+                 for (size_t i = 0; i < sampledPoints.size(); i++) {
+                   result.set(i, sampledPoints[i]);
+                 }
+                 return result;
+               }));
   // 曲线类型枚举
   enum_<curve_type>("CurveType")
       .value("LINE", curve_type::LINE)
       .value("ARC", curve_type::ARC)
-      .value("SPLINE", curve_type::SPLINE);
+      .value("BEZIER", curve_type::BEZIER);
 
   // 曲线电缆参数结构体
   value_object<curve_cable_params>("CurveCableParams")
@@ -2022,6 +2047,45 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const curve_cable_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_curve_cable));
+
+  function("sampleCurvePoints",
+           emscripten::optional_override([](emscripten::val controlPointsVal,
+                                            emscripten::val segmentsVal,
+                                            double tessellation) {
+             std::vector<std::vector<gp_Pnt>> controlPoints;
+             if (controlPointsVal.isArray()) {
+               int length = controlPointsVal["length"].as<int>();
+               for (int i = 0; i < length; i++) {
+                 emscripten::val pointArray = controlPointsVal[i];
+                 std::vector<gp_Pnt> points;
+                 if (pointArray.isArray()) {
+                   int pointLength = pointArray["length"].as<int>();
+                   for (int j = 0; j < pointLength; j++) {
+                     gp_Pnt point = pointArray[j].as<gp_Pnt>();
+                     points.push_back(point);
+                   }
+                 }
+                 controlPoints.push_back(points);
+               }
+             }
+
+             std::vector<curve_type> segments;
+             if (segmentsVal.isArray()) {
+               int length = segmentsVal["length"].as<int>();
+               for (int i = 0; i < length; i++) {
+                 segments.push_back(segmentsVal[i].as<curve_type>());
+               }
+             }
+
+             auto points =
+                 sample_curve_points(controlPoints, segments, tessellation);
+
+             emscripten::val result = emscripten::val::array();
+             for (size_t i = 0; i < points.size(); i++) {
+               result.set(i, points[i]);
+             }
+             return result;
+           }));
 
   // 角钢参数结构体
   value_object<angle_steel_params>("AngleSteelParams")
@@ -2515,6 +2579,24 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const transmission_line_params &,
                                         const gp_Pnt &, const gp_Pnt &)>(
                &create_transmission_line));
+  function("sampleTransmissionLine",
+           emscripten::optional_override(
+               [](emscripten::val paramsVal, emscripten::val startPointVal,
+                  emscripten::val endPointVal, double tessellation) {
+                 transmission_line_params params =
+                     paramsVal.as<transmission_line_params>();
+                 gp_Pnt startPoint = startPointVal.as<gp_Pnt>();
+                 gp_Pnt endPoint = endPointVal.as<gp_Pnt>();
+
+                 auto sampledPoints = sample_transmission_line(
+                     params, startPoint, endPoint, tessellation);
+
+                 emscripten::val result = emscripten::val::array();
+                 for (size_t i = 0; i < sampledPoints.size(); i++) {
+                   result.set(i, sampledPoints[i]);
+                 }
+                 return result;
+               }));
 
   // 绝缘子材质枚举绑定
   enum_<insulator_material>("InsulatorMaterial")
@@ -3326,15 +3408,47 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                    const gp_Dir &, const gp_Dir &)>(
           &create_four_way_well));
 
+  emscripten::enum_<channel_point_type>("ChannelPointType")
+      .value("LINE", channel_point_type::LINE)
+      .value("ARC", channel_point_type::ARC);
+
   // 通道点结构体绑定
   value_object<channel_point>("ChannelPoint")
       .field("position", &channel_point::position)
       .field("type", &channel_point::type);
 
+  function("sampleChannelPoints",
+           emscripten::optional_override([](emscripten::val pointsVal,
+                                            double tessellation) {
+             std::vector<channel_point> points;
+             if (pointsVal.isArray()) {
+               int length = pointsVal["length"].as<int>();
+               for (int i = 0; i < length; i++) {
+                 emscripten::val pointVal = pointsVal[i];
+                 channel_point point;
+                 point.position = pointVal["position"].as<gp_Pnt>();
+                 point.type = pointVal["type"].as<int>();
+                 points.push_back(point);
+               }
+             }
+
+             auto sampledPoints = sample_channel_points(points, tessellation);
+
+             emscripten::val result = emscripten::val::array();
+             for (size_t i = 0; i < sampledPoints.size(); i++) {
+               result.set(i, sampledPoints[i]);
+             }
+             return result;
+           }));
+
   // 桥架样式枚举绑定
   enum_<cable_tray_style>("CableTrayStyle")
       .value("ARCH", cable_tray_style::ARCH)
       .value("BEAM", cable_tray_style::BEAM);
+
+  emscripten::enum_<pipe_row_type>("PipeRowType")
+      .value("NORMAL", pipe_row_type::NORMAL)
+      .value("PULL", pipe_row_type::PULL);
 
   // 排管参数结构体绑定
   value_object<pipe_row_params>("PipeRowParams")
@@ -3707,6 +3821,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                    const gp_Dir &, const gp_Dir &)>(
           &create_drainage_well));
 
+  emscripten::enum_<pipe_support_style>("PipeSupportStyle")
+      .value("SINGLE_SIDED", pipe_support_style::SINGLE_SIDED)
+      .value("DOUBLE_SIDED", pipe_support_style::DOUBLE_SIDED);
+
   // 管枕参数结构体绑定
   value_object<pipe_support_params>("PipeSupportParams")
       .field("style", &pipe_support_params::style)
@@ -3727,6 +3845,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const pipe_support_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_pipe_support));
+
+  emscripten::enum_<cover_plate_style>("CoverPlateStyle")
+      .value("RECTANGULAR", cover_plate_style::RECTANGULAR)
+      .value("SECTOR", cover_plate_style::SECTOR);
 
   // 盖板参数结构体绑定
   value_object<cover_plate_params>("CoverPlateParams")
@@ -3874,7 +3996,47 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .value("LINE", segment_type::LINE)
       .value("THREE_POINT_ARC", segment_type::THREE_POINT_ARC)
       .value("CIRCLE_CENTER_ARC", segment_type::CIRCLE_CENTER_ARC)
-      .value("SPLINE", segment_type::SPLINE);
+      .value("SPLINE", segment_type::SPLINE)
+      .value("BEZIER", segment_type::BEZIER);
+  ;
+
+  function("sampleSegmentPoints",
+           emscripten::optional_override([](emscripten::val wiresVal,
+                                            emscripten::val segmentsVal,
+                                            double tessellation) {
+             std::vector<std::vector<gp_Pnt>> wires;
+             if (wiresVal.isArray()) {
+               int wireCount = wiresVal["length"].as<int>();
+               for (int i = 0; i < wireCount; i++) {
+                 emscripten::val wireVal = wiresVal[i];
+                 std::vector<gp_Pnt> wirePoints;
+                 if (wireVal.isArray()) {
+                   int pointCount = wireVal["length"].as<int>();
+                   for (int j = 0; j < pointCount; j++) {
+                     gp_Pnt point = wireVal[j].as<gp_Pnt>();
+                     wirePoints.push_back(point);
+                   }
+                 }
+                 wires.push_back(wirePoints);
+               }
+             }
+
+             std::vector<segment_type> segments;
+             if (segmentsVal.isArray()) {
+               int segmentCount = segmentsVal["length"].as<int>();
+               for (int i = 0; i < segmentCount; i++) {
+                 segments.push_back(segmentsVal[i].as<segment_type>());
+               }
+             }
+
+             auto points = sample_segment_points(wires, segments, tessellation);
+
+             emscripten::val result = emscripten::val::array();
+             for (size_t i = 0; i < points.size(); i++) {
+               result.set(i, points[i]);
+             }
+             return result;
+           }));
 
   // 管道参数结构体
   value_object<pipe_params>("PipeParams")

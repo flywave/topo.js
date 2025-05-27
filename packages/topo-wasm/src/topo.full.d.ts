@@ -1,9 +1,11 @@
+
+export type XCAFDoc_PartId = any
+export type Graphic3d_ZLayerId = any
+export type address = any
 export declare class AIS {
   constructor();
   delete(): void;
 }
-
-export type Graphic3d_ZLayerId = any
 
 export declare class AIS_Animation extends Standard_Transient {
   constructor(theAnimationName: XCAFDoc_PartId)
@@ -179533,6 +179535,7 @@ export declare function createWireWithPosition(
     normal: gp_Dir,
     xDir: gp_Dir
 ): TopoDS_Shape;
+export declare function sampleWire(params: WireParams, tessellation?: number): gp_Pnt[];
 
 // 电缆参数结构体
 export declare interface CableParams {
@@ -179550,13 +179553,20 @@ export declare function createCableWithPosition(
     normal: gp_Dir,
     xDir: gp_Dir
 ): TopoDS_Shape;
+export declare function sampleCable(params: CableParams, tessellation?: number): gp_Pnt[];
 
 // 曲线类型枚举
 export declare type CurveType = {
     LINE: {},
     ARC: {},
-    SPLINE: {}
+    BEZIER: {}
 }
+
+declare function sampleCurvePoints(
+    controlPoints: Array<Array<gp_Pnt>>,
+    curveTypes: Array<CurveType>,
+    tessellation?: number
+): Array<gp_Pnt>;
 
 // 曲线电缆参数结构体
 export declare interface CurveCableParams {
@@ -180045,6 +180055,12 @@ export declare function createTransmissionLine(
     startPoint: gp_Pnt,
     endPoint: gp_Pnt
 ): TopoDS_Shape;
+export declare function sampleTransmissionLine(
+    params: TransmissionLineParams,
+    startPoint: gp_Pnt,
+    endPoint: gp_Pnt,
+    tessellation?: number
+): Array<gp_Pnt>;
 
 // 绝缘子材质枚举
 export declare type InsulatorMaterial = {
@@ -180844,14 +180860,30 @@ export declare function createFourWayWellWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+
+export declare type ChannelPointType = {
+    LINE: {}, // 圆形转角
+    ARC: {}   // 折角形转角
+};
+
 // 通道点结构体
 export declare interface ChannelPoint {
     position: gp_Pnt;
-    type: number;
+    type: ChannelPointType;
 }
 
+declare function sampleChannelPoints(
+    points: Array<ChannelPoint>,
+    tessellation?: number
+): Array<gp_Pnt>;
+
+export declare type PipeRowType = {
+    NORMAL: {}, // 圆形转角
+    PULL: {}   // 折角形转角
+};
+
 export declare interface PipeRowParams {
-    pipeType: number;
+    pipeType: PipeRowType;
     hasEnclosure: boolean;
     enclosureWidth: number;
     enclosureHeight: number;
@@ -181213,9 +181245,14 @@ export declare function createDrainageWellWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+export declare type PipeSupportStyle = {
+    SINGLE_SIDED: {},   // 圆形竖井
+    DOUBLE_SIDED: {} // 矩形竖井
+};
+
 // 管枕参数结构体
 export declare interface PipeSupportParams {
-    style: number;
+    style: PipeSupportParams;
     count: number;
     positions: gp_Pnt2d[];
     radii: number[];
@@ -181232,9 +181269,14 @@ export declare function createPipeSupportWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+export declare type CoverPlateStyle = {
+    RECTANGULAR: {},   // 圆形竖井
+    SECTOR: {} // 矩形竖井
+};
+
 // 盖板参数结构体
 export declare interface CoverPlateParams {
-    style: string;
+    style: CoverPlateStyle;
     length: number;
     width: number;
     smallRadius: number;
@@ -181380,8 +181422,15 @@ export declare type SegmentType = {
     LINE: {},
     THREE_POINT_ARC: {},
     CIRCLE_CENTER_ARC: {},
-    SPLINE: {}
+    SPLINE: {},
+    BEZIER: {}
 }
+
+declare function sampleSegmentPoints(
+    wires: Array<Array<gp_Pnt>>,
+    segments: Array<SegmentType>,
+    tessellation?: number
+): Array<gp_Pnt>;
 
 // 管道参数
 export declare interface PipeParams {
@@ -181429,8 +181478,8 @@ export declare interface PipeEndpoint {
 
 // 管道连接参数
 export declare interface PipeJointParams {
-    ins?: PipeEndpoint[];
-    outs?: PipeEndpoint[];
+    ins: PipeEndpoint[];
+    outs: PipeEndpoint[];
     mode: JointShapeMode;
     flanged: boolean;
     upDir?: gp_Dir;
@@ -181461,8 +181510,8 @@ export declare function createPipeJointWithPosition(
 
 // 悬链线参数
 export declare interface CatenaryParams {
-    p1?: gp_Pnt;
-    p2?: gp_Pnt;
+    p1: gp_Pnt;
+    p2: gp_Pnt;
     profile: ShapeProfile;
     slack: number;
     maxSag: number;
@@ -209229,6 +209278,10 @@ export type TopoInstance = {FS: typeof FS} & {
   NotSelector: typeof NotSelector;
   StringSyntaxSelector: typeof StringSyntaxSelector;
   ShapeOps: typeof ShapeOps;
+  ChannelPointType: ChannelPointType;
+  PipeRowType: PipeRowType;
+  CoverPlateStyle:CoverPlateStyle;
+  PipeSupportStyle:PipeSupportStyle;
   MeshData: MeshData;
   EdgeData: EdgeData;
   SweepMode: SweepMode;

@@ -256,7 +256,7 @@ export interface FourWayWellObject extends Version {
 
 export interface PipeRowObject extends Version {
     type: "GIM/EC/PipeRow";
-    pipeType: number; // 管道类型
+    pipeType: 'NORMAL' | 'PULL'; // 管道类型
     hasEnclosure: boolean; // 是否有围护结构
     enclosureWidth: number; // 围护结构宽度
     enclosureHeight: number; // 围护结构高度
@@ -269,10 +269,12 @@ export interface PipeRowObject extends Version {
     pipeWallThicknesses: number[]; // 管道壁厚数组
     pullPipeInnerDiameter: number; // 牵引管内径
     pullPipeThickness: number; // 牵引管壁厚
-    points: Array<{
-        position: Point;
-        type: number;
-    }>; // 路径点
+    points: Array<ChannelPoint>; // 路径点
+}
+
+export interface ChannelPoint {
+    position: Point;
+    type: 'LINE' | 'ARC';
 }
 
 export interface CableTrenchObject extends Version {
@@ -287,10 +289,7 @@ export interface CableTrenchObject extends Version {
     cushionThickness: number; // 垫层厚度
     wallThickness: number; // 壁厚
     wallThickness2: number; // 壁厚2
-    points: Array<{
-        position: Point;
-        type: number;
-    }>; // 路径点
+    points: Array<ChannelPoint>; // 路径点
 }
 
 export interface CableTunnelObject extends Version {
@@ -306,10 +305,7 @@ export interface CableTunnelObject extends Version {
     bottomPlatformHeight: number; // 底部平台高度
     cushionExtension: number; // 垫层延伸
     cushionThickness: number; // 垫层厚度
-    points: Array<{
-        position: Point;
-        type: number;
-    }>; // 路径点
+    points: Array<ChannelPoint>; // 路径点
 }
 
 export interface CableTrayObject extends Version {
@@ -328,10 +324,7 @@ export interface CableTrayObject extends Version {
     pipeInnerDiameters: number[]; // 管道内径数组
     pipeWallThicknesses: number[]; // 管道壁厚数组
     hasProtectionPlate: boolean; // 是否有保护板
-    points: Array<{
-        position: Point;
-        type: number;
-    }>; // 路径点
+    points: Array<ChannelPoint>; // 路径点
 }
 
 export interface CableLBeamObject extends Version {
@@ -378,10 +371,7 @@ export interface FootpathObject extends Version {
     type: "GIM/EC/Footpath";
     height: number;  // 高度
     width: number;  // 宽度
-    points: Array<{
-        position: Point;
-        type: number;
-    }>;  // 路径点
+    points: Array<ChannelPoint>;  // 路径点
 }
 
 export interface ShaftChamberObject extends Version {
@@ -470,7 +460,7 @@ export interface DrainageWellObject extends Version {
 
 export interface PipeSupportObject extends Version {
     type: "GIM/EC/PipeSupport";
-    style: number; // 类型(1-2)
+    style: 'SINGLE_SIDE' | 'DOUBLE_SIDED'; // 类型(1-2)
     count: number; // 数量
     positions: Array<Point2>; // 位置坐标
     radii: number[]; // 半径数组
@@ -481,7 +471,7 @@ export interface PipeSupportObject extends Version {
 
 export interface CoverPlateObject extends Version {
     type: "GIM/EC/CoverPlate";
-    style: string; // 类型
+    style: 'RECTANGULAR' | 'SECTOR'; // 类型
     length: number; // 长度
     width: number; // 宽度
     smallRadius: number; // 小半径

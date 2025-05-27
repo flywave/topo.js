@@ -311,9 +311,9 @@ export class OpticalFiberBoxPrimitive extends BasePrimitive<OpticalFiberBoxParam
 
     setDefault(): Primitive<OpticalFiberBoxParams, OpticalFiberBoxObject> {
         this.params = {
-            length: 300.0,
-            height: 150.0,
-            width: 200.0
+            length: 30.0,
+            height: 15.0,
+            width: 20.0
         };
         return this;
     }
@@ -376,32 +376,32 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams, C
     setDefault(): Primitive<CableTerminalParams, CableTerminalObject> {
         this.params = {
             sort: 1,
-            height: 1000,
-            topDiameter: 200,
-            bottomDiameter: 300,
-            tailDiameter: 350,
-            tailHeight: 50,
+            height: 100,
+            topDiameter: 20,
+            bottomDiameter: 30,
+            tailDiameter: 35,
+            tailHeight: 5,
             skirtCount: 18,
-            upperSkirtTopDiameter: 330,
-            upperSkirtBottomDiameter: 340,
-            lowerSkirtTopDiameter: 380,
-            lowerSkirtBottomDiameter: 400,
-            skirtSectionHeight: 40,
-            upperTerminalLength: 100,
-            upperTerminalDiameter: 80,
-            lowerTerminalLength: 120,
-            lowerTerminalDiameter: 100,
-            hole1Diameter: 20,
-            hole2Diameter: 20,
-            hole1Distance: 30,
-            holeSpacing: 40,
-            flangeHoleDiameter: 25,
-            flangeHoleSpacing: 400,
-            flangeWidth: 450,
-            flangeCenterHoleRadius: 75,
-            flangeChamferRadius: 10,
-            flangeOpeningWidth: 120,
-            flangeBoltHeight: 40
+            upperSkirtTopDiameter: 33,
+            upperSkirtBottomDiameter: 34,
+            lowerSkirtTopDiameter: 38,
+            lowerSkirtBottomDiameter: 40,
+            skirtSectionHeight: 4,
+            upperTerminalLength: 10,
+            upperTerminalDiameter: 8,
+            lowerTerminalLength: 12,
+            lowerTerminalDiameter: 10,
+            hole1Diameter: 2,
+            hole2Diameter: 2,
+            hole1Distance: 3,
+            holeSpacing: 4,
+            flangeHoleDiameter: 2.5,
+            flangeHoleSpacing: 40,
+            flangeWidth: 45,
+            flangeCenterHoleRadius: 7.5,
+            flangeChamferRadius: 1,
+            flangeOpeningWidth: 12,
+            flangeBoltHeight: 4
         };
         return this;
     }
@@ -513,14 +513,14 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams,
     setDefault(): Primitive<CableAccessoryParams, CableAccessoryObject> {
         this.params = {
             type: this.tp.CableBoxType.DIRECT_GROUND as any, // DIRECT_GROUND
-            length: 500.0,
-            width: 400.0,
-            height: 300.0,
+            length: 50.0,
+            width: 40.0,
+            height: 30.0,
             portCount: 3,
-            portDiameter: 100.0,
-            portSpacing: 180,
-            backPanelDistance: 50.0,
-            sidePanelDistance: 60.0
+            portDiameter: 10.0,
+            portSpacing: 18,
+            backPanelDistance: 5.0,
+            sidePanelDistance: 6.0
         };
         return this;
     }
@@ -1126,17 +1126,17 @@ export class CornerWellPrimitive extends BasePrimitive<CornerWellParams, CornerW
 
     setDefault(): Primitive<CornerWellParams, CornerWellObject> {
         this.params = {
-            leftLength: 800.0,
-            rightLength: 600.0,
-            width: 150.0,
-            height: 180.0,
-            topThickness: 20.0,
-            bottomThickness: 25.0,
-            wallThickness: 30.0,
+            leftLength: 80.0,
+            rightLength: 60.0,
+            width: 15.0,
+            height: 18.0,
+            topThickness: 2.0,
+            bottomThickness: 2.5,
+            wallThickness: 3.0,
             angle: 90.0,
-            cornerRadius: 100.0,
-            cushionExtension: 10.0,
-            cushionThickness: 15.0
+            cornerRadius: 10.0,
+            cushionExtension: 1.0,
+            cushionThickness: 1.5
         };
         return this;
     }
@@ -1222,14 +1222,14 @@ export class TunnelWellPrimitive extends BasePrimitive<TunnelWellParams, TunnelW
     setDefault(): Primitive<TunnelWellParams, TunnelWellObject> {
         this.params = {
             type: this.tp.TunnelWellType.STRAIGHT as any, // STRAIGHT
-            length: 800.0,
-            width: 150.0,
-            height: 180.0,
-            topThickness: 20.0,
-            bottomThickness: 25.0,
-            outerWallThickness: 30.0,
-            cushionExtension: 10.0,
-            cushionThickness: 15.0,
+            length: 80.0,
+            width: 15.0,
+            height: 18.0,
+            topThickness: 2.0,
+            bottomThickness: 2.5,
+            outerWallThickness: 3.0,
+            cushionExtension: 1.0,
+            cushionThickness: 1.5,
             leftSectionType: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
             leftLength: 0,
             leftWidth: 0,
@@ -1392,46 +1392,46 @@ export class ThreeWayWellPrimitive extends BasePrimitive<ThreeWayWellParams, Thr
 
     setDefault(): Primitive<ThreeWayWellParams> {
         this.params = {
-            type: this.tp.ThreeWayWellType.UNDERGROUND_TUNNEL as any, // UNDERGROUND_TUNNEL
-            cornerType: this.tp.CornerStyle.ROUNDED as any, // ROUNDED
-            shaftType: this.tp.ShaftStyle.CIRCULAR as any, // CIRCULAR
-            length: 200.0,
-            width: 80.0,
-            height: 60.0,
-            shaftRadius: 80.0,
-            cornerRadius: 30.0,
-            cornerLength: 40.0,
-            cornerWidth: 35.0,
-            branchLength: 120.0,
-            branchLeftLength: 80.0,
-            branchWidth: 100.0,
-            topThickness: 20.0,
-            bottomThickness: 25.0,
-            leftSectionStyle: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
-            leftSectionLength: 60.0,
-            leftSectionWidth: 80.0,
-            leftSectionHeight: 90.0,
-            leftSectionArcHeight: 15.0,
-            rightSectionStyle: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
-            rightSectionLength: 60.0,
-            rightSectionWidth: 80.0,
-            rightSectionHeight: 90.0,
-            rightSectionArcHeight: 15.0,
-            branchSectionStyle: this.tp.ConnectionSectionStyle.HORSESHOE as any, // HORSESHOE
-            branchSectionLength: 80.0,
-            branchSectionWidth: 80.0,
-            branchSectionHeight: 50.0,
-            branchSectionArcHeight: 15.0,
-            outerWallThickness: 5.0,
-            innerWallThickness: 3.0,
+            type: this.tp.ThreeWayWellType.UNDERGROUND_TUNNEL as any,
+            cornerType: this.tp.CornerStyle.ROUNDED as any,
+            shaftType: this.tp.ShaftStyle.CIRCULAR as any,
+            length: 120.0,
+            width: 48.0,
+            height: 36.0,
+            shaftRadius: 48.0,
+            cornerRadius: 18.0,
+            cornerLength: 24.0,
+            cornerWidth: 21.0,
+            branchLength: 72.0,
+            branchLeftLength: 48.0,
+            branchWidth: 60.0,
+            topThickness: 12.0,
+            bottomThickness: 15.0,
+            leftSectionStyle: this.tp.ConnectionSectionStyle.RECTANGULAR as any,
+            leftSectionLength: 36.0,
+            leftSectionWidth: 48.0,
+            leftSectionHeight: 54.0,
+            leftSectionArcHeight: 9.0,
+            rightSectionStyle: this.tp.ConnectionSectionStyle.RECTANGULAR as any,
+            rightSectionLength: 36.0,
+            rightSectionWidth: 48.0,
+            rightSectionHeight: 54.0,
+            rightSectionArcHeight: 9.0,
+            branchSectionStyle: this.tp.ConnectionSectionStyle.HORSESHOE as any,
+            branchSectionLength: 48.0,
+            branchSectionWidth: 48.0,
+            branchSectionHeight: 30.0,
+            branchSectionArcHeight: 9.0,
+            outerWallThickness: 3.0,
+            innerWallThickness: 1.8,
             isDoubleShaft: false,
             doubleShaftSpacing: 0.0,
-            outerWallExtension: 10.0,
-            innerWallExtension: 5.0,
-            cushionExtension: 15.0,
-            cushionThickness: 10.0,
-            innerBottomThickness: 18.0,
-            outerBottomThickness: 20.0,
+            outerWallExtension: 6.0,
+            innerWallExtension: 3.0,
+            cushionExtension: 9.0,
+            cushionThickness: 6.0,
+            innerBottomThickness: 10.8,
+            outerBottomThickness: 12.0,
             angle: 0,
         };
         return this;
@@ -1671,50 +1671,50 @@ export class FourWayWellPrimitive extends BasePrimitive<FourWayWellParams, FourW
     setDefault(): Primitive<FourWayWellParams, FourWayWellObject> {
         this.params = {
             type: this.tp.FourWayWellType.WORKING_WELL as any, // WORKING_WELL
-            length: 200.0,
-            width: 80.0,
-            height: 60.0,
+            length: 120.0,
+            width: 48.0,
+            height: 36.0,
             cornerStyle: this.tp.CornerStyle.ROUNDED as any, // ROUNDED
-            cornerRadius: 30.0,
-            branchLength: 100.0,
-            branchWidth: 80.0,
-            topThickness: 10.0,
-            bottomThickness: 10.0,
-            outerWallThickness: 5.0,
-            innerWallThickness: 3.0,
-            cushionExtension: 10.0,
-            cushionThickness: 15.0,
+            cornerRadius: 18.0,
+            branchLength: 60.0,
+            branchWidth: 48.0,
+            topThickness: 6.0,
+            bottomThickness: 6.0,
+            outerWallThickness: 3.0,
+            innerWallThickness: 1.8,
+            cushionExtension: 6.0,
+            cushionThickness: 9.0,
             leftSection: {
                 sectionType: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
-                length: 60.0,
-                width: 80.0,
-                height: 90.0,
-                arcHeight: 15.0,
+                length: 36.0,
+                width: 48.0,
+                height: 54.0,
+                arcHeight: 9.0
             },
             rightSection: {
                 sectionType: this.tp.ConnectionSectionStyle.RECTANGULAR as any, // RECTANGULAR
-                length: 60.0,
-                width: 80.0,
-                height: 90.0,
-                arcHeight: 15.0,
+                length: 36.0,
+                width: 48.0,
+                height: 54.0,
+                arcHeight: 9.0
             },
             branchSection1: {
                 sectionType: this.tp.ConnectionSectionStyle.HORSESHOE as any, // HORSESHOE
-                length: 80.0,
-                width: 80.0,
-                height: 50.0,
-                arcHeight: 15.0,
+                length: 48.0,
+                width: 48.0,
+                height: 30.0,
+                arcHeight: 9.0
             },
             branchSection2: {
                 sectionType: this.tp.ConnectionSectionStyle.HORSESHOE as any, // HORSESHOE
-                length: 80.0,
-                width: 80.0,
-                height: 50.0,
-                arcHeight: 15.0,
+                length: 48.0,
+                width: 48.0,
+                height: 30.0,
+                arcHeight: 9.0
             },
             shaftRadius: 0.0,
             cornerLength: 0.0,
-            cornerWidth: 0.0,
+            cornerWidth: 0.0
         };
         return this;
     }
@@ -1957,7 +1957,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
 
     setDefault(): Primitive<PipeRowParams, PipeRowObject> {
         this.params = {
-            pipeType: 1,
+            pipeType: this.tp.PipeType.NORMAL as any,
             hasEnclosure: false,
             baseExtension: 20,
             baseThickness: 5,
@@ -1969,10 +1969,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             pipeWallThicknesses: [4, 4, 4],
             points: [
                 { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 0, 30), type: 0 },
-                { position: new this.tp.gp_Pnt_3(500, 300, 50), type: 1 },
-                { position: new this.tp.gp_Pnt_3(300, 600, 20), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 800, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
             ],
             enclosureWidth: 0.0,
             enclosureHeight: 0.0,
@@ -2014,8 +2011,14 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
         if (o['version']) {
             this.version = o['version'];
         }
+        let pipeType = 1;
+        if (o['pipeType'] === 'NORMAL') {
+            pipeType = this.tp.PipeType.NORMAL as any;
+        } else if (o['pipeType'] === 'PULL') {
+            pipeType = this.tp.PipeType.PULL as any;
+        }
         this.params = {
-            pipeType: o['pipeType'],
+            pipeType: pipeType,
             hasEnclosure: o['hasEnclosure'],
             enclosureWidth: o['enclosureWidth'],
             enclosureHeight: o['enclosureHeight'],
@@ -2030,17 +2033,23 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             pullPipeThickness: o['pullPipeThickness'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
     }
 
     toObject(): PipeRowObject | undefined {
+
+        let pipeType = 'NORMAL';
+        if (this.params.pipeType === this.tp.PipeType.PULL) {
+            pipeType = 'PULL';
+        }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['pipeType', this.params.pipeType],
+            ['pipeType', pipeType],
             ['hasEnclosure', this.params.hasEnclosure],
             ['enclosureWidth', this.params.enclosureWidth],
             ['enclosureHeight', this.params.enclosureHeight],
@@ -2055,7 +2064,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             ['pullPipeThickness', this.params.pullPipeThickness],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as PipeRowObject;
     }
@@ -2085,10 +2094,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             wallThickness2: 10.0,
             points: [
                 { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 0, 30), type: 0 },
-                { position: new this.tp.gp_Pnt_3(500, 300, 50), type: 1 },
-                { position: new this.tp.gp_Pnt_3(300, 600, 20), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 800, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
             ]
         };
         return this;
@@ -2135,7 +2141,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             wallThickness2: o['wallThickness2'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2157,7 +2163,7 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             ['wallThickness2', this.params.wallThickness2],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as CableTrenchObject;
     }
@@ -2185,10 +2191,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             cushionThickness: 8.0,
             points: [
                 { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 0, 30), type: 0 },
-                { position: new this.tp.gp_Pnt_3(500, 300, 50), type: 1 },
-                { position: new this.tp.gp_Pnt_3(300, 600, 20), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 800, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
             ],
             innerWallThickness: 0.0,
             arcHeight: 0.0,
@@ -2245,7 +2248,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             cushionThickness: o['cushionThickness'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2276,7 +2279,7 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             ['cushionThickness', this.params.cushionThickness],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as CableTunnelObject;
     }
@@ -2299,7 +2302,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             style: this.tp.CableTrayStyle.ARCH as any, // ARCH
             columnDiameter: 40.0,
             columnHeight: 100.0,
-            span: 400.0,
+            span: 300.0,
             width: 60.0,
             height: 30.0,
             topPlateHeight: 5.0,
@@ -2316,7 +2319,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             hasProtectionPlate: true,
             points: [
                 { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(900, 500, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 320, 0), type: 0 },
             ]
         };
         return this;
@@ -2375,7 +2378,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             hasProtectionPlate: o['hasProtectionPlate'],
             points: o['points']?.map((p: any) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2408,7 +2411,7 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             ['hasProtectionPlate', this.params.hasProtectionPlate],
             ['points', this.params.points.map((p) => ({
                 position: [p.position.X(), p.position.Y(), p.position.Z()],
-                type: p.type
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as CableTrayObject;
     }
@@ -2426,9 +2429,9 @@ export class CableLBeamPrimitive extends BasePrimitive<CableLBeamParams, CableLB
 
     setDefault(): Primitive<CableLBeamParams> {
         this.params = {
-            length: 300.0,
-            width: 150.0,
-            height: 200.0
+            length: 100.0,
+            width: 50.0,
+            height: 66.0
         };
         return this;
     }
@@ -2654,9 +2657,9 @@ export class LadderPrimitive extends BasePrimitive<LadderParams, LadderObject> {
 
     setDefault(): Primitive<LadderParams> {
         this.params = {
-            length: 3000.0,
-            width: 400.0,
-            thickness: 20.0
+            length: 100.0,
+            width: 40.0,
+            thickness: 2.0
         };
         return this;
     }
@@ -2718,10 +2721,10 @@ export class SumpPrimitive extends BasePrimitive<SumpParams, SumpObject> {
 
     setDefault(): Primitive<SumpParams, SumpObject> {
         this.params = {
-            length: 500.0,
-            width: 300.0,
-            depth: 400.0,
-            bottomThickness: 50.0
+            length: 100.0,
+            width: 60.0,
+            depth: 80.0,
+            bottomThickness: 10.0
         };
         return this;
     }
@@ -2792,7 +2795,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             width: 80.0,
             points: [
                 { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(900, 500, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
             ]
         };
         return this;
@@ -2829,7 +2832,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             width: o['width'],
             points: o['points'].map((p) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -2843,7 +2846,7 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             ['width', this.params.width],
             ['points', this.params.points.map((t) => ({
                 position: [t.position.X(), t.position.Y(), t.position.Z()],
-                type: t.type
+                type: t.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as FootpathObject;
     }
@@ -2946,8 +2949,8 @@ export class TunnelCompartmentPartitionPrimitive extends BasePrimitive<TunnelCom
 
     setDefault(): Primitive<TunnelCompartmentPartitionParams, TunnelCompartmentPartitionObject> {
         this.params = {
-            width: 300.0,
-            thickness: 15.0
+            width: 100.0,
+            thickness: 10.0
         };
         return this;
     }
@@ -3007,15 +3010,15 @@ export class VentilationPavilionPrimitive extends BasePrimitive<VentilationPavil
 
     setDefault(): Primitive<VentilationPavilionParams, VentilationPavilionObject> {
         this.params = {
-            topLength: 400.0,
-            middleLength: 300.0,
-            bottomLength: 400.0,
-            topWidth: 350.0,
-            middleWidth: 250.0,
-            bottomWidth: 350.0,
-            topHeight: 50.0,
-            height: 150.0,
-            baseHeight: 30.0
+            topLength: 100.0,
+            middleLength: 75.0,
+            bottomLength: 100.0,
+            topWidth: 87.5,
+            middleWidth: 62.5,
+            bottomWidth: 87.5,
+            topHeight: 12.5,
+            height: 37.5,
+            baseHeight: 7.5
         };
         return this;
     }
@@ -3185,9 +3188,9 @@ export class StraightVentilationDuctPrimitive extends BasePrimitive<StraightVent
 
     setDefault(): Primitive<StraightVentilationDuctParams, StraightVentilationDuctObject> {
         this.params = {
-            diameter: 200.0,
-            wallThickness: 10.0,
-            height: 500.0
+            diameter: 20.0,
+            wallThickness: 3.0,
+            height: 50.0
         };
         return this;
     }
@@ -3252,23 +3255,23 @@ export class ObliqueVentilationDuctPrimitive extends BasePrimitive<ObliqueVentil
 
     setDefault(): Primitive<ObliqueVentilationDuctParams, ObliqueVentilationDuctObject> {
         this.params = {
-            hoodRoomLength: 200.0,
-            hoodRoomWidth: 150.0,
-            hoodRoomHeight: 200.0,
-            hoodWallThickness: 10.0,
-            ductCenterHeight: 80.0,
-            ductLeftDistance: 80.0,
-            ductDiameter: 120.0,
-            ductWallThickness: 8.0,
-            ductLength: 300.0,
-            ductHeightDifference: 50.0,
-            baseLength: 220.0,
-            baseWidth: 180.0,
-            baseHeight: 10.0,
-            baseRoomLength: 200.0,
-            baseRoomWallThickness: 12.0,
-            baseRoomWidth: 150.0,
-            baseRoomHeight: 220.0
+            hoodRoomLength: 66.67,
+            hoodRoomWidth: 50.0,
+            hoodRoomHeight: 66.67,
+            hoodWallThickness: 3.33,
+            ductCenterHeight: 26.67,
+            ductLeftDistance: 26.67,
+            ductDiameter: 40.0,
+            ductWallThickness: 2.67,
+            ductLength: 100.0,
+            ductHeightDifference: 16.67,
+            baseLength: 73.33,
+            baseWidth: 60.0,
+            baseHeight: 3.33,
+            baseRoomLength: 66.67,
+            baseRoomWallThickness: 4.0,
+            baseRoomWidth: 50.0,
+            baseRoomHeight: 73.33
         };
         return this;
     }
@@ -3369,14 +3372,14 @@ export class DrainageWellPrimitive extends BasePrimitive<DrainageWellParams, Dra
 
     setDefault(): Primitive<DrainageWellParams, DrainageWellObject> {
         this.params = {
-            length: 500.0,
-            width: 300.0,
-            height: 300.0,
-            neckDiameter: 150.0,
-            neckHeight: 400.0,
-            cushionExtension: 50.0,
-            bottomThickness: 60.0,
-            wallThickness: 20.0
+            length: 100.0,
+            width: 60.0,
+            height: 60.0,
+            neckDiameter: 30.0,
+            neckHeight: 80.0,
+            cushionExtension: 10.0,
+            bottomThickness: 12.0,
+            wallThickness: 4.0
         };
         return this;
     }
@@ -3455,7 +3458,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
 
     setDefault(): Primitive<PipeSupportParams, PipeSupportObject> {
         this.params = {
-            style: 2,
+            style: this.tp.PipeSupportStyle.DOUBLE_SIDE as any,
             count: 8,
             positions: [
                 new this.tp.gp_Pnt2d_3(-10, 12),
@@ -3509,7 +3512,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'],
+            style: o['style'] == 'SINGLE_SIDE' ? this.tp.PipeSupportStyle.SINGLE_SIDE as any : this.tp.PipeSupportStyle.DOUBLE_SIDE as any,
             count: o['count'],
             positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))),
             radii: o['radii'],
@@ -3524,7 +3527,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style],
+            ['style', this.params.style == this.tp.PipeSupportStyle.SINGLE_SIDE ? 'SINGLE_SIDE' : 'DOUBLE_SIDE'],
             ['count', this.params.count],
             ['positions', this.params.positions.map((p: any) => ([p.X(), p.Y()]))],
             ['radii', this.params.radii],
@@ -3547,7 +3550,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
 
     setDefault(): Primitive<CoverPlateParams, CoverPlateObject> {
         this.params = {
-            style: "0",
+            style: this.tp.CoverPlateStyle.RECTANGULAR as any,
             length: 200.0,
             width: 100.0,
             smallRadius: 0,
@@ -3584,7 +3587,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'],
+            style: o['style'] == 'RECTANGULAR' ? this.tp.CoverPlateStyle.RECTANGULAR as any : this.tp.CoverPlateStyle.SECTOR as any,
             length: o['length'],
             width: o['width'],
             smallRadius: o['smallRadius'],
@@ -3598,7 +3601,7 @@ export class CoverPlatePrimitive extends BasePrimitive<CoverPlateParams, CoverPl
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style],
+            ['style', this.params.style == this.tp.CoverPlateStyle.RECTANGULAR ? 'RECTANGULAR' : 'SECTOR'],
             ['length', this.params.length],
             ['width', this.params.width],
             ['smallRadius', this.params.smallRadius],
@@ -3620,11 +3623,11 @@ export class CableRayPrimitive extends BasePrimitive<CableRayParams, CableRayObj
 
     setDefault(): Primitive<CableRayParams, CableRayObject> {
         this.params = {
-            outerLength: 300.0,
-            outerHeight: 100.0,
-            innerLength: 280.0,
-            innerHeight: 80.0,
-            coverThickness: 5.0
+            outerLength: 30.0,
+            outerHeight: 10.0,
+            innerLength: 28.0,
+            innerHeight: 8.0,
+            coverThickness: 2.0
         };
         return this;
     }
