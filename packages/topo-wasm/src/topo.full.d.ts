@@ -179555,7 +179555,7 @@ export declare function createCableWithPosition(
 export declare type CurveType = {
     LINE: {},
     ARC: {},
-    SPLINE: {}
+    BEZIER: {}
 }
 
 // 曲线电缆参数结构体

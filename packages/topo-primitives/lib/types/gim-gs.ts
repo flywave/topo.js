@@ -232,7 +232,7 @@ export interface CableObject extends Version {
     diameter: number;
 }
 
-export type CurveType = 'LINE' | 'ARC' | 'SPLINE';
+export type CurveType = 'LINE' | 'ARC' | 'BEZIER';
 
 export interface CurveCableObject extends Version {
     type: 'GIM::GS::CurveCable';

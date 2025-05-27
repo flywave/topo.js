@@ -1907,7 +1907,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCa
         for (const type of o['curveTypes']) {
             if (type === 'LINE') curveTypes.push(this.tp.CurveType.LINE as any);
             else if (type === 'ARC') curveTypes.push(this.tp.CurveType.ARC as any);
-            else if (type === 'SPLINE') curveTypes.push(this.tp.CurveType.SPLINE as any);
+            else if (type === 'BEZIER') curveTypes.push(this.tp.CurveType.BEZIER as any);
             else throw new Error(`Invalid curve type: ${type}`);
         }
 
@@ -1926,7 +1926,7 @@ export class CurveCablePrimitive extends BasePrimitive<CurveCableParams, CurveCa
         for (const type of this.params.curveTypes) {
             if (type === this.tp.CurveType.LINE as any) curveTypes.push('LINE');
             else if (type === this.tp.CurveType.ARC as any) curveTypes.push('ARC');
-            else if (type === this.tp.CurveType.SPLINE as any) curveTypes.push('SPLINE');
+            else if (type === this.tp.CurveType.BEZIER as any) curveTypes.push('BEZIER');
             else throw new Error(`Invalid curve type: ${type}`);
         }
         return BasePrimitive.buildObject(new Map<string, any>([

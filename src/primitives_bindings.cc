@@ -2003,7 +2003,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   enum_<curve_type>("CurveType")
       .value("LINE", curve_type::LINE)
       .value("ARC", curve_type::ARC)
-      .value("SPLINE", curve_type::SPLINE);
+      .value("BEZIER", curve_type::BEZIER);
 
   // 曲线电缆参数结构体
   value_object<curve_cable_params>("CurveCableParams")
