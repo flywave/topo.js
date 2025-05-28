@@ -180231,6 +180231,11 @@ export declare function createPoleTowerWithPosition(
 ): TopoDS_Shape;
 
 
+export declare type WasherShapeType = {
+    SQUARE: {},
+    ROUND: {}
+}
+
 // 单钩锚固参数结构体
 export declare interface SingleHookAnchorParams {
     boltDiameter: number;
@@ -180239,7 +180244,7 @@ export declare interface SingleHookAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: number;
+    washerShape: WasherShapeType;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -180264,7 +180269,7 @@ export declare interface TripleHookAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: number;
+    washerShape: WasherShapeType;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -180290,7 +180295,7 @@ export declare interface RibbedAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: number;
+    washerShape: WasherShapeType;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -180319,7 +180324,7 @@ export declare interface NutAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: number;
+    washerShape: WasherShapeType;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -180344,7 +180349,7 @@ export declare interface TripleArmAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: number;
+    washerShape: WasherShapeType;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -180371,7 +180376,7 @@ export declare interface PositioningPlateAnchorParams {
     nutHeight: number;
     nutOD: number;
     washerCount: number;
-    washerShape: number;
+    washerShape: WasherShapeType;
     washerSize: number;
     washerThickness: number;
     anchorLength: number;
@@ -180471,9 +180476,15 @@ export declare function createOpticalFiberBoxWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+export declare type CableTerminalType = {
+    OUTDOOR: {},
+    GIS: {},
+    DRY: {}
+}
+
 // 电缆终端参数结构体
 export declare interface CableTerminalParams {
-    sort: number;
+    sort: CableTerminalType;
     height: number;
     topDiameter: number;
     bottomDiameter: number;
@@ -180877,6 +180888,7 @@ declare function sampleChannelPoints(
     tessellation?: number
 ): Array<gp_Pnt>;
 
+
 export declare type PipeRowType = {
     NORMAL: {}, // 圆形转角
     PULL: {}   // 折角形转角
@@ -181135,10 +181147,14 @@ export declare function createTunnelCompartmentPartitionWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+export declare type TunnelPartitionBoardStyle = {
+    CIRCULAR: {},
+    RECTANGULAR: {}
+}
 
 // 隧道分区板参数结构体
 export declare interface TunnelPartitionBoardParams {
-    style: number;
+    style: TunnelPartitionBoardStyle;
     length: number;
     width: number;
     thickness: number;
@@ -181245,14 +181261,16 @@ export declare function createDrainageWellWithPosition(
     direction2: gp_Dir
 ): TopoDS_Shape;
 
+
 export declare type PipeSupportStyle = {
     SINGLE_SIDED: {},   // 圆形竖井
     DOUBLE_SIDED: {} // 矩形竖井
 };
 
+
 // 管枕参数结构体
 export declare interface PipeSupportParams {
-    style: PipeSupportParams;
+    style: PipeSupportStyle;
     count: number;
     positions: gp_Pnt2d[];
     radii: number[];
@@ -181510,8 +181528,8 @@ export declare function createPipeJointWithPosition(
 
 // 悬链线参数
 export declare interface CatenaryParams {
-    p1: gp_Pnt;
-    p2: gp_Pnt;
+    p1?: gp_Pnt;
+    p2?: gp_Pnt;
     profile: ShapeProfile;
     slack: number;
     maxSag: number;
@@ -209227,6 +209245,13 @@ export type TopoInstance = {FS: typeof FS} & {
   ProfileType: ProfileType;
   SegmentType: SegmentType;
   JointShapeMode: JointShapeMode;
+  ChannelPointType: ChannelPointType;
+  PipeRowType: PipeRowType;
+  CoverPlateStyle: CoverPlateStyle;
+  PipeSupportStyle: PipeSupportStyle;
+  WasherShapeType: WasherShapeType;
+  CableTerminalType: CableTerminalType;
+  TunnelPartitionBoardStyle: TunnelPartitionBoardStyle;
   SketchMode: SketchMode;
   Sketch: typeof Sketch;
   BBox: typeof BBox;
@@ -209278,10 +209303,6 @@ export type TopoInstance = {FS: typeof FS} & {
   NotSelector: typeof NotSelector;
   StringSyntaxSelector: typeof StringSyntaxSelector;
   ShapeOps: typeof ShapeOps;
-  ChannelPointType: ChannelPointType;
-  PipeRowType: PipeRowType;
-  CoverPlateStyle:CoverPlateStyle;
-  PipeSupportStyle:PipeSupportStyle;
   MeshData: MeshData;
   EdgeData: EdgeData;
   SweepMode: SweepMode;

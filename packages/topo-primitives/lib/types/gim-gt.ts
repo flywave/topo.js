@@ -358,7 +358,7 @@ export interface SingleHookAnchorObject extends Version {
     nutHeight: number; // 螺母高度
     nutOD: number; // 螺母外径
     washerCount: number; // 垫圈数量
-    washerShape: number; // 垫圈形状 (1-圆形, 2-方形)
+    washerShape: 'SQUARE' | 'CIRCULAR'; // 垫圈形状 (1-圆形, 2-方形)
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
@@ -376,7 +376,7 @@ export interface TripleHookAnchorObject extends Version {
     nutHeight: number; // 螺母高度
     nutOD: number; // 螺母外径
     washerCount: number; // 垫圈数量
-    washerShape: number; // 垫圈形状 (1-圆形, 2-方形)
+    washerShape: 'SQUARE' | 'ROUND'; // 垫圈形状 (1-圆形, 2-方形)
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
@@ -392,7 +392,7 @@ export interface RibbedAnchorObject extends Version {
     nutHeight: number; // 螺母高度
     nutOD: number; // 螺母外径
     washerCount: number; // 垫圈数量
-    washerShape: number; // 垫圈形状 (1-圆形, 2-方形)
+    washerShape: 'SQUARE' | 'ROUND'; // 垫圈形状 (1-圆形, 2-方形)
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
@@ -412,7 +412,7 @@ export interface NutAnchorObject extends Version {
     nutHeight: number; // 螺母高度
     nutOD: number; // 螺母外径
     washerCount: number; // 垫圈数量
-    washerShape: number; // 垫圈形状 (1-圆形, 2-方形)
+    washerShape: 'SQUARE' | 'ROUND'; // 垫圈形状 (1-圆形, 2-方形)
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
@@ -429,7 +429,7 @@ export interface TripleArmAnchorObject extends Version {
     nutHeight: number; // 螺母高度
     nutOD: number; // 螺母外径
     washerCount: number; // 垫圈数量
-    washerShape: number; // 垫圈形状 (1-圆形, 2-方形)
+    washerShape: 'SQUARE' | 'ROUND'; // 垫圈形状 (1-圆形, 2-方形)
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
@@ -447,7 +447,7 @@ export interface PositioningPlateAnchorObject extends Version {
     nutHeight: number; // 螺母高度
     nutOD: number; // 螺母外径
     washerCount: number; // 垫圈数量
-    washerShape: number; // 垫圈形状 (1-圆形, 2-方形)
+    washerShape: 'SQUARE' | 'ROUND'; // 垫圈形状 (1-圆形, 2-方形)
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度

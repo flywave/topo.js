@@ -1243,7 +1243,7 @@ static void set_channel_points(pipe_row_params &params, emscripten::val val) {
   for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
     channel_point point;
     point.position = val[i]["position"].as<gp_Pnt>();
-    point.type = val[i]["type"].as<int>();
+    point.type = val[i]["type"].as<channel_point_type>();
     points.push_back(point);
   }
   params.points = points;
@@ -1270,7 +1270,7 @@ static void set_cable_trench_points(cable_trench_params &params,
   for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
     channel_point point;
     point.position = val[i]["position"].as<gp_Pnt>();
-    point.type = val[i]["type"].as<int>();
+    point.type = val[i]["type"].as<channel_point_type>();
     points.push_back(point);
   }
   params.points = points;
@@ -1297,7 +1297,7 @@ static void set_cable_tunnel_points(cable_tunnel_params &params,
   for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
     channel_point point;
     point.position = val[i]["position"].as<gp_Pnt>();
-    point.type = val[i]["type"].as<int>();
+    point.type = val[i]["type"].as<channel_point_type>();
     points.push_back(point);
   }
   params.points = points;
@@ -1382,7 +1382,7 @@ static void set_cable_tray_points(cable_tray_params &params,
   for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
     channel_point point;
     point.position = val[i]["position"].as<gp_Pnt>();
-    point.type = val[i]["type"].as<int>();
+    point.type = val[i]["type"].as<channel_point_type>();
     points.push_back(point);
   }
   params.points = points;
@@ -1407,7 +1407,7 @@ static void set_footpath_points(footpath_params &params, emscripten::val val) {
   for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
     channel_point point;
     point.position = val[i]["position"].as<gp_Pnt>();
-    point.type = val[i]["type"].as<int>();
+    point.type = val[i]["type"].as<channel_point_type>();
     points.push_back(point);
   }
   params.points = points;
@@ -1554,7 +1554,7 @@ static void set_water_tunnel_points(water_tunnel_params &params,
   for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
     channel_point point;
     point.position = val[i]["position"].as<gp_Pnt>();
-    point.type = val[i]["type"].as<int>();
+    point.type = val[i]["type"].as<channel_point_type>();
     points.push_back(point);
   }
   params.points = points;
@@ -2754,6 +2754,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const pole_tower_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_pole_tower));
+          
+  enum_<washer_shape_type>("WasherShapeType")
+      .value("SQUARE", washer_shape_type::SQUARE)
+      .value("ROUND", washer_shape_type::ROUND);
 
   // 单钩锚固参数结构体绑定
   value_object<single_hook_anchor_params>("SingleHookAnchorParams")
@@ -3004,6 +3008,11 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(
                const optical_fiber_box_params &, const gp_Pnt &, const gp_Dir &,
                const gp_Dir &)>(&create_optical_fiber_box));
+
+  enum_<cable_terminal_type>("CableTerminalType")
+      .value("OUTDOOR", cable_terminal_type::OUTDOOR)
+      .value("GIS", cable_terminal_type::GIS)
+      .value("DRY", cable_terminal_type::DRY);
 
   // 电缆终端参数结构体绑定
   value_object<cable_terminal_params>("CableTerminalParams")
@@ -3427,7 +3436,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                  emscripten::val pointVal = pointsVal[i];
                  channel_point point;
                  point.position = pointVal["position"].as<gp_Pnt>();
-                 point.type = pointVal["type"].as<int>();
+                 point.type = pointVal["type"].as<channel_point_type>();
                  points.push_back(point);
                }
              }
@@ -3700,6 +3709,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                const tunnel_compartment_partition_params &, const gp_Pnt &,
                const gp_Dir &, const gp_Dir &)>(
                &create_tunnel_compartment_partition));
+
+  enum_<tunnel_partition_board_style>("TunnelPartitionBoardStyle")
+      .value("CIRCULAR", tunnel_partition_board_style::CIRCULAR)
+      .value("RECTANGULAR", tunnel_partition_board_style::RECTANGULAR);
 
   // 隧道分区板参数结构体绑定
   value_object<tunnel_partition_board_params>("TunnelPartitionBoardParams")

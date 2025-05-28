@@ -35,7 +35,8 @@ import {
     ApplicationType,
     StringType,
     PoleTowerMember,
-    PoleTowerNode
+    PoleTowerNode,
+    WasherShapeType
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../../primitive";
 import {
@@ -6767,7 +6768,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
             nutHeight: 10.0,
             nutOD: 60.0,
             washerCount: 2,
-            washerShape: 2,
+            washerShape: this.tp.WasherShapeType.ROUND as any,
             washerSize: 65.0,
             washerThickness: 1.5,
             anchorLength: 150.0,
@@ -6791,7 +6792,6 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         if (this.params.nutHeight <= 0) return false;
         if (this.params.nutOD <= this.params.boltDiameter) return false;
         if (this.params.washerCount < 0) return false;
-        if (this.params.washerShape !== 1 && this.params.washerShape !== 2) return false;
         if (this.params.washerSize <= 0) return false;
         if (this.params.washerThickness <= 0) return false;
         if (this.params.anchorLength <= 0) return false;
@@ -6816,6 +6816,10 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         if (o['version']) {
             this.version = o['version'];
         }
+        let washerShape: WasherShapeType = this.tp.WasherShapeType.ROUND as any;
+        if (o['washerShape'] === 'SQUARE') {
+            washerShape = this.tp.WasherShapeType.SQUARE as any;
+        }
         this.params = {
             boltDiameter: o['boltDiameter'],
             exposedLength: o['exposedLength'],
@@ -6823,7 +6827,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
             nutHeight: o['nutHeight'],
             nutOD: o['nutOD'],
             washerCount: o['washerCount'],
-            washerShape: o['washerShape'],
+            washerShape: washerShape,
             washerSize: o['washerSize'],
             washerThickness: o['washerThickness'],
             anchorLength: o['anchorLength'],
@@ -6836,6 +6840,10 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
     }
 
     toObject(): SingleHookAnchorObject | undefined {
+        let washerShape: string = 'ROUND';
+        if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
+            washerShape = 'SQUARE';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -6845,7 +6853,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
             ['nutHeight', this.params.nutHeight],
             ['nutOD', this.params.nutOD],
             ['washerCount', this.params.washerCount],
-            ['washerShape', this.params.washerShape],
+            ['washerShape', washerShape],
             ['washerSize', this.params.washerSize],
             ['washerThickness', this.params.washerThickness],
             ['anchorLength', this.params.anchorLength],
@@ -6875,7 +6883,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
             nutHeight: 7.5,
             nutOD: 60.0,
             washerCount: 2,
-            washerShape: 2,
+            washerShape: this.tp.WasherShapeType.ROUND as any,
             washerSize: 65.0,
             washerThickness: 1.5,
             anchorLength: 150.0,
@@ -6897,7 +6905,6 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         if (this.params.nutHeight <= 0) return false;
         if (this.params.nutOD <= this.params.boltDiameter) return false;
         if (this.params.washerCount < 0) return false;
-        if (this.params.washerShape !== 1 && this.params.washerShape !== 2) return false;
         if (this.params.washerSize <= 0) return false;
         if (this.params.washerThickness <= 0) return false;
         if (this.params.anchorLength <= 0) return false;
@@ -6938,6 +6945,10 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
     }
 
     toObject(): TripleHookAnchorObject | undefined {
+        let washerShape: string = 'ROUND';
+        if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
+            washerShape = 'SQUARE';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -6947,7 +6958,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
             ['nutHeight', this.params.nutHeight],
             ['nutOD', this.params.nutOD],
             ['washerCount', this.params.washerCount],
-            ['washerShape', this.params.washerShape],
+            ['washerShape', washerShape],
             ['washerSize', this.params.washerSize],
             ['washerThickness', this.params.washerThickness],
             ['anchorLength', this.params.anchorLength],
@@ -6975,7 +6986,7 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, Rib
             nutHeight: 10.0,
             nutOD: 60.0,
             washerCount: 0,
-            washerShape: 2,
+            washerShape: this.tp.WasherShapeType.ROUND as any,
             washerSize: 65.0,
             washerThickness: 1.5,
             anchorLength: 150.0,
@@ -7021,6 +7032,10 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, Rib
         if (o['version']) {
             this.version = o['version'];
         }
+        let washerShape: WasherShapeType = this.tp.WasherShapeType.ROUND as any;
+        if (o['washerShape'] === 'SQUARE') {
+            washerShape = this.tp.WasherShapeType.SQUARE as any;
+        }
         this.params = {
             boltDiameter: o['boltDiameter'],
             exposedLength: o['exposedLength'],
@@ -7028,7 +7043,7 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, Rib
             nutHeight: o['nutHeight'],
             nutOD: o['nutOD'],
             washerCount: o['washerCount'],
-            washerShape: o['washerShape'],
+            washerShape: washerShape,
             washerSize: o['washerSize'],
             washerThickness: o['washerThickness'],
             anchorLength: o['anchorLength'],
@@ -7043,6 +7058,10 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, Rib
     }
 
     toObject(): RibbedAnchorObject | undefined {
+        let washerShape: string = 'ROUND';
+        if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
+            washerShape = 'SQUARE';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -7052,7 +7071,7 @@ export class RibbedAnchorPrimitive extends BasePrimitive<RibbedAnchorParams, Rib
             ['nutHeight', this.params.nutHeight],
             ['nutOD', this.params.nutOD],
             ['washerCount', this.params.washerCount],
-            ['washerShape', this.params.washerShape],
+            ['washerShape', washerShape],
             ['washerSize', this.params.washerSize],
             ['washerThickness', this.params.washerThickness],
             ['anchorLength', this.params.anchorLength],
@@ -7084,7 +7103,7 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
             nutHeight: 10.0,
             nutOD: 60.0,
             washerCount: 2,
-            washerShape: 2,
+            washerShape: this.tp.WasherShapeType.ROUND as any,
             washerSize: 65.0,
             washerThickness: 1.5,
             anchorLength: 150.0,
@@ -7107,7 +7126,6 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
         if (this.params.nutHeight <= 0) return false;
         if (this.params.nutOD <= this.params.boltDiameter) return false;
         if (this.params.washerCount < 0) return false;
-        if (this.params.washerShape !== 1 && this.params.washerShape !== 2) return false;
         if (this.params.washerSize <= 0) return false;
         if (this.params.washerThickness <= 0) return false;
         if (this.params.anchorLength <= 0) return false;
@@ -7131,6 +7149,10 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
         if (o['version']) {
             this.version = o['version'];
         }
+        let washerShape: WasherShapeType = this.tp.WasherShapeType.ROUND as any;
+        if (o['washerShape'] === 'SQUARE') {
+            washerShape = this.tp.WasherShapeType.SQUARE as any;
+        }
         this.params = {
             boltDiameter: o['boltDiameter'],
             exposedLength: o['exposedLength'],
@@ -7138,7 +7160,7 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
             nutHeight: o['nutHeight'],
             nutOD: o['nutOD'],
             washerCount: o['washerCount'],
-            washerShape: o['washerShape'],
+            washerShape: washerShape,
             washerSize: o['washerSize'],
             washerThickness: o['washerThickness'],
             anchorLength: o['anchorLength'],
@@ -7150,6 +7172,10 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
     }
 
     toObject(): NutAnchorObject | undefined {
+        let washerShape: string = 'ROUND';
+        if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
+            washerShape = 'SQUARE';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -7159,7 +7185,7 @@ export class NutAnchorPrimitive extends BasePrimitive<NutAnchorParams, NutAnchor
             ['nutHeight', this.params.nutHeight],
             ['nutOD', this.params.nutOD],
             ['washerCount', this.params.washerCount],
-            ['washerShape', this.params.washerShape],
+            ['washerShape', washerShape],
             ['washerSize', this.params.washerSize],
             ['washerThickness', this.params.washerThickness],
             ['anchorLength', this.params.anchorLength],
@@ -7189,7 +7215,7 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
             nutHeight: 10.0,
             nutOD: 60.0,
             washerCount: 2,
-            washerShape: 2,
+            washerShape: this.tp.WasherShapeType.ROUND as any,
             washerSize: 65.0,
             washerThickness: 1.5,
             anchorLength: 150.0,
@@ -7213,7 +7239,6 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
         if (this.params.nutHeight <= 0) return false;
         if (this.params.nutOD <= this.params.boltDiameter) return false;
         if (this.params.washerCount < 0) return false;
-        if (this.params.washerShape !== 1 && this.params.washerShape !== 2) return false;
         if (this.params.washerSize <= 0) return false;
         if (this.params.washerThickness <= 0) return false;
         if (this.params.anchorLength <= 0) return false;
@@ -7238,6 +7263,10 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
         if (o['version']) {
             this.version = o['version'];
         }
+        let washerShape: WasherShapeType = this.tp.WasherShapeType.ROUND as any;
+        if (o['washerShape'] === 'SQUARE') {
+            washerShape = this.tp.WasherShapeType.SQUARE as any;
+        }
         this.params = {
             boltDiameter: o['boltDiameter'],
             exposedLength: o['exposedLength'],
@@ -7245,7 +7274,7 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
             nutHeight: o['nutHeight'],
             nutOD: o['nutOD'],
             washerCount: o['washerCount'],
-            washerShape: o['washerShape'],
+            washerShape: washerShape,
             washerSize: o['washerSize'],
             washerThickness: o['washerThickness'],
             anchorLength: o['anchorLength'],
@@ -7258,6 +7287,10 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
     }
 
     toObject(): TripleArmAnchorObject | undefined {
+        let washerShape: string = 'ROUND';
+        if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
+            washerShape = 'SQUARE';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -7267,7 +7300,7 @@ export class TripleArmAnchorPrimitive extends BasePrimitive<TripleArmAnchorParam
             ['nutHeight', this.params.nutHeight],
             ['nutOD', this.params.nutOD],
             ['washerCount', this.params.washerCount],
-            ['washerShape', this.params.washerShape],
+            ['washerShape', washerShape],
             ['washerSize', this.params.washerSize],
             ['washerThickness', this.params.washerThickness],
             ['anchorLength', this.params.anchorLength],
@@ -7297,7 +7330,7 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
             nutHeight: 10.0,
             nutOD: 60.0,
             washerCount: 2,
-            washerShape: 2,
+            washerShape: this.tp.WasherShapeType.ROUND as any,
             washerSize: 65.0,
             washerThickness: 1.5,
             anchorLength: 150.0,
@@ -7322,7 +7355,6 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
         if (this.params.nutHeight <= 0) return false;
         if (this.params.nutOD <= this.params.boltDiameter) return false;
         if (this.params.washerCount < 0) return false;
-        if (this.params.washerShape !== 1 && this.params.washerShape !== 2) return false;
         if (this.params.washerSize <= 0) return false;
         if (this.params.washerThickness <= 0) return false;
         if (this.params.anchorLength <= 0) return false;
@@ -7348,6 +7380,10 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
         if (o['version']) {
             this.version = o['version'];
         }
+        let washerShape: WasherShapeType = this.tp.WasherShapeType.ROUND as any;
+        if (o['washerShape'] === 'SQUARE') {
+            washerShape = this.tp.WasherShapeType.SQUARE as any;
+        }
         this.params = {
             boltDiameter: o['boltDiameter'],
             exposedLength: o['exposedLength'],
@@ -7355,7 +7391,7 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
             nutHeight: o['nutHeight'],
             nutOD: o['nutOD'],
             washerCount: o['washerCount'],
-            washerShape: o['washerShape'],
+            washerShape: washerShape,
             washerSize: o['washerSize'],
             washerThickness: o['washerThickness'],
             anchorLength: o['anchorLength'],
@@ -7369,6 +7405,10 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
     }
 
     toObject(): PositioningPlateAnchorObject | undefined {
+        let washerShape: string = 'ROUND';
+        if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
+            washerShape = 'SQUARE';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -7378,7 +7418,7 @@ export class PositioningPlateAnchorPrimitive extends BasePrimitive<PositioningPl
             ['nutHeight', this.params.nutHeight],
             ['nutOD', this.params.nutOD],
             ['washerCount', this.params.washerCount],
-            ['washerShape', this.params.washerShape],
+            ['washerShape', washerShape],
             ['washerSize', this.params.washerSize],
             ['washerThickness', this.params.washerThickness],
             ['anchorLength', this.params.anchorLength],
