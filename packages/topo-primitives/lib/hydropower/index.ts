@@ -39,8 +39,8 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams, Water
             cushionExtension: 5.0,
             cushionThickness: 8.0,
             points: [
-                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(300, 0, 30), type: 0 }
+                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: this.tp.ChannelPointType.LINE as any },
+                { position: new this.tp.gp_Pnt_3(300, 0, 30), type: this.tp.ChannelPointType.LINE as any }
             ]
         };
         return this;
@@ -104,7 +104,7 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams, Water
             cushionThickness: o['cushionThickness'] || 0,
             points: o['points']?.map((p) => ({
                 position: new this.tp.gp_Pnt_3(p.position[0], p.position[1], p.position[2]),
-                type: p.type
+                type: p.type === 'ARC' ? this.tp.ChannelPointType.ARC as any : this.tp.ChannelPointType.LINE as any
             })) || []
         };
         return this;
@@ -150,7 +150,7 @@ export class WaterTunnelPrimitive extends BasePrimitive<WaterTunnelParams, Water
                     p.position.Y(),
                     p.position.Z()
                 ],
-                type: p.type
+                type: p.type == this.tp.ChannelPointType.ARC ? 'ARC' : 'LINE'
             }))]
         ])) as WaterTunnelObject;
     }

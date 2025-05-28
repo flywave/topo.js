@@ -23,7 +23,7 @@ export interface OpticalFiberBoxObject extends Version {
 
 export interface CableTerminalObject extends Version {
     type: "GIM/EC/CableTerminal";
-    sort: number; // 类型(1-3)
+    sort: 'OUTDOOR' | 'GIS' | 'DRY'; // 类型(1-3)
     height: number; // 总高度
     topDiameter: number; // 顶部直径
     bottomDiameter: number; // 底部直径
@@ -407,7 +407,7 @@ export interface VentilationPavilionObject extends Version {
 
 export interface TunnelPartitionBoardObject extends Version {
     type: "GIM/EC/TunnelPartitionBoard";
-    style: number;  // 类型
+    style: 'CIRCULAR' | 'RECTANGULAR';  // 类型
     length: number;  // 长度
     width: number;  // 宽度
     thickness: number;  // 厚度
@@ -460,7 +460,7 @@ export interface DrainageWellObject extends Version {
 
 export interface PipeSupportObject extends Version {
     type: "GIM/EC/PipeSupport";
-    style: 'SINGLE_SIDE' | 'DOUBLE_SIDED'; // 类型(1-2)
+    style: 'SINGLE_SIDED' | 'DOUBLE_SIDED'; // 类型(1-2)
     count: number; // 数量
     positions: Array<Point2>; // 位置坐标
     radii: number[]; // 半径数组

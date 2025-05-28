@@ -46,7 +46,10 @@ import {
     FourWayWellType,
     CableTrayStyle,
     ManholeStyle,
-    ManholeCoverStyle
+    ManholeCoverStyle,
+    CableTerminalType,
+    PipeRowType,
+    TunnelPartitionBoardStyle
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../../primitive";
 import {
@@ -375,7 +378,7 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams, C
 
     setDefault(): Primitive<CableTerminalParams, CableTerminalObject> {
         this.params = {
-            sort: 1,
+            sort: this.tp.CableTerminalType.OUTDOOR as any,
             height: 100,
             topDiameter: 20,
             bottomDiameter: 30,
@@ -412,10 +415,9 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams, C
     }
 
     public valid(): boolean {
-        if (this.params.sort < 1 || this.params.sort > 3) return false;
         if (this.params.height <= 0) return false;
         if (this.params.topDiameter <= 0 || this.params.bottomDiameter <= 0) return false;
-        if (this.params.sort === 1 && this.params.skirtCount <= 0) return false;
+        if (this.params.sort === this.tp.CableTerminalType.OUTDOOR && this.params.skirtCount <= 0) return false;
         return true;
     }
 
@@ -433,8 +435,14 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams, C
         if (o['version']) {
             this.version = o['version'];
         }
+        let sort: CableTerminalType = this.tp.CableTerminalType.OUTDOOR as any;
+        if (o['sort'] === 'GIS') {
+            sort = this.tp.CableTerminalType.GIS as any;
+        } else if (o['sort'] === 'DRY') {
+            sort = this.tp.CableTerminalType.DRY as any;
+        }
         this.params = {
-            sort: o['sort'],
+            sort: sort,
             height: o['height'],
             topDiameter: o['topDiameter'],
             bottomDiameter: o['bottomDiameter'],
@@ -466,10 +474,16 @@ export class CableTerminalPrimitive extends BasePrimitive<CableTerminalParams, C
     }
 
     toObject(): CableTerminalObject | undefined {
+        let sort: string = 'OUTDOOR';
+        if (this.params.sort === this.tp.CableTerminalType.GIS) {
+            sort = 'GIS';
+        } else if (this.params.sort === this.tp.CableTerminalType.DRY) {
+            sort = 'DRY';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['sort', this.params.sort],
+            ['sort', sort],
             ['height', this.params.height],
             ['topDiameter', this.params.topDiameter],
             ['bottomDiameter', this.params.bottomDiameter],
@@ -1957,7 +1971,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
 
     setDefault(): Primitive<PipeRowParams, PipeRowObject> {
         this.params = {
-            pipeType: this.tp.PipeType.NORMAL as any,
+            pipeType: this.tp.PipeRowType.NORMAL as any,
             hasEnclosure: false,
             baseExtension: 20,
             baseThickness: 5,
@@ -1968,8 +1982,8 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
             pipeInnerDiameters: [20, 30, 20],
             pipeWallThicknesses: [4, 4, 4],
             points: [
-                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: this.tp.ChannelPointType.LINE as any },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: this.tp.ChannelPointType.LINE as any },
             ],
             enclosureWidth: 0.0,
             enclosureHeight: 0.0,
@@ -2011,11 +2025,11 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
         if (o['version']) {
             this.version = o['version'];
         }
-        let pipeType = 1;
+        let pipeType: PipeRowType = this.tp.PipeRowType.NORMAL as any;
         if (o['pipeType'] === 'NORMAL') {
-            pipeType = this.tp.PipeType.NORMAL as any;
+            pipeType = this.tp.PipeRowType.NORMAL as any;
         } else if (o['pipeType'] === 'PULL') {
-            pipeType = this.tp.PipeType.PULL as any;
+            pipeType = this.tp.PipeRowType.PULL as any;
         }
         this.params = {
             pipeType: pipeType,
@@ -2042,7 +2056,7 @@ export class PipeRowPrimitive extends BasePrimitive<PipeRowParams, PipeRowObject
     toObject(): PipeRowObject | undefined {
 
         let pipeType = 'NORMAL';
-        if (this.params.pipeType === this.tp.PipeType.PULL) {
+        if (this.params.pipeType === this.tp.PipeRowType.PULL) {
             pipeType = 'PULL';
         }
 
@@ -2093,8 +2107,8 @@ export class CableTrenchPrimitive extends BasePrimitive<CableTrenchParams, Cable
             wallThickness: 15.0,
             wallThickness2: 10.0,
             points: [
-                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: this.tp.ChannelPointType.LINE as any },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: this.tp.ChannelPointType.LINE as any },
             ]
         };
         return this;
@@ -2190,8 +2204,8 @@ export class CableTunnelPrimitive extends BasePrimitive<CableTunnelParams, Cable
             cushionExtension: 5.0,
             cushionThickness: 8.0,
             points: [
-                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: this.tp.ChannelPointType.LINE as any },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: this.tp.ChannelPointType.LINE as any },
             ],
             innerWallThickness: 0.0,
             arcHeight: 0.0,
@@ -2318,8 +2332,8 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             pipeWallThicknesses: [2.0, 2.0, 2.0],
             hasProtectionPlate: true,
             points: [
-                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(0, 320, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: this.tp.ChannelPointType.LINE as any },
+                { position: new this.tp.gp_Pnt_3(0, 320, 0), type: this.tp.ChannelPointType.LINE as any },
             ]
         };
         return this;
@@ -2794,8 +2808,8 @@ export class FootpathPrimitive extends BasePrimitive<FootpathParams, FootpathObj
             height: 15.0,
             width: 80.0,
             points: [
-                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: 0 },
-                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: 0 },
+                { position: new this.tp.gp_Pnt_3(0, 0, 0), type: this.tp.ChannelPointType.LINE as any },
+                { position: new this.tp.gp_Pnt_3(0, 200, 0), type: this.tp.ChannelPointType.LINE as any },
             ]
         };
         return this;
@@ -3092,7 +3106,7 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
 
     setDefault(): Primitive<TunnelPartitionBoardParams, TunnelPartitionBoardObject> {
         this.params = {
-            style: 1,
+            style: this.tp.TunnelPartitionBoardStyle.CIRCULAR as any,
             length: 200.0,
             width: 0.0,
             thickness: 10.0,
@@ -3119,9 +3133,6 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
         if (this.params.thickness <= 0) {
             return false;
         }
-        if (this.params.style !== 1 && this.params.style !== 2) {
-            return false;
-        }
         if (this.params.holeCount !== this.params.holePositions.length ||
             this.params.holeCount !== this.params.holeStyles.length ||
             this.params.holeCount !== this.params.holeDiameters.length ||
@@ -3145,8 +3156,12 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
         if (o['version']) {
             this.version = o['version'];
         }
+        let style: TunnelPartitionBoardStyle = this.tp.TunnelPartitionBoardStyle.CIRCULAR as any;
+        if (o['style'] === 'RECTANGULAR') {
+            style = this.tp.TunnelPartitionBoardStyle.RECTANGULAR as any;
+        }
         this.params = {
-            style: o['style'],
+            style: style,
             length: o['length'],
             width: o['width'],
             thickness: o['thickness'],
@@ -3160,10 +3175,14 @@ export class TunnelPartitionBoardPrimitive extends BasePrimitive<TunnelPartition
     }
 
     toObject(): TunnelPartitionBoardObject | undefined {
+        let style = 'CIRCULAR';
+        if (this.params.style === this.tp.TunnelPartitionBoardStyle.RECTANGULAR as any) {
+            style = 'RECTANGULAR';
+        }
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style],
+            ['style', style],
             ['length', this.params.length],
             ['width', this.params.width],
             ['thickness', this.params.thickness],
@@ -3458,7 +3477,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
 
     setDefault(): Primitive<PipeSupportParams, PipeSupportObject> {
         this.params = {
-            style: this.tp.PipeSupportStyle.DOUBLE_SIDE as any,
+            style: this.tp.PipeSupportStyle.DOUBLE_SIDED as any,
             count: 8,
             positions: [
                 new this.tp.gp_Pnt2d_3(-10, 12),
@@ -3487,7 +3506,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
         if (this.params.length <= 0 || this.params.height <= 0) {
             return false;
         }
-        if (this.params.style !== 1 && this.params.style !== 2) {
+        if (this.params.style !== this.tp.PipeSupportStyle.SINGLE_SIDED && this.params.style !== this.tp.PipeSupportStyle.DOUBLE_SIDED) {
             return false;
         }
         if (this.params.count !== this.params.positions.length ||
@@ -3512,7 +3531,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
             this.version = o['version'];
         }
         this.params = {
-            style: o['style'] == 'SINGLE_SIDE' ? this.tp.PipeSupportStyle.SINGLE_SIDE as any : this.tp.PipeSupportStyle.DOUBLE_SIDE as any,
+            style: o['style'] == 'SINGLE_SIDED' ? this.tp.PipeSupportStyle.SINGLE_SIDED as any : this.tp.PipeSupportStyle.DOUBLE_SIDED as any,
             count: o['count'],
             positions: o['positions'].map((p: any) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))),
             radii: o['radii'],
@@ -3527,7 +3546,7 @@ export class PipeSupportPrimitive extends BasePrimitive<PipeSupportParams, PipeS
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
-            ['style', this.params.style == this.tp.PipeSupportStyle.SINGLE_SIDE ? 'SINGLE_SIDE' : 'DOUBLE_SIDE'],
+            ['style', this.params.style == this.tp.PipeSupportStyle.SINGLE_SIDED ? 'SINGLE_SIDED' : 'DOUBLE_SIDE'],
             ['count', this.params.count],
             ['positions', this.params.positions.map((p: any) => ([p.X(), p.Y()]))],
             ['radii', this.params.radii],

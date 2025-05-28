@@ -17,6 +17,6 @@ export interface WaterTunnelObject extends Version {
     cushionThickness?: number;
     points: Array<{
         position: Point;
-        type: number;
+        type: 'LINE' | 'ARC';
     }>;
 }

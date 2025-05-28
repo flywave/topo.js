@@ -382,7 +382,10 @@
             "ChannelPointType",
             "PipeRowType",
             "CoverPlateStyle",
-            "PipeSupportStyle"
+            "PipeSupportStyle",
+            "WasherShapeType",
+            "CableTerminalType",
+            "TunnelPartitionBoardStyle"
         ],
         "kind": "enum"
     }
