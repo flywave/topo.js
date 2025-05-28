@@ -2262,6 +2262,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
               }))
       // 三点圆弧创建方法
       .class_function("makeThreePointArc", &edge::make_three_point_arc)
+      .class_function("makeCircleCenterArc", &edge::make_circle_center_arc)
       // 切线圆弧创建方法
       .class_function("makeTangentArc", &edge::make_tangent_arc)
       // 贝塞尔曲线创建方法

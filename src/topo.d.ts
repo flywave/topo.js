@@ -760,6 +760,9 @@ export declare class Edge extends Shape1D {
     // 三点圆弧创建方法
     static makeThreePointArc(v1: gp_Pnt, v2: gp_Pnt, v3: gp_Pnt): Edge;
 
+    // 圆心法圆弧创建方法
+    static makeCircleCenterArc(v1: gp_Pnt, center: gp_Pnt, v2: gp_Pnt): Edge;
+
     // 切线圆弧创建方法
     static makeTangentArc(v1: gp_Pnt, tangent: gp_Vec, v3: gp_Pnt): Edge;
 
