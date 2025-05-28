@@ -6634,6 +6634,27 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
         if (o['version']) {
             this.version = o['version'];
         }
+
+        let getMemberType=(type:string):any => {
+            if(type=='ANGLE'){
+                return this.tp.MemberType.ANGLE;
+            }else if(type=='TUBE'){
+                return this.tp.MemberType.TUBE;
+            }else {
+                return this.tp.MemberType.TAPERED_TUBE;
+            }
+        }
+
+        let getAttachmentType=(type:string):any => {
+            if(type=='GROUND_WIRE'){
+                return this.tp.AttachmentType.GROUND_WIRE;
+            }else if(type=='CONDUCTOR'){
+                return this.tp.AttachmentType.CONDUCTOR;
+            }else {
+                return this.tp.AttachmentType.JUMPER;
+            }
+        }
+        
         this.params = {
             heights: o['heights']?.map((h: any) => ({
                 value: h.value,
@@ -6661,7 +6682,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                 id: m.id,
                 startNodeId: m.startNodeId,
                 endNodeId: m.endNodeId,
-                type: m.type,
+                type: getMemberType(m.type),
                 specification: m.specification,
                 material: m.material,
                 xDirection: new this.tp.gp_Dir_4(m.xDirection[0], m.xDirection[1], m.xDirection.z),
@@ -6673,7 +6694,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
             })) || [],
             attachments: o['attachments']?.map((a: any) => ({
                 name: a.name,
-                type: a.type,
+                type:getAttachmentType(a.type),
                 position: new this.tp.gp_Pnt_3(a.position[0], a.position[1], a.position.z)
             })) || []
         };
@@ -6681,6 +6702,27 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
     }
 
     toObject(): PoleTowerObject | undefined {
+
+     let getMemberType=(type:any) => {
+            if(type==this.tp.MemberType.ANGLE){
+                return 'ANGLE';
+            }else if(type==this.tp.MemberType.TUBE){
+                return 'TUBE';
+            }else if(type==this.tp.MemberType.TAPERED_TUBE){
+                return 'TAPERED_TUBE';
+            }
+        }
+
+    let getAttachmentType=(type:any) => {
+            if(type==this.tp.AttachmentType.GROUND_WIRE){
+                return 'GROUND_WIRE';
+            }else if(type==this.tp.AttachmentType.CONDUCTOR){
+                return 'CONDUCTOR';
+            }else if(type==this.tp.AttachmentType.JUMPER){
+                return 'JUMPER';
+            }
+    }
+
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -6718,7 +6760,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
                 id: m.id,
                 startNodeId: m.startNodeId,
                 endNodeId: m.endNodeId,
-                type: m.type,
+                type: getMemberType(m.type),
                 specification: m.specification,
                 material: m.material,
                 xDirection: [
@@ -6738,7 +6780,7 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
             }))],
             ['attachments', this.params.attachments.map(a => ({
                 name: a.name,
-                type: a.type,
+                type: getAttachmentType(a.type),
                 position: [
                     a.position.X(),
                     a.position.Y(),

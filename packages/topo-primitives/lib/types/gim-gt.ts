@@ -332,7 +332,7 @@ export interface PoleTowerObject extends Version {
         id: string; // 构件ID
         startNodeId: string; // 起始节点ID
         endNodeId: string; // 结束节点ID
-        type: string; // 构件类型
+        type: 'ANGLE'|'TUBE'|'TAPERED_TUBE'; // 构件类型
         specification: string; // 规格
         material: string; // 材料
         xDirection: Dir; // X方向
@@ -345,7 +345,7 @@ export interface PoleTowerObject extends Version {
     attachments: Array<{
         // 附件列表
         name: string; // 附件名称
-        type: string; // 附件类型
+        type: 'GROUND_WIRE'|'CONDUCTOR'|'JUMPER'; // 附件类型
         position: Point;
     }>;
 }
