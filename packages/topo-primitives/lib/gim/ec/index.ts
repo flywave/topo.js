@@ -2335,7 +2335,6 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             topPlateHeight: 5.0,
             arcHeight: 55.0,
             wallThickness: 3.0,
-            pipeCount: 3,
             pipePositions: [
                 new this.tp.gp_Pnt2d_3(-20, 15),
                 new this.tp.gp_Pnt2d_3(0, 15),
@@ -2398,7 +2397,6 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             topPlateHeight: o['topPlateHeight'],
             arcHeight: o['arcHeight'],
             wallThickness: o['wallThickness'],
-            pipeCount: o['pipeCount'],
             pipePositions: o['pipePositions']?.map((p) => (new this.tp.gp_Pnt2d_3(p[0], p[1]))) || [],
             pipeInnerDiameters: o['pipeInnerDiameters'] || [],
             pipeWallThicknesses: o['pipeWallThicknesses'] || [],
@@ -2431,7 +2429,6 @@ export class CableTrayPrimitive extends BasePrimitive<CableTrayParams, CableTray
             ['topPlateHeight', this.params.topPlateHeight],
             ['arcHeight', this.params.arcHeight],
             ['wallThickness', this.params.wallThickness],
-            ['pipeCount', this.params.pipeCount],
             ['pipePositions', this.params.pipePositions.map((p) => ([p.X(), p.Y()]))],
             ['pipeInnerDiameters', this.params.pipeInnerDiameters],
             ['pipeWallThicknesses', this.params.pipeWallThicknesses],

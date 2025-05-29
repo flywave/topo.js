@@ -179477,7 +179477,7 @@ export declare function createTerminalBlockWithPosition(
 ): TopoDS_Shape;
 
 // 矩形开孔板参数结构体
-export declare interface RectangularHolePlateParams {
+export declare interface RectangularFixedPlateParams {
     length: number;
     width: number;
     thickness: number;
@@ -179489,9 +179489,9 @@ export declare interface RectangularHolePlateParams {
     holeDiameter: number;
 }
 
-export declare function createRectangularFixedPlate(params: RectangularHolePlateParams): TopoDS_Shape;
+export declare function createRectangularFixedPlate(params: RectangularFixedPlateParams): TopoDS_Shape;
 export declare function createRectangularFixedPlateWithPosition(
-    params: RectangularHolePlateParams,
+    params: RectangularFixedPlateParams,
     position: gp_Pnt,
     normal: gp_Dir,
     xDir: gp_Dir
@@ -180985,7 +180985,6 @@ export declare interface CableTrayParams {
     topPlateHeight: number;
     arcHeight: number;
     wallThickness: number;
-    pipeCount: number;
     pipePositions: gp_Pnt2d[];
     pipeInnerDiameters: number[];
     pipeWallThicknesses: number[];
@@ -208898,7 +208897,7 @@ export type TopoInstance = {FS: typeof FS} & {
   InsulatorStringParams: InsulatorStringParams;
   VTypeInsulatorParams: VTypeInsulatorParams;
   TerminalBlockParams: TerminalBlockParams;
-  RectangularHolePlateParams: RectangularHolePlateParams;
+  RectangularFixedPlateParams: RectangularFixedPlateParams;
   CircularFixedPlateParams: CircularFixedPlateParams;
   WireParams: WireParams;
   CableParams: CableParams;
