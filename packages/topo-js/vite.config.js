@@ -15,7 +15,7 @@ export default defineConfig({
     sourcemap: true,
     minify: false,
     rollupOptions: {
-      external: ['topo.full.wasm'] // Add this if you want to explicitly externalize
+      external: ['topo-wasm', 'three'] // 添加three到外部依赖
     }
   },
   plugins: [
@@ -27,6 +27,6 @@ export default defineConfig({
         topLevelAwait()
   ].filter((a) => !!a),
   optimizeDeps: {
-    exclude: ['topo-wasm']
+    exclude: ['topo-wasm', 'three'], // 同时在optimizeDeps中排除three
   }
 });

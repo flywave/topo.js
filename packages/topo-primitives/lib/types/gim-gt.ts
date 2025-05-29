@@ -6,261 +6,261 @@ export interface BoredPileBaseObject extends Version {
     H2: number; // 过渡段高度
     H3: number; // 底部圆柱高度
     H4: number; // 桩头高度
-    d: number; // 上部直径
-    D: number; // 底部直径
+    d: number;  // 上部直径
+    D: number;  // 底部直径
 }
 
 export interface PileCapBaseObject extends Version {
     type: "GIM/GT/PileCapBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    H4: number;
-    H5: number;
-    H6: number;
-    d: number;
-    D: number;
-    b: number;
-    B1: number;
-    L1: number;
-    e1: number;
-    e2: number;
-    cs: number;
-    ZCOUNT: number;
-    ZPOSTARRAY: Point[];
+    H1: number; // 桩上部圆柱高度
+    H2: number; // 桩过渡段高度
+    H3: number; // 桩底部圆柱高度
+    H4: number; // 承台柱高度
+    H5: number; // 承台底板高度
+    H6: number; // 桩头高度
+    d: number;  // 桩上部直径
+    D: number;  // 桩底部直径
+    b: number;  // 承台柱直径/边长
+    B1: number; // 承台底板宽度
+    L1: number; // 承台底板长度
+    e1: number; // X方向偏心
+    e2: number; // Y方向偏心
+    cs: number; // 承台柱样式 (0=圆形, 1=方形)
+    ZCOUNT: number; // 桩数量
+    ZPOSTARRAY: Point[]; // 桩位置数组
 }
 
 export interface RockAnchorBaseObject extends Version {
     type: "GIM/GT/RockAnchorBase";
-    H1: number;
-    H2: number;
-    d: number;
-    B1: number;
-    L1: number;
-    ZCOUNT: number;
-    ZPOSTARRAY: Point[];
+    H1: number; // 基础底板高度
+    H2: number; // 锚桩长度
+    d: number;  // 锚桩直径
+    B1: number; // 底板宽度
+    L1: number; // 底板长度
+    ZCOUNT: number; // 锚桩数量
+    ZPOSTARRAY: Point[]; // 锚桩位置数组
 }
 
 export interface RockPileCapBaseObject extends Version {
     type: "GIM/GT/RockPileCapBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    d: number;
-    b: number;
-    B1: number;
-    L1: number;
-    e1: number;
-    e2: number;
-    cs: number;
-    ZCOUNT: number;
-    ZPOSTARRAY: Point[];
+    H1: number; // 承台柱高度
+    H2: number; // 承台底板高度
+    H3: number; // 锚桩长度
+    d: number;  // 锚桩直径
+    b: number;  // 承台柱直径/边长
+    B1: number; // 承台底板宽度
+    L1: number; // 承台底板长度
+    e1: number; // X方向偏心
+    e2: number; // Y方向偏心
+    cs: number; // 承台柱样式 (0=圆形, 1=方形)
+    ZCOUNT: number; // 锚桩数量
+    ZPOSTARRAY: Point[]; // 锚桩位置数组
 }
 
 export interface EmbeddedRockAnchorBaseObject extends Version {
     type: "GIM/GT/EmbeddedRockAnchorBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    d: number;
-    D: number;
+    H1: number; // 上部圆柱高度
+    H2: number; // 过渡段高度
+    H3: number; // 底部圆柱高度
+    d: number;  // 上部直径
+    D: number;  // 底部直径
 }
 
 export interface InclinedRockAnchorBaseObject extends Version {
     type: "GIM/GT/InclinedRockAnchorBase";
-    H1: number;
-    H2: number;
-    d: number;
-    D: number;
-    B: number;
-    L: number;
-    e1: number;
-    e2: number;
-    alpha1: number;
-    alpha2: number;
+    H1: number; // 基础底板高度
+    H2: number; // 锚桩长度
+    d: number;  // 锚桩直径
+    D: number;  // 底部扩大头直径
+    B: number;  // 底板宽度
+    L: number;  // 底板长度
+    e1: number; // X方向偏心
+    e2: number; // Y方向偏心
+    alpha1: number; // X轴坡度(度)
+    alpha2: number; // Y轴坡度(度)
 }
 
 export interface ExcavatedBaseObject extends Version {
     type: "GIM/GT/ExcavatedBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    d: number;
-    D: number;
-    alpha1: number;
-    alpha2: number;
+    H1: number; // 上部圆柱高度
+    H2: number; // 过渡段高度
+    H3: number; // 底部圆柱高度
+    d: number;  // 上部直径
+    D: number;  // 底部直径
+    alpha1: number; // X轴坡度(度)
+    alpha2: number; // Y轴坡度(度)
 }
 
 export interface StepBaseObject extends Version {
     type: "GIM/GT/StepBase";
-    H: number;
-    H1: number;
-    H2: number;
-    H3: number;
-    b: number;
-    B1: number;
-    B2: number;
-    B3: number;
-    L1: number;
-    L2: number;
-    L3: number;
-    N: number;
+    H: number;  // 基础总高度
+    H1: number; // 第一级台阶高度
+    H2: number; // 第二级台阶高度
+    H3: number; // 第三级台阶高度
+    b: number;  // 基础顶部宽度
+    B1: number; // 第一级台阶宽度
+    B2: number; // 第二级台阶宽度
+    B3: number; // 第三级台阶宽度
+    L1: number; // 第一级台阶长度
+    L2: number; // 第二级台阶长度
+    L3: number; // 第三级台阶长度
+    N: number;  // 台阶数量(1-3)
 }
 
 export interface StepPlateBaseObject extends Version {
     type: "GIM/GT/StepPlateBase";
-    H: number;
-    H1: number;
-    H2: number;
-    H3: number;
-    b: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
-    alpha1: number;
-    alpha2: number;
-    N: number;
+    H: number;  // 基础总高度
+    H1: number; // 第一级台阶高度
+    H2: number; // 第二级台阶高度
+    H3: number; // 第三级台阶高度
+    b: number;  // 柱顶宽度/直径
+    B1: number; // 基础底板宽度
+    B2: number; // 第一级台阶宽度
+    L1: number; // 第一级台阶长度
+    L2: number; // 第二级台阶长度
+    alpha1: number; // X轴坡度(度)
+    alpha2: number; // Y轴坡度(度)
+    N: number;  // 台阶数量(1-3)
 }
 
 export interface SlopedBaseBaseObject extends Version {
     type: "GIM/GT/SlopedBaseBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    b: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
-    alpha1: number;
-    alpha2: number;
+    H1: number; // 底板前部高度
+    H2: number; // 底板后部高度差
+    H3: number; // 柱体高度
+    b: number;  // 柱体直径
+    L1: number; // 底板前部长度
+    L2: number; // 底板后部长度
+    B1: number; // 底板前部宽度
+    B2: number; // 底板后部宽度
+    alpha1: number; // X轴坡度(度)
+    alpha2: number; // Y轴坡度(度)
 }
 
 export interface CompositeCaissonBaseObject extends Version {
     type: "GIM/GT/CompositeCaissonBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    H4: number;
-    b: number;
-    D: number;
-    t: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
+    H1: number; // 上部沉井高度
+    H2: number; // 过渡段高度
+    H3: number; // 下部基础高度
+    H4: number; // 沉井底部圆管部分高度
+    b: number;  // 上部沉井圆筒直径/边长
+    D: number;  // 沉井底部圆管外径
+    t: number;  // 沉井壁厚
+    B1: number; // 过渡段底部宽度
+    B2: number; // 下部基础宽度
+    L1: number; // 过渡段底部长度
+    L2: number; // 下部基础长度
 }
 
 export interface RaftBaseObject extends Version {
     type: "GIM/GT/RaftBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    b1: number;
-    b2: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
+    H1: number; // 底板高度
+    H2: number; // 边梁高度
+    H3: number; // 主梁高度 (0表示无主梁)
+    b1: number; // 纵向主梁宽度
+    b2: number; // 横向主梁宽度
+    B1: number; // 底板宽度
+    B2: number; // 边梁宽度
+    L1: number; // 底板长度
+    L2: number; // 边梁长度
 }
 
 export interface DirectBuriedBaseObject extends Version {
     type: "GIM/GT/DirectBuriedBase";
-    H1: number;
-    H2: number;
-    d: number;
-    D: number;
-    B: number;
-    t: number;
+    H1: number; // 基础主体高度
+    H2: number; // 固定盘高度 (可选)
+    d: number;  // 基础主体直径
+    D: number;  // 圆形固定盘直径 (可选)
+    B: number;  // 方形固定盘边长 (可选)
+    t: number;  // 壁厚
 }
 
 export interface SteelSleeveBaseObject extends Version {
     type: "GIM/GT/SteelSleeveBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    H4: number;
-    d: number;
-    D1: number;
-    D2: number;
-    t: number;
-    B1: number;
-    B2: number;
+    H1: number; // 钢套筒高度
+    H2: number; // 底部扩大段高度
+    H3: number; // 顶部扩大段高度
+    H4: number; // 内部填充高度
+    d: number;  // 钢套筒外径
+    D1: number; // 底部扩大段外径 (可选)
+    D2: number; // 底部扩大段内径 (可选)
+    t: number;  // 钢套筒壁厚
+    B1: number; // 顶部扩大段外径 (可选)
+    B2: number; // 顶部扩大段内径 (可选)
 }
 
 export interface PrecastColumnBaseObject extends Version {
     type: "GIM/GT/PrecastColumnBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    d: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
+    H1: number; // 柱体高度
+    H2: number; // 过渡段上部高度
+    H3: number; // 过渡段下部高度
+    d: number;  // 柱体直径
+    B1: number; // 过渡段上部宽度
+    B2: number; // 过渡段下部宽度
+    L1: number; // 过渡段上部长度
+    L2: number; // 过渡段下部长度
 }
 
 export interface PrecastPinnedBaseObject extends Version {
     type: "GIM/GT/PrecastPinnedBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    d: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
-    B: number;
-    H: number;
-    L: number;
+    H1: number; // 柱体高度
+    H2: number; // 过渡段上部高度
+    H3: number; // 过渡段下部高度
+    d: number;  // 柱体直径
+    B1: number; // 过渡段上部宽度
+    B2: number; // 过渡段下部宽度
+    L1: number; // 过渡段上部长度
+    L2: number; // 过渡段下部长度
+    B: number;  // 卡盘宽度
+    H: number;  // 卡盘高度
+    L: number;  // 卡盘长度
 }
 
 export interface PrecastMetalSupportBaseObject extends Version {
     type: "GIM/GT/PrecastMetalSupportBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    H4: number;
-    b1: number;
-    b2: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
-    S1: number;
-    S2: number;
-    n1: number;
-    n2: number;
-    HX: number[];
+    H1: number; // 底板高度
+    H2: number; // 立柱高度
+    H3: number; // 连接梁高度
+    H4: number; // 斜撑高度差
+    b1: number; // 立柱直径
+    b2: number; // 连接梁直径
+    B1: number; // 底板宽度
+    B2: number; // 支架正面根开
+    L1: number; // 底板长度
+    L2: number; // 支架侧面根开
+    S1: number; // 支架规格
+    S2: number; // 斜材规格
+    n1: number; // 斜材组数
+    n2: number; // 板条数量
+    HX: number[]; // 斜材层高数组
 }
 
 export interface PrecastConcreteSupportBaseObject extends Version {
     type: "GIM/GT/PrecastConcreteSupportBase";
-    H1: number;
-    H2: number;
-    H3: number;
-    H4: number;
-    H5: number;
-    b1: number;
-    b2: number;
-    b3: number;
-    B1: number;
-    B2: number;
-    L1: number;
-    L2: number;
-    S1: number;
-    n1: number;
+    H1: number; // 底板高度
+    H2: number; // 立柱高度
+    H3: number; // 连接梁高度
+    H4: number; // 支撑顶部高度
+    H5: number; // 支撑底部高度
+    b1: number; // 立柱直径
+    b2: number; // 连接梁直径
+    b3: number; // 支撑直径
+    B1: number; // 底板宽度
+    B2: number; // 支架正面根开
+    L1: number; // 底板长度
+    L2: number; // 支架侧面根开
+    S1: number; // 顶部平台尺寸
+    n1: number; // 支撑数量
 }
 
 export interface TransmissionLineObject extends Version {
     type: "GIM/GT/TransmissionLine";
-    sectionalArea: number;
-    outsideDiameter: number;
-    wireWeight: number;
-    coefficientOfElasticity: number;
-    expansionCoefficient: number;
-    ratedStrength: number;
+    sectionalArea: number; // 截面积(mm²)
+    outsideDiameter: number; // 外径(mm)
+    wireWeight: number; // 单位长度质量(kg/km)
+    coefficientOfElasticity: number; // 弹性系数(N/mm²)
+    expansionCoefficient: number; // 线膨胀系数(1/℃)
+    ratedStrength: number; // 额定拉断力(N)
 }
 
 export interface InsulatorObject extends Version {
