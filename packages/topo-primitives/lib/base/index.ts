@@ -123,7 +123,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.TRIANGLE:
             const tprofile = profile as TriangleProfile;
             return {
-                type: tprofile.type,
+                type: 'TRIANGLE',
                 p1: [
                     tprofile.p1.X(),
                     tprofile.p1.Y(),
@@ -143,7 +143,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.RECTANGLE:
             const rprofile = profile as RectangleProfile;
             return {
-                type: rprofile.type,
+                type: 'RECTANGLE,
                 p1: [rprofile.p1.X(),
                 rprofile.p1.Y(),
                 rprofile.p1.Z()
@@ -156,7 +156,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.CIRC:
             const cprofile = profile as CircProfile;
             return {
-                type: cprofile.type,
+                type: 'CIRC',
                 center: [cprofile.center.X(),
                 cprofile.center.Y(),
                 cprofile.center.Z()
@@ -170,7 +170,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.ELIPS:
             const eprofile = profile as ElipsProfile;
             return {
-                type: eprofile.type,
+                type: 'ELIPS',
                 s1: [eprofile.s1.X(),
                 eprofile.s1.Y(),
                 eprofile.s1.Z()
@@ -188,7 +188,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.POLYGON:
             const pprofile = profile as PolygonProfile;
             return {
-                type: pprofile.type,
+                type: 'POLYGON',
                 edges: pprofile.edges.map(p => ([p.X(),
                 p.Y(),
                 p.Z()
