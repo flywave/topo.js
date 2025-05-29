@@ -50,10 +50,10 @@ export interface CableTerminalObject extends Version {
     flangeChamferRadius: number; // 法兰倒角半径
     flangeOpeningWidth: number; // 法兰开口宽度
     flangeBoltHeight: number; // 法兰螺栓高度
-}
-
+} 
 export interface CableAccessoryObject extends Version {
     type: "GIM/EC/CableAccessory";
+    cableAccessoryType: 'DIRECT_GROUND' | 'PROTECTIVE_GROUND' | 'CROSS_INTERCONNECT';
     length: number; // 长度
     width: number; // 宽度
     height: number; // 高度

@@ -564,8 +564,14 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams,
         if (o['version']) {
             this.version = o['version'];
         }
+        let cableAccessoryType = this.tp.CableBoxType.DIRECT_GROUND as any;
+       if (o['cableAccessoryType'] === 'PROTECTIVE_GROUND') {
+            cableAccessoryType = this.tp.CableBoxType.PROTECTIVE_GROUND as any;
+        }else if (o['cableAccessoryType'] === 'CROSS_INTERCONNECT') {
+            cableAccessoryType = this.tp.CableBoxType.CROSS_INTERCONNECT as any;   
+        }
         this.params = {
-            type: o['type'],
+            type: cableAccessoryType,
             length: o['length'],
             width: o['width'],
             height: o['height'],
@@ -579,8 +585,15 @@ export class CableAccessoryPrimitive extends BasePrimitive<CableAccessoryParams,
     }
 
     toObject(): CableAccessoryObject | undefined {
+        let cableAccessoryType = 'DIRECT_GROUND';
+        if (this.params.type === this.tp.CableBoxType.PROTECTIVE_GROUND) {
+            cableAccessoryType = 'PROTECTIVE_GROUND';
+        }else if (this.params.type === this.tp.CableBoxType.CROSS_INTERCONNECT) {
+            cableAccessoryType = 'CROSS_INTERCONNECT';
+        } 
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
+            ['cableAccessoryType',cableAccessoryType],
             ['version', this.getVersion()],
             ['length', this.params.length],
             ['width', this.params.width],
