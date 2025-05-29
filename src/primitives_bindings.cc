@@ -1936,9 +1936,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("holeDiameter", &rectangular_fixed_plate_params::holeDiameter);
 
   // 矩形开孔板创建函数
-  function("createRectangularFixedPlate",
-           select_overload<TopoDS_Shape(const rectangular_fixed_plate_params &)>(
-               &create_rectangular_fixed_plate));
+  function(
+      "createRectangularFixedPlate",
+      select_overload<TopoDS_Shape(const rectangular_fixed_plate_params &)>(
+          &create_rectangular_fixed_plate));
   function("createRectangularFixedPlateWithPosition",
            select_overload<TopoDS_Shape(const rectangular_fixed_plate_params &,
                                         const gp_Pnt &, const gp_Dir &,
@@ -2754,7 +2755,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const pole_tower_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_pole_tower));
-          
+
   enum_<washer_shape_type>("WasherShapeType")
       .value("SQUARE", washer_shape_type::SQUARE)
       .value("ROUND", washer_shape_type::ROUND);
@@ -3451,7 +3452,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            }));
 
   // 桥架样式枚举绑定
-  enum_<cable_tray_style>("CableTrayStyle")
+  emscripten::enum_<cable_tray_style>("CableTrayStyle")
       .value("ARCH", cable_tray_style::ARCH)
       .value("BEAM", cable_tray_style::BEAM);
 
