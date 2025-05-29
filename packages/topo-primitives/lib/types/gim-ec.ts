@@ -319,7 +319,6 @@ export interface CableTrayObject extends Version {
     topPlateHeight: number; // 顶板高度
     arcHeight: number; // 弧高
     wallThickness: number; // 壁厚
-    pipeCount: number; // 管道数量
     pipePositions: Array<Point2>; // 管道位置
     pipeInnerDiameters: number[]; // 管道内径数组
     pipeWallThicknesses: number[]; // 管道壁厚数组

@@ -1924,23 +1924,23 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                const gp_Dir &)>(&create_terminal_block));
 
   // 矩形开孔板参数结构体
-  value_object<rectangular_hole_plate_params>("RectangularHolePlateParams")
-      .field("length", &rectangular_hole_plate_params::length)
-      .field("width", &rectangular_hole_plate_params::width)
-      .field("thickness", &rectangular_hole_plate_params::thickness)
-      .field("columnSpacing", &rectangular_hole_plate_params::columnSpacing)
-      .field("rowSpacing", &rectangular_hole_plate_params::rowSpacing)
-      .field("columnCount", &rectangular_hole_plate_params::columnCount)
-      .field("rowCount", &rectangular_hole_plate_params::rowCount)
-      .field("hasMiddleHole", &rectangular_hole_plate_params::hasMiddleHole)
-      .field("holeDiameter", &rectangular_hole_plate_params::holeDiameter);
+  value_object<rectangular_fixed_plate_params>("RectangularFixedPlateParams")
+      .field("length", &rectangular_fixed_plate_params::length)
+      .field("width", &rectangular_fixed_plate_params::width)
+      .field("thickness", &rectangular_fixed_plate_params::thickness)
+      .field("columnSpacing", &rectangular_fixed_plate_params::columnSpacing)
+      .field("rowSpacing", &rectangular_fixed_plate_params::rowSpacing)
+      .field("columnCount", &rectangular_fixed_plate_params::columnCount)
+      .field("rowCount", &rectangular_fixed_plate_params::rowCount)
+      .field("hasMiddleHole", &rectangular_fixed_plate_params::hasMiddleHole)
+      .field("holeDiameter", &rectangular_fixed_plate_params::holeDiameter);
 
   // 矩形开孔板创建函数
   function("createRectangularFixedPlate",
-           select_overload<TopoDS_Shape(const rectangular_hole_plate_params &)>(
+           select_overload<TopoDS_Shape(const rectangular_fixed_plate_params &)>(
                &create_rectangular_fixed_plate));
   function("createRectangularFixedPlateWithPosition",
-           select_overload<TopoDS_Shape(const rectangular_hole_plate_params &,
+           select_overload<TopoDS_Shape(const rectangular_fixed_plate_params &,
                                         const gp_Pnt &, const gp_Dir &,
                                         const gp_Dir &)>(
                &create_rectangular_fixed_plate));
@@ -3547,7 +3547,6 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("topPlateHeight", &cable_tray_params::topPlateHeight)
       .field("arcHeight", &cable_tray_params::arcHeight)
       .field("wallThickness", &cable_tray_params::wallThickness)
-      .field("pipeCount", &cable_tray_params::pipeCount)
       .field("pipePositions", &get_cable_tray_pipe_positions,
              &set_cable_tray_pipe_positions)
       .field("pipeInnerDiameters", &get_cable_tray_pipe_inner_diameters,

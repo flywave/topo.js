@@ -21,7 +21,7 @@ import {
     InsulatorStringParams,
     VTypeInsulatorParams,
     TerminalBlockParams,
-    RectangularHolePlateParams,
+    RectangularFixedPlateParams,
     CircularFixedPlateParams,
     WireParams,
     CableParams,
@@ -50,7 +50,7 @@ import {
     IShapedSteelObject,
     OffsetRectangularTableObject,
     PorcelainBushingObject,
-    RectangularHolePlateObject,
+    RectangularFixedPlateObject,
     RectangularRingObject,
     RingObject,
     RotationalEllipsoidObject,
@@ -89,7 +89,7 @@ export enum GSPrimitiveType {
     InsulatorString = "GIM/GS/InsulatorString",
     VTypeInsulator = "GIM/GS/VTypeInsulator",
     TerminalBlock = "GIM/GS/TerminalBlock",
-    RectangularHolePlate = "GIM/GS/RectangularHolePlate",
+    RectangularFixedPlate = "GIM/GS/RectangularFixedPlate",
     CircularFixedPlate = "GIM/GS/CircularFixedPlate",
     Wire = "GIM/GS/Wire",
     Cable = "GIM/GS/Cable",
@@ -1556,17 +1556,17 @@ export class TerminalBlockPrimitive extends BasePrimitive<TerminalBlockParams, T
     }
 };
 
-export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHolePlateParams, RectangularHolePlateObject> {
+export class RectangularFixedPlatePrimitive extends BasePrimitive<RectangularFixedPlateParams, RectangularFixedPlateObject> {
 
-    constructor(tp: TopoInstance, params?: RectangularHolePlateObject) {
+    constructor(tp: TopoInstance, params?: RectangularFixedPlateObject) {
         super(tp, params);
     }
 
     getType(): string {
-        return GSPrimitiveType.RectangularHolePlate;
+        return GSPrimitiveType.RectangularFixedPlate;
     }
 
-    setDefault(): Primitive<RectangularHolePlateParams, RectangularHolePlateObject> {
+    setDefault(): Primitive<RectangularFixedPlateParams, RectangularFixedPlateObject> {
         this.params.length = 100.0;
         this.params.width = 80.0;
         this.params.thickness = 10.0;
@@ -1579,7 +1579,7 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         return this;
     }
 
-    public setParams(params: RectangularHolePlateParams): Primitive<RectangularHolePlateParams, RectangularHolePlateObject> {
+    public setParams(params: RectangularFixedPlateParams): Primitive<RectangularFixedPlateParams, RectangularFixedPlateObject> {
         this.params = params;
         return this;
     }
@@ -1599,10 +1599,10 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRectangularFixedPlate(this.params), false);
         }
-        throw new Error("Invalid parameters for RectangularHolePlate");
+        throw new Error("Invalid parameters for RectangularFixedPlate");
     }
 
-    fromObject(o?: RectangularHolePlateObject): Primitive<RectangularHolePlateParams, RectangularHolePlateObject> {
+    fromObject(o?: RectangularFixedPlateObject): Primitive<RectangularFixedPlateParams, RectangularFixedPlateObject> {
         if (o === undefined) {
             return this;
         }
@@ -1623,7 +1623,7 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
         return this;
     }
 
-    toObject(): RectangularHolePlateObject | undefined {
+    toObject(): RectangularFixedPlateObject | undefined {
         return BasePrimitive.buildObject(new Map<string, any>([
             ['type', this.getType()],
             ['version', this.getVersion()],
@@ -1636,7 +1636,7 @@ export class RectangularHolePlatePrimitive extends BasePrimitive<RectangularHole
             ['rowCount', this.params.rowCount],
             ['hasMiddleHole', this.params.hasMiddleHole],
             ['holeDiameter', this.params.holeDiameter]
-        ])) as RectangularHolePlateObject;
+        ])) as RectangularFixedPlateObject;
     }
 };
 
@@ -2234,7 +2234,7 @@ export type GSPrimitive =
     | InsulatorStringPrimitive
     | VTypeInsulatorPrimitive
     | TerminalBlockPrimitive
-    | RectangularHolePlatePrimitive
+    | RectangularFixedPlatePrimitive
     | CircularFixedPlatePrimitive
     | WirePrimitive
     | CablePrimitive
@@ -2322,8 +2322,8 @@ export function createGSPrimitive(tp: TopoInstance, args?: GSPrimitiveType | any
         case GSPrimitiveType.TerminalBlock:
             primitive = new TerminalBlockPrimitive(tp);
             break;
-        case GSPrimitiveType.RectangularHolePlate:
-            primitive = new RectangularHolePlatePrimitive(tp);
+        case GSPrimitiveType.RectangularFixedPlate:
+            primitive = new RectangularFixedPlatePrimitive(tp);
             break;
         case GSPrimitiveType.CircularFixedPlate:
             primitive = new CircularFixedPlatePrimitive(tp);

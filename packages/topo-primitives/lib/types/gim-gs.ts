@@ -188,8 +188,8 @@ export interface TerminalBlockObject extends Version {
     bottomOffset: number;
 }
 
-export interface RectangularHolePlateObject extends Version {
-    type: 'GIM/GS/RectangularHolePlate';
+export interface RectangularFixedPlateObject extends Version {
+    type: 'GIM/GS/RectangularFixedPlate';
     length: number;
     width: number;
     thickness: number;

@@ -22,7 +22,7 @@
             "InsulatorStringParams",
             "VTypeInsulatorParams",
             "TerminalBlockParams",
-            "RectangularHolePlateParams",
+            "RectangularFixedPlateParams",
             "CircularFixedPlateParams",
             "WireParams",
             "CableParams",
