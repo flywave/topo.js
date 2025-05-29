@@ -143,7 +143,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.RECTANGLE:
             const rprofile = profile as RectangleProfile;
             return {
-                type: 'RECTANGLE,
+                type: 'RECTANGLE',
                 p1: [rprofile.p1.X(),
                 rprofile.p1.Y(),
                 rprofile.p1.Z()
