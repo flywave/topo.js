@@ -78,34 +78,34 @@ export type ShapePrimitive = RevolPrimitive
 
 export function deserializeProfile(tp: TopoInstance, o: any): ShapeProfile {
     switch (o.profile.type) {
-        case tp.ProfileType.TRIANGLE:
+        case 'TRIANGLE':
             return {
                 type: tp.ProfileType.TRIANGLE,
                 p1: new tp.gp_Pnt_3(o.profile.p1[0], o.profile.p1[1], o.profile.p1[2]),
                 p2: new tp.gp_Pnt_3(o.profile.p2[0], o.profile.p2[1], o.profile.p2[2]),
                 p3: new tp.gp_Pnt_3(o.profile.p3[0], o.profile.p3[1], o.profile.p3[2])
             };
-        case tp.ProfileType.RECTANGLE:
+        case 'RECTANGLE':
             return {
                 type: tp.ProfileType.RECTANGLE,
                 p1: new tp.gp_Pnt_3(o.profile.p1[0], o.profile.p1[1], o.profile.p1[2]),
                 p2: new tp.gp_Pnt_3(o.profile.p2[0], o.profile.p2[1], o.profile.p2[2])
             };
-        case tp.ProfileType.CIRC:
+        case 'CIRC':
             return {
                 type: tp.ProfileType.CIRC,
                 center: new tp.gp_Pnt_3(o.profile.center[0], o.profile.center[1], o.profile.center[2]),
                 norm: new tp.gp_Dir_4(o.profile.norm[0], o.profile.norm[1], o.profile.norm[2]),
                 radius: o.profile.radius
             };
-        case tp.ProfileType.ELIPS:
+        case 'ELIPS':
             return {
                 type: tp.ProfileType.ELIPS,
                 s1: new tp.gp_Pnt_3(o.profile.s1[0], o.profile.s1[1], o.profile.s1[2]),
                 s2: new tp.gp_Pnt_3(o.profile.s2[0], o.profile.s2[1], o.profile.s2[2]),
                 center: new tp.gp_Pnt_3(o.profile.center[0], o.profile.center[1], o.profile.center[2])
             };
-        case tp.ProfileType.POLYGON:
+        case 'POLYGON':
             return {
                 type: tp.ProfileType.POLYGON,
                 edges: o.profile.edges.map((p: any) =>
@@ -143,7 +143,7 @@ export function serializeProfile(tp: TopoInstance, profile: ShapeProfile): any {
         case tp.ProfileType.RECTANGLE:
             const rprofile = profile as RectangleProfile;
             return {
-                type: 'RECTANGLE,
+                type: 'RECTANGLE',
                 p1: [rprofile.p1.X(),
                 rprofile.p1.Y(),
                 rprofile.p1.Z()
