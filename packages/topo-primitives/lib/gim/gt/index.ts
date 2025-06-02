@@ -6792,9 +6792,9 @@ export class PoleTowerPrimitive extends BasePrimitive<PoleTowerParams, PoleTower
 }
 
 
-export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorParams, SingleHookAnchorObject> {
+export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorParams, TripleHookAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: SingleHookAnchorObject) {
+    constructor(tp: TopoInstance, params?: TripleHookAnchorObject) {
         super(tp, params);
     }
 
@@ -6802,7 +6802,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         return GTPrimitiveType.TripleHookAnchor;
     }
 
-    setDefault(): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
+    setDefault(): Primitive<TripleHookAnchorParams, TripleHookAnchorObject> {
         this.params = {
             boltDiameter: 24.0,
             exposedLength: 20.0,
@@ -6822,7 +6822,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         return this;
     }
 
-    public setParams(params: TripleHookAnchorParams): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
+    public setParams(params: TripleHookAnchorParams): Primitive<TripleHookAnchorParams, TripleHookAnchorObject> {
         this.params = params;
         return this;
     }
@@ -6851,7 +6851,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         throw new Error("Invalid parameters for TripleHookAnchor");
     }
 
-    fromObject(o?: SingleHookAnchorObject): Primitive<TripleHookAnchorParams, SingleHookAnchorObject> {
+    fromObject(o?: TripleHookAnchorObject): Primitive<TripleHookAnchorParams, TripleHookAnchorObject> {
         if (o === undefined) {
             return this;
         }
@@ -6881,7 +6881,7 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
         return this;
     }
 
-    toObject(): SingleHookAnchorObject | undefined {
+    toObject(): TripleHookAnchorObject | undefined {
         let washerShape: string = 'ROUND';
         if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
             washerShape = 'SQUARE';
@@ -6903,13 +6903,13 @@ export class TripleHookAnchorPrimitive extends BasePrimitive<TripleHookAnchorPar
             ['hookStraightLengthB', this.params.hookStraightLengthB],
             ['hookDiameter', this.params.hookDiameter],
             ['anchorBarDiameter', this.params.anchorBarDiameter]
-        ])) as SingleHookAnchorObject;
+        ])) as TripleHookAnchorObject;
     }
 }
 
-export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorParams, TripleHookAnchorObject> {
+export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorParams, SingleHookAnchorObject> {
 
-    constructor(tp: TopoInstance, params?: TripleHookAnchorObject) {
+    constructor(tp: TopoInstance, params?: SingleHookAnchorObject) {
         super(tp, params);
     }
 
@@ -6917,7 +6917,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         return GTPrimitiveType.SingleHookAnchor;
     }
 
-    setDefault(): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
+    setDefault(): Primitive<SingleHookAnchorParams, SingleHookAnchorObject> {
         this.params = {
             boltDiameter: 24.0,
             exposedLength: 20.0,
@@ -6935,7 +6935,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         return this;
     }
 
-    public setParams(params: SingleHookAnchorParams): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
+    public setParams(params: SingleHookAnchorParams): Primitive<SingleHookAnchorParams, SingleHookAnchorObject> {
         this.params = params;
         return this;
     }
@@ -6962,7 +6962,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         throw new Error("Invalid parameters for SingleHookAnchor");
     }
 
-    fromObject(o: any): Primitive<SingleHookAnchorParams, TripleHookAnchorObject> {
+    fromObject(o: any): Primitive<SingleHookAnchorParams, SingleHookAnchorObject> {
         if (o === undefined) {
             return this;
         }
@@ -6986,7 +6986,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
         return this;
     }
 
-    toObject(): TripleHookAnchorObject | undefined {
+    toObject(): SingleHookAnchorObject | undefined {
         let washerShape: string = 'ROUND';
         if (this.params.washerShape === this.tp.WasherShapeType.SQUARE as any) {
             washerShape = 'SQUARE';
@@ -7006,7 +7006,7 @@ export class SingleHookAnchorPrimitive extends BasePrimitive<SingleHookAnchorPar
             ['anchorLength', this.params.anchorLength],
             ['hookStraightLength', this.params.hookStraightLength],
             ['hookDiameter', this.params.hookDiameter]
-        ])) as TripleHookAnchorObject;
+        ])) as SingleHookAnchorObject;
     }
 }
 
