@@ -362,11 +362,9 @@ export interface SingleHookAnchorObject extends Version {
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
-    hookStraightLengthA: number; // 钩直段长度A
-    hookStraightLengthB: number; // 钩直段长度B
+    hookStraightLength: number; // 钩直段长度A
     hookDiameter: number; // 钩直径
-    anchorBarDiameter: number; // 锚筋直径
-}
+ }
 
 export interface TripleHookAnchorObject extends Version {
     type: "GIM/GT/TripleHookAnchor";
@@ -380,8 +378,10 @@ export interface TripleHookAnchorObject extends Version {
     washerSize: number; // 垫圈尺寸
     washerThickness: number; // 垫圈厚度
     anchorLength: number; // 锚固长度
-    hookStraightLength: number; // 钩直段长度
+    hookStraightLengthA: number; //  
+    hookStraightLengthB: number; //  
     hookDiameter: number; // 钩直径
+    anchorBarDiameter : number; // 锚固柱直径
 }
 
 export interface RibbedAnchorObject extends Version {
