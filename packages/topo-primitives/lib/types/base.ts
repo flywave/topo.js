@@ -164,3 +164,9 @@ export interface PipeShapeObject extends Version {
     profile: ShapeProfile;
     upDir?: Dir;
 }
+
+export interface StepShapeObject extends Version {
+    type: 'StepShape';
+    name: string;
+    step: string;
+}

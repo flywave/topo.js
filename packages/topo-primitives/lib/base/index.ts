@@ -21,6 +21,7 @@ import {
     TorusShapeParams,
     WedgeShapeParams,
     PipeShapeParams,
+    StepShapeParams,
     TransitionMode,
     SegmentType,
     JointShapeMode
@@ -41,6 +42,7 @@ import {
     SphereShapeObject,
     TorusShapeObject,
     WedgeShapeObject,
+    StepShapeObject
 } from "../types";
 
 export enum BasePrimitiveType {
@@ -57,7 +59,8 @@ export enum BasePrimitiveType {
     SphereShape = "SphereShape",
     TorusShape = "TorusShape",
     WedgeShape = "WedgeShape",
-    PipeShape = "PipeShape"
+    PipeShape = "PipeShape",
+    StepShape = "StepShape"
 }
 
 export type ShapePrimitive = RevolPrimitive
@@ -73,7 +76,8 @@ export type ShapePrimitive = RevolPrimitive
     | SphereShapePrimitive
     | TorusShapePrimitive
     | WedgeShapePrimitive
-    | PipeShapePrimitive;
+    | PipeShapePrimitive
+    | StepShapePrimitive;
 
 
 export function deserializeProfile(tp: TopoInstance, o: any): ShapeProfile {
@@ -1603,6 +1607,117 @@ export class PipeShapePrimitive extends BasePrimitive<PipeShapeParams, PipeShape
     }
 }
 
+
+export class StepShapePrimitive extends BasePrimitive<StepShapeParams, StepShapeObject> {
+
+    constructor(tp: TopoInstance, params?: StepShapeObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return BasePrimitiveType.StepShape;
+    }
+
+    setDefault(): Primitive<StepShapeParams, StepShapeObject> {
+        this.params = {
+            name: "test",
+            step: `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Open CASCADE Model'),'2;1');
+FILE_NAME('Open CASCADE Shape Model','2025-06-03T10:06:14',('Author'),(
+    'Open CASCADE'),'Open CASCADE STEP processor 7.7','Open CASCADE 7.7'
+  ,'Unknown');
+FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
+ENDSEC;
+DATA;
+#1 = APPLICATION_PROTOCOL_DEFINITION('international standard',
+  'automotive_design',2000,#2);
+#2 = APPLICATION_CONTEXT(
+  'core data for automotive mechanical design processes');
+#3 = SHAPE_DEFINITION_REPRESENTATION(#4,#10);
+#4 = PRODUCT_DEFINITION_SHAPE('','',#5);
+#5 = PRODUCT_DEFINITION('design','',#6,#9);
+#6 = PRODUCT_DEFINITION_FORMATION('','',#7);
+#7 = PRODUCT('Open CASCADE STEP translator 7.7 1',
+  'Open CASCADE STEP translator 7.7 1','',(#8));
+#8 = PRODUCT_CONTEXT('',#2,'mechanical');
+#9 = PRODUCT_DEFINITION_CONTEXT('part definition',#2,'design');
+#10 = ADVANCED_BREP_SHAPE_REPRESENTATION('',(#11,#15),#27);
+#11 = AXIS2_PLACEMENT_3D('',#12,#13,#14);
+#12 = CARTESIAN_POINT('',(0.,0.,0.));
+#13 = DIRECTION('',(0.,0.,1.));
+#14 = DIRECTION('',(1.,0.,-0.));
+#15 = MANIFOLD_SOLID_BREP('',#16);
+#16 = CLOSED_SHELL('',(#17));
+#17 = ADVANCED_FACE('',(#18),#22,.T.);
+#18 = FACE_BOUND('',#19,.T.);
+#19 = VERTEX_LOOP('',#20);
+#20 = VERTEX_POINT('',#21);
+#21 = CARTESIAN_POINT('',(1.224646799147E-15,-2.999519565324E-31,-20.));
+#22 = SPHERICAL_SURFACE('',#23,20.);
+#23 = AXIS2_PLACEMENT_3D('',#24,#25,#26);
+#24 = CARTESIAN_POINT('',(0.,0.,0.));
+#25 = DIRECTION('',(0.,0.,1.));
+#26 = DIRECTION('',(1.,0.,-0.));
+#27 = ( GEOMETRIC_REPRESENTATION_CONTEXT(3) 
+GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#31)) GLOBAL_UNIT_ASSIGNED_CONTEXT(
+(#28,#29,#30)) REPRESENTATION_CONTEXT('Context #1',
+  '3D Context with UNIT and UNCERTAINTY') );
+#28 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
+#29 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
+#30 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
+#31 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-07),#28,
+  'distance_accuracy_value','confusion accuracy');
+#32 = PRODUCT_RELATED_PRODUCT_CATEGORY('part',$,(#7));
+ENDSEC;
+END-ISO-10303-21;
+`};
+        return this;
+    }
+
+    public setParams(params: StepShapeParams): Primitive<StepShapeParams, StepShapeObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        if (!this.params.step || this.params.step.length === 0) return false;
+        return true;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createStepShape(this.params), false);
+        }
+        throw new Error("Invalid parameters for StepShape");
+    }
+
+    fromObject(o?: StepShapeObject): Primitive<StepShapeParams, StepShapeObject> {
+        if (o === undefined) {
+            return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        this.params = {
+            step: o.step,
+            name: o.name,
+        };
+        return this;
+    }
+
+    toObject(): StepShapeObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['step', this.params.step],
+            ['name', this.params.name],
+        ])) as StepShapeObject;
+    }
+}
+
+
 export function createBasePrimitive(tp: TopoInstance, args?: BasePrimitiveType | any): ShapePrimitive | undefined {
     if (args === undefined) {
         return undefined;
@@ -1659,6 +1774,9 @@ export function createBasePrimitive(tp: TopoInstance, args?: BasePrimitiveType |
             break;
         case BasePrimitiveType.PipeShape:
             primitive = new PipeShapePrimitive(tp);
+            break;
+        case BasePrimitiveType.StepShape:
+            primitive = new StepShapePrimitive(tp);
             break;
     }
 

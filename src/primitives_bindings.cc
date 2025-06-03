@@ -4294,4 +4294,19 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const pipe_shape_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_pipe_shape));
+
+  // STEP形状参数结构体绑定
+  value_object<step_shape_params>("StepShapeParams")
+      .field("name", &step_shape_params::name)
+      .field("step", &step_shape_params::step);
+
+  // 创建STEP形状函数
+  function("createStepShape",
+           select_overload<TopoDS_Shape(const step_shape_params &)>(
+               &create_step_shap));
+  function(
+      "createStepShapeWithPosition",
+      select_overload<TopoDS_Shape(const step_shape_params &, const gp_Pnt &,
+                                   const gp_Dir &, const gp_Dir &)>(
+          &create_step_shap));
 }

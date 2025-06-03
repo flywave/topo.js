@@ -181632,7 +181632,22 @@ export declare interface PipeShapeParams {
 
 // 管道形状
 export declare function createPipeShape(params: PipeShapeParams): TopoDS_Shape;
-export declare function createPipeShapeWithPosition(params: PipeShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;export declare type SketchMode = {
+export declare function createPipeShapeWithPosition(params: PipeShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// STEP形状参数结构体
+export declare interface StepShapeParams {
+    name: string;
+    step: string;
+}
+
+// 创建STEP形状函数
+declare function createStepShape(params: StepShapeParams): TopoDS_Shape;
+declare function createStepShapeWithPosition(
+    params: StepShapeParams,
+    position: gp_Pnt,
+    direction: gp_Dir,
+    xDir: gp_Dir
+): TopoDS_Shape;export declare type SketchMode = {
   ADD: {},
   SUBTRACT: {},
   INTERSECT: {},
@@ -182614,6 +182629,9 @@ export declare class Edge extends Shape1D {
 
     // 三点圆弧创建方法
     static makeThreePointArc(v1: gp_Pnt, v2: gp_Pnt, v3: gp_Pnt): Edge;
+
+    // 圆心法圆弧创建方法
+    static makeCircleCenterArc(v1: gp_Pnt, center: gp_Pnt, v2: gp_Pnt): Edge;
 
     // 切线圆弧创建方法
     static makeTangentArc(v1: gp_Pnt, tangent: gp_Vec, v3: gp_Pnt): Edge;
@@ -209000,6 +209018,7 @@ export type TopoInstance = {FS: typeof FS} & {
   TorusShapeParams: TorusShapeParams;
   WedgeShapeParams: WedgeShapeParams;
   PipeShapeParams: PipeShapeParams;
+  StepShapeParams: StepShapeParams;
   createSphere: typeof createSphere;
   createSphereWithCenter: typeof createSphereWithCenter;
   createRotationalEllipsoid: typeof createRotationalEllipsoid;
@@ -209221,6 +209240,8 @@ export type TopoInstance = {FS: typeof FS} & {
   createWedgeShapeWithPosition: typeof createWedgeShapeWithPosition;
   createPipeShape: typeof createPipeShape;
   createPipeShapeWithPosition: typeof createPipeShapeWithPosition;
+  createStepShape: typeof createStepShape;
+  createStepShapeWithPosition: typeof createStepShapeWithPosition;
   CurveType: CurveType;
   InsulatorMaterial: InsulatorMaterial;
   ArrangementType: ArrangementType;

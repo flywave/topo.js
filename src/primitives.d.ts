@@ -2505,3 +2505,18 @@ export declare interface PipeShapeParams {
 // 管道形状
 export declare function createPipeShape(params: PipeShapeParams): TopoDS_Shape;
 export declare function createPipeShapeWithPosition(params: PipeShapeParams, position: gp_Pnt, direction?: gp_Dir, xDir?: gp_Dir): TopoDS_Shape;
+
+// STEP形状参数结构体
+export declare interface StepShapeParams {
+    name: string;
+    step: string;
+}
+
+// 创建STEP形状函数
+declare function createStepShape(params: StepShapeParams): TopoDS_Shape;
+declare function createStepShapeWithPosition(
+    params: StepShapeParams,
+    position: gp_Pnt,
+    direction: gp_Dir,
+    xDir: gp_Dir
+): TopoDS_Shape;

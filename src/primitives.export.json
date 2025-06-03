@@ -124,7 +124,8 @@
             "SphereShapeParams",
             "TorusShapeParams",
             "WedgeShapeParams",
-            "PipeShapeParams"
+            "PipeShapeParams",
+            "StepShapeParams"
         ],
         "kind": "interface"
     },
@@ -350,7 +351,9 @@
             "createWedgeShape",
             "createWedgeShapeWithPosition",
             "createPipeShape",
-            "createPipeShapeWithPosition"
+            "createPipeShapeWithPosition",
+            "createStepShape",
+            "createStepShapeWithPosition"
         ],
         "kind": "function"
     },
