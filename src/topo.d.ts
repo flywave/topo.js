@@ -1439,6 +1439,20 @@ export declare interface ImprintResult {
     history: Record<string, Shape>;
 }
 
+export declare type ProgressType = {
+    RATIO: {},
+    DISTANCE: {}
+}
+
+export declare interface WorkProgressParams {
+    direction?: gp_Dir;
+    radius?: number;
+    originalPath: wire;
+    points: gp_Pnt[];
+    type: ProgressType;
+    range: [number, number];
+}
+
 export declare class ShapeOps {
     // 布尔运算
     static fuse(shapes: Shape[], tol?: number, glue?: boolean): Shape | undefined;
@@ -1642,4 +1656,30 @@ export declare class ShapeOps {
         upDir?: gp_Dir,
         tessellation?: number
     ): gp_Pnt[];
+
+    static clipWithTopo4D(shape: shape, params: WorkProgressParams): shape | undefined;
+
+    static fitCenterlineFromShape(
+        shape: shape,
+        numSamples?: number,
+        smoothingFactor?: number
+    ): wire | undefined;
+
+    static centerlinePointsToWire(points: gp_Pnt[]): wire | undefined;
+
+    static computeShapeMaxRadiusFromCenterline(
+        shape: shape,
+        centerline: wire
+    ): number;
+
+    static sampleCenterlineWire(
+        centerline: wire,
+        numSamples?: number,
+        simplify?: boolean
+    ): gp_Pnt[];
+
+    static createBoundingCenterlineShape(
+        radius: number,
+        path: wire
+    ): shape | undefined;
 }

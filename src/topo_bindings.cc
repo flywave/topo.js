@@ -152,6 +152,79 @@ public:
   }
 };
 
+// 添加work_progress_params的get/set函数
+static emscripten::val
+get_work_progress_direction(const work_progress_params &params) {
+  if (params.direction) {
+    return emscripten::val(*params.direction);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_work_progress_direction(work_progress_params &params,
+                                        emscripten::val val) {
+  if (val.isUndefined()) {
+    params.direction = boost::none;
+  } else {
+    params.direction = val.as<gp_Dir>();
+  }
+}
+
+static emscripten::val
+get_work_progress_radius(const work_progress_params &params) {
+  if (params.radius) {
+    return emscripten::val(*params.radius);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_work_progress_radius(work_progress_params &params,
+                                     emscripten::val val) {
+  if (val.isUndefined()) {
+    params.radius = boost::none;
+  } else {
+    params.radius = val.as<double>();
+  }
+}
+
+static emscripten::val
+get_work_progress_points(const work_progress_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &point : params.points) {
+    arr.call<void>("push", emscripten::val(point));
+  }
+  return arr;
+}
+
+static void set_work_progress_points(work_progress_params &params,
+                                     emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for points");
+  }
+  std::vector<gp_Pnt> points;
+  for (size_t i = 0; i < val["length"].as<size_t>(); ++i) {
+    points.push_back(val[i].as<gp_Pnt>());
+  }
+  params.points = points;
+}
+
+static emscripten::val
+get_work_progress_range(const work_progress_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  arr.call<void>("push", emscripten::val(params.range[0]));
+  arr.call<void>("push", emscripten::val(params.range[1]));
+  return arr;
+}
+
+static void set_work_progress_range(work_progress_params &params,
+                                    emscripten::val val) {
+  if (!val.isArray() || val["length"].as<size_t>() != 2) {
+    throw std::runtime_error("Expected array of length 2 for range");
+  }
+  params.range[0] = val[0].as<double>();
+  params.range[1] = val[1].as<double>();
+}
+
 // 定义数组访问器
 EMSCRIPTEN_BINDINGS(Topo) {
 
@@ -4849,6 +4922,21 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .field("tangent", &flywave::topo::profile_projection::tangent)
       .field("position", &flywave::topo::profile_projection::position);
 
+  // 添加progress_type枚举绑定
+  emscripten::enum_<progress_type>("ProgressType")
+      .value("RATIO", progress_type::RATIO)
+      .value("DISTANCE", progress_type::DISTANCE);
+
+  // 添加work_progress_params绑定
+  emscripten::value_object<work_progress_params>("WorkProgressParams")
+      .field("direction", &get_work_progress_direction,
+             &set_work_progress_direction)
+      .field("radius", &get_work_progress_radius, &set_work_progress_radius)
+      .field("originalPath", &work_progress_params::original_path)
+      .field("points", &get_work_progress_points, &set_work_progress_points)
+      .field("type", &work_progress_params::type)
+      .field("range", &get_work_progress_range, &set_work_progress_range);
+
   emscripten::class_<shape_ops>("ShapeOps")
       .class_function(
           "fuse",
@@ -5773,5 +5861,102 @@ EMSCRIPTEN_BINDINGS(Topo) {
                   result.call<void>("push", emscripten::val(p));
                 }
                 return result;
-              }));
+              }))
+      .class_function("clipWithTopo4D",
+                      emscripten::optional_override(
+                          [](emscripten::val shapeVal,
+                             emscripten::val paramsVal) -> emscripten::val {
+                            auto shp = shapeVal.as<shape>();
+                            auto params = paramsVal.as<work_progress_params>();
+
+                            auto result =
+                                flywave::topo::clip_with_topo4d(shp, params);
+                            if (result) {
+                              return emscripten::val(result);
+                            }
+                            return emscripten::val::undefined();
+                          }))
+      .class_function(
+          "fitCenterlineFromShape",
+          emscripten::optional_override(
+              [](emscripten::val shapeVal, emscripten::val numSamplesVal,
+                 emscripten::val smoothingFactorVal) -> emscripten::val {
+                auto shp = shapeVal.as<shape>();
+                int numSamples =
+                    numSamplesVal.isUndefined() ? 100 : numSamplesVal.as<int>();
+                double smoothingFactor = smoothingFactorVal.isUndefined()
+                                             ? 0.99
+                                             : smoothingFactorVal.as<double>();
+
+                auto result = flywave::topo::fit_centerline_from_shape(
+                    shp, numSamples, smoothingFactor);
+                if (result) {
+                  return emscripten::val(result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "centerlinePointsToWire",
+          emscripten::optional_override(
+              [](emscripten::val pointsVal) -> emscripten::val {
+                std::vector<gp_Pnt> points;
+                if (pointsVal.isArray()) {
+                  const size_t length = pointsVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    points.push_back(pointsVal[i].as<gp_Pnt>());
+                  }
+                }
+
+                auto result = flywave::topo::centerline_points_to_wire(points);
+                if (result) {
+                  return emscripten::val(result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "computeShapeMaxRadiusFromCenterline",
+          emscripten::optional_override(
+              [](emscripten::val shapeVal,
+                 emscripten::val centerlineVal) -> double {
+                auto shp = shapeVal.as<shape>();
+                auto centerline = centerlineVal.as<topo::wire>();
+
+                return flywave::topo::compute_shape_max_radius_from_centerline(
+                    shp, centerline);
+              }))
+      .class_function(
+          "sampleCenterlineWire",
+          emscripten::optional_override(
+              [](emscripten::val centerlineVal, emscripten::val numSamplesVal,
+                 emscripten::val simplifyVal) -> emscripten::val {
+                auto centerline = centerlineVal.as<topo::wire>();
+                int numSamples =
+                    numSamplesVal.isUndefined() ? 200 : numSamplesVal.as<int>();
+                bool simplify =
+                    simplifyVal.isUndefined() ? false : simplifyVal.as<bool>();
+
+                auto points = flywave::topo::sample_centerline_wire(
+                    centerline, numSamples, simplify);
+
+                emscripten::val result = emscripten::val::array();
+                for (const auto &p : points) {
+                  result.call<void>("push", emscripten::val(p));
+                }
+                return result;
+              }))
+      .class_function("createBoundingCenterlineShape",
+                      emscripten::optional_override(
+                          [](emscripten::val radiusVal,
+                             emscripten::val pathVal) -> emscripten::val {
+                            double radius = radiusVal.as<double>();
+                            auto path = pathVal.as<topo::wire>();
+
+                            auto result =
+                                flywave::topo::create_bounding_centerline_shape(
+                                    radius, path);
+                            if (result) {
+                              return emscripten::val(result);
+                            }
+                            return emscripten::val::undefined();
+                          }));
 }

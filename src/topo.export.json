@@ -62,7 +62,8 @@
             "ShapeCheckStatus",
             "WireSamplePoint",
             "ProfileProjection",
-            "ImprintResult"
+            "ImprintResult",
+            "WorkProgressParams"
         ],
         "kind": "interface"
     },
@@ -77,7 +78,8 @@
             "WireCurveType",
             "BooleanOperationType",
             "IntersectionDirection",
-            "TransitionMode"
+            "TransitionMode",
+            "ProgressType"
         ],
         "kind": "enum"
     }
