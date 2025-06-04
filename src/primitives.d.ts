@@ -401,6 +401,7 @@ export declare interface WireParams {
 
 // 几何体创建函数
 export declare function createWire(params: WireParams): TopoDS_Shape;
+export declare function createWireCenterline(params: WireParams): TopoDS_Wire;
 export declare function createWireWithPosition(
     params: WireParams,
     position: gp_Pnt,
@@ -419,6 +420,7 @@ export declare interface CableParams {
 }
 
 export declare function createCable(params: CableParams): TopoDS_Shape;
+export declare function createCableCenterline(params: CableParams): TopoDS_Wire;
 export declare function createCableWithPosition(
     params: CableParams,
     position: gp_Pnt,
@@ -448,6 +450,7 @@ export declare interface CurveCableParams {
 }
 
 export declare function createCurveCable(params: CurveCableParams): TopoDS_Shape;
+export declare function createCurveCableCenterline(params: CurveCableParams): TopoDS_Wire;
 export declare function createCurveCableWithPosition(
     params: CurveCableParams,
     position: gp_Pnt,
@@ -927,6 +930,11 @@ export declare function createTransmissionLine(
     startPoint: gp_Pnt,
     endPoint: gp_Pnt
 ): TopoDS_Shape;
+export declare function createTransmissionCenterline(
+    params: TransmissionLineParams,
+    startPoint: gp_Pnt,
+    endPoint: gp_Pnt
+): TopoDS_Wire;
 export declare function sampleTransmissionLine(
     params: TransmissionLineParams,
     startPoint: gp_Pnt,
@@ -1755,11 +1763,15 @@ export declare interface ChannelPoint {
     type: ChannelPointType;
 }
 
+
+declare function createChannelCenterline(
+    points: Array<ChannelPoint>
+): TopoDS_Wire;
+
 declare function sampleChannelPoints(
     points: Array<ChannelPoint>,
     tessellation?: number
 ): Array<gp_Pnt>;
-
 
 export declare type PipeRowType = {
     NORMAL: {}, // 圆形转角
@@ -2333,6 +2345,7 @@ export declare interface PipeParams {
 
 // 管道创建函数
 export declare function createPipe(params: PipeParams): TopoDS_Shape;
+export declare function createPipeCenterline(params: PipeParams): TopoDS_Wire;
 export declare function createPipeWithSplitDistances(
     params: PipeParams,
     splitDistances?: [number, number]
@@ -2376,6 +2389,7 @@ export declare interface PipeJointParams {
 
 // 多段管道创建函数
 export declare function createMultiSegmentPipe(params: MultiSegmentPipeParams): TopoDS_Shape;
+export declare function createMultiSegmentPipeCenterline(params: MultiSegmentPipeParams): TopoDS_Wire;
 export declare function createMultiSegmentPipeWithSplitDistances(
     params: MultiSegmentPipeParams,
     splitDistances?: [number, number]

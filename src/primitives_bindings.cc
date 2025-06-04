@@ -1978,6 +1978,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 导线创建函数
   function("createWire",
            select_overload<TopoDS_Shape(const wire_params &)>(&create_wire));
+  function("createWireCenterline",
+           select_overload<TopoDS_Wire(const wire_params &)>(
+               &create_wire_centerline));
   function("createWireWithPosition",
            select_overload<TopoDS_Shape(const wire_params &, const gp_Pnt &,
                                         const gp_Dir &, const gp_Dir &)>(
@@ -2008,6 +2011,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 电缆创建函数
   function("createCable",
            select_overload<TopoDS_Shape(const cable_params &)>(&create_cable));
+  function("createCableCenterline",
+           select_overload<TopoDS_Wire(const cable_params &)>(
+               &create_cable_centerline));
   function("createCableWithPosition",
            select_overload<TopoDS_Shape(const cable_params &, const gp_Pnt &,
                                         const gp_Dir &, const gp_Dir &)>(
@@ -2043,6 +2049,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("createCurveCable",
            select_overload<TopoDS_Shape(const curve_cable_params &)>(
                &create_curve_cable));
+  function("createCurveCableCenterline",
+           select_overload<TopoDS_Wire(const curve_cable_params &)>(
+               &create_curve_cable_centerline));
   function(
       "createCurveCableWithPosition",
       select_overload<TopoDS_Shape(const curve_cable_params &, const gp_Pnt &,
@@ -2580,6 +2589,10 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const transmission_line_params &,
                                         const gp_Pnt &, const gp_Pnt &)>(
                &create_transmission_line));
+  function("createTransmissionCenterline",
+           select_overload<TopoDS_Wire(const transmission_line_params &,
+                                       const gp_Pnt &, const gp_Pnt &)>(
+               &create_transmission_centerline));
   function("sampleTransmissionLine",
            emscripten::optional_override(
                [](emscripten::val paramsVal, emscripten::val startPointVal,
@@ -3427,6 +3440,23 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("position", &channel_point::position)
       .field("type", &channel_point::type);
 
+  function("createChannelCenterline",
+           emscripten::optional_override([](emscripten::val pointsVal) {
+             std::vector<channel_point> points;
+             if (pointsVal.isArray()) {
+               int length = pointsVal["length"].as<int>();
+               for (int i = 0; i < length; i++) {
+                 emscripten::val pointVal = pointsVal[i];
+                 channel_point point;
+                 point.position = pointVal["position"].as<gp_Pnt>();
+                 point.type = pointVal["type"].as<channel_point_type>();
+                 points.push_back(point);
+               }
+             }
+
+             return create_channel_centerline(points);
+           }));
+
   function("sampleChannelPoints",
            emscripten::optional_override([](emscripten::val pointsVal,
                                             double tessellation) {
@@ -4074,6 +4104,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 创建管道函数
   function("createPipe",
            select_overload<TopoDS_Shape(const pipe_params &)>(&create_pipe));
+  function("createPipeCenterline",
+           select_overload<TopoDS_Wire(const pipe_params &)>(
+               &create_pipe_centerline));
   function("createPipeWithPosition",
            select_overload<TopoDS_Shape(const pipe_params &, const gp_Pnt &,
                                         const gp_Dir &, const gp_Dir &)>(
@@ -4094,6 +4127,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("createMultiSegmentPipe",
            select_overload<TopoDS_Shape(const multi_segment_pipe_params &)>(
                &create_multi_segment_pipe));
+  function("createMultiSegmentPipeCenterline",
+           select_overload<TopoDS_Wire(const multi_segment_pipe_params &)>(
+               &create_multi_segment_pipe_centerline));
   function("createMultiSegmentPipeWithPosition",
            select_overload<TopoDS_Shape(
                const multi_segment_pipe_params &, const gp_Pnt &,

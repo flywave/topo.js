@@ -179529,6 +179529,7 @@ export declare interface WireParams {
 
 // 几何体创建函数
 export declare function createWire(params: WireParams): TopoDS_Shape;
+export declare function createWireCenterline(params: WireParams): TopoDS_Wire;
 export declare function createWireWithPosition(
     params: WireParams,
     position: gp_Pnt,
@@ -179547,6 +179548,7 @@ export declare interface CableParams {
 }
 
 export declare function createCable(params: CableParams): TopoDS_Shape;
+export declare function createCableCenterline(params: CableParams): TopoDS_Wire;
 export declare function createCableWithPosition(
     params: CableParams,
     position: gp_Pnt,
@@ -179576,6 +179578,7 @@ export declare interface CurveCableParams {
 }
 
 export declare function createCurveCable(params: CurveCableParams): TopoDS_Shape;
+export declare function createCurveCableCenterline(params: CurveCableParams): TopoDS_Wire;
 export declare function createCurveCableWithPosition(
     params: CurveCableParams,
     position: gp_Pnt,
@@ -180055,6 +180058,11 @@ export declare function createTransmissionLine(
     startPoint: gp_Pnt,
     endPoint: gp_Pnt
 ): TopoDS_Shape;
+export declare function createTransmissionCenterline(
+    params: TransmissionLineParams,
+    startPoint: gp_Pnt,
+    endPoint: gp_Pnt
+): TopoDS_Wire;
 export declare function sampleTransmissionLine(
     params: TransmissionLineParams,
     startPoint: gp_Pnt,
@@ -180883,11 +180891,15 @@ export declare interface ChannelPoint {
     type: ChannelPointType;
 }
 
+
+declare function createChannelCenterline(
+    points: Array<ChannelPoint>
+): TopoDS_Wire;
+
 declare function sampleChannelPoints(
     points: Array<ChannelPoint>,
     tessellation?: number
 ): Array<gp_Pnt>;
-
 
 export declare type PipeRowType = {
     NORMAL: {}, // 圆形转角
@@ -181461,6 +181473,7 @@ export declare interface PipeParams {
 
 // 管道创建函数
 export declare function createPipe(params: PipeParams): TopoDS_Shape;
+export declare function createPipeCenterline(params: PipeParams): TopoDS_Wire;
 export declare function createPipeWithSplitDistances(
     params: PipeParams,
     splitDistances?: [number, number]
@@ -181504,6 +181517,7 @@ export declare interface PipeJointParams {
 
 // 多段管道创建函数
 export declare function createMultiSegmentPipe(params: MultiSegmentPipeParams): TopoDS_Shape;
+export declare function createMultiSegmentPipeCenterline(params: MultiSegmentPipeParams): TopoDS_Wire;
 export declare function createMultiSegmentPipeWithSplitDistances(
     params: MultiSegmentPipeParams,
     splitDistances?: [number, number]
@@ -209066,10 +209080,13 @@ export type TopoInstance = {FS: typeof FS} & {
   createCircularFixedPlate: typeof createCircularFixedPlate;
   createCircularFixedPlateWithPosition: typeof createCircularFixedPlateWithPosition;
   createWire: typeof createWire;
+  createWireCenterline: typeof createWireCenterline;
   createWireWithPosition: typeof createWireWithPosition;
   createCable: typeof createCable;
+  createCableCenterline: typeof createCableCenterline;
   createCableWithPosition: typeof createCableWithPosition;
   createCurveCable: typeof createCurveCable;
+  createCurveCableCenterline: typeof createCurveCableCenterline;
   createCurveCableWithPosition: typeof createCurveCableWithPosition;
   createAngleSteel: typeof createAngleSteel;
   createAngleSteelWithPosition: typeof createAngleSteelWithPosition;
@@ -209118,6 +209135,7 @@ export type TopoInstance = {FS: typeof FS} & {
   createInsulator: typeof createInsulator;
   createInsulatorWithPosition: typeof createInsulatorWithPosition;
   createTransmissionLine: typeof createTransmissionLine;
+  createTransmissionCenterline: typeof createTransmissionCenterline;
   createPoleTower: typeof createPoleTower;
   createPoleTowerWithPosition: typeof createPoleTowerWithPosition;
   createSingleHookAnchor: typeof createSingleHookAnchor;
@@ -209166,6 +209184,8 @@ export type TopoInstance = {FS: typeof FS} & {
   createThreeWayWellWithPosition: typeof createThreeWayWellWithPosition;
   createFourWayWell: typeof createFourWayWell;
   createFourWayWellWithPosition: typeof createFourWayWellWithPosition;
+  createChannelCenterline: typeof createChannelCenterline;
+  sampleChannelPoints: typeof sampleChannelPoints;
   createPipeRow: typeof createPipeRow;
   createPipeRowWithPosition: typeof createPipeRowWithPosition;
   createCableTrench: typeof createCableTrench;
@@ -209213,9 +209233,11 @@ export type TopoInstance = {FS: typeof FS} & {
   createPrism: typeof createPrism;
   createPrismWithPosition: typeof createPrismWithPosition;
   createPipe: typeof createPipe;
+  createPipeCenterline: typeof createPipeCenterline;
   createPipeWithSplitDistances: typeof createPipeWithSplitDistances;
   createPipeWithPosition: typeof createPipeWithPosition;
   createMultiSegmentPipe: typeof createMultiSegmentPipe;
+  createMultiSegmentPipeCenterline: typeof createMultiSegmentPipeCenterline;
   createMultiSegmentPipeWithSplitDistances: typeof createMultiSegmentPipeWithSplitDistances;
   createMultiSegmentPipeWithPosition: typeof createMultiSegmentPipeWithPosition;
   createPipeJoint: typeof createPipeJoint;
