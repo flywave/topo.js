@@ -6,6 +6,28 @@ using namespace flywave::topo;
 
 namespace {
 
+static emscripten::val get_borehole_samples(const borehole_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < params.samples.size(); ++i) {
+    arr.set(i, emscripten::val(params.samples[i]));
+  }
+  return arr;
+}
+
+static void set_borehole_samples(borehole_params &params, emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for borehole samples");
+  }
+
+  params.samples.clear();
+  size_t length = val["length"].as<size_t>();
+  params.samples.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    params.samples.push_back(val[i].as<borehole_sample>());
+  }
+}
+
 static emscripten::val
 get_insulator_radius(const flywave::topo::insulator_params::insulator_ &obj) {
   if (obj.radius.which() == 0) { // double
@@ -4345,4 +4367,25 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const step_shape_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_step_shap));
+
+  // 钻孔样本结构体
+  value_object<borehole_sample>("BoreholeSample")
+      .field("name", &borehole_sample::name)
+      .field("depthFrom", &borehole_sample::depth_from)
+      .field("depthTo", &borehole_sample::depth_to);
+
+  // 钻孔参数结构体
+  value_object<borehole_params>("BoreholeParams")
+      .field("samples", &get_borehole_samples, &set_borehole_samples)
+      .field("diameter", &borehole_params::diameter);
+
+  function("createBorehole",
+           emscripten::optional_override([](const borehole_params &params) {
+             auto results = create_borehole(params);
+             emscripten::val obj = emscripten::val::object();
+             for (const auto &pair : results) {
+               obj.set(pair.first, emscripten::val(pair.second));
+             }
+             return obj;
+           }));
 }

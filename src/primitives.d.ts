@@ -2534,3 +2534,19 @@ declare function createStepShapeWithPosition(
     direction: gp_Dir,
     xDir: gp_Dir
 ): TopoDS_Shape;
+
+
+// 钻孔样本类型
+export declare interface BoreholeSample {
+    name: string;
+    depthFrom: number;
+    depthTo: number;
+}
+
+// 钻孔参数类型
+export declare interface BoreholeParams {
+    samples: BoreholeSample[];
+    diameter: number;
+}
+
+export declare function createBorehole(params: BoreholeParams): { [key: string]: TopoShape };

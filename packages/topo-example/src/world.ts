@@ -1,8 +1,8 @@
 import * as THREE from "three"
 import Setup from "./setup"
-import { TopoInstance } from "topo-wasm"
+import { Shape, TopoInstance } from "topo-wasm"
 import { mesh, requestTopoInstance } from "topo-js"
-import { BasePrimitiveType, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType } from "topo-primitives"
+import { BasePrimitiveType, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType, GeologyPrimitiveType } from "topo-primitives"
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import { createShapePrimitive } from "./primitives"
 import createAxisHelper from "./axes"
@@ -15,7 +15,7 @@ export default class World {
   oc: TopoInstance | null = null
   done: Promise<void> | null = null
   gui: GUI | null = null  // 新增GUI实例
-  selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType = BasePrimitiveType.Pipe
+  selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType = BasePrimitiveType.Pipe
   group: THREE.Group | null = null
   axis: THREE.Group | null = null
 
@@ -53,7 +53,8 @@ export default class World {
       ...Object.values(ECPrimitiveType),
       ...Object.values(GSPrimitiveType),
       ...Object.values(GTPrimitiveType),
-      ...Object.values(HPPrimitiveType)
+      ...Object.values(HPPrimitiveType),
+      ...Object.values(GeologyPrimitiveType)
     ];
 
     const options = {
@@ -63,7 +64,7 @@ export default class World {
 
     this.gui.add(options, 'shapeType', options.shapes)
       .name('Shape Type')
-      .onChange((value: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType) => {
+      .onChange((value: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType) => {
         this.selectedShape = value;
         console.log('Selected shape:', value);
         // 这里可以添加形状切换逻辑
@@ -72,7 +73,7 @@ export default class World {
   }
 
   // 新增方法 - 根据选择的类型更新形状
-  private updateShapeBasedOnSelection(shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType) {
+  private updateShapeBasedOnSelection(shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType) {
     // 清除当前场景中的形状
 
     this.group?.clear();
@@ -87,7 +88,14 @@ export default class World {
     // 构建形状并添加到场景
     const shape = primitive.setDefault().build();
     if (shape) {
-      const geometries = mesh(shape);
+      let geometries: Array<THREE.BufferGeometry> = []
+      if (shape instanceof this.oc.Shape) {
+        geometries = mesh(shape);
+      } else {
+        Object.values(shape).forEach((s) => {
+          geometries = geometries.concat(mesh(s))
+        })
+      }
       const material = new THREE.MeshStandardMaterial({
         color: this.getColorForShapeType(shapeType),
         metalness: 0.5,

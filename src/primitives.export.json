@@ -125,7 +125,9 @@
             "TorusShapeParams",
             "WedgeShapeParams",
             "PipeShapeParams",
-            "StepShapeParams"
+            "StepShapeParams",
+            "BoreholeSample",
+            "BoreholeParams"
         ],
         "kind": "interface"
     },
@@ -361,7 +363,8 @@
             "createPipeShape",
             "createPipeShapeWithPosition",
             "createStepShape",
-            "createStepShapeWithPosition"
+            "createStepShapeWithPosition",
+            "createBorehole"
         ],
         "kind": "function"
     },

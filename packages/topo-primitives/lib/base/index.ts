@@ -42,7 +42,7 @@ import {
     SphereShapeObject,
     TorusShapeObject,
     WedgeShapeObject,
-    StepShapeObject
+    StepShapeObject,
 } from "../types";
 
 export enum BasePrimitiveType {
@@ -60,7 +60,7 @@ export enum BasePrimitiveType {
     TorusShape = "TorusShape",
     WedgeShape = "WedgeShape",
     PipeShape = "PipeShape",
-    StepShape = "StepShape"
+    StepShape = "StepShape",
 }
 
 export type ShapePrimitive = RevolPrimitive

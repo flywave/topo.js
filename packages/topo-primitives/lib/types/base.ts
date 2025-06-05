@@ -170,3 +170,15 @@ export interface StepShapeObject extends Version {
     name: string;
     step: string;
 }
+
+
+export interface BoreholeSample {
+    name: string;
+    depthFrom: number;
+    depthTo: number;
+}
+
+export interface BoreholeObject  {
+    samples: BoreholeSample[];
+    diameter: number;
+}

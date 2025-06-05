@@ -3,7 +3,7 @@ import { Shape, TopoInstance } from "topo-wasm";
 export interface Primitive<T = any, O = any> {
     getType(): string;
     getVersion(): number;
-    build(args?: any[]): Shape | undefined;
+    build(args?: any[]): Shape | Record<string, Shape> | undefined;
     setDefault(): Primitive<T, O>;
     setParams(params: T): Primitive<T, O>;
     valid(): boolean;
@@ -50,7 +50,7 @@ export abstract class BasePrimitive<T = any, O = any> implements Primitive<T, O>
     }
 
     abstract getType(): string;
-    abstract build(args?: any[]): Shape | undefined;
+    abstract build(args?: any[]): Shape | Record<string, Shape> | undefined;
     abstract setDefault(): Primitive<T, O>;
     abstract setParams(params: T): Primitive<T, O>;
     abstract valid(): boolean;

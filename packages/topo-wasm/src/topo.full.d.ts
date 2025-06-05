@@ -181661,7 +181661,23 @@ declare function createStepShapeWithPosition(
     position: gp_Pnt,
     direction: gp_Dir,
     xDir: gp_Dir
-): TopoDS_Shape;export declare type SketchMode = {
+): TopoDS_Shape;
+
+
+// 钻孔样本类型
+export declare interface BoreholeSample {
+    name: string;
+    depthFrom: number;
+    depthTo: number;
+}
+
+// 钻孔参数类型
+export declare interface BoreholeParams {
+    samples: BoreholeSample[];
+    diameter: number;
+}
+
+export declare function createBorehole(params: BoreholeParams): { [key: string]: TopoShape };export declare type SketchMode = {
   ADD: {},
   SUBTRACT: {},
   INTERSECT: {},
@@ -209074,6 +209090,8 @@ export type TopoInstance = {FS: typeof FS} & {
   WedgeShapeParams: WedgeShapeParams;
   PipeShapeParams: PipeShapeParams;
   StepShapeParams: StepShapeParams;
+  BoreholeSample: BoreholeSample;
+  BoreholeParams: BoreholeParams;
   createSphere: typeof createSphere;
   createSphereWithCenter: typeof createSphereWithCenter;
   createRotationalEllipsoid: typeof createRotationalEllipsoid;
@@ -209305,6 +209323,7 @@ export type TopoInstance = {FS: typeof FS} & {
   createPipeShapeWithPosition: typeof createPipeShapeWithPosition;
   createStepShape: typeof createStepShape;
   createStepShapeWithPosition: typeof createStepShapeWithPosition;
+  createBorehole: typeof createBorehole;
   CurveType: CurveType;
   InsulatorMaterial: InsulatorMaterial;
   ArrangementType: ArrangementType;

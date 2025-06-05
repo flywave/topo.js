@@ -4,30 +4,32 @@ import {
     GSPrimitiveType,
     GTPrimitiveType,
     HPPrimitiveType,
+    GeologyPrimitiveType,
     createBasePrimitive,
     createECPrimitive,
     createGSPrimitive,
     createGTPrimitive,
-    createHPPrimitive
+    createHPPrimitive,
+    createGeologyPrimitive,
 } from "topo-primitives"
 import { TopoInstance } from "topo-wasm"
 
 export function createShapePrimitive(
     tp: TopoInstance,
-    shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType,
+    shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType,
     params?: any
 ) {
     // 缓存上次创建的类型
     let lastCreatedType: string | null = null;
-    
-    return function() {
+
+    return function () {
         // 如果类型未变化，则不再重复创建
         if (lastCreatedType === shapeType) {
             return undefined;
         }
-        
+
         lastCreatedType = shapeType;
-        
+
         // 根据类型调用不同的创建函数
         if (Object.values(BasePrimitiveType).includes(shapeType as BasePrimitiveType)) {
             return createBasePrimitive(tp, shapeType as BasePrimitiveType);
@@ -43,6 +45,10 @@ export function createShapePrimitive(
         }
         if (Object.values(HPPrimitiveType).includes(shapeType as HPPrimitiveType)) {
             return createHPPrimitive(tp, shapeType as HPPrimitiveType);
+        }
+
+        if (Object.values(GeologyPrimitiveType).includes(shapeType as GeologyPrimitiveType)) {
+            return createGeologyPrimitive(tp, shapeType as GeologyPrimitiveType);
         }
 
         console.warn(`Unknown shape type: ${shapeType}`);
