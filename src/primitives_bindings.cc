@@ -132,6 +132,210 @@ static void set_shape_profiles(std::vector<shape_profile> &profiles,
   }
 }
 
+// 获取profile_layer的profiles
+static emscripten::val get_profile_layer_profiles(const profile_layer &layer) {
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < layer.profiles.size(); ++i) {
+    arr.set(i, get_shape_profile(layer.profiles[i]));
+  }
+  return arr;
+}
+
+// 设置profile_layer的profiles
+static void set_profile_layer_profiles(profile_layer &layer,
+                                       emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for profiles");
+  }
+
+  layer.profiles.clear();
+  size_t length = val["length"].as<size_t>();
+  layer.profiles.resize(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    set_shape_profile(layer.profiles[i], val[i]);
+  }
+}
+
+// 获取profile_layer的inner_profiles
+static emscripten::val
+get_profile_layer_inner_profiles(const profile_layer &layer) {
+  if (!layer.inner_profiles) {
+    return emscripten::val::null();
+  }
+
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < layer.inner_profiles->size(); ++i) {
+    arr.set(i, get_shape_profile((*layer.inner_profiles)[i]));
+  }
+  return arr;
+}
+
+// 设置profile_layer的inner_profiles
+static void set_profile_layer_inner_profiles(profile_layer &layer,
+                                             emscripten::val val) {
+  if (val.isNull() || val.isUndefined()) {
+    layer.inner_profiles = boost::none;
+    return;
+  }
+
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for inner_profiles");
+  }
+
+  std::vector<shape_profile> profiles;
+  size_t length = val["length"].as<size_t>();
+  profiles.resize(length);
+  for (size_t i = 0; i < length; ++i) {
+    set_shape_profile(profiles[i], val[i]);
+  }
+  layer.inner_profiles = profiles;
+}
+
+static emscripten::val
+get_multi_layer_wires(const multi_layer_extrusion_structure_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < params.wires.size(); ++i) {
+    emscripten::val wireArr = emscripten::val::array();
+    for (size_t j = 0; j < params.wires[i].size(); ++j) {
+      wireArr.set(j, params.wires[i][j]);
+    }
+    arr.set(i, wireArr);
+  }
+  return arr;
+}
+
+static void
+set_multi_layer_wires(multi_layer_extrusion_structure_params &params,
+                      emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for wires");
+  }
+
+  params.wires.clear();
+  size_t wireCount = val["length"].as<size_t>();
+  for (size_t i = 0; i < wireCount; ++i) {
+    emscripten::val wireVal = val[i];
+    std::vector<gp_Pnt> wire;
+    if (wireVal.isArray()) {
+      size_t pointCount = wireVal["length"].as<size_t>();
+      for (size_t j = 0; j < pointCount; ++j) {
+        wire.push_back(wireVal[j].as<gp_Pnt>());
+      }
+    }
+    params.wires.push_back(wire);
+  }
+}
+
+static emscripten::val get_multi_layer_segment_types(
+    const multi_layer_extrusion_structure_params &params) {
+  if (!params.segment_types) {
+    return emscripten::val::null();
+  }
+
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < params.segment_types->size(); ++i) {
+    arr.set(i, (*params.segment_types)[i]);
+  }
+  return arr;
+}
+
+static void
+set_multi_layer_segment_types(multi_layer_extrusion_structure_params &params,
+                              emscripten::val val) {
+  if (val.isNull() || val.isUndefined()) {
+    params.segment_types = boost::none;
+    return;
+  }
+
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for segment types");
+  }
+
+  std::vector<segment_type> types;
+  size_t length = val["length"].as<size_t>();
+  for (size_t i = 0; i < length; ++i) {
+    types.push_back(val[i].as<segment_type>());
+  }
+  params.segment_types = types;
+}
+
+static emscripten::val
+get_multi_layer_up_dir(const multi_layer_extrusion_structure_params &params) {
+  if (!params.upDir) {
+    return emscripten::val::null();
+  }
+  return emscripten::val(*params.upDir);
+}
+
+static void
+set_multi_layer_up_dir(multi_layer_extrusion_structure_params &params,
+                       emscripten::val val) {
+  if (val.isNull() || val.isUndefined()) {
+    params.upDir = boost::none;
+  } else {
+    params.upDir = val.as<gp_Dir>();
+  }
+}
+
+static emscripten::val get_profile_layer(const profile_layer &layer) {
+  emscripten::val obj = emscripten::val::object();
+  obj.set("name", emscripten::val(layer.name));
+  obj.set("profiles", get_profile_layer_profiles(layer));
+  if (layer.inner_profiles) {
+    obj.set("innerProfiles", get_profile_layer_inner_profiles(layer));
+  }
+  return obj;
+}
+
+static emscripten::val
+get_profile_layers(const multi_layer_extrusion_structure_params &params) {
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < params.layers.size(); ++i) {
+    arr.set(i, get_profile_layer(params.layers[i]));
+  }
+  return arr;
+}
+
+static void set_profile_layer(profile_layer &layer, emscripten::val val) {
+  // 设置name字段
+  if (val.hasOwnProperty("name")) {
+    layer.name = val["name"].as<std::string>();
+  } else {
+    throw std::runtime_error("Missing required field 'name' in profile layer");
+  }
+
+  // 设置profiles字段
+  if (val.hasOwnProperty("profiles")) {
+    set_profile_layer_profiles(layer, val["profiles"]);
+  } else {
+    throw std::runtime_error(
+        "Missing required field 'profiles' in profile layer");
+  }
+
+  // 设置可选的innerProfiles字段
+  if (val.hasOwnProperty("innerProfiles")) {
+    set_profile_layer_inner_profiles(layer, val["innerProfiles"]);
+  }
+}
+
+static void set_profile_layers(multi_layer_extrusion_structure_params &params,
+                               emscripten::val val) {
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array for profile layers");
+  }
+
+  params.layers.clear();
+  size_t length = val["length"].as<size_t>();
+  params.layers.reserve(length);
+
+  for (size_t i = 0; i < length; ++i) {
+    profile_layer layer;
+    set_profile_layer(layer, val[i]);
+    params.layers.push_back(layer);
+  }
+}
+
 // 添加辅助函数
 static emscripten::val
 get_multi_segment_inner_profiles(const multi_segment_pipe_params &params) {
@@ -4169,6 +4373,51 @@ EMSCRIPTEN_BINDINGS(Primitive) {
         return create_multi_segment_pipe_with_split_distances(params,
                                                               splitDistances);
       }));
+
+  emscripten::value_object<profile_layer>("ProfileLayer")
+      .field("name", &profile_layer::name)
+      .field("profiles", &get_profile_layer_profiles,
+             &set_profile_layer_profiles)
+      .field("innerProfiles", &get_profile_layer_inner_profiles,
+             &set_profile_layer_inner_profiles);
+
+  emscripten::value_object<multi_layer_extrusion_structure_params>(
+      "MultiLayerExtrusionStructureParams")
+      .field("wires", &get_multi_layer_wires, &set_multi_layer_wires)
+      .field("segmentTypes", &get_multi_layer_segment_types,
+             &set_multi_layer_segment_types)
+      .field("layers", &get_profile_layers, &set_profile_layers)
+      .field("transitionMode",
+             &multi_layer_extrusion_structure_params::transition_mode)
+      .field("upDir", &get_multi_layer_up_dir, &set_multi_layer_up_dir);
+
+  function("createMultiLayerExtrusionStructure",
+           emscripten::optional_override(
+               [](const multi_layer_extrusion_structure_params &params) {
+                 auto results = create_multi_layer_extrusion_structure(params);
+                 emscripten::val obj = emscripten::val::object();
+                 for (const auto &pair : results) {
+                   obj.set(pair.first, emscripten::val(pair.second));
+                 }
+                 return obj;
+               }));
+
+  function("createMultiLayerExtrusionStructureWithPosition",
+           emscripten::optional_override(
+               [](const multi_layer_extrusion_structure_params &params,
+                  const gp_Pnt &position, const gp_Dir &direction,
+                  const gp_Dir &xDir) {
+                 auto results = create_multi_layer_extrusion_structure(
+                     params, position, direction, xDir);
+                 emscripten::val obj = emscripten::val::object();
+                 for (const auto &pair : results) {
+                   obj.set(pair.first, emscripten::val(pair.second));
+                 }
+                 return obj;
+               }));
+
+  emscripten::function("createMultiLayerExtrusionStructureCenterline",
+                       &create_multi_layer_extrusion_structure_centerline);
 
   // 连接形状模式枚举
   enum_<joint_shape_mode>("JointShapeMode")

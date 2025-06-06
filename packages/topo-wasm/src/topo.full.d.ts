@@ -181529,6 +181529,37 @@ export declare function createMultiSegmentPipeWithPosition(
     xDir?: gp_Dir
 ): TopoDS_Shape;
 
+
+export declare interface ProfileLayer {
+  name: string;
+  profiles: ShapeProfile[];
+  innerProfiles?: ShapeProfile[];
+}
+
+export declare interface MultiLayerExtrusionStructureParams {
+  wires: gp_Pnt[][];
+  segmentTypes?: SegmentType[];
+  layers: ProfileLayer[];
+  transitionMode: TransitionMode;
+  upDir?: gp_Dir;
+}
+
+export declare function createMultiLayerExtrusionStructure(
+  params: MultiLayerExtrusionStructureParams
+): Record<string, TopoDS_Shape>;
+
+export declare function createMultiLayerExtrusionStructureWithPosition(
+  params: MultiLayerExtrusionStructureParams,
+  position: gp_Pnt,
+  direction?: gp_Dir,
+  xDir?: gp_Dir
+): Record<string, TopoDS_Shape>;
+
+export declare function createMultiLayerExtrusionStructureCenterline(
+  params: MultiLayerExtrusionStructureParams
+): TopoDS_Wire;
+
+
 // 管道连接创建函数
 export declare function createPipeJoint(params: PipeJointParams): TopoDS_Shape;
 export declare function createPipeJointWithPosition(
@@ -209092,6 +209123,8 @@ export type TopoInstance = {FS: typeof FS} & {
   StepShapeParams: StepShapeParams;
   BoreholeSample: BoreholeSample;
   BoreholeParams: BoreholeParams;
+  ProfileLayer: ProfileLayer;
+  MultiLayerExtrusionStructureParams: MultiLayerExtrusionStructureParams;
   createSphere: typeof createSphere;
   createSphereWithCenter: typeof createSphereWithCenter;
   createRotationalEllipsoid: typeof createRotationalEllipsoid;
@@ -209324,6 +209357,9 @@ export type TopoInstance = {FS: typeof FS} & {
   createStepShape: typeof createStepShape;
   createStepShapeWithPosition: typeof createStepShapeWithPosition;
   createBorehole: typeof createBorehole;
+  createMultiLayerExtrusionStructure: typeof createMultiLayerExtrusionStructure;
+  createMultiLayerExtrusionStructureWithPosition: typeof createMultiLayerExtrusionStructureWithPosition;
+  createMultiLayerExtrusionStructureCenterline: typeof createMultiLayerExtrusionStructureCenterline;
   CurveType: CurveType;
   InsulatorMaterial: InsulatorMaterial;
   ArrangementType: ArrangementType;

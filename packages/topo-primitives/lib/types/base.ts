@@ -76,6 +76,21 @@ export interface MultiSegmentPipePrimitiveObject extends Version {
     upDir?: Dir | null;
 }
 
+export interface ProfileLayerObject {
+  name: string;
+  profiles: any[];
+  innerProfiles?: any[];
+}
+
+export interface MultiLayerExtrusionStructureObject extends Version {
+  type: 'MultiLayerExtrusionStructure';
+  wires: number[][][];
+  segmentTypes?: string[];
+  layers: ProfileLayerObject[];
+  transitionMode: 'TRANSFORMED' | 'ROUND' | 'RIGHT';
+  upDir?: number[];
+}
+
 export interface PipeJointEndpoint {
     id: string;
     offset?: Point;

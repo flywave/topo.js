@@ -24,7 +24,9 @@ import {
     StepShapeParams,
     TransitionMode,
     SegmentType,
-    JointShapeMode
+    JointShapeMode,
+    MultiLayerExtrusionStructureParams,
+    ProfileLayer
 } from "topo-wasm";
 import { angleToRad, BasePrimitive, Primitive, radToAngle } from "../primitive";
 import {
@@ -43,6 +45,7 @@ import {
     TorusShapeObject,
     WedgeShapeObject,
     StepShapeObject,
+    MultiLayerExtrusionStructureObject,
 } from "../types";
 
 export enum BasePrimitiveType {
@@ -61,6 +64,7 @@ export enum BasePrimitiveType {
     WedgeShape = "WedgeShape",
     PipeShape = "PipeShape",
     StepShape = "StepShape",
+    MultiLayerExtrusionStructure = "MultiLayerExtrusionStructure"
 }
 
 export type ShapePrimitive = RevolPrimitive
@@ -77,7 +81,8 @@ export type ShapePrimitive = RevolPrimitive
     | TorusShapePrimitive
     | WedgeShapePrimitive
     | PipeShapePrimitive
-    | StepShapePrimitive;
+    | StepShapePrimitive
+    | MultiLayerExtrusionStructurePrimitive;
 
 
 export function deserializeProfile(tp: TopoInstance, o: any): ShapeProfile {
@@ -765,6 +770,239 @@ export class MultiSegmentPipePrimitive extends BasePrimitive<MultiSegmentPipePar
                 this.params.upDir.Z()
             ] : null]
         ])) as MultiSegmentPipePrimitiveObject;
+    }
+}
+
+
+
+export class MultiLayerExtrusionStructurePrimitive extends BasePrimitive<MultiLayerExtrusionStructureParams, MultiLayerExtrusionStructureObject> {
+
+    constructor(tp: TopoInstance, params?: MultiLayerExtrusionStructureObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return BasePrimitiveType.MultiLayerExtrusionStructure;
+    }
+
+    setDefault(): Primitive<MultiLayerExtrusionStructureParams, MultiLayerExtrusionStructureObject> {
+        // 直线段
+        const linePoints = [
+            new this.tp.gp_Pnt_3(50, -50, 0),
+            new this.tp.gp_Pnt_3(100, 0, 0)
+        ];
+
+        // 三点圆弧
+        const arcPoints = [
+            new this.tp.gp_Pnt_3(100, 0, 0),
+            new this.tp.gp_Pnt_3(150, 50, 0),
+            new this.tp.gp_Pnt_3(200, 0, 0)
+        ];
+
+        // 圆心弧线
+        const centerArcPoints = [
+            new this.tp.gp_Pnt_3(200, 0, 0),
+            new this.tp.gp_Pnt_3(250, 0, 0), // 圆心
+            new this.tp.gp_Pnt_3(300, 0, 0)
+        ];
+
+        // 样条曲线
+        const splinePoints = [
+            new this.tp.gp_Pnt_3(300, 0, 0),
+            new this.tp.gp_Pnt_3(350, 50, 50),
+            new this.tp.gp_Pnt_3(400, 0, 100)
+        ];
+
+        // 定义剖面层
+        const layers: ProfileLayer[] = [
+            { // 第一层 - 矩形剖面
+                name: "base_layer",
+                profiles: [{
+                    type: this.tp.ProfileType.RECTANGLE,
+                    p1: new this.tp.gp_Pnt_3(-10, -50, 0),
+                    p2: new this.tp.gp_Pnt_3(10, -30, 0)
+                }]
+            },
+            { // 第二层 - 圆形剖面
+                name: "middle_layer",
+                profiles: [{
+                    type: this.tp.ProfileType.CIRC,
+                    center: new this.tp.gp_Pnt_3(0, -20, 0),
+                    norm: new this.tp.gp_Dir_4(0, 0, 1),
+                    radius: 16.0
+                }]
+            },
+            { // 第三层 - 多边形剖面
+                name: "top_layer",
+                profiles: [{
+                    type: this.tp.ProfileType.POLYGON,
+                    edges: [
+                        new this.tp.gp_Pnt_3(-5, -5, 0),
+                        new this.tp.gp_Pnt_3(5, -5, 0),
+                        new this.tp.gp_Pnt_3(5, 5, 0),
+                        new this.tp.gp_Pnt_3(0, 8, 0),
+                        new this.tp.gp_Pnt_3(-5, 5, 0)
+                    ],
+                    inners: [],
+                } as PolygonProfile],
+            }
+        ];
+
+        this.params = {
+            wires: [linePoints, arcPoints, centerArcPoints, splinePoints],
+            segmentTypes: [
+                this.tp.SegmentType.LINE as any,
+                this.tp.SegmentType.THREE_POINT_ARC as any,
+                this.tp.SegmentType.CIRCLE_CENTER_ARC as any,
+                this.tp.SegmentType.SPLINE as any
+            ],
+            layers: layers,
+            transitionMode: this.tp.TransitionMode.TRANSFORMED as any,
+            upDir: new this.tp.gp_Dir_4(0, 0, 1)
+        };
+        return this;
+    }
+
+    public setParams(params: MultiLayerExtrusionStructureParams): Primitive<MultiLayerExtrusionStructureParams, MultiLayerExtrusionStructureObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        if (!this.params.wires || this.params.wires.length === 0) return false;
+        if (!this.params.layers || this.params.layers.length === 0) return false;
+        return true;
+    }
+
+    public build(): Record<string, Shape> | undefined {
+        if (this.valid()) {
+            let res = this.tp.createMultiLayerExtrusionStructure(this.params);
+            let obj: Record<string, Shape> = {}
+            for (let key in res) {
+                obj[key] = new this.tp.Shape(res[key], false);
+            }
+            return obj;
+        }
+        throw new Error("Invalid parameters for MultiLayerExtrusionStructure");
+    }
+
+    fromObject(o?: MultiLayerExtrusionStructureObject): Primitive<MultiLayerExtrusionStructureParams, MultiLayerExtrusionStructureObject> {
+        if (o === undefined) {
+            return this;
+        }
+        if (o['version']) {
+            this.version = o['version'];
+        }
+
+        let transitionMode: TransitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
+        switch (o.transitionMode) {
+            case 'TRANSFORMED':
+                transitionMode = this.tp.TransitionMode.TRANSFORMED as TransitionMode;
+                break;
+            case 'ROUND':
+                transitionMode = this.tp.TransitionMode.ROUND as TransitionMode;
+                break;
+            case 'RIGHT':
+                transitionMode = this.tp.TransitionMode.RIGHT as TransitionMode;
+        }
+
+        const segmentTypes: SegmentType[] = [];
+        if (o.segmentTypes) {
+            for (let i = 0; i < o.segmentTypes.length; i++) {
+                switch (o.segmentTypes[i]) {
+                    case 'LINE':
+                        segmentTypes.push(this.tp.SegmentType.LINE as SegmentType);
+                        break;
+                    case 'THREE_POINT_ARC':
+                        segmentTypes.push(this.tp.SegmentType.THREE_POINT_ARC as SegmentType);
+                        break;
+                    case 'CIRCLE_CENTER_ARC':
+                        segmentTypes.push(this.tp.SegmentType.CIRCLE_CENTER_ARC as SegmentType);
+                        break;
+                    case 'SPLINE':
+                        segmentTypes.push(this.tp.SegmentType.SPLINE as SegmentType);
+                        break;
+                    case 'BEZIER':
+                        segmentTypes.push(this.tp.SegmentType.BEZIER as SegmentType);
+                        break;
+                    default:
+                        segmentTypes.push(this.tp.SegmentType.LINE as SegmentType);
+                }
+            }
+        }
+
+        this.params = {
+            wires: o.wires?.map((wire: any[]) =>
+                wire.map((p: any) => new this.tp.gp_Pnt_3(p[0], p[1], p[2]))) || [],
+            segmentTypes: segmentTypes,
+            layers: o.layers.map(layer => ({
+                name: layer.name,
+                profiles: layer.profiles.map(p => deserializeProfile(this.tp, { profile: p })),
+                innerProfiles: layer.innerProfiles?.map(p => deserializeProfile(this.tp, { profile: p }))
+            })),
+            transitionMode: transitionMode,
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
+        };
+        return this;
+    }
+
+    toObject(): MultiLayerExtrusionStructureObject | undefined {
+        let transitionMode = 'TRANSFORMED';
+        switch (this.params.transitionMode) {
+            case this.tp.TransitionMode.TRANSFORMED:
+                transitionMode = 'TRANSFORMED';
+                break;
+            case this.tp.TransitionMode.ROUND:
+                transitionMode = 'ROUND';
+                break;
+            case this.tp.TransitionMode.RIGHT:
+                transitionMode = 'RIGHT';
+                break;
+        }
+
+        const segmentTypes: string[] = [];
+        if (this.params.segmentTypes?.length) {
+            for (let i = 0; i < this.params.segmentTypes?.length; i++) {
+                switch (this.params.segmentTypes[i]) {
+                    case this.tp.SegmentType.LINE:
+                        segmentTypes.push('LINE');
+                        break;
+                    case this.tp.SegmentType.THREE_POINT_ARC:
+                        segmentTypes.push('THREE_POINT_ARC');
+                        break;
+                    case this.tp.SegmentType.CIRCLE_CENTER_ARC:
+                        segmentTypes.push('CIRCLE_CENTER_ARC');
+                        break;
+                    case this.tp.SegmentType.SPLINE:
+                        segmentTypes.push('SPLINE');
+                        break;
+                    case this.tp.SegmentType.BEZIER:
+                        segmentTypes.push('BEZIER');
+                        break;
+                    default:
+                        segmentTypes.push('LINE');
+                }
+            }
+        }
+
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['wires', this.params.wires.map(wire =>
+                wire.map(p => ([p.X(), p.Y(), p.Z()])))],
+            ['segmentTypes', segmentTypes],
+            ['layers', this.params.layers.map(layer => ({
+                name: layer.name,
+                profiles: layer.profiles.map(p => serializeProfile(this.tp, p)),
+                innerProfiles: layer.innerProfiles?.map(p => serializeProfile(this.tp, p))
+            }))],
+            ['transitionMode', transitionMode],
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : null]
+        ])) as MultiLayerExtrusionStructureObject;
     }
 }
 
@@ -1744,6 +1982,9 @@ export function createBasePrimitive(tp: TopoInstance, args?: BasePrimitiveType |
             break;
         case BasePrimitiveType.MultiSegmentPipe:
             primitive = new MultiSegmentPipePrimitive(tp);
+            break;
+        case BasePrimitiveType.MultiLayerExtrusionStructure:
+            primitive = new MultiLayerExtrusionStructurePrimitive(tp);
             break;
         case BasePrimitiveType.PipeJoint:
             primitive = new PipeJointPrimitive(tp);

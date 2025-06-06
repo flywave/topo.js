@@ -127,7 +127,9 @@
             "PipeShapeParams",
             "StepShapeParams",
             "BoreholeSample",
-            "BoreholeParams"
+            "BoreholeParams",
+            "ProfileLayer",
+            "MultiLayerExtrusionStructureParams"
         ],
         "kind": "interface"
     },
@@ -364,7 +366,10 @@
             "createPipeShapeWithPosition",
             "createStepShape",
             "createStepShapeWithPosition",
-            "createBorehole"
+            "createBorehole",
+            "createMultiLayerExtrusionStructure",
+            "createMultiLayerExtrusionStructureWithPosition",
+            "createMultiLayerExtrusionStructureCenterline"
         ],
         "kind": "function"
     },
