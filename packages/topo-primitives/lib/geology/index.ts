@@ -38,7 +38,8 @@ export class BoreholePrimitive extends BasePrimitive<BoreholeParams, BoreholeObj
                     depthFrom: 40,
                     depthTo: 50,
                 }
-            ]
+            ],
+            upDir: new this.tp.gp_Dir_4(0, 0, 1),
         };
         return this;
     }
@@ -77,7 +78,8 @@ export class BoreholePrimitive extends BasePrimitive<BoreholeParams, BoreholeObj
                     depthFrom: sample.depthFrom,
                     depthTo: sample.depthTo,
                 };
-            })
+            }),
+            upDir: o.upDir ? new this.tp.gp_Dir_4(o.upDir[0], o.upDir[1], o.upDir[2]) : undefined
         };
         return this;
     }
@@ -94,6 +96,11 @@ export class BoreholePrimitive extends BasePrimitive<BoreholeParams, BoreholeObj
                 };
             })],
             ['diameter', this.params.diameter],
+            ['upDir', this.params.upDir ? [
+                this.params.upDir.X(),
+                this.params.upDir.Y(),
+                this.params.upDir.Z()
+            ] : undefined]
         ])) as BoreholeObject;
     }
 

@@ -77,18 +77,18 @@ export interface MultiSegmentPipePrimitiveObject extends Version {
 }
 
 export interface ProfileLayerObject {
-  name: string;
-  profiles: any[];
-  innerProfiles?: any[];
+    name: string;
+    profiles: any[];
+    innerProfiles?: any[];
 }
 
 export interface MultiLayerExtrusionStructureObject extends Version {
-  type: 'MultiLayerExtrusionStructure';
-  wires: number[][][];
-  segmentTypes?: string[];
-  layers: ProfileLayerObject[];
-  transitionMode: 'TRANSFORMED' | 'ROUND' | 'RIGHT';
-  upDir?: number[];
+    type: 'MultiLayerExtrusionStructure';
+    wires: number[][][];
+    segmentTypes?: string[];
+    layers: ProfileLayerObject[];
+    transitionMode: 'TRANSFORMED' | 'ROUND' | 'RIGHT';
+    upDir?: number[];
 }
 
 export interface PipeJointEndpoint {
@@ -193,7 +193,8 @@ export interface BoreholeSample {
     depthTo: number;
 }
 
-export interface BoreholeObject  {
+export interface BoreholeObject {
     samples: BoreholeSample[];
     diameter: number;
+    upDir?: Dir;
 }

@@ -1786,6 +1786,22 @@ static void set_water_tunnel_points(water_tunnel_params &params,
   params.points = points;
 }
 
+static emscripten::val get_borehole_up_dir(const borehole_params &params) {
+  if (params.upDir) {
+    return emscripten::val(*params.upDir);
+  }
+  return emscripten::val::undefined();
+}
+
+static void set_borehole_up_dir(borehole_params &params,
+                                  emscripten::val val) {
+  if (val.isUndefined()) {
+    params.upDir = boost::none;
+  } else {
+    params.upDir = val.as<gp_Dir>();
+  }
+}
+
 } // namespace
 
 EMSCRIPTEN_BINDINGS(Primitive) {
@@ -4626,7 +4642,8 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // 钻孔参数结构体
   value_object<borehole_params>("BoreholeParams")
       .field("samples", &get_borehole_samples, &set_borehole_samples)
-      .field("diameter", &borehole_params::diameter);
+      .field("diameter", &borehole_params::diameter)
+      .field("upDir", &get_borehole_up_dir, &set_borehole_up_dir);
 
   function("createBorehole",
            emscripten::optional_override([](const borehole_params &params) {

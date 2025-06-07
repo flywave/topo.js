@@ -181706,6 +181706,7 @@ export declare interface BoreholeSample {
 export declare interface BoreholeParams {
     samples: BoreholeSample[];
     diameter: number;
+    upDir?: gp_Dir;
 }
 
 export declare function createBorehole(params: BoreholeParams): { [key: string]: TopoShape };export declare type SketchMode = {
