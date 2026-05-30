@@ -32,9 +32,7 @@
     "topo-js": "workspace:*",
     "topo-primitives": "workspace:*",
     "topo-threejs": "workspace:*",
-    "topo-wasm": "workspace:*",
-    "tsconfig-paths-webpack-plugin": "^4.2.0",
-    "vite-plugin-wasm": "^3.4.1"
+    "topo-wasm": "workspace:*"
   },
   "browserslist": [
     ">0.2%",

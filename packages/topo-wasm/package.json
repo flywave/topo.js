@@ -1,7 +1,7 @@
 {
   "name": "topo-wasm",
   "version": "0.0.1",
-  "description": "Topo wasm binging",
+  "description": "Topo WASM bindings for browser CAD",
   "author": "aninggo <aninggo@qq.com>",
   "homepage": "",
   "types": "src/index.d.ts",
@@ -13,7 +13,8 @@
   "files": [
     "src"
   ],
+  "type": "module",
   "scripts": {
-    "build": "echo 'Please build manually'"
+    "build": "cd ../.. && make rebuild"
   }
 }

@@ -6,6 +6,14 @@
       "packages/*"
     ],
     "scripts": {
+      "build": "make",
+      "rebuild": "make rebuild",
+      "wasm": "make rebuild",
+      "dev": "pnpm --filter topo-example dev",
+      "start": "pnpm --filter topo-example dev",
+      "example": "pnpm --filter topo-example build",
+      "build:js": "pnpm --filter topo-threejs build && pnpm --filter topo-primitives build && pnpm --filter topo-js build",
+      "build:example": "pnpm --filter topo-example build",
       "prepare-packages": "lerna exec pnpm build --no-private --no-bail",
       "publish-packages": "lerna publish"
     },
