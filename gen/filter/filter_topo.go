@@ -1,6 +1,10 @@
 package filter
 
-import "strings"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+)
 
 func FilterTopoFile(fileName string) bool {
 
@@ -24,4 +28,29 @@ func FilterTopoFile(fileName string) bool {
 		}
 	}
 	return true
+}
+
+func CleanTopoSource(workDir string) error {
+	buildSrc := filepath.Join(workDir, "../build/src")
+	return filepath.WalkDir(buildSrc, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		ext := filepath.Ext(name)
+		if ext == ".o" {
+			baseName := strings.TrimSuffix(name, ext)
+			baseName = strings.TrimSuffix(baseName, ".gxx")
+			baseName = strings.TrimSuffix(baseName, ".cc")
+			baseName = strings.TrimSuffix(baseName, ".cpp")
+			baseName = strings.TrimSuffix(baseName, ".cxx")
+			if !FilterTopoFile(baseName + ".cc") {
+				os.Remove(path)
+			}
+		}
+		return nil
+	})
 }

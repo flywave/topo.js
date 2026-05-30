@@ -436,7 +436,7 @@ export declare type CurveType = {
     BEZIER: {}
 }
 
-declare function sampleCurvePoints(
+ export declare function sampleCurvePoints(
     controlPoints: Array<Array<gp_Pnt>>,
     curveTypes: Array<CurveType>,
     tessellation?: number
@@ -812,9 +812,9 @@ export declare interface SteelSleeveBaseParams {
     B2: number;
 }
 
-export declare function createSteelSleeveBase(params: SteelSleeureBaseParams): TopoDS_Shape;
+export declare function createSteelSleeveBase(params: SteelSleeveBaseParams): TopoDS_Shape;
 export declare function createSteelSleeveBaseWithPosition(
-    params: SteelSleeureBaseParams,
+    params: SteelSleeveBaseParams,
     position: gp_Pnt,
     direction: gp_Dir
 ): TopoDS_Shape;
@@ -1764,11 +1764,11 @@ export declare interface ChannelPoint {
 }
 
 
-declare function createChannelCenterline(
+ export declare function createChannelCenterline(
     points: Array<ChannelPoint>
 ): TopoDS_Wire;
 
-declare function sampleChannelPoints(
+ export declare function sampleChannelPoints(
     points: Array<ChannelPoint>,
     tessellation?: number
 ): Array<gp_Pnt>;
@@ -2327,7 +2327,7 @@ export declare type SegmentType = {
     BEZIER: {}
 }
 
-declare function sampleSegmentPoints(
+ export declare function sampleSegmentPoints(
     wires: Array<Array<gp_Pnt>>,
     segments: Array<SegmentType>,
     tessellation?: number
@@ -2558,8 +2558,8 @@ export declare interface StepShapeParams {
 }
 
 // 创建STEP形状函数
-declare function createStepShape(params: StepShapeParams): TopoDS_Shape;
-declare function createStepShapeWithPosition(
+ export declare function createStepShape(params: StepShapeParams): TopoDS_Shape;
+ export declare function createStepShapeWithPosition(
     params: StepShapeParams,
     position: gp_Pnt,
     direction: gp_Dir,

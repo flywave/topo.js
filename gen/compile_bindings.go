@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -20,19 +21,7 @@ type ExportItem struct {
 func CompileCustomCodeBindings(workDir string, args map[string]string) error {
 	dir := path.Join(workDir, "build/bindings")
 
-	if runtime.GOOS == "darwin" {
-		// 设置Emscripten缓存目录
-		if err := os.Setenv("EM_CACHE", "/opt/homebrew/opt/emscripten/libexec/cache"); err != nil {
-			fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
-			return err
-		}
-	} else {
-		// 设置Emscripten缓存目录
-		if err := os.Setenv("EM_CACHE", "/usr/share/emscripten/cache"); err != nil {
-			fmt.Fprintf(os.Stderr, "设置EM_CACHE失败: %v\n", err)
-			return err
-		}
-	}
+	setEmCache()
 
 	var filesToBuild []string
 
@@ -143,11 +132,5 @@ func buildOneFile(workDir string, args map[string]string, item string) error {
 
 // Helper to sort strings
 func sortStrings(s []string) {
-	for i := 0; i < len(s)-1; i++ {
-		for j := i + 1; j < len(s); j++ {
-			if s[i] > s[j] {
-				s[i], s[j] = s[j], s[i]
-			}
-		}
-	}
+	sort.Strings(s)
 }

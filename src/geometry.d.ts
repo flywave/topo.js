@@ -29,8 +29,9 @@ export declare class GeometryCreator {
     ): Handle_Geom_TrimmedCurve;
 
     static makeArcOfCircleWithVector(
-        circ: gp_Circ,
-        v: gp_Vec
+        p1: gp_Pnt,
+        v: gp_Vec,
+        p2: gp_Pnt
     ): Handle_Geom_TrimmedCurve;
 
     // 椭圆弧创建方法
@@ -180,22 +181,21 @@ export declare class GeometryCreator {
     static makeTrimmedConeWithFourPoints(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt): Handle_Geom_RectangularTrimmedSurface;
     static makeTrimmedConeWithTwoPointsTwoRadii(p1: gp_Pnt, p2: gp_Pnt, r1: number, r2: number): Handle_Geom_RectangularTrimmedSurface;
 
-    // 抛物线创建方法
-    static makeParabola(prb: gp_Parab): Handle_Geom_Parabola;
-    static makeParabolaWithAxis(axis: gp_Ax22d, focal: number): Handle_Geom_Parabola;
-    static makeParabolaWithMirrorAxis(mirrorAxis: gp_Ax2d, focal: number, sense: boolean): Handle_Geom_Parabola;
-    static makeParabolaWithDirectrix(d: gp_Ax2d, f: gp_Pnt2d, sense?: boolean): Handle_Geom_Parabola;
-    static makeParabolaWithTwoPoints(s1: gp_Pnt2d, o: gp_Pnt2d): Handle_Geom_Parabola;
-
-    // 球面创建方法
-    static makeSphericalSurface(ax2: gp_Ax2, radius: number): Handle_Geom_SphericalSurface;
-    static makeSphericalSurfaceWithSphere(sphere: gp_Sphere): Handle_Geom_SphericalSurface;
-    static makeSphericalSurfaceWithThreePoints(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt): Handle_Geom_SphericalSurface;
-    static makeSphericalSurfaceWithFourPoints(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt): Handle_Geom_SphericalSurface;
-
-    // 圆环面创建方法
-    static makeToroidalSurface(ax2: gp_Ax2, majorRadius: number, minorRadius: number): Handle_Geom_ToroidalSurface;
-    static makeToroidalSurfaceWithTorus(torus: gp_Torus): Handle_Geom_ToroidalSurface;
+    // 修剪圆柱曲面创建方法
+    static makeTrimmedCylinderWithThreePoints(
+        p1: gp_Pnt,
+        p2: gp_Pnt,
+        p3: gp_Pnt
+    ): Handle_Geom_RectangularTrimmedSurface;
+    static makeTrimmedCylinderWithCirc(
+        circ: gp_Circ,
+        param: number
+    ): Handle_Geom_RectangularTrimmedSurface;
+    static makeTrimmedCylinderWithAxis1(
+        axis: gp_Ax1,
+        radius: number,
+        height: number
+    ): Handle_Geom_RectangularTrimmedSurface;
 
     // 曲线近似转换方法
     static convertApproxCurve(

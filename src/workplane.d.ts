@@ -34,9 +34,9 @@ export declare type FaceIndexType = {
     NEXT: {}
 }
 
-declare type ShapeObject = Shape | Vector | Location | Sketch | null
+export declare type ShapeObject = Shape | Vector | Location | Sketch | null
 
-declare class Workplane {
+export declare class Workplane {
     constructor()
     constructor(planeOrName: PlaneName | TopoPlane, origin?: Vector, obj?: ShapeObject);
 

@@ -241,7 +241,7 @@ export declare class GeometryObject {
     type(): GeometryObjectType;
 
     // 几何属性
-    boundingBox(tolerance?: number): Bnd_Box;
+    boundingBox(tolerance?: number): BBox;
 
     // 比较方法
     equals(other: GeometryObject): boolean;
@@ -311,7 +311,7 @@ export declare class Shape extends GeometryObject {
     isValid(): boolean;
     isSolid(): boolean;
     type(): GeometryObjectType;
-    bbox(): BBox;
+    bbox(tolerance?: number): BBox;
     hashCode(): number;
     equals(other: Shape): boolean;
     isSame(other: Shape): boolean;
@@ -517,7 +517,7 @@ export declare class Shape1D extends Shape {
     isClosed(): boolean;
 
     // 端点访问
-    startgPoint(): gp_Pnt;
+    startPoint(): gp_Pnt;
     endPoint(): gp_Pnt;
 
     // 参数化方法

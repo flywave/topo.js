@@ -5833,7 +5833,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
           "wireLength",
           emscripten::optional_override([](emscripten::val pathVal) -> double {
             auto path = pathVal.as<wire>();
-            return flywave::topo::wrie_length(path);
+            return path.length();
           }))
       .class_function(
           "makeCatenary",

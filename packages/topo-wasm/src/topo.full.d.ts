@@ -178649,7 +178649,7 @@ export declare class math_ValueAndWeight {
   }
 
 
-declare type AssemblyObject = Shape | Workplane | null
+export declare type AssemblyObject = Shape | Workplane | null
 
 export declare type AssemblyExportMode = {
     DEFAULT: {},
@@ -178657,14 +178657,14 @@ export declare type AssemblyExportMode = {
     PER_PART: {}
 }
 
-declare interface AssemblyElement {
+export declare interface AssemblyElement {
     shape: Shape;
     name: string;
     location: Location;
     color: QuantityColor | null;
 }
 
-declare class Assembly {
+export declare class Assembly {
     static create(
         obj?: Shape | Workplane,
         loc?: Location,
@@ -178728,8 +178728,9 @@ export declare class GeometryCreator {
     ): Handle_Geom_TrimmedCurve;
 
     static makeArcOfCircleWithVector(
-        circ: gp_Circ,
-        v: gp_Vec
+        p1: gp_Pnt,
+        v: gp_Vec,
+        p2: gp_Pnt
     ): Handle_Geom_TrimmedCurve;
 
     // 椭圆弧创建方法
@@ -178879,22 +178880,21 @@ export declare class GeometryCreator {
     static makeTrimmedConeWithFourPoints(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt): Handle_Geom_RectangularTrimmedSurface;
     static makeTrimmedConeWithTwoPointsTwoRadii(p1: gp_Pnt, p2: gp_Pnt, r1: number, r2: number): Handle_Geom_RectangularTrimmedSurface;
 
-    // 抛物线创建方法
-    static makeParabola(prb: gp_Parab): Handle_Geom_Parabola;
-    static makeParabolaWithAxis(axis: gp_Ax22d, focal: number): Handle_Geom_Parabola;
-    static makeParabolaWithMirrorAxis(mirrorAxis: gp_Ax2d, focal: number, sense: boolean): Handle_Geom_Parabola;
-    static makeParabolaWithDirectrix(d: gp_Ax2d, f: gp_Pnt2d, sense?: boolean): Handle_Geom_Parabola;
-    static makeParabolaWithTwoPoints(s1: gp_Pnt2d, o: gp_Pnt2d): Handle_Geom_Parabola;
-
-    // 球面创建方法
-    static makeSphericalSurface(ax2: gp_Ax2, radius: number): Handle_Geom_SphericalSurface;
-    static makeSphericalSurfaceWithSphere(sphere: gp_Sphere): Handle_Geom_SphericalSurface;
-    static makeSphericalSurfaceWithThreePoints(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt): Handle_Geom_SphericalSurface;
-    static makeSphericalSurfaceWithFourPoints(p1: gp_Pnt, p2: gp_Pnt, p3: gp_Pnt, p4: gp_Pnt): Handle_Geom_SphericalSurface;
-
-    // 圆环面创建方法
-    static makeToroidalSurface(ax2: gp_Ax2, majorRadius: number, minorRadius: number): Handle_Geom_ToroidalSurface;
-    static makeToroidalSurfaceWithTorus(torus: gp_Torus): Handle_Geom_ToroidalSurface;
+    // 修剪圆柱曲面创建方法
+    static makeTrimmedCylinderWithThreePoints(
+        p1: gp_Pnt,
+        p2: gp_Pnt,
+        p3: gp_Pnt
+    ): Handle_Geom_RectangularTrimmedSurface;
+    static makeTrimmedCylinderWithCirc(
+        circ: gp_Circ,
+        param: number
+    ): Handle_Geom_RectangularTrimmedSurface;
+    static makeTrimmedCylinderWithAxis1(
+        axis: gp_Ax1,
+        radius: number,
+        height: number
+    ): Handle_Geom_RectangularTrimmedSurface;
 
     // 曲线近似转换方法
     static convertApproxCurve(
@@ -179564,7 +179564,7 @@ export declare type CurveType = {
     BEZIER: {}
 }
 
-declare function sampleCurvePoints(
+ export declare function sampleCurvePoints(
     controlPoints: Array<Array<gp_Pnt>>,
     curveTypes: Array<CurveType>,
     tessellation?: number
@@ -179940,9 +179940,9 @@ export declare interface SteelSleeveBaseParams {
     B2: number;
 }
 
-export declare function createSteelSleeveBase(params: SteelSleeureBaseParams): TopoDS_Shape;
+export declare function createSteelSleeveBase(params: SteelSleeveBaseParams): TopoDS_Shape;
 export declare function createSteelSleeveBaseWithPosition(
-    params: SteelSleeureBaseParams,
+    params: SteelSleeveBaseParams,
     position: gp_Pnt,
     direction: gp_Dir
 ): TopoDS_Shape;
@@ -180892,11 +180892,11 @@ export declare interface ChannelPoint {
 }
 
 
-declare function createChannelCenterline(
+ export declare function createChannelCenterline(
     points: Array<ChannelPoint>
 ): TopoDS_Wire;
 
-declare function sampleChannelPoints(
+ export declare function sampleChannelPoints(
     points: Array<ChannelPoint>,
     tessellation?: number
 ): Array<gp_Pnt>;
@@ -181455,7 +181455,7 @@ export declare type SegmentType = {
     BEZIER: {}
 }
 
-declare function sampleSegmentPoints(
+ export declare function sampleSegmentPoints(
     wires: Array<Array<gp_Pnt>>,
     segments: Array<SegmentType>,
     tessellation?: number
@@ -181686,8 +181686,8 @@ export declare interface StepShapeParams {
 }
 
 // 创建STEP形状函数
-declare function createStepShape(params: StepShapeParams): TopoDS_Shape;
-declare function createStepShapeWithPosition(
+ export declare function createStepShape(params: StepShapeParams): TopoDS_Shape;
+ export declare function createStepShapeWithPosition(
     params: StepShapeParams,
     position: gp_Pnt,
     direction: gp_Dir,
@@ -181717,9 +181717,9 @@ export declare function createBorehole(params: BoreholeParams): { [key: string]:
   REPLACE: {},
 }
 
-declare type SketchVal = Shape | Location
+export declare type SketchVal = Shape | Location
 
-declare class Sketch {
+export declare class Sketch {
   constructor();
   constructor(inPlane: Workplane, locs?: Location[], obj?: Compound);
   constructor(locs: Location[], obj?: Compound);
@@ -181744,7 +181744,7 @@ declare class Sketch {
     tag?: string
   ): Sketch;
 
-  circle(r: number, mode: SketchMode, tag?: string): Sketch;
+  circle(r: number, mode?: SketchMode, tag?: string): Sketch;
 
   ellipse(
     a1: number,
@@ -182173,7 +182173,7 @@ export declare class GeometryObject {
     type(): GeometryObjectType;
 
     // 几何属性
-    boundingBox(tolerance?: number): Bnd_Box;
+    boundingBox(tolerance?: number): BBox;
 
     // 比较方法
     equals(other: GeometryObject): boolean;
@@ -182243,7 +182243,7 @@ export declare class Shape extends GeometryObject {
     isValid(): boolean;
     isSolid(): boolean;
     type(): GeometryObjectType;
-    bbox(): BBox;
+    bbox(tolerance?: number): BBox;
     hashCode(): number;
     equals(other: Shape): boolean;
     isSame(other: Shape): boolean;
@@ -182449,7 +182449,7 @@ export declare class Shape1D extends Shape {
     isClosed(): boolean;
 
     // 端点访问
-    startgPoint(): gp_Pnt;
+    startPoint(): gp_Pnt;
     endPoint(): gp_Pnt;
 
     // 参数化方法
@@ -183651,9 +183651,9 @@ export declare type FaceIndexType = {
     NEXT: {}
 }
 
-declare type ShapeObject = Shape | Vector | Location | Sketch | null
+export declare type ShapeObject = Shape | Vector | Location | Sketch | null
 
-declare class Workplane {
+export declare class Workplane {
     constructor()
     constructor(planeOrName: PlaneName | TopoPlane, origin?: Vector, obj?: ShapeObject);
 

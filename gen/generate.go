@@ -27,8 +27,8 @@ type Batch struct {
 	start, stop int
 }
 
-func mkdirp(name string) error {
-	return os.MkdirAll(name, 0755)
+func ensureDir(filePath string) error {
+	return os.MkdirAll(filepath.Dir(filePath), 0755)
 }
 
 func filterClasses(workDir string, child clang.Cursor, customBuild bool) bool {
@@ -82,7 +82,7 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 	if batch.stop > len(children) {
 		batch.stop = len(children)
 	}
-	bulidPath := filepath.Join(workDir, "/build")
+	buildPath := filepath.Join(workDir, "/build")
 
 	for _, child := range children[batch.start:batch.stop] {
 		if !filterFunc(workDir, child, customBuild) {
@@ -90,17 +90,6 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 		}
 		sfile, _, _, _ := child.Extent().Start().FileLocation()
 		relOcFileName := strings.Replace(sfile.Name(), path.Join(workDir, oggSourceBasePath), "", 1)
-		dirPath := filepath.Join(bulidPath, buildType, filepath.Dir(relOcFileName))
-		if err := mkdirp(dirPath); err != nil {
-			fmt.Printf("Error creating directory %s: %v\n", dirPath, err)
-			continue
-		}
-
-		filename := filepath.Join(bulidPath, buildType, relOcFileName)
-		if err := mkdirp(filename); err != nil {
-			fmt.Printf("Error creating directory %s: %v\n", filename, err)
-			continue
-		}
 
 		childName := child.Spelling()
 		if childName == "" {
@@ -114,7 +103,13 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 			childName = strings.TrimSuffix(childName, ".lxx")
 		}
 
-		filename = filepath.Join(filename, childName+extension)
+		dirPath := filepath.Join(buildPath, buildType, relOcFileName)
+		filename := filepath.Join(dirPath, childName+extension)
+
+		if err := ensureDir(filename); err != nil {
+			fmt.Printf("Error creating directory for %s: %v\n", filename, err)
+			continue
+		}
 
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			fmt.Printf("Processing %s\n", child.Spelling())
@@ -124,10 +119,6 @@ func processChildBatch(workDir string, includePathArgs []string, includeStatemen
 					fmt.Println(err.Error())
 				}
 				continue
-			}
-
-			if strings.Contains(filename, "anonymous-") {
-				fmt.Printf("Error writing file %s: %s\n", filename, err)
 			}
 
 			if err := os.WriteFile(filename, []byte(output), 0644); err != nil {

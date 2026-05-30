@@ -17,7 +17,7 @@ type BuildConfig struct {
 	MainBuild              BuildSpec   `yaml:"mainBuild"`
 	ExtraBuilds            []BuildSpec `yaml:"extraBuilds"`
 	AdditionalCppCode      string      `yaml:"additionalCppCode"`
-	GenerateTypescriptDefs bool        `yaml:"generateTypescriptDefinitions"`
+	GenerateTypescriptDefs bool        `yaml:"GenerateTypescriptDefs"`
 }
 
 type BuildSpec struct {
@@ -100,16 +100,17 @@ func RunBuild(workDir string, filename string) error {
 }
 
 func verifyBinding(binding Binding, libraryBasePath string) (bool, error) {
+	found := false
 	err := filepath.Walk(libraryBasePath+"/bindings", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".cpp.o") && binding.Symbol == info.Name()[:len(info.Name())-6] {
-			return nil
+		if !found && !info.IsDir() && strings.HasSuffix(info.Name(), ".cpp.o") && binding.Symbol == info.Name()[:len(info.Name())-6] {
+			found = true
 		}
 		return nil
 	})
-	return err == nil, err
+	return found, err
 }
 
 func verifyBindings(bindings []Binding, libraryBasePath string) error {

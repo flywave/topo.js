@@ -1,5 +1,5 @@
 
-declare type AssemblyObject = Shape | Workplane | null
+export declare type AssemblyObject = Shape | Workplane | null
 
 export declare type AssemblyExportMode = {
     DEFAULT: {},
@@ -7,14 +7,14 @@ export declare type AssemblyExportMode = {
     PER_PART: {}
 }
 
-declare interface AssemblyElement {
+export declare interface AssemblyElement {
     shape: Shape;
     name: string;
     location: Location;
     color: QuantityColor | null;
 }
 
-declare class Assembly {
+export declare class Assembly {
     static create(
         obj?: Shape | Workplane,
         loc?: Location,

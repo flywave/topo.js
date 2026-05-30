@@ -44,8 +44,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&dirPath, "dir", "d", "", "工作目录路径")
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "gen/topo.full.yml", "配置文件路径")
 
-	rootCmd.PersistentFlags().BoolP("single-threaded", "st", false, "使用单线程模式")
-	rootCmd.PersistentFlags().BoolP("multi-threaded", "mt", false, "使用多线程模式")
+	rootCmd.PersistentFlags().Bool("single-threaded", false, "使用单线程模式")
+	rootCmd.PersistentFlags().Bool("multi-threaded", false, "使用多线程模式")
 	rootCmd.PersistentFlags().StringVarP(&threading, "threading", "t", "single-threaded", "线程模式 (single-threaded|multi-threaded)")
 
 	// 添加子命令
@@ -246,11 +246,11 @@ func initConfig() {
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("topo")
 
-	// 处理线程模式标志
-	if viper.GetBool("single-threaded") {
+	// 处理线程模式标志 - 优先使用命令行参数
+	if st, _ := rootCmd.Flags().GetBool("single-threaded"); st {
 		threading = "single-threaded"
 	}
-	if viper.GetBool("multi-threaded") {
+	if mt, _ := rootCmd.Flags().GetBool("multi-threaded"); mt {
 		threading = "multi-threaded"
 	}
 }

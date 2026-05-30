@@ -6,9 +6,9 @@ export declare type SketchMode = {
   REPLACE: {},
 }
 
-declare type SketchVal = Shape | Location
+export declare type SketchVal = Shape | Location
 
-declare class Sketch {
+export declare class Sketch {
   constructor();
   constructor(inPlane: Workplane, locs?: Location[], obj?: Compound);
   constructor(locs: Location[], obj?: Compound);
@@ -33,7 +33,7 @@ declare class Sketch {
     tag?: string
   ): Sketch;
 
-  circle(r: number, mode: SketchMode, tag?: string): Sketch;
+  circle(r: number, mode?: SketchMode, tag?: string): Sketch;
 
   ellipse(
     a1: number,
