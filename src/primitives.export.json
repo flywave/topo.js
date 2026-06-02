@@ -128,6 +128,11 @@
             "StepShapeParams",
             "RodInsulatorParams",
             "CrossArmParams",
+            "LevelCantileverParams",
+            "SlantCantileverParams",
+            "CantileverBraceParams",
+            "RegArmBracketParams",
+            "RegistrationArmParams",
             "BoreholeSample",
             "BoreholeParams",
             "ProfileLayer",
@@ -372,6 +377,16 @@
             "createRodInsulatorWithPosition",
             "createCrossArm",
             "createCrossArmWithPosition",
+            "createLevelCantilever",
+            "createLevelCantileverWithPosition",
+            "createSlantCantilever",
+            "createSlantCantileverWithPosition",
+            "createCantileverBrace",
+            "createCantileverBraceWithPosition",
+            "createRegArmBracket",
+            "createRegArmBracketWithPosition",
+            "createRegistrationArm",
+            "createRegistrationArmWithPosition",
             "createBorehole",
             "createMultiLayerExtrusionStructure",
             "createMultiLayerExtrusionStructureWithPosition",
@@ -412,7 +427,8 @@
             "CableTerminalType",
             "TunnelPartitionBoardStyle",
             "RodInsulatorType",
-            "EndFittingType"
+            "EndFittingType",
+            "RegistrationArmType"
         ],
         "kind": "enum"
     }

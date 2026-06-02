@@ -4702,6 +4702,102 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                         const gp_Dir &)>(&create_cross_arm));
 
   // ==========================================================================
+  // Level Cantilever (平腕臂) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<level_cantilever_params>("LevelCantileverParams")
+      .field("length", &level_cantilever_params::length)
+      .field("outerDiameter", &level_cantilever_params::outerDiameter)
+      .field("wallThickness", &level_cantilever_params::wallThickness)
+      .field("riseAngle", &level_cantilever_params::riseAngle);
+
+  function("createLevelCantilever",
+           select_overload<TopoDS_Shape(const level_cantilever_params &)>(
+               &create_level_cantilever));
+  function("createLevelCantileverWithPosition",
+           select_overload<TopoDS_Shape(const level_cantilever_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_level_cantilever));
+
+  // ==========================================================================
+  // Slant Cantilever (斜腕臂) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<slant_cantilever_params>("SlantCantileverParams")
+      .field("length", &slant_cantilever_params::length)
+      .field("outerDiameter", &slant_cantilever_params::outerDiameter)
+      .field("wallThickness", &slant_cantilever_params::wallThickness)
+      .field("slantAngle", &slant_cantilever_params::slantAngle);
+
+  function("createSlantCantilever",
+           select_overload<TopoDS_Shape(const slant_cantilever_params &)>(
+               &create_slant_cantilever));
+  function("createSlantCantileverWithPosition",
+           select_overload<TopoDS_Shape(const slant_cantilever_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_slant_cantilever));
+
+  // ==========================================================================
+  // Cantilever Brace (斜撑) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<cantilever_brace_params>("CantileverBraceParams")
+      .field("length", &cantilever_brace_params::length)
+      .field("outerDiameter", &cantilever_brace_params::outerDiameter)
+      .field("wallThickness", &cantilever_brace_params::wallThickness)
+      .field("slantAngle", &cantilever_brace_params::slantAngle);
+
+  function("createCantileverBrace",
+           select_overload<TopoDS_Shape(const cantilever_brace_params &)>(
+               &create_cantilever_brace));
+  function("createCantileverBraceWithPosition",
+           select_overload<TopoDS_Shape(const cantilever_brace_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_cantilever_brace));
+
+  // ==========================================================================
+  // Reg Arm Bracket (定位器底座 L型金具) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<reg_arm_bracket_params>("RegArmBracketParams")
+      .field("tubeDiameter", &reg_arm_bracket_params::tubeDiameter)
+      .field("bandWidth", &reg_arm_bracket_params::bandWidth)
+      .field("bandThickness", &reg_arm_bracket_params::bandThickness)
+      .field("bracketHeight", &reg_arm_bracket_params::bracketHeight)
+      .field("bracketThickness", &reg_arm_bracket_params::bracketThickness)
+      .field("bracketWidth", &reg_arm_bracket_params::bracketWidth)
+      .field("mountHoleDiameter", &reg_arm_bracket_params::mountHoleDiameter);
+
+  function("createRegArmBracket",
+           select_overload<TopoDS_Shape(const reg_arm_bracket_params &)>(
+               &create_reg_arm_bracket));
+  function("createRegArmBracketWithPosition",
+           select_overload<TopoDS_Shape(const reg_arm_bracket_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_reg_arm_bracket));
+
+  // ==========================================================================
+  // Registration Arm (定位器) — from primitives_railway.hh
+  // ==========================================================================
+  enum_<registration_arm_type>("RegistrationArmType")
+      .value("STRAIGHT", registration_arm_type::STRAIGHT)
+      .value("CURVED", registration_arm_type::CURVED)
+      .value("EXTENDED", registration_arm_type::EXTENDED);
+
+  value_object<registration_arm_params>("RegistrationArmParams")
+      .field("type", &registration_arm_params::type)
+      .field("length", &registration_arm_params::length)
+      .field("tubeWidth", &registration_arm_params::tubeWidth)
+      .field("tubeHeight", &registration_arm_params::tubeHeight)
+      .field("wallThickness", &registration_arm_params::wallThickness)
+      .field("angle", &registration_arm_params::angle)
+      .field("isReverse", &registration_arm_params::isReverse);
+
+  function("createRegistrationArm",
+           select_overload<TopoDS_Shape(const registration_arm_params &)>(
+               &create_registration_arm));
+  function("createRegistrationArmWithPosition",
+           select_overload<TopoDS_Shape(const registration_arm_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_registration_arm));
+
+  // ==========================================================================
   // Borehole (钻孔)
   // ==========================================================================
   function("createBorehole",

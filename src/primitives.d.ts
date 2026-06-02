@@ -2580,6 +2580,74 @@ export declare type EndFittingType = {
     SCREW: {}
 }
 
+// 定位器类型枚举
+export declare type RegistrationArmType = {
+    STRAIGHT: {},
+    CURVED: {},
+    EXTENDED: {}
+}
+
+// 定位器参数结构体
+export declare interface RegistrationArmParams {
+    type: RegistrationArmType;
+    length: number;
+    tubeWidth: number;
+    tubeHeight: number;
+    wallThickness: number;
+    angle: number;
+    isReverse: boolean;
+}
+
+export declare function createRegistrationArm(params: RegistrationArmParams): TopoDS_Shape;
+export declare function createRegistrationArmWithPosition(params: RegistrationArmParams, basePoint: gp_Pnt, axisDirection: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 定位器底座参数结构体
+export declare interface RegArmBracketParams {
+    tubeDiameter: number;
+    bandWidth: number;
+    bandThickness: number;
+    bracketHeight: number;
+    bracketThickness: number;
+    bracketWidth: number;
+    mountHoleDiameter: number;
+}
+
+export declare function createRegArmBracket(params: RegArmBracketParams): TopoDS_Shape;
+export declare function createRegArmBracketWithPosition(params: RegArmBracketParams, position: gp_Pnt, tubeDir: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 斜撑参数结构体
+export declare interface CantileverBraceParams {
+    length: number;
+    outerDiameter: number;
+    wallThickness: number;
+    slantAngle: number;
+}
+
+export declare function createCantileverBrace(params: CantileverBraceParams): TopoDS_Shape;
+export declare function createCantileverBraceWithPosition(params: CantileverBraceParams, basePoint: gp_Pnt, axisDirection: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 斜腕臂参数结构体
+export declare interface SlantCantileverParams {
+    length: number;
+    outerDiameter: number;
+    wallThickness: number;
+    slantAngle: number;
+}
+
+export declare function createSlantCantilever(params: SlantCantileverParams): TopoDS_Shape;
+export declare function createSlantCantileverWithPosition(params: SlantCantileverParams, basePoint: gp_Pnt, axisDirection: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 平腕臂参数结构体
+export declare interface LevelCantileverParams {
+    length: number;
+    outerDiameter: number;
+    wallThickness: number;
+    riseAngle: number;
+}
+
+export declare function createLevelCantilever(params: LevelCantileverParams): TopoDS_Shape;
+export declare function createLevelCantileverWithPosition(params: LevelCantileverParams, basePoint: gp_Pnt, axisDirection: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
 // 横担参数结构体
 export declare interface CrossArmParams {
     beamLength: number;

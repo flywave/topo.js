@@ -1,5 +1,51 @@
 import { Version } from "./types";
 
+export interface RegistrationArmObject extends Version {
+    type: 'RAILWAY/RegistrationArm';
+    regType?: number;
+    length: number;
+    tubeWidth: number;
+    tubeHeight: number;
+    wallThickness: number;
+    angle: number;
+    isReverse: boolean;
+}
+
+export interface RegArmBracketObject extends Version {
+    type: 'RAILWAY/RegArmBracket';
+    tubeDiameter: number;
+    bandWidth: number;
+    bandThickness: number;
+    bracketHeight: number;
+    bracketThickness: number;
+    bracketWidth: number;
+    mountHoleDiameter: number;
+}
+
+export interface CantileverBraceObject extends Version {
+    type: 'RAILWAY/CantileverBrace';
+    length: number;
+    outerDiameter: number;
+    wallThickness: number;
+    slantAngle: number;
+}
+
+export interface SlantCantileverObject extends Version {
+    type: 'RAILWAY/SlantCantilever';
+    length: number;
+    outerDiameter: number;
+    wallThickness: number;
+    slantAngle: number;
+}
+
+export interface LevelCantileverObject extends Version {
+    type: 'RAILWAY/LevelCantilever';
+    length: number;
+    outerDiameter: number;
+    wallThickness: number;
+    riseAngle: number;
+}
+
 export interface CrossArmObject extends Version {
     type: 'RAILWAY/CrossArm';
     beamLength: number;
