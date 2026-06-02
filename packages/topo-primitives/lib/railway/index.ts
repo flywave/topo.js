@@ -2,15 +2,17 @@ import {
     Shape,
     TopoInstance,
     RodInsulatorParams,
+    CrossArmParams,
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
-import { RodInsulatorObject } from "../types/railway";
+import { RodInsulatorObject, CrossArmObject } from "../types/railway";
 
 export enum RLPrimitiveType {
     RodInsulator = "RAILWAY/RodInsulator",
+    CrossArm = "RAILWAY/CrossArm",
 }
 
-export type RLPrimitive = RodInsulatorPrimitive;
+export type RLPrimitive = RodInsulatorPrimitive | CrossArmPrimitive;
 
 export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, RodInsulatorObject> {
 
@@ -97,6 +99,81 @@ export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, Rod
     }
 };
 
+export class CrossArmPrimitive extends BasePrimitive<CrossArmParams, CrossArmObject> {
+
+    constructor(tp: TopoInstance, params?: CrossArmObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.CrossArm;
+    }
+
+    setDefault(): Primitive<CrossArmParams, CrossArmObject> {
+        this.params = {
+            beamLength: 2000,
+            beamHeight: 120,
+            beamWidth: 80,
+            beamThickness: 6,
+            beamSpacing: 400,
+            braceDiameter: 20,
+            boltSpacing: 100,
+            boltDiameter: 16,
+            boltCount: 4,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: CrossArmParams): Primitive<CrossArmParams, CrossArmObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.beamLength > 0 && this.params.beamHeight > 0 && this.params.beamWidth > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createCrossArm(this.params), false);
+        }
+        throw new Error("Invalid parameters for CrossArm");
+    }
+
+    fromObject(o?: CrossArmObject): Primitive<CrossArmParams, CrossArmObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            beamLength: o['beamLength'],
+            beamHeight: o['beamHeight'],
+            beamWidth: o['beamWidth'],
+            beamThickness: o['beamThickness'],
+            beamSpacing: o['beamSpacing'],
+            braceDiameter: o['braceDiameter'],
+            boltSpacing: o['boltSpacing'],
+            boltDiameter: o['boltDiameter'],
+            boltCount: o['boltCount'],
+        } as any;
+        return this;
+    }
+
+    toObject(): CrossArmObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['beamLength', this.params.beamLength],
+            ['beamHeight', this.params.beamHeight],
+            ['beamWidth', this.params.beamWidth],
+            ['beamThickness', this.params.beamThickness],
+            ['beamSpacing', this.params.beamSpacing],
+            ['braceDiameter', this.params.braceDiameter],
+            ['boltSpacing', this.params.boltSpacing],
+            ['boltDiameter', this.params.boltDiameter],
+            ['boltCount', this.params.boltCount],
+        ])) as CrossArmObject;
+    }
+};
+
 export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any): RLPrimitive | undefined {
     if (args === undefined) {
         return undefined;
@@ -113,6 +190,9 @@ export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any
     switch (type) {
         case RLPrimitiveType.RodInsulator:
             primitive = new RodInsulatorPrimitive(tp);
+            break;
+        case RLPrimitiveType.CrossArm:
+            primitive = new CrossArmPrimitive(tp);
             break;
     }
     if (primitive === undefined) {

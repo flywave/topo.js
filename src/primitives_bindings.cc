@@ -4680,6 +4680,28 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                &create_rod_insulator));
 
   // ==========================================================================
+  // Cross Arm (横担) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<cross_arm_params>("CrossArmParams")
+      .field("beamLength", &cross_arm_params::beamLength)
+      .field("beamHeight", &cross_arm_params::beamHeight)
+      .field("beamWidth", &cross_arm_params::beamWidth)
+      .field("beamThickness", &cross_arm_params::beamThickness)
+      .field("beamSpacing", &cross_arm_params::beamSpacing)
+      .field("braceDiameter", &cross_arm_params::braceDiameter)
+      .field("boltSpacing", &cross_arm_params::boltSpacing)
+      .field("boltDiameter", &cross_arm_params::boltDiameter)
+      .field("boltCount", &cross_arm_params::boltCount);
+
+  function("createCrossArm",
+           select_overload<TopoDS_Shape(const cross_arm_params &)>(
+               &create_cross_arm));
+  function("createCrossArmWithPosition",
+           select_overload<TopoDS_Shape(const cross_arm_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_cross_arm));
+
+  // ==========================================================================
   // Borehole (钻孔)
   // ==========================================================================
   function("createBorehole",

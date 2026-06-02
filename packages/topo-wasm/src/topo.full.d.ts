@@ -181708,6 +181708,22 @@ export declare type EndFittingType = {
     SCREW: {}
 }
 
+// 横担参数结构体
+export declare interface CrossArmParams {
+    beamLength: number;
+    beamHeight: number;
+    beamWidth: number;
+    beamThickness: number;
+    beamSpacing: number;
+    braceDiameter: number;
+    boltSpacing: number;
+    boltDiameter: number;
+    boltCount: number;
+}
+
+export declare function createCrossArm(params: CrossArmParams): TopoDS_Shape;
+export declare function createCrossArmWithPosition(params: CrossArmParams, position: gp_Pnt, normal: gp_Dir, xDir: gp_Dir): TopoDS_Shape;
+
 // 棒式绝缘子参数结构体
 export declare interface RodInsulatorParams {
     type: RodInsulatorType;
@@ -209154,6 +209170,7 @@ export type TopoInstance = {FS: typeof FS} & {
   PipeShapeParams: PipeShapeParams;
   StepShapeParams: StepShapeParams;
   RodInsulatorParams: RodInsulatorParams;
+  CrossArmParams: CrossArmParams;
   BoreholeSample: BoreholeSample;
   BoreholeParams: BoreholeParams;
   ProfileLayer: ProfileLayer;
@@ -209391,6 +209408,8 @@ export type TopoInstance = {FS: typeof FS} & {
   createStepShapeWithPosition: typeof createStepShapeWithPosition;
   createRodInsulator: typeof createRodInsulator;
   createRodInsulatorWithPosition: typeof createRodInsulatorWithPosition;
+  createCrossArm: typeof createCrossArm;
+  createCrossArmWithPosition: typeof createCrossArmWithPosition;
   createBorehole: typeof createBorehole;
   createMultiLayerExtrusionStructure: typeof createMultiLayerExtrusionStructure;
   createMultiLayerExtrusionStructureWithPosition: typeof createMultiLayerExtrusionStructureWithPosition;

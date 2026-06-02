@@ -1,5 +1,18 @@
 import { Version } from "./types";
 
+export interface CrossArmObject extends Version {
+    type: 'RAILWAY/CrossArm';
+    beamLength: number;
+    beamHeight: number;
+    beamWidth: number;
+    beamThickness: number;
+    beamSpacing: number;
+    braceDiameter: number;
+    boltSpacing: number;
+    boltDiameter: number;
+    boltCount: number;
+}
+
 export interface RodInsulatorObject extends Version {
     type: 'RAILWAY/RodInsulator';
     rodType?: number;
