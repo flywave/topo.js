@@ -4,19 +4,21 @@ import {
     GSPrimitiveType,
     GTPrimitiveType,
     HPPrimitiveType,
+    RLPrimitiveType,
     GeologyPrimitiveType,
     createBasePrimitive,
     createECPrimitive,
     createGSPrimitive,
     createGTPrimitive,
     createHPPrimitive,
+    createRLPrimitive,
     createGeologyPrimitive,
 } from "topo-primitives"
 import { TopoInstance } from "topo-wasm"
 
 export function createShapePrimitive(
     tp: TopoInstance,
-    shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType,
+    shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | RLPrimitiveType | GeologyPrimitiveType,
     params?: any
 ) {
     // 缓存上次创建的类型
@@ -45,6 +47,9 @@ export function createShapePrimitive(
         }
         if (Object.values(HPPrimitiveType).includes(shapeType as HPPrimitiveType)) {
             return createHPPrimitive(tp, shapeType as HPPrimitiveType);
+        }
+        if (Object.values(RLPrimitiveType).includes(shapeType as RLPrimitiveType)) {
+            return createRLPrimitive(tp, shapeType as RLPrimitiveType);
         }
 
         if (Object.values(GeologyPrimitiveType).includes(shapeType as GeologyPrimitiveType)) {

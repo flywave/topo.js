@@ -2,7 +2,7 @@ import * as THREE from "three"
 import Setup from "./setup"
 import { Shape, TopoInstance } from "topo-wasm"
 import { mesh, requestTopoInstance } from "topo-js"
-import { BasePrimitiveType, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType, GeologyPrimitiveType } from "topo-primitives"
+import { BasePrimitiveType, ECPrimitiveType, GSPrimitiveType, GTPrimitiveType, HPPrimitiveType, RLPrimitiveType, GeologyPrimitiveType } from "topo-primitives"
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import { createShapePrimitive } from "./primitives"
 import createAxisHelper from "./axes"
@@ -15,7 +15,7 @@ export default class World {
   oc: TopoInstance | null = null
   done: Promise<void> | null = null
   gui: GUI | null = null  // 新增GUI实例
-  selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType = BasePrimitiveType.Pipe
+  selectedShape: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | RLPrimitiveType | GeologyPrimitiveType = BasePrimitiveType.Pipe
   group: THREE.Group | null = null
   axis: THREE.Group | null = null
 
@@ -54,6 +54,7 @@ export default class World {
       ...Object.values(GSPrimitiveType),
       ...Object.values(GTPrimitiveType),
       ...Object.values(HPPrimitiveType),
+      ...Object.values(RLPrimitiveType),
       ...Object.values(GeologyPrimitiveType)
     ];
 
@@ -64,7 +65,7 @@ export default class World {
 
     this.gui.add(options, 'shapeType', options.shapes)
       .name('Shape Type')
-      .onChange((value: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType) => {
+      .onChange((value: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | RLPrimitiveType | GeologyPrimitiveType) => {
         this.selectedShape = value;
         console.log('Selected shape:', value);
         // 这里可以添加形状切换逻辑
@@ -73,7 +74,7 @@ export default class World {
   }
 
   // 新增方法 - 根据选择的类型更新形状
-  private updateShapeBasedOnSelection(shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | GeologyPrimitiveType) {
+  private updateShapeBasedOnSelection(shapeType: BasePrimitiveType | ECPrimitiveType | GSPrimitiveType | GTPrimitiveType | HPPrimitiveType | RLPrimitiveType | GeologyPrimitiveType) {
     // 清除当前场景中的形状
 
     this.group?.clear();
@@ -136,6 +137,9 @@ export default class World {
     }
     if (shapeType.includes('GIM/GS')) {
       return 0xff4500; // 橙色 - 管道类
+    }
+    if (shapeType.includes('RAILWAY')) {
+      return 0xff69b4; // 粉红色 - 铁路类
     }
     return 0x3498db; // 默认蓝色
   }

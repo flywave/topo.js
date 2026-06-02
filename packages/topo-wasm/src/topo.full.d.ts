@@ -181695,6 +181695,37 @@ export declare interface StepShapeParams {
 ): TopoDS_Shape;
 
 
+// 棒式绝缘子类型枚举
+export declare type RodInsulatorType = {
+    SOLID: {},
+    HOLLOW: {}
+}
+
+// 端部连接方式枚举
+export declare type EndFittingType = {
+    FLANGE: {},
+    BALL: {},
+    SCREW: {}
+}
+
+// 棒式绝缘子参数结构体
+export declare interface RodInsulatorParams {
+    type: RodInsulatorType;
+    height: number;
+    outerDiameter: number;
+    innerDiameter: number;
+    shedDiameter: number;
+    shedSpacing: number;
+    shedCount: number;
+    endFitting: EndFittingType;
+    flangeDiameter: number;
+    flangeBoltSpacing: number;
+    flangeBoltDiameter: number;
+}
+
+export declare function createRodInsulator(params: RodInsulatorParams): TopoDS_Shape;
+export declare function createRodInsulatorWithPosition(params: RodInsulatorParams, basePoint: gp_Pnt, axisDirection: gp_Dir): TopoDS_Shape;
+
 // 钻孔样本类型
 export declare interface BoreholeSample {
     name: string;
@@ -209122,6 +209153,7 @@ export type TopoInstance = {FS: typeof FS} & {
   WedgeShapeParams: WedgeShapeParams;
   PipeShapeParams: PipeShapeParams;
   StepShapeParams: StepShapeParams;
+  RodInsulatorParams: RodInsulatorParams;
   BoreholeSample: BoreholeSample;
   BoreholeParams: BoreholeParams;
   ProfileLayer: ProfileLayer;
@@ -209357,6 +209389,8 @@ export type TopoInstance = {FS: typeof FS} & {
   createPipeShapeWithPosition: typeof createPipeShapeWithPosition;
   createStepShape: typeof createStepShape;
   createStepShapeWithPosition: typeof createStepShapeWithPosition;
+  createRodInsulator: typeof createRodInsulator;
+  createRodInsulatorWithPosition: typeof createRodInsulatorWithPosition;
   createBorehole: typeof createBorehole;
   createMultiLayerExtrusionStructure: typeof createMultiLayerExtrusionStructure;
   createMultiLayerExtrusionStructureWithPosition: typeof createMultiLayerExtrusionStructureWithPosition;
@@ -209391,6 +209425,8 @@ export type TopoInstance = {FS: typeof FS} & {
   WasherShapeType: WasherShapeType;
   CableTerminalType: CableTerminalType;
   TunnelPartitionBoardStyle: TunnelPartitionBoardStyle;
+  RodInsulatorType: RodInsulatorType;
+  EndFittingType: EndFittingType;
   SketchMode: SketchMode;
   Sketch: typeof Sketch;
   BBox: typeof BBox;

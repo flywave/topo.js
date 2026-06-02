@@ -126,6 +126,7 @@
             "WedgeShapeParams",
             "PipeShapeParams",
             "StepShapeParams",
+            "RodInsulatorParams",
             "BoreholeSample",
             "BoreholeParams",
             "ProfileLayer",
@@ -366,6 +367,8 @@
             "createPipeShapeWithPosition",
             "createStepShape",
             "createStepShapeWithPosition",
+            "createRodInsulator",
+            "createRodInsulatorWithPosition",
             "createBorehole",
             "createMultiLayerExtrusionStructure",
             "createMultiLayerExtrusionStructureWithPosition",
@@ -404,7 +407,9 @@
             "PipeSupportStyle",
             "WasherShapeType",
             "CableTerminalType",
-            "TunnelPartitionBoardStyle"
+            "TunnelPartitionBoardStyle",
+            "RodInsulatorType",
+            "EndFittingType"
         ],
         "kind": "enum"
     }

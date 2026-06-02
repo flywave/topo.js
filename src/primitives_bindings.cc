@@ -1,5 +1,6 @@
 #include "binding.hh"
 #include "primitives.hh"
+#include "primitives_railway.hh"
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -4645,6 +4646,42 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("diameter", &borehole_params::diameter)
       .field("upDir", &get_borehole_up_dir, &set_borehole_up_dir);
 
+  // ==========================================================================
+  // 7. Rod Insulator (棒式绝缘子) — from primitives_railway.hh
+  // ==========================================================================
+  enum_<rod_insulator_type>("RodInsulatorType")
+      .value("SOLID", rod_insulator_type::SOLID)
+      .value("HOLLOW", rod_insulator_type::HOLLOW);
+
+  enum_<end_fitting_type>("EndFittingType")
+      .value("FLANGE", end_fitting_type::FLANGE)
+      .value("BALL", end_fitting_type::BALL)
+      .value("SCREW", end_fitting_type::SCREW);
+
+  value_object<rod_insulator_params>("RodInsulatorParams")
+      .field("type", &rod_insulator_params::type)
+      .field("height", &rod_insulator_params::height)
+      .field("outerDiameter", &rod_insulator_params::outerDiameter)
+      .field("innerDiameter", &rod_insulator_params::innerDiameter)
+      .field("shedDiameter", &rod_insulator_params::shedDiameter)
+      .field("shedSpacing", &rod_insulator_params::shedSpacing)
+      .field("shedCount", &rod_insulator_params::shedCount)
+      .field("endFitting", &rod_insulator_params::endFitting)
+      .field("flangeDiameter", &rod_insulator_params::flangeDiameter)
+      .field("flangeBoltSpacing", &rod_insulator_params::flangeBoltSpacing)
+      .field("flangeBoltDiameter", &rod_insulator_params::flangeBoltDiameter);
+
+  function("createRodInsulator",
+           select_overload<TopoDS_Shape(const rod_insulator_params &)>(
+               &create_rod_insulator));
+  function("createRodInsulatorWithPosition",
+           select_overload<TopoDS_Shape(const rod_insulator_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_rod_insulator));
+
+  // ==========================================================================
+  // Borehole (钻孔)
+  // ==========================================================================
   function("createBorehole",
            emscripten::optional_override([](const borehole_params &params) {
              auto results = create_borehole(params);
