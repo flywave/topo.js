@@ -1,7 +1,6 @@
 mainBuild:
   name: topo.full.js
   emccFlags:
-    - "-flto"
     - "-O3"
     - "-fexceptions"
     - "-sDISABLE_EXCEPTION_CATCHING=0"
