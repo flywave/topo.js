@@ -8,9 +8,10 @@ import {
     CantileverBraceParams,
     RegArmBracketParams,
     RegistrationArmParams,
+    CurvedArmParams,
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
-import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, RegArmBracketObject, RegistrationArmObject } from "../types/railway";
+import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject } from "../types/railway";
 
 export enum RLPrimitiveType {
     RodInsulator = "RAILWAY/RodInsulator",
@@ -20,9 +21,10 @@ export enum RLPrimitiveType {
     CantileverBrace = "RAILWAY/CantileverBrace",
     RegArmBracket = "RAILWAY/RegArmBracket",
     RegistrationArm = "RAILWAY/RegistrationArm",
+    CurvedArm = "RAILWAY/CurvedArm",
 }
 
-export type RLPrimitive = RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
+export type RLPrimitive = RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
 
 export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, RodInsulatorObject> {
 
@@ -501,6 +503,81 @@ export class RegistrationArmPrimitive extends BasePrimitive<RegistrationArmParam
     }
 };
 
+export class CurvedArmPrimitive extends BasePrimitive<CurvedArmParams, CurvedArmObject> {
+
+    constructor(tp: TopoInstance, params?: CurvedArmObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.CurvedArm;
+    }
+
+    setDefault(): Primitive<CurvedArmParams, CurvedArmObject> {
+        this.params = {
+            verticalLength: 500,
+            horizontalLength: 800,
+            bendRadius: 200,
+            bendAngle: 90,
+            outerDiameter: 48,
+            wallThickness: 3.5,
+            flangeThickness: 10,
+            boltSpacing: 80,
+            boltDiameter: 12,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: CurvedArmParams): Primitive<CurvedArmParams, CurvedArmObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.verticalLength > 0 && this.params.horizontalLength > 0 && this.params.outerDiameter > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createCurvedArm(this.params), false);
+        }
+        throw new Error("Invalid parameters for CurvedArm");
+    }
+
+    fromObject(o?: CurvedArmObject): Primitive<CurvedArmParams, CurvedArmObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            verticalLength: o['verticalLength'],
+            horizontalLength: o['horizontalLength'],
+            bendRadius: o['bendRadius'],
+            bendAngle: o['bendAngle'] || 90,
+            outerDiameter: o['outerDiameter'],
+            wallThickness: o['wallThickness'],
+            flangeThickness: o['flangeThickness'],
+            boltSpacing: o['boltSpacing'] || 80,
+            boltDiameter: o['boltDiameter'] || 12,
+        } as any;
+        return this;
+    }
+
+    toObject(): CurvedArmObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['verticalLength', this.params.verticalLength],
+            ['horizontalLength', this.params.horizontalLength],
+            ['bendRadius', this.params.bendRadius],
+            ['bendAngle', this.params.bendAngle],
+            ['outerDiameter', this.params.outerDiameter],
+            ['wallThickness', this.params.wallThickness],
+            ['flangeThickness', this.params.flangeThickness],
+            ['boltSpacing', this.params.boltSpacing],
+            ['boltDiameter', this.params.boltDiameter],
+        ])) as CurvedArmObject;
+    }
+};
+
 export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any): RLPrimitive | undefined {
     if (args === undefined) {
         return undefined;
@@ -535,6 +612,9 @@ export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any
             break;
         case RLPrimitiveType.RegistrationArm:
             primitive = new RegistrationArmPrimitive(tp);
+            break;
+        case RLPrimitiveType.CurvedArm:
+            primitive = new CurvedArmPrimitive(tp);
             break;
     }
     if (primitive === undefined) {

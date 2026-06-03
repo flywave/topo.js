@@ -1,5 +1,18 @@
 import { Version } from "./types";
 
+export interface CurvedArmObject extends Version {
+    type: 'RAILWAY/CurvedArm';
+    verticalLength: number;
+    horizontalLength: number;
+    bendRadius: number;
+    bendAngle: number;
+    outerDiameter: number;
+    wallThickness: number;
+    flangeThickness: number;
+    boltSpacing: number;
+    boltDiameter: number;
+}
+
 export interface RegistrationArmObject extends Version {
     type: 'RAILWAY/RegistrationArm';
     regType?: number;

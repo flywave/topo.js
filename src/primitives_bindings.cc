@@ -4798,6 +4798,28 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                         const gp_Dir &)>(&create_registration_arm));
 
   // ==========================================================================
+  // Curved Arm (弯臂) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<curved_arm_params>("CurvedArmParams")
+      .field("verticalLength", &curved_arm_params::verticalLength)
+      .field("horizontalLength", &curved_arm_params::horizontalLength)
+      .field("bendRadius", &curved_arm_params::bendRadius)
+      .field("bendAngle", &curved_arm_params::bendAngle)
+      .field("outerDiameter", &curved_arm_params::outerDiameter)
+      .field("wallThickness", &curved_arm_params::wallThickness)
+      .field("flangeThickness", &curved_arm_params::flangeThickness)
+      .field("boltSpacing", &curved_arm_params::boltSpacing)
+      .field("boltDiameter", &curved_arm_params::boltDiameter);
+
+  function("createCurvedArm",
+           select_overload<TopoDS_Shape(const curved_arm_params &)>(
+               &create_curved_arm));
+  function("createCurvedArmWithPosition",
+           select_overload<TopoDS_Shape(const curved_arm_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_curved_arm));
+
+  // ==========================================================================
   // Borehole (钻孔)
   // ==========================================================================
   function("createBorehole",

@@ -181715,6 +181715,22 @@ export declare type RegistrationArmType = {
     EXTENDED: {}
 }
 
+// 弯臂参数结构体
+export declare interface CurvedArmParams {
+    verticalLength: number;
+    horizontalLength: number;
+    bendRadius: number;
+    bendAngle: number;
+    outerDiameter: number;
+    wallThickness: number;
+    flangeThickness: number;
+    boltSpacing: number;
+    boltDiameter: number;
+}
+
+export declare function createCurvedArm(params: CurvedArmParams): TopoDS_Shape;
+export declare function createCurvedArmWithPosition(params: CurvedArmParams, position: gp_Pnt, normal: gp_Dir, xDir: gp_Dir): TopoDS_Shape;
+
 // 定位器参数结构体
 export declare interface RegistrationArmParams {
     type: RegistrationArmType;
@@ -209244,6 +209260,7 @@ export type TopoInstance = {FS: typeof FS} & {
   CantileverBraceParams: CantileverBraceParams;
   RegArmBracketParams: RegArmBracketParams;
   RegistrationArmParams: RegistrationArmParams;
+  CurvedArmParams: CurvedArmParams;
   BoreholeSample: BoreholeSample;
   BoreholeParams: BoreholeParams;
   ProfileLayer: ProfileLayer;
@@ -209493,6 +209510,8 @@ export type TopoInstance = {FS: typeof FS} & {
   createRegArmBracketWithPosition: typeof createRegArmBracketWithPosition;
   createRegistrationArm: typeof createRegistrationArm;
   createRegistrationArmWithPosition: typeof createRegistrationArmWithPosition;
+  createCurvedArm: typeof createCurvedArm;
+  createCurvedArmWithPosition: typeof createCurvedArmWithPosition;
   createBorehole: typeof createBorehole;
   createMultiLayerExtrusionStructure: typeof createMultiLayerExtrusionStructure;
   createMultiLayerExtrusionStructureWithPosition: typeof createMultiLayerExtrusionStructureWithPosition;
