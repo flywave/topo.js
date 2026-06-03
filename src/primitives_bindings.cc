@@ -4773,6 +4773,113 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                         const gp_Dir &)>(&create_reg_arm_bracket));
 
   // ==========================================================================
+  // OCS Foundation (支柱基础) — from primitives_railway.hh
+  // ==========================================================================
+  enum_<foundation_type>("FoundationType")
+      .value("DIRECT_BURIED", foundation_type::DIRECT_BURIED)
+      .value("FLANGE", foundation_type::FLANGE)
+      .value("BORED_PILE", foundation_type::BORED_PILE)
+      .value("EXCAVATED_PILE", foundation_type::EXCAVATED_PILE)
+      .value("ANCHOR", foundation_type::ANCHOR);
+
+  value_object<ocs_foundation_params>("OcsFoundationParams")
+      .field("type", &ocs_foundation_params::type)
+      .field("height", &ocs_foundation_params::height)
+      .field("width", &ocs_foundation_params::width)
+      .field("length", &ocs_foundation_params::length)
+      .field("flangeThickness", &ocs_foundation_params::flangeThickness)
+      .field("anchorCount", &ocs_foundation_params::anchorCount)
+      .field("anchorDiameter", &ocs_foundation_params::anchorDiameter)
+      .field("anchorLength", &ocs_foundation_params::anchorLength)
+      .field("anchorSpacing", &ocs_foundation_params::anchorSpacing);
+
+  function("createOcsFoundation",
+           select_overload<TopoDS_Shape(const ocs_foundation_params &)>(
+               &create_ocs_foundation));
+  function("createOcsFoundationWithPosition",
+           select_overload<TopoDS_Shape(const ocs_foundation_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_ocs_foundation));
+
+  // ==========================================================================
+  // Steel Mast (钢支柱) — from primitives_railway.hh
+  // ==========================================================================
+  enum_<steel_mast_type>("SteelMastType")
+      .value("LATTICE", steel_mast_type::LATTICE)
+      .value("H_BEAM", steel_mast_type::H_BEAM);
+
+  value_object<steel_mast_params>("SteelMastParams")
+      .field("type", &steel_mast_params::type)
+      .field("height", &steel_mast_params::height)
+      .field("topWidth", &steel_mast_params::topWidth)
+      .field("bottomWidth", &steel_mast_params::bottomWidth)
+      .field("wallThickness", &steel_mast_params::wallThickness)
+      .field("flangeThickness", &steel_mast_params::flangeThickness)
+      .field("flangeWidth", &steel_mast_params::flangeWidth)
+      .field("anchorSpacing", &steel_mast_params::anchorSpacing)
+      .field("anchorDiameter", &steel_mast_params::anchorDiameter)
+      .field("segmentCount", &steel_mast_params::segmentCount);
+
+  function("createSteelMast",
+           select_overload<TopoDS_Shape(const steel_mast_params &)>(
+               &create_steel_mast));
+  function("createSteelMastWithPosition",
+           select_overload<TopoDS_Shape(const steel_mast_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_steel_mast));
+
+  // ==========================================================================
+  // Concrete Mast (混凝土支柱) — from primitives_railway.hh
+  // ==========================================================================
+  enum_<concrete_mast_section_type>("ConcreteMastSectionType")
+      .value("CIRCULAR", concrete_mast_section_type::CIRCULAR)
+      .value("RECTANGULAR", concrete_mast_section_type::RECTANGULAR)
+      .value("CIRCULAR_HOLED", concrete_mast_section_type::CIRCULAR_HOLED)
+      .value("RECTANGULAR_HOLED", concrete_mast_section_type::RECTANGULAR_HOLED);
+
+  value_object<concrete_mast_params>("ConcreteMastParams")
+      .field("sectionType", &concrete_mast_params::sectionType)
+      .field("height", &concrete_mast_params::height)
+      .field("topWidth", &concrete_mast_params::topWidth)
+      .field("bottomWidth", &concrete_mast_params::bottomWidth)
+      .field("wallThickness", &concrete_mast_params::wallThickness)
+      .field("holeDiameter", &concrete_mast_params::holeDiameter)
+      .field("holeSpacingV", &concrete_mast_params::holeSpacingV)
+      .field("holeSpacingH", &concrete_mast_params::holeSpacingH)
+      .field("firstHoleOffset", &concrete_mast_params::firstHoleOffset)
+      .field("holeRowCount", &concrete_mast_params::holeRowCount)
+      .field("holesPerRow", &concrete_mast_params::holesPerRow);
+
+  function("createConcreteMast",
+           select_overload<TopoDS_Shape(const concrete_mast_params &)>(
+               &create_concrete_mast));
+  function("createConcreteMastWithPosition",
+           select_overload<TopoDS_Shape(const concrete_mast_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_concrete_mast));
+
+  // ==========================================================================
+  // Mast Bracket (支柱连接座) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<mast_bracket_params>("MastBracketParams")
+      .field("boltSpacing", &mast_bracket_params::boltSpacing)
+      .field("boltDiameter", &mast_bracket_params::boltDiameter)
+      .field("height", &mast_bracket_params::height)
+      .field("width", &mast_bracket_params::width)
+      .field("thickness", &mast_bracket_params::thickness)
+      .field("insulatorBoltSpacing", &mast_bracket_params::insulatorBoltSpacing)
+      .field("insulatorBoltDiameter", &mast_bracket_params::insulatorBoltDiameter)
+      .field("mountAngle", &mast_bracket_params::mountAngle);
+
+  function("createMastBracket",
+           select_overload<TopoDS_Shape(const mast_bracket_params &)>(
+               &create_mast_bracket));
+  function("createMastBracketWithPosition",
+           select_overload<TopoDS_Shape(const mast_bracket_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_mast_bracket));
+
+  // ==========================================================================
   // Registration Arm (定位器) — from primitives_railway.hh
   // ==========================================================================
   enum_<registration_arm_type>("RegistrationArmType")
@@ -4818,6 +4925,29 @@ EMSCRIPTEN_BINDINGS(Primitive) {
            select_overload<TopoDS_Shape(const curved_arm_params &,
                                         const gp_Pnt &, const gp_Dir &,
                                         const gp_Dir &)>(&create_curved_arm));
+
+  // ==========================================================================
+  // Guy Wire (下锚拉线) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<guy_wire_params>("GuyWireParams")
+      .field("length", &guy_wire_params::length)
+      .field("diameter", &guy_wire_params::diameter)
+      .field("angle", &guy_wire_params::angle)
+      .field("ratedTension", &guy_wire_params::ratedTension)
+      .field("hasInsulator", &guy_wire_params::hasInsulator)
+      .field("insulatorCount", &guy_wire_params::insulatorCount)
+      .field("anchorRodDiameter", &guy_wire_params::anchorRodDiameter)
+      .field("anchorRodLength", &guy_wire_params::anchorRodLength)
+      .field("anchorPlateLength", &guy_wire_params::anchorPlateLength)
+      .field("anchorPlateWidth", &guy_wire_params::anchorPlateWidth);
+
+  function("createGuyWire",
+           select_overload<TopoDS_Shape(const guy_wire_params &)>(
+               &create_guy_wire));
+  function("createGuyWireWithPosition",
+           select_overload<TopoDS_Shape(const guy_wire_params &,
+                                        const gp_Pnt &, const gp_Pnt &,
+                                        const gp_Dir &)>(&create_guy_wire));
 
   // ==========================================================================
   // Contact Wire (接触线) — from primitives_railway.hh

@@ -13,6 +13,60 @@ export interface CurvedArmObject extends Version {
     boltDiameter: number;
 }
 
+export interface MastBracketObject extends Version {
+    type: 'RAILWAY/MastBracket';
+    boltSpacing: number;
+    boltDiameter: number;
+    height: number;
+    width: number;
+    thickness: number;
+    insulatorBoltSpacing: number;
+    insulatorBoltDiameter: number;
+    mountAngle: number;
+}
+
+export interface OcsFoundationObject extends Version {
+    type: 'RAILWAY/OcsFoundation';
+    foundationType?: number;
+    height: number;
+    width: number;
+    length: number;
+    flangeThickness: number;
+    anchorCount: number;
+    anchorDiameter: number;
+    anchorLength: number;
+    anchorSpacing: number;
+}
+
+export interface SteelMastObject extends Version {
+    type: 'RAILWAY/SteelMast';
+    steelType?: number;
+    height: number;
+    topWidth: number;
+    bottomWidth: number;
+    wallThickness: number;
+    flangeThickness: number;
+    flangeWidth: number;
+    anchorSpacing: number;
+    anchorDiameter: number;
+    segmentCount: number;
+}
+
+export interface ConcreteMastObject extends Version {
+    type: 'RAILWAY/ConcreteMast';
+    sectionType?: number;
+    height: number;
+    topWidth: number;
+    bottomWidth: number;
+    wallThickness: number;
+    holeDiameter: number;
+    holeSpacingV: number;
+    holeSpacingH: number;
+    firstHoleOffset: number;
+    holeRowCount: number;
+    holesPerRow: number;
+}
+
 export interface RegistrationArmObject extends Version {
     type: 'RAILWAY/RegistrationArm';
     regType?: number;
@@ -70,6 +124,20 @@ export interface CrossArmObject extends Version {
     boltSpacing: number;
     boltDiameter: number;
     boltCount: number;
+}
+
+export interface GuyWireObject extends Version {
+    type: 'RAILWAY/GuyWire';
+    length: number;
+    diameter: number;
+    angle: number;
+    ratedTension: number;
+    hasInsulator: boolean;
+    insulatorCount: number;
+    anchorRodDiameter: number;
+    anchorRodLength: number;
+    anchorPlateLength: number;
+    anchorPlateWidth: number;
 }
 
 export interface ContactWireObject extends Version {

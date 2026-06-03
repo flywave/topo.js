@@ -11,13 +11,23 @@ import {
     CurvedArmParams,
     ContactWireParams,
     MessengerWireParams,
+    MastBracketParams,
+    SteelMastParams,
+    ConcreteMastParams,
+    OcsFoundationParams,
+    GuyWireParams,
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
-import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject, ContactWireObject, MessengerWireObject } from "../types/railway";
+import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject, ContactWireObject, MessengerWireObject, MastBracketObject, SteelMastObject, ConcreteMastObject, OcsFoundationObject, GuyWireObject } from "../types/railway";
 
 export enum RLPrimitiveType {
     ContactWire = "RAILWAY/ContactWire",
     MessengerWire = "RAILWAY/MessengerWire",
+    GuyWire = "RAILWAY/GuyWire",
+    OcsFoundation = "RAILWAY/OcsFoundation",
+    SteelMast = "RAILWAY/SteelMast",
+    ConcreteMast = "RAILWAY/ConcreteMast",
+    MastBracket = "RAILWAY/MastBracket",
     RodInsulator = "RAILWAY/RodInsulator",
     CrossArm = "RAILWAY/CrossArm",
     LevelCantilever = "RAILWAY/LevelCantilever",
@@ -28,7 +38,7 @@ export enum RLPrimitiveType {
     CurvedArm = "RAILWAY/CurvedArm",
 }
 
-export type RLPrimitive = ContactWirePrimitive | MessengerWirePrimitive | RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
+export type RLPrimitive = ContactWirePrimitive | MessengerWirePrimitive | GuyWirePrimitive | OcsFoundationPrimitive | SteelMastPrimitive | ConcreteMastPrimitive | MastBracketPrimitive | RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
 
 export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, RodInsulatorObject> {
 
@@ -582,6 +592,84 @@ export class CurvedArmPrimitive extends BasePrimitive<CurvedArmParams, CurvedArm
     }
 };
 
+export class GuyWirePrimitive extends BasePrimitive<GuyWireParams, GuyWireObject> {
+
+    constructor(tp: TopoInstance, params?: GuyWireObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.GuyWire;
+    }
+
+    setDefault(): Primitive<GuyWireParams, GuyWireObject> {
+        this.params = {
+            length: 3000,
+            diameter: 8,
+            angle: 45,
+            ratedTension: 50,
+            hasInsulator: true,
+            insulatorCount: 2,
+            anchorRodDiameter: 10,
+            anchorRodLength: 500,
+            anchorPlateLength: 150,
+            anchorPlateWidth: 100,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: GuyWireParams): Primitive<GuyWireParams, GuyWireObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.length > 0 && this.params.diameter > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createGuyWire(this.params), false);
+        }
+        throw new Error("Invalid parameters for GuyWire");
+    }
+
+    fromObject(o?: GuyWireObject): Primitive<GuyWireParams, GuyWireObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            length: o['length'],
+            diameter: o['diameter'],
+            angle: o['angle'] || 45,
+            ratedTension: o['ratedTension'] || 0,
+            hasInsulator: o['hasInsulator'] || false,
+            insulatorCount: o['insulatorCount'] || 2,
+            anchorRodDiameter: o['anchorRodDiameter'] || 0,
+            anchorRodLength: o['anchorRodLength'] || 0,
+            anchorPlateLength: o['anchorPlateLength'] || 0,
+            anchorPlateWidth: o['anchorPlateWidth'] || 0,
+        } as any;
+        return this;
+    }
+
+    toObject(): GuyWireObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['length', this.params.length],
+            ['diameter', this.params.diameter],
+            ['angle', this.params.angle],
+            ['ratedTension', this.params.ratedTension],
+            ['hasInsulator', this.params.hasInsulator],
+            ['insulatorCount', this.params.insulatorCount],
+            ['anchorRodDiameter', this.params.anchorRodDiameter],
+            ['anchorRodLength', this.params.anchorRodLength],
+            ['anchorPlateLength', this.params.anchorPlateLength],
+            ['anchorPlateWidth', this.params.anchorPlateWidth],
+        ])) as GuyWireObject;
+    }
+};
+
 export class ContactWirePrimitive extends BasePrimitive<ContactWireParams, ContactWireObject> {
 
     constructor(tp: TopoInstance, params?: ContactWireObject) {
@@ -714,6 +802,312 @@ export class MessengerWirePrimitive extends BasePrimitive<MessengerWireParams, M
     }
 };
 
+export class MastBracketPrimitive extends BasePrimitive<MastBracketParams, MastBracketObject> {
+
+    constructor(tp: TopoInstance, params?: MastBracketObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.MastBracket;
+    }
+
+    setDefault(): Primitive<MastBracketParams, MastBracketObject> {
+        this.params = {
+            boltSpacing: 200,
+            boltDiameter: 18,
+            height: 300,
+            width: 200,
+            thickness: 12,
+            insulatorBoltSpacing: 150,
+            insulatorBoltDiameter: 16,
+            mountAngle: 0,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: MastBracketParams): Primitive<MastBracketParams, MastBracketObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.height > 0 && this.params.width > 0 && this.params.thickness > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createMastBracket(this.params), false);
+        }
+        throw new Error("Invalid parameters for MastBracket");
+    }
+
+    fromObject(o?: MastBracketObject): Primitive<MastBracketParams, MastBracketObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            boltSpacing: o['boltSpacing'],
+            boltDiameter: o['boltDiameter'],
+            height: o['height'],
+            width: o['width'],
+            thickness: o['thickness'],
+            insulatorBoltSpacing: o['insulatorBoltSpacing'],
+            insulatorBoltDiameter: o['insulatorBoltDiameter'],
+            mountAngle: o['mountAngle'] || 0,
+        } as any;
+        return this;
+    }
+
+    toObject(): MastBracketObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['boltSpacing', this.params.boltSpacing],
+            ['boltDiameter', this.params.boltDiameter],
+            ['height', this.params.height],
+            ['width', this.params.width],
+            ['thickness', this.params.thickness],
+            ['insulatorBoltSpacing', this.params.insulatorBoltSpacing],
+            ['insulatorBoltDiameter', this.params.insulatorBoltDiameter],
+            ['mountAngle', this.params.mountAngle],
+        ])) as MastBracketObject;
+    }
+};
+
+export class SteelMastPrimitive extends BasePrimitive<SteelMastParams, SteelMastObject> {
+
+    constructor(tp: TopoInstance, params?: SteelMastObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.SteelMast;
+    }
+
+    setDefault(): Primitive<SteelMastParams, SteelMastObject> {
+        this.params = {
+            type: this.tp.SteelMastType.H_BEAM as any,
+            height: 8000,
+            topWidth: 200,
+            bottomWidth: 350,
+            wallThickness: 10,
+            flangeThickness: 16,
+            flangeWidth: 450,
+            anchorSpacing: 200,
+            anchorDiameter: 24,
+            segmentCount: 1,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: SteelMastParams): Primitive<SteelMastParams, SteelMastObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.height > 0 && this.params.topWidth > 0 && this.params.bottomWidth > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createSteelMast(this.params), false);
+        }
+        throw new Error("Invalid parameters for SteelMast");
+    }
+
+    fromObject(o?: SteelMastObject): Primitive<SteelMastParams, SteelMastObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            type: o['steelType'] !== undefined ? (o['steelType'] as any) : (this.tp.SteelMastType.H_BEAM as any),
+            height: o['height'],
+            topWidth: o['topWidth'],
+            bottomWidth: o['bottomWidth'],
+            wallThickness: o['wallThickness'],
+            flangeThickness: o['flangeThickness'],
+            flangeWidth: o['flangeWidth'],
+            anchorSpacing: o['anchorSpacing'],
+            anchorDiameter: o['anchorDiameter'],
+            segmentCount: o['segmentCount'] || 1,
+        } as any;
+        return this;
+    }
+
+    toObject(): SteelMastObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['steelType', this.params.type],
+            ['height', this.params.height],
+            ['topWidth', this.params.topWidth],
+            ['bottomWidth', this.params.bottomWidth],
+            ['wallThickness', this.params.wallThickness],
+            ['flangeThickness', this.params.flangeThickness],
+            ['flangeWidth', this.params.flangeWidth],
+            ['anchorSpacing', this.params.anchorSpacing],
+            ['anchorDiameter', this.params.anchorDiameter],
+            ['segmentCount', this.params.segmentCount],
+        ])) as SteelMastObject;
+    }
+};
+
+export class ConcreteMastPrimitive extends BasePrimitive<ConcreteMastParams, ConcreteMastObject> {
+
+    constructor(tp: TopoInstance, params?: ConcreteMastObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.ConcreteMast;
+    }
+
+    setDefault(): Primitive<ConcreteMastParams, ConcreteMastObject> {
+        this.params = {
+            sectionType: this.tp.ConcreteMastSectionType.CIRCULAR as any,
+            height: 9000,
+            topWidth: 250,
+            bottomWidth: 350,
+            wallThickness: 60,
+            holeDiameter: 0,
+            holeSpacingV: 0,
+            holeSpacingH: 0,
+            firstHoleOffset: 0,
+            holeRowCount: 0,
+            holesPerRow: 0,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: ConcreteMastParams): Primitive<ConcreteMastParams, ConcreteMastObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.height > 0 && this.params.topWidth > 0 && this.params.bottomWidth > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createConcreteMast(this.params), false);
+        }
+        throw new Error("Invalid parameters for ConcreteMast");
+    }
+
+    fromObject(o?: ConcreteMastObject): Primitive<ConcreteMastParams, ConcreteMastObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            sectionType: o['sectionType'] !== undefined ? (o['sectionType'] as any) : (this.tp.ConcreteMastSectionType.CIRCULAR as any),
+            height: o['height'],
+            topWidth: o['topWidth'],
+            bottomWidth: o['bottomWidth'],
+            wallThickness: o['wallThickness'],
+            holeDiameter: o['holeDiameter'] || 0,
+            holeSpacingV: o['holeSpacingV'] || 0,
+            holeSpacingH: o['holeSpacingH'] || 0,
+            firstHoleOffset: o['firstHoleOffset'] || 0,
+            holeRowCount: o['holeRowCount'] || 0,
+            holesPerRow: o['holesPerRow'] || 0,
+        } as any;
+        return this;
+    }
+
+    toObject(): ConcreteMastObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['sectionType', this.params.sectionType],
+            ['height', this.params.height],
+            ['topWidth', this.params.topWidth],
+            ['bottomWidth', this.params.bottomWidth],
+            ['wallThickness', this.params.wallThickness],
+            ['holeDiameter', this.params.holeDiameter],
+            ['holeSpacingV', this.params.holeSpacingV],
+            ['holeSpacingH', this.params.holeSpacingH],
+            ['firstHoleOffset', this.params.firstHoleOffset],
+            ['holeRowCount', this.params.holeRowCount],
+            ['holesPerRow', this.params.holesPerRow],
+        ])) as ConcreteMastObject;
+    }
+};
+
+export class OcsFoundationPrimitive extends BasePrimitive<OcsFoundationParams, OcsFoundationObject> {
+
+    constructor(tp: TopoInstance, params?: OcsFoundationObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.OcsFoundation;
+    }
+
+    setDefault(): Primitive<OcsFoundationParams, OcsFoundationObject> {
+        this.params = {
+            type: this.tp.FoundationType.FLANGE as any,
+            height: 200,
+            width: 300,
+            length: 300,
+            flangeThickness: 10,
+            anchorCount: 4,
+            anchorDiameter: 12,
+            anchorLength: 100,
+            anchorSpacing: 200,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: OcsFoundationParams): Primitive<OcsFoundationParams, OcsFoundationObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.height > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createOcsFoundation(this.params), false);
+        }
+        throw new Error("Invalid parameters for OcsFoundation");
+    }
+
+    fromObject(o?: OcsFoundationObject): Primitive<OcsFoundationParams, OcsFoundationObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            type: o['foundationType'] !== undefined ? (o['foundationType'] as any) : (this.tp.FoundationType.FLANGE as any),
+            height: o['height'],
+            width: o['width'],
+            length: o['length'],
+            flangeThickness: o['flangeThickness'] || 0,
+            anchorCount: o['anchorCount'] || 0,
+            anchorDiameter: o['anchorDiameter'] || 0,
+            anchorLength: o['anchorLength'] || 0,
+            anchorSpacing: o['anchorSpacing'] || 0,
+        } as any;
+        return this;
+    }
+
+    toObject(): OcsFoundationObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['foundationType', this.params.type],
+            ['height', this.params.height],
+            ['width', this.params.width],
+            ['length', this.params.length],
+            ['flangeThickness', this.params.flangeThickness],
+            ['anchorCount', this.params.anchorCount],
+            ['anchorDiameter', this.params.anchorDiameter],
+            ['anchorLength', this.params.anchorLength],
+            ['anchorSpacing', this.params.anchorSpacing],
+        ])) as OcsFoundationObject;
+    }
+};
+
 export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any): RLPrimitive | undefined {
     if (args === undefined) {
         return undefined;
@@ -746,8 +1140,23 @@ export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any
         case RLPrimitiveType.SlantCantilever:
             primitive = new SlantCantileverPrimitive(tp);
             break;
+        case RLPrimitiveType.GuyWire:
+            primitive = new GuyWirePrimitive(tp);
+            break;
         case RLPrimitiveType.CantileverBrace:
             primitive = new CantileverBracePrimitive(tp);
+            break;
+        case RLPrimitiveType.OcsFoundation:
+            primitive = new OcsFoundationPrimitive(tp);
+            break;
+        case RLPrimitiveType.SteelMast:
+            primitive = new SteelMastPrimitive(tp);
+            break;
+        case RLPrimitiveType.ConcreteMast:
+            primitive = new ConcreteMastPrimitive(tp);
+            break;
+        case RLPrimitiveType.MastBracket:
+            primitive = new MastBracketPrimitive(tp);
             break;
         case RLPrimitiveType.RegArmBracket:
             primitive = new RegArmBracketPrimitive(tp);

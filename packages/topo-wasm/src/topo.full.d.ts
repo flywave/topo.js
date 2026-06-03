@@ -181708,6 +181708,20 @@ export declare type EndFittingType = {
     SCREW: {}
 }
 
+// 钢支柱类型枚举
+export declare type SteelMastType = {
+    LATTICE: {},
+    H_BEAM: {}
+}
+
+// 混凝土支柱截面类型枚举
+export declare type ConcreteMastSectionType = {
+    CIRCULAR: {},
+    RECTANGULAR: {},
+    CIRCULAR_HOLED: {},
+    RECTANGULAR_HOLED: {}
+}
+
 // 定位器类型枚举
 export declare type RegistrationArmType = {
     STRAIGHT: {},
@@ -181730,6 +181744,81 @@ export declare interface CurvedArmParams {
 
 export declare function createCurvedArm(params: CurvedArmParams): TopoDS_Shape;
 export declare function createCurvedArmWithPosition(params: CurvedArmParams, position: gp_Pnt, normal: gp_Dir, xDir: gp_Dir): TopoDS_Shape;
+
+// 钢支柱参数结构体
+export declare interface SteelMastParams {
+    type: SteelMastType;
+    height: number;
+    topWidth: number;
+    bottomWidth: number;
+    wallThickness: number;
+    flangeThickness: number;
+    flangeWidth: number;
+    anchorSpacing: number;
+    anchorDiameter: number;
+    segmentCount: number;
+}
+
+export declare function createSteelMast(params: SteelMastParams): TopoDS_Shape;
+export declare function createSteelMastWithPosition(params: SteelMastParams, baseCenter: gp_Pnt, axisDir: gp_Dir): TopoDS_Shape;
+
+// 混凝土支柱参数结构体
+export declare interface ConcreteMastParams {
+    sectionType: ConcreteMastSectionType;
+    height: number;
+    topWidth: number;
+    bottomWidth: number;
+    wallThickness: number;
+    holeDiameter: number;
+    holeSpacingV: number;
+    holeSpacingH: number;
+    firstHoleOffset: number;
+    holeRowCount: number;
+    holesPerRow: number;
+}
+
+export declare function createConcreteMast(params: ConcreteMastParams): TopoDS_Shape;
+export declare function createConcreteMastWithPosition(params: ConcreteMastParams, baseCenter: gp_Pnt, axisDir: gp_Dir): TopoDS_Shape;
+
+// 支柱基础类型枚举
+export declare type FoundationType = {
+    DIRECT_BURIED: {},
+    FLANGE: {},
+    BORED_PILE: {},
+    EXCAVATED_PILE: {},
+    ANCHOR: {}
+}
+
+// 支柱基础参数结构体
+export declare interface OcsFoundationParams {
+    type: FoundationType;
+    height: number;
+    width: number;
+    length: number;
+    flangeThickness: number;
+    anchorCount: number;
+    anchorDiameter: number;
+    anchorLength: number;
+    anchorSpacing: number;
+}
+
+export declare function createOcsFoundation(params: OcsFoundationParams): TopoDS_Shape;
+export declare function createOcsFoundationWithPosition(params: OcsFoundationParams, position: gp_Pnt, normal: gp_Dir, xDir: gp_Dir): TopoDS_Shape;
+
+// 支柱连接座参数结构体
+export declare interface MastBracketParams {
+    boltSpacing: number;
+    boltDiameter: number;
+    height: number;
+    width: number;
+    thickness: number;
+    insulatorBoltSpacing: number;
+    insulatorBoltDiameter: number;
+    mountAngle: number;
+}
+
+export declare function createMastBracket(params: MastBracketParams): TopoDS_Shape;
+export declare function createMastBracketWithPosition(params: MastBracketParams, position: gp_Pnt, normal: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
 
 // 定位器参数结构体
 export declare interface RegistrationArmParams {
@@ -181825,6 +181914,23 @@ export declare interface RodInsulatorParams {
 
 export declare function createRodInsulator(params: RodInsulatorParams): TopoDS_Shape;
 export declare function createRodInsulatorWithPosition(params: RodInsulatorParams, basePoint: gp_Pnt, axisDirection: gp_Dir): TopoDS_Shape;
+
+// 下锚拉线参数结构体
+export declare interface GuyWireParams {
+    length: number;
+    diameter: number;
+    angle: number;
+    ratedTension: number;
+    hasInsulator: boolean;
+    insulatorCount: number;
+    anchorRodDiameter: number;
+    anchorRodLength: number;
+    anchorPlateLength: number;
+    anchorPlateWidth: number;
+}
+
+export declare function createGuyWire(params: GuyWireParams): TopoDS_Shape;
+export declare function createGuyWireWithPosition(params: GuyWireParams, anchorPoint: gp_Pnt, mastPoint: gp_Pnt, upDir: gp_Dir): TopoDS_Shape;
 
 // 接触线参数结构体
 export declare interface ContactWireParams {
@@ -209282,11 +209388,16 @@ export type TopoInstance = {FS: typeof FS} & {
   LevelCantileverParams: LevelCantileverParams;
   SlantCantileverParams: SlantCantileverParams;
   CantileverBraceParams: CantileverBraceParams;
+  MastBracketParams: MastBracketParams;
+  OcsFoundationParams: OcsFoundationParams;
   RegArmBracketParams: RegArmBracketParams;
   RegistrationArmParams: RegistrationArmParams;
   CurvedArmParams: CurvedArmParams;
   ContactWireParams: ContactWireParams;
   MessengerWireParams: MessengerWireParams;
+  GuyWireParams: GuyWireParams;
+  SteelMastParams: SteelMastParams;
+  ConcreteMastParams: ConcreteMastParams;
   BoreholeSample: BoreholeSample;
   BoreholeParams: BoreholeParams;
   ProfileLayer: ProfileLayer;
@@ -209532,6 +209643,10 @@ export type TopoInstance = {FS: typeof FS} & {
   createSlantCantileverWithPosition: typeof createSlantCantileverWithPosition;
   createCantileverBrace: typeof createCantileverBrace;
   createCantileverBraceWithPosition: typeof createCantileverBraceWithPosition;
+  createMastBracket: typeof createMastBracket;
+  createMastBracketWithPosition: typeof createMastBracketWithPosition;
+  createOcsFoundation: typeof createOcsFoundation;
+  createOcsFoundationWithPosition: typeof createOcsFoundationWithPosition;
   createRegArmBracket: typeof createRegArmBracket;
   createRegArmBracketWithPosition: typeof createRegArmBracketWithPosition;
   createRegistrationArm: typeof createRegistrationArm;
@@ -209540,6 +209655,12 @@ export type TopoInstance = {FS: typeof FS} & {
   createCurvedArmWithPosition: typeof createCurvedArmWithPosition;
   createContactWire: typeof createContactWire;
   createMessengerWire: typeof createMessengerWire;
+  createGuyWire: typeof createGuyWire;
+  createGuyWireWithPosition: typeof createGuyWireWithPosition;
+  createSteelMast: typeof createSteelMast;
+  createSteelMastWithPosition: typeof createSteelMastWithPosition;
+  createConcreteMast: typeof createConcreteMast;
+  createConcreteMastWithPosition: typeof createConcreteMastWithPosition;
   createBorehole: typeof createBorehole;
   createMultiLayerExtrusionStructure: typeof createMultiLayerExtrusionStructure;
   createMultiLayerExtrusionStructureWithPosition: typeof createMultiLayerExtrusionStructureWithPosition;
@@ -209576,6 +209697,9 @@ export type TopoInstance = {FS: typeof FS} & {
   TunnelPartitionBoardStyle: TunnelPartitionBoardStyle;
   RodInsulatorType: RodInsulatorType;
   EndFittingType: EndFittingType;
+  SteelMastType: SteelMastType;
+  ConcreteMastSectionType: ConcreteMastSectionType;
+  FoundationType: FoundationType;
   RegistrationArmType: RegistrationArmType;
   SketchMode: SketchMode;
   Sketch: typeof Sketch;
