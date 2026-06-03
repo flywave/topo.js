@@ -9,11 +9,15 @@ import {
     RegArmBracketParams,
     RegistrationArmParams,
     CurvedArmParams,
+    ContactWireParams,
+    MessengerWireParams,
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
-import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject } from "../types/railway";
+import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject, ContactWireObject, MessengerWireObject } from "../types/railway";
 
 export enum RLPrimitiveType {
+    ContactWire = "RAILWAY/ContactWire",
+    MessengerWire = "RAILWAY/MessengerWire",
     RodInsulator = "RAILWAY/RodInsulator",
     CrossArm = "RAILWAY/CrossArm",
     LevelCantilever = "RAILWAY/LevelCantilever",
@@ -24,7 +28,7 @@ export enum RLPrimitiveType {
     CurvedArm = "RAILWAY/CurvedArm",
 }
 
-export type RLPrimitive = RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
+export type RLPrimitive = ContactWirePrimitive | MessengerWirePrimitive | RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
 
 export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, RodInsulatorObject> {
 
@@ -578,6 +582,138 @@ export class CurvedArmPrimitive extends BasePrimitive<CurvedArmParams, CurvedArm
     }
 };
 
+export class ContactWirePrimitive extends BasePrimitive<ContactWireParams, ContactWireObject> {
+
+    constructor(tp: TopoInstance, params?: ContactWireObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.ContactWire;
+    }
+
+    setDefault(): Primitive<ContactWireParams, ContactWireObject> {
+        this.params = {
+            sectionalArea: 120,
+            diameter: 14.5,
+            ratedTension: 15,
+            grooveDepth: 1.5,
+            grooveWidth: 2.5,
+            bottomRadius: 6.5,
+            topRadius: 3.0,
+            sag: 50,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: ContactWireParams): Primitive<ContactWireParams, ContactWireObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.diameter > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createContactWire(this.params, new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(1000, 0, 0)), false);
+        }
+        throw new Error("Invalid parameters for ContactWire");
+    }
+
+    fromObject(o?: ContactWireObject): Primitive<ContactWireParams, ContactWireObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            sectionalArea: o['sectionalArea'],
+            diameter: o['diameter'],
+            ratedTension: o['ratedTension'],
+            grooveDepth: o['grooveDepth'],
+            grooveWidth: o['grooveWidth'],
+            bottomRadius: o['bottomRadius'],
+            topRadius: o['topRadius'],
+            sag: o['sag'] || 0,
+        } as any;
+        return this;
+    }
+
+    toObject(): ContactWireObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['sectionalArea', this.params.sectionalArea],
+            ['diameter', this.params.diameter],
+            ['ratedTension', this.params.ratedTension],
+            ['grooveDepth', this.params.grooveDepth],
+            ['grooveWidth', this.params.grooveWidth],
+            ['bottomRadius', this.params.bottomRadius],
+            ['topRadius', this.params.topRadius],
+            ['sag', this.params.sag],
+        ])) as ContactWireObject;
+    }
+};
+
+export class MessengerWirePrimitive extends BasePrimitive<MessengerWireParams, MessengerWireObject> {
+
+    constructor(tp: TopoInstance, params?: MessengerWireObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.MessengerWire;
+    }
+
+    setDefault(): Primitive<MessengerWireParams, MessengerWireObject> {
+        this.params = {
+            diameter: 20,
+            ratedTension: 20,
+            structuralHeight: 1800,
+            sag: 500,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: MessengerWireParams): Primitive<MessengerWireParams, MessengerWireObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.diameter > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createMessengerWire(this.params, new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(1000, 0, 0)), false);
+        }
+        throw new Error("Invalid parameters for MessengerWire");
+    }
+
+    fromObject(o?: MessengerWireObject): Primitive<MessengerWireParams, MessengerWireObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            diameter: o['diameter'],
+            ratedTension: o['ratedTension'],
+            structuralHeight: o['structuralHeight'],
+            sag: o['sag'],
+        } as any;
+        return this;
+    }
+
+    toObject(): MessengerWireObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['diameter', this.params.diameter],
+            ['ratedTension', this.params.ratedTension],
+            ['structuralHeight', this.params.structuralHeight],
+            ['sag', this.params.sag],
+        ])) as MessengerWireObject;
+    }
+};
+
 export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any): RLPrimitive | undefined {
     if (args === undefined) {
         return undefined;
@@ -592,6 +728,12 @@ export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any
     }
     let primitive: RLPrimitive | undefined = undefined;
     switch (type) {
+        case RLPrimitiveType.ContactWire:
+            primitive = new ContactWirePrimitive(tp);
+            break;
+        case RLPrimitiveType.MessengerWire:
+            primitive = new MessengerWirePrimitive(tp);
+            break;
         case RLPrimitiveType.RodInsulator:
             primitive = new RodInsulatorPrimitive(tp);
             break;

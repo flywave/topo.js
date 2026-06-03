@@ -72,6 +72,26 @@ export interface CrossArmObject extends Version {
     boltCount: number;
 }
 
+export interface ContactWireObject extends Version {
+    type: 'RAILWAY/ContactWire';
+    sectionalArea: number;
+    diameter: number;
+    ratedTension: number;
+    grooveDepth: number;
+    grooveWidth: number;
+    bottomRadius: number;
+    topRadius: number;
+    sag: number;
+}
+
+export interface MessengerWireObject extends Version {
+    type: 'RAILWAY/MessengerWire';
+    diameter: number;
+    ratedTension: number;
+    structuralHeight: number;
+    sag: number;
+}
+
 export interface RodInsulatorObject extends Version {
     type: 'RAILWAY/RodInsulator';
     rodType?: number;

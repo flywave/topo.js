@@ -4820,6 +4820,38 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                         const gp_Dir &)>(&create_curved_arm));
 
   // ==========================================================================
+  // Contact Wire (接触线) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<contact_wire_params>("ContactWireParams")
+      .field("sectionalArea", &contact_wire_params::sectionalArea)
+      .field("diameter", &contact_wire_params::diameter)
+      .field("ratedTension", &contact_wire_params::ratedTension)
+      .field("grooveDepth", &contact_wire_params::grooveDepth)
+      .field("grooveWidth", &contact_wire_params::grooveWidth)
+      .field("bottomRadius", &contact_wire_params::bottomRadius)
+      .field("topRadius", &contact_wire_params::topRadius)
+      .field("sag", &contact_wire_params::sag);
+
+  function("createContactWire",
+           select_overload<TopoDS_Shape(const contact_wire_params &,
+                                        const gp_Pnt &, const gp_Pnt &)>(
+               &create_contact_wire));
+
+  // ==========================================================================
+  // Messenger Wire (承力索) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<messenger_wire_params>("MessengerWireParams")
+      .field("diameter", &messenger_wire_params::diameter)
+      .field("ratedTension", &messenger_wire_params::ratedTension)
+      .field("structuralHeight", &messenger_wire_params::structuralHeight)
+      .field("sag", &messenger_wire_params::sag);
+
+  function("createMessengerWire",
+           select_overload<TopoDS_Shape(const messenger_wire_params &,
+                                        const gp_Pnt &, const gp_Pnt &)>(
+               &create_messenger_wire));
+
+  // ==========================================================================
   // Borehole (钻孔)
   // ==========================================================================
   function("createBorehole",

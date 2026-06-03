@@ -181826,6 +181826,30 @@ export declare interface RodInsulatorParams {
 export declare function createRodInsulator(params: RodInsulatorParams): TopoDS_Shape;
 export declare function createRodInsulatorWithPosition(params: RodInsulatorParams, basePoint: gp_Pnt, axisDirection: gp_Dir): TopoDS_Shape;
 
+// 接触线参数结构体
+export declare interface ContactWireParams {
+    sectionalArea: number;
+    diameter: number;
+    ratedTension: number;
+    grooveDepth: number;
+    grooveWidth: number;
+    bottomRadius: number;
+    topRadius: number;
+    sag: number;
+}
+
+export declare function createContactWire(params: ContactWireParams, startPoint: gp_Pnt, endPoint: gp_Pnt): TopoDS_Shape;
+
+// 承力索参数结构体
+export declare interface MessengerWireParams {
+    diameter: number;
+    ratedTension: number;
+    structuralHeight: number;
+    sag: number;
+}
+
+export declare function createMessengerWire(params: MessengerWireParams, startPoint: gp_Pnt, endPoint: gp_Pnt): TopoDS_Shape;
+
 // 钻孔样本类型
 export declare interface BoreholeSample {
     name: string;
@@ -209261,6 +209285,8 @@ export type TopoInstance = {FS: typeof FS} & {
   RegArmBracketParams: RegArmBracketParams;
   RegistrationArmParams: RegistrationArmParams;
   CurvedArmParams: CurvedArmParams;
+  ContactWireParams: ContactWireParams;
+  MessengerWireParams: MessengerWireParams;
   BoreholeSample: BoreholeSample;
   BoreholeParams: BoreholeParams;
   ProfileLayer: ProfileLayer;
@@ -209512,6 +209538,8 @@ export type TopoInstance = {FS: typeof FS} & {
   createRegistrationArmWithPosition: typeof createRegistrationArmWithPosition;
   createCurvedArm: typeof createCurvedArm;
   createCurvedArmWithPosition: typeof createCurvedArmWithPosition;
+  createContactWire: typeof createContactWire;
+  createMessengerWire: typeof createMessengerWire;
   createBorehole: typeof createBorehole;
   createMultiLayerExtrusionStructure: typeof createMultiLayerExtrusionStructure;
   createMultiLayerExtrusionStructureWithPosition: typeof createMultiLayerExtrusionStructureWithPosition;
