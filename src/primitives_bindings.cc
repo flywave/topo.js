@@ -4950,6 +4950,25 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                                         const gp_Dir &)>(&create_guy_wire));
 
   // ==========================================================================
+  // Dropper (吊弦) — from primitives_railway.hh
+  // ==========================================================================
+  value_object<dropper_params>("DropperParams")
+      .field("length", &dropper_params::length)
+      .field("wireDiameter", &dropper_params::wireDiameter)
+      .field("clampLength", &dropper_params::clampLength)
+      .field("clampWidth", &dropper_params::clampWidth)
+      .field("clampThickness", &dropper_params::clampThickness)
+      .field("conductive", &dropper_params::conductive);
+
+  function("createDropper",
+           select_overload<TopoDS_Shape(const dropper_params &)>(
+               &create_dropper));
+  function("createDropperWithPosition",
+           select_overload<TopoDS_Shape(const dropper_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_dropper));
+
+  // ==========================================================================
   // Contact Wire (接触线) — from primitives_railway.hh
   // ==========================================================================
   value_object<contact_wire_params>("ContactWireParams")

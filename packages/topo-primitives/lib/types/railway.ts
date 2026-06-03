@@ -140,6 +140,16 @@ export interface GuyWireObject extends Version {
     anchorPlateWidth: number;
 }
 
+export interface DropperObject extends Version {
+    type: 'RAILWAY/Dropper';
+    length: number;
+    wireDiameter: number;
+    clampLength: number;
+    clampWidth: number;
+    clampThickness: number;
+    conductive: boolean;
+}
+
 export interface ContactWireObject extends Version {
     type: 'RAILWAY/ContactWire';
     sectionalArea: number;

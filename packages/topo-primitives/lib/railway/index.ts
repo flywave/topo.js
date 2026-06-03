@@ -16,13 +16,15 @@ import {
     ConcreteMastParams,
     OcsFoundationParams,
     GuyWireParams,
+    DropperParams,
 } from "topo-wasm";
 import { BasePrimitive, Primitive } from "../primitive";
-import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject, ContactWireObject, MessengerWireObject, MastBracketObject, SteelMastObject, ConcreteMastObject, OcsFoundationObject, GuyWireObject } from "../types/railway";
+import { RodInsulatorObject, CrossArmObject, LevelCantileverObject, SlantCantileverObject, CantileverBraceObject, CurvedArmObject, RegArmBracketObject, RegistrationArmObject, ContactWireObject, MessengerWireObject, MastBracketObject, SteelMastObject, ConcreteMastObject, OcsFoundationObject, GuyWireObject, DropperObject } from "../types/railway";
 
 export enum RLPrimitiveType {
     ContactWire = "RAILWAY/ContactWire",
     MessengerWire = "RAILWAY/MessengerWire",
+    Dropper = "RAILWAY/Dropper",
     GuyWire = "RAILWAY/GuyWire",
     OcsFoundation = "RAILWAY/OcsFoundation",
     SteelMast = "RAILWAY/SteelMast",
@@ -38,7 +40,7 @@ export enum RLPrimitiveType {
     CurvedArm = "RAILWAY/CurvedArm",
 }
 
-export type RLPrimitive = ContactWirePrimitive | MessengerWirePrimitive | GuyWirePrimitive | OcsFoundationPrimitive | SteelMastPrimitive | ConcreteMastPrimitive | MastBracketPrimitive | RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
+export type RLPrimitive = ContactWirePrimitive | MessengerWirePrimitive | DropperPrimitive | GuyWirePrimitive | OcsFoundationPrimitive | SteelMastPrimitive | ConcreteMastPrimitive | MastBracketPrimitive | RodInsulatorPrimitive | CrossArmPrimitive | LevelCantileverPrimitive | SlantCantileverPrimitive | CantileverBracePrimitive | CurvedArmPrimitive | RegArmBracketPrimitive | RegistrationArmPrimitive;
 
 export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, RodInsulatorObject> {
 
@@ -592,6 +594,72 @@ export class CurvedArmPrimitive extends BasePrimitive<CurvedArmParams, CurvedArm
     }
 };
 
+export class DropperPrimitive extends BasePrimitive<DropperParams, DropperObject> {
+
+    constructor(tp: TopoInstance, params?: DropperObject) {
+        super(tp, params);
+    }
+
+    getType(): string {
+        return RLPrimitiveType.Dropper;
+    }
+
+    setDefault(): Primitive<DropperParams, DropperObject> {
+        this.params = {
+            length: 1500,
+            wireDiameter: 2.5,
+            clampLength: 30,
+            clampWidth: 20,
+            clampThickness: 6,
+            conductive: true,
+        } as any;
+        return this;
+    }
+
+    public setParams(params: DropperParams): Primitive<DropperParams, DropperObject> {
+        this.params = params;
+        return this;
+    }
+
+    public valid(): boolean {
+        return this.params.length > 0 && this.params.wireDiameter > 0;
+    }
+
+    public build(): Shape | undefined {
+        if (this.valid()) {
+            return new this.tp.Shape(this.tp.createDropper(this.params), false);
+        }
+        throw new Error("Invalid parameters for Dropper");
+    }
+
+    fromObject(o?: DropperObject): Primitive<DropperParams, DropperObject> {
+        if (o === undefined) return this;
+        if (o['version']) this.version = o['version'];
+        this.params = {
+            length: o['length'],
+            wireDiameter: o['wireDiameter'],
+            clampLength: o['clampLength'] || 0,
+            clampWidth: o['clampWidth'] || 0,
+            clampThickness: o['clampThickness'] || 0,
+            conductive: o['conductive'] || false,
+        } as any;
+        return this;
+    }
+
+    toObject(): DropperObject | undefined {
+        return BasePrimitive.buildObject(new Map<string, any>([
+            ['type', this.getType()],
+            ['version', this.getVersion()],
+            ['length', this.params.length],
+            ['wireDiameter', this.params.wireDiameter],
+            ['clampLength', this.params.clampLength],
+            ['clampWidth', this.params.clampWidth],
+            ['clampThickness', this.params.clampThickness],
+            ['conductive', this.params.conductive],
+        ])) as DropperObject;
+    }
+};
+
 export class GuyWirePrimitive extends BasePrimitive<GuyWireParams, GuyWireObject> {
 
     constructor(tp: TopoInstance, params?: GuyWireObject) {
@@ -1139,6 +1207,9 @@ export function createRLPrimitive(tp: TopoInstance, args?: RLPrimitiveType | any
             break;
         case RLPrimitiveType.SlantCantilever:
             primitive = new SlantCantileverPrimitive(tp);
+            break;
+        case RLPrimitiveType.Dropper:
+            primitive = new DropperPrimitive(tp);
             break;
         case RLPrimitiveType.GuyWire:
             primitive = new GuyWirePrimitive(tp);

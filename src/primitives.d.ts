@@ -2804,6 +2804,19 @@ export declare interface GuyWireParams {
 export declare function createGuyWire(params: GuyWireParams): TopoDS_Shape;
 export declare function createGuyWireWithPosition(params: GuyWireParams, anchorPoint: gp_Pnt, mastPoint: gp_Pnt, upDir: gp_Dir): TopoDS_Shape;
 
+// 吊弦参数结构体
+export declare interface DropperParams {
+    length: number;
+    wireDiameter: number;
+    clampLength: number;
+    clampWidth: number;
+    clampThickness: number;
+    conductive: boolean;
+}
+
+export declare function createDropper(params: DropperParams): TopoDS_Shape;
+export declare function createDropperWithPosition(params: DropperParams, topPoint: gp_Pnt, direction: gp_Dir): TopoDS_Shape;
+
 // 接触线参数结构体
 export declare interface ContactWireParams {
     sectionalArea: number;
