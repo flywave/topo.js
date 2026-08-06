@@ -13,6 +13,7 @@
 - [环境要求](#环境要求)
 - [快速开始](#快速开始)
 - [项目命令](#项目命令)
+- [测试](#测试)
 - [WASM 构建](#wasm-构建)
 - [TypeScript 接口修复](#typescript-接口修复)
 - [开发工作流](#开发工作流)
@@ -202,6 +203,22 @@ pnpm dev
 | `make run` | 链接 WASM |
 | `make gen-ts` | 重新生成 TypeScript 声明 |
 | `make clean` | 清理所有构建产物 |
+
+---
+
+## 测试
+
+自动化测试基于 **vitest**，目前集中在 `topo-primitives` 包（铁路 Primitive 类 + 布局闭环）：
+
+```sh
+pnpm --filter topo-primitives test        # 一次性全量跑 (vitest run)
+pnpm --filter topo-primitives test:watch  # watch 模式
+```
+
+- `packages/topo-primitives/test/railway_primitives.test.ts` — 52 个铁路 Primitive 类冒烟（`setDefault` → `build` → shape 非空 / bbox 有限）
+- `packages/topo-primitives/test/railway_layout.test.ts` — 锚段/站场布局闭环（计算口径、JSON 往返、命名唯一、编辑再生成 bbox、与 Go layout JSON 互通）
+- WASM 经 `test/helpers/topo.ts` 以模块级单例加载（`topo.full.js` + `readFileSync` wasm binary），每个测试文件初始化一次
+- 注意：重几何用例（道岔/站场再生成）单文件可能跑到数分钟，`vitest.config.ts` 已把 `testTimeout` 放到 180s 并关闭多线程
 
 ---
 

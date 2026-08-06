@@ -1803,6 +1803,141 @@ static void set_borehole_up_dir(borehole_params &params,
   }
 }
 
+// ==========================================================================
+// Generic vector <-> JS array bridges (railway params)
+// ==========================================================================
+template <typename T>
+emscripten::val vec_to_val(const std::vector<T> &vec) {
+  emscripten::val arr = emscripten::val::array();
+  for (size_t i = 0; i < vec.size(); ++i) {
+    arr.set(i, emscripten::val(vec[i]));
+  }
+  return arr;
+}
+
+template <typename T>
+std::vector<T> val_to_vec(emscripten::val val) {
+  std::vector<T> vec;
+  if (!val.isArray()) {
+    throw std::runtime_error("Expected array");
+  }
+  size_t length = val["length"].as<size_t>();
+  vec.reserve(length);
+  for (size_t i = 0; i < length; ++i) {
+    vec.push_back(val[i].as<T>());
+  }
+  return vec;
+}
+
+static emscripten::val
+get_centerline_segment_points(const centerline_segment &seg) {
+  return vec_to_val(seg.points);
+}
+static void set_centerline_segment_points(centerline_segment &seg,
+                                          emscripten::val val) {
+  seg.points = val_to_vec<gp_Pnt>(val);
+}
+
+static emscripten::val
+get_ballast_centerline_segments(const ballast_params &params) {
+  return vec_to_val(params.centerlineSegments);
+}
+static void set_ballast_centerline_segments(ballast_params &params,
+                                            emscripten::val val) {
+  params.centerlineSegments = val_to_vec<centerline_segment>(val);
+}
+
+static emscripten::val
+get_rail_pair_centerline(const rail_pair_params &params) {
+  return vec_to_val(params.centerline);
+}
+static void set_rail_pair_centerline(rail_pair_params &params,
+                                     emscripten::val val) {
+  params.centerline = val_to_vec<gp_Pnt>(val);
+}
+
+static emscripten::val
+get_sleeper_layout_centerline(const sleeper_layout_params &params) {
+  return vec_to_val(params.centerline);
+}
+static void set_sleeper_layout_centerline(sleeper_layout_params &params,
+                                          emscripten::val val) {
+  params.centerline = val_to_vec<gp_Pnt>(val);
+}
+
+static emscripten::val
+get_curve_control_points(const curve_params &params) {
+  return vec_to_val(params.controlPoints);
+}
+static void set_curve_control_points(curve_params &params,
+                                     emscripten::val val) {
+  params.controlPoints = val_to_vec<gp_Pnt>(val);
+}
+
+static emscripten::val
+get_sleeper_line_groove_ys(const sleeper_line_params &params) {
+  return vec_to_val(params.grooveYs);
+}
+static void set_sleeper_line_groove_ys(sleeper_line_params &params,
+                                       emscripten::val val) {
+  params.grooveYs = val_to_vec<double>(val);
+}
+
+static emscripten::val
+get_turnout_assembly_rails(const turnout_assembly_params &params) {
+  return vec_to_val(params.rails);
+}
+static void set_turnout_assembly_rails(turnout_assembly_params &params,
+                                       emscripten::val val) {
+  params.rails = val_to_vec<rail_curve_params>(val);
+}
+
+static emscripten::val
+get_turnout_assembly_wing_rails(const turnout_assembly_params &params) {
+  return vec_to_val(params.wingRails);
+}
+static void set_turnout_assembly_wing_rails(turnout_assembly_params &params,
+                                            emscripten::val val) {
+  params.wingRails = val_to_vec<wing_rail_curve_params>(val);
+}
+
+static emscripten::val
+get_turnout_assembly_guard_rails(const turnout_assembly_params &params) {
+  return vec_to_val(params.guardRails);
+}
+static void set_turnout_assembly_guard_rails(turnout_assembly_params &params,
+                                             emscripten::val val) {
+  params.guardRails = val_to_vec<guard_rail_curve_params>(val);
+}
+
+static emscripten::val
+get_turnout_assembly_sleepers(const turnout_assembly_params &params) {
+  return vec_to_val(params.sleepers);
+}
+static void set_turnout_assembly_sleepers(turnout_assembly_params &params,
+                                          emscripten::val val) {
+  params.sleepers = val_to_vec<sleeper_line_params>(val);
+}
+
+static emscripten::val
+get_turnout_assembly_fasteners(const turnout_assembly_params &params) {
+  return vec_to_val(params.fasteners);
+}
+static void set_turnout_assembly_fasteners(turnout_assembly_params &params,
+                                           emscripten::val val) {
+  params.fasteners = val_to_vec<fastener_point_params>(val);
+}
+
+static emscripten::val
+get_ballast_from_sleepers_sleepers(const ballast_from_sleepers_params &params) {
+  return vec_to_val(params.sleepers);
+}
+static void
+set_ballast_from_sleepers_sleepers(ballast_from_sleepers_params &params,
+                                   emscripten::val val) {
+  params.sleepers = val_to_vec<sleeper_line_params>(val);
+}
+
 } // namespace
 
 EMSCRIPTEN_BINDINGS(Primitive) {
@@ -5012,4 +5147,891 @@ EMSCRIPTEN_BINDINGS(Primitive) {
              }
              return obj;
            }));
+
+  // ==========================================================================
+  // TRACK GROUP 1: 轨道组 — from primitives_railway.hh
+  // ==========================================================================
+
+  // Rail (钢轨)
+  value_object<rail_params>("RailParams")
+      .field("railHeight", &rail_params::railHeight)
+      .field("headWidth", &rail_params::headWidth)
+      .field("baseWidth", &rail_params::baseWidth)
+      .field("webThickness", &rail_params::webThickness)
+      .field("headHeight", &rail_params::headHeight)
+      .field("baseHeight", &rail_params::baseHeight)
+      .field("headRadius", &rail_params::headRadius)
+      .field("standardLength", &rail_params::standardLength);
+
+  function("createRail", select_overload<TopoDS_Shape(const rail_params &)>(
+                             &create_rail));
+  function("createRailWithPoints",
+           select_overload<TopoDS_Shape(const rail_params &, const gp_Pnt &,
+                                        const gp_Pnt &)>(&create_rail));
+
+  // Sleeper (轨枕)
+  enum_<sleeper_shape_type>("SleeperShapeType")
+      .value("RECTANGULAR", sleeper_shape_type::RECTANGULAR)
+      .value("TRAPEZOIDAL", sleeper_shape_type::TRAPEZOIDAL);
+
+  value_object<sleeper_params>("SleeperParams")
+      .field("shapeType", &sleeper_params::shapeType)
+      .field("length", &sleeper_params::length)
+      .field("width", &sleeper_params::width)
+      .field("height", &sleeper_params::height)
+      .field("gauge", &sleeper_params::gauge)
+      .field("railBaseWidth", &sleeper_params::railBaseWidth)
+      .field("grooveDepth", &sleeper_params::grooveDepth)
+      .field("spacing", &sleeper_params::spacing);
+
+  function("createSleeper",
+           select_overload<TopoDS_Shape(const sleeper_params &)>(
+               &create_sleeper));
+  function("createSleeperWithPosition",
+           select_overload<TopoDS_Shape(const sleeper_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_sleeper));
+
+  // Ballast Bed (道床)
+  enum_<centerline_curve_type>("CenterlineCurveType")
+      .value("LINE", centerline_curve_type::LINE)
+      .value("ARC", centerline_curve_type::ARC)
+      .value("BEZIER", centerline_curve_type::BEZIER);
+
+  value_object<centerline_segment>("CenterlineSegment")
+      .field("type", &centerline_segment::type)
+      .field("points", &get_centerline_segment_points,
+             &set_centerline_segment_points);
+
+  value_object<ballast_params>("BallastParams")
+      .field("topWidth", &ballast_params::topWidth)
+      .field("thickness", &ballast_params::thickness)
+      .field("sideSlope", &ballast_params::sideSlope)
+      .field("centerlineSegments", &get_ballast_centerline_segments,
+             &set_ballast_centerline_segments)
+      .field("tiltAngle", &ballast_params::tiltAngle);
+
+  function("createBallast", select_overload<TopoDS_Shape(const ballast_params &)>(
+                                &create_ballast));
+
+  // Track Slab (轨道板)
+  value_object<track_slab_params>("TrackSlabParams")
+      .field("length", &track_slab_params::length)
+      .field("width", &track_slab_params::width)
+      .field("thickness", &track_slab_params::thickness)
+      .field("railSeatCount", &track_slab_params::railSeatCount)
+      .field("railSeatSpacing", &track_slab_params::railSeatSpacing)
+      .field("cementAsphaltThickness",
+             &track_slab_params::cementAsphaltThickness);
+
+  function("createTrackSlab",
+           select_overload<TopoDS_Shape(const track_slab_params &)>(
+               &create_track_slab));
+  function("createTrackSlabWithPosition",
+           select_overload<TopoDS_Shape(const track_slab_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_track_slab));
+
+  // Fastener (扣件)
+  value_object<fastener_params>("FastenerParams")
+      .field("spacing", &fastener_params::spacing)
+      .field("gauge", &fastener_params::gauge)
+      .field("padThickness", &fastener_params::padThickness)
+      .field("padLength", &fastener_params::padLength)
+      .field("padWidth", &fastener_params::padWidth);
+
+  function("createFastener",
+           select_overload<TopoDS_Shape(const fastener_params &)>(
+               &create_fastener));
+  function("createFastenerWithPosition",
+           select_overload<TopoDS_Shape(const fastener_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_fastener));
+
+  // Fastener Point (扣件点)
+  value_object<fastener_point_params>("FastenerPointParams")
+      .field("position", &fastener_point_params::position)
+      .field("railNormal", &fastener_point_params::railNormal)
+      .field("type", &fastener_point_params::type)
+      .field("railBaseWidth", &fastener_point_params::railBaseWidth)
+      .field("padThickness", &fastener_point_params::padThickness);
+
+  function("createFastenerPoint",
+           select_overload<TopoDS_Shape(const fastener_point_params &)>(
+               &create_fastener_point));
+
+  // Sleeper Line (枕木直线)
+  value_object<sleeper_line_params>("SleeperLineParams")
+      .field("startPoint", &sleeper_line_params::startPoint)
+      .field("endPoint", &sleeper_line_params::endPoint)
+      .field("width", &sleeper_line_params::width)
+      .field("height", &sleeper_line_params::height)
+      .field("hasEndSlope", &sleeper_line_params::hasEndSlope)
+      .field("sleeperType", &sleeper_line_params::sleeperType)
+      .field("gauge", &sleeper_line_params::gauge)
+      .field("grooveWidth", &sleeper_line_params::grooveWidth)
+      .field("grooveDepth", &sleeper_line_params::grooveDepth)
+      .field("grooveYs", &get_sleeper_line_groove_ys,
+             &set_sleeper_line_groove_ys)
+      .field("shapeType", &sleeper_line_params::shapeType);
+
+  function("createSleeperLine",
+           select_overload<TopoDS_Shape(const sleeper_line_params &)>(
+               &create_sleeper_line));
+
+  // Rail Pair (轨排对)
+  value_object<rail_pair_params>("RailPairParams")
+      .field("centerline", &get_rail_pair_centerline,
+             &set_rail_pair_centerline)
+      .field("gauge", &rail_pair_params::gauge)
+      .field("superElevation", &rail_pair_params::superElevation)
+      .field("railHeight", &rail_pair_params::railHeight)
+      .field("railHeadWidth", &rail_pair_params::railHeadWidth)
+      .field("railBaseWidth", &rail_pair_params::railBaseWidth);
+
+  function("createRailPair",
+           select_overload<TopoDS_Shape(const rail_pair_params &)>(
+               &create_rail_pair));
+  function("createRailPairWithPosition",
+           select_overload<TopoDS_Shape(const rail_pair_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_rail_pair));
+
+  // Sleeper Layout (轨枕阵列)
+  value_object<sleeper_layout_params>("SleeperLayoutParams")
+      .field("centerline", &get_sleeper_layout_centerline,
+             &set_sleeper_layout_centerline)
+      .field("length", &sleeper_layout_params::length)
+      .field("width", &sleeper_layout_params::width)
+      .field("height", &sleeper_layout_params::height)
+      .field("spacing", &sleeper_layout_params::spacing)
+      .field("gauge", &sleeper_layout_params::gauge);
+
+  function("createSleeperLayout",
+           select_overload<TopoDS_Shape(const sleeper_layout_params &)>(
+               &create_sleeper_layout));
+
+  // Straight Track (直线轨道段)
+  value_object<straight_track_params>("StraightTrackParams")
+      .field("startPoint", &straight_track_params::startPoint)
+      .field("endPoint", &straight_track_params::endPoint)
+      .field("gauge", &straight_track_params::gauge)
+      .field("railHeight", &straight_track_params::railHeight)
+      .field("railHeadWidth", &straight_track_params::railHeadWidth)
+      .field("railBaseWidth", &straight_track_params::railBaseWidth)
+      .field("webThickness", &straight_track_params::webThickness)
+      .field("sleeperLength", &straight_track_params::sleeperLength)
+      .field("sleeperWidth", &straight_track_params::sleeperWidth)
+      .field("sleeperHeight", &straight_track_params::sleeperHeight)
+      .field("sleeperSpacing", &straight_track_params::sleeperSpacing)
+      .field("ballastTopWidth", &straight_track_params::ballastTopWidth)
+      .field("ballastThickness", &straight_track_params::ballastThickness)
+      .field("ballastSlope", &straight_track_params::ballastSlope);
+
+  function("createStraightTrack",
+           select_overload<TopoDS_Shape(const straight_track_params &)>(
+               &create_straight_track));
+  function("createStraightTrackWithPosition",
+           select_overload<TopoDS_Shape(const straight_track_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_straight_track));
+
+  // Curve Track (曲线轨道段)
+  value_object<curve_track_params>("CurveTrackParams")
+      .field("curveCenter", &curve_track_params::curveCenter)
+      .field("startAngle", &curve_track_params::startAngle)
+      .field("sweepAngle", &curve_track_params::sweepAngle)
+      .field("curveRadius", &curve_track_params::curveRadius)
+      .field("gauge", &curve_track_params::gauge)
+      .field("superElevation", &curve_track_params::superElevation)
+      .field("railHeight", &curve_track_params::railHeight)
+      .field("railHeadWidth", &curve_track_params::railHeadWidth)
+      .field("railBaseWidth", &curve_track_params::railBaseWidth)
+      .field("webThickness", &curve_track_params::webThickness)
+      .field("sleeperLength", &curve_track_params::sleeperLength)
+      .field("sleeperWidth", &curve_track_params::sleeperWidth)
+      .field("sleeperHeight", &curve_track_params::sleeperHeight)
+      .field("sleeperSpacing", &curve_track_params::sleeperSpacing)
+      .field("ballastTopWidth", &curve_track_params::ballastTopWidth)
+      .field("ballastThickness", &curve_track_params::ballastThickness)
+      .field("ballastSlope", &curve_track_params::ballastSlope);
+
+  function("createCurveTrack",
+           select_overload<TopoDS_Shape(const curve_track_params &)>(
+               &create_curve_track));
+  function("createCurveTrackWithPosition",
+           select_overload<TopoDS_Shape(const curve_track_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_curve_track));
+
+  // Retarder Point (减速顶)
+  value_object<retarder_point_params>("RetarderPointParams")
+      .field("position", &retarder_point_params::position)
+      .field("rotation", &retarder_point_params::rotation)
+      .field("side", &retarder_point_params::side)
+      .field("type", &retarder_point_params::type)
+      .field("mountType", &retarder_point_params::mountType)
+      .field("height", &retarder_point_params::height)
+      .field("bodyDiameter", &retarder_point_params::bodyDiameter)
+      .field("capDiameter", &retarder_point_params::capDiameter)
+      .field("capHeight", &retarder_point_params::capHeight)
+      .field("transitionHeight", &retarder_point_params::transitionHeight)
+      .field("armLength", &retarder_point_params::armLength)
+      .field("armWidth", &retarder_point_params::armWidth)
+      .field("armThickness", &retarder_point_params::armThickness)
+      .field("boltDiameter", &retarder_point_params::boltDiameter)
+      .field("portDiameter", &retarder_point_params::portDiameter);
+
+  function("createRetarderPoint",
+           select_overload<TopoDS_Shape(const retarder_point_params &)>(
+               &create_retarder_point));
+  function("createRetarderPointWithPosition",
+           select_overload<TopoDS_Shape(const retarder_point_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_retarder_point));
+
+  // ==========================================================================
+  // TRACK GROUP 2: 道岔组 — from primitives_railway.hh
+  // ==========================================================================
+
+  // Switch Rail (尖轨)
+  value_object<switch_rail_params>("SwitchRailParams")
+      .field("length", &switch_rail_params::length)
+      .field("railHeight", &switch_rail_params::railHeight)
+      .field("railHeadWidth", &switch_rail_params::railHeadWidth)
+      .field("railBaseWidth", &switch_rail_params::railBaseWidth)
+      .field("webThickness", &switch_rail_params::webThickness)
+      .field("tipWidth", &switch_rail_params::tipWidth)
+      .field("curveRadius", &switch_rail_params::curveRadius)
+      .field("isLeftHand", &switch_rail_params::isLeftHand);
+
+  function("createSwitchRail",
+           select_overload<TopoDS_Shape(const switch_rail_params &)>(
+               &create_switch_rail));
+  function("createSwitchRailWithPosition",
+           select_overload<TopoDS_Shape(const switch_rail_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_switch_rail));
+
+  // Frog (辙叉)
+  value_object<frog_params>("FrogParams")
+      .field("turnoutNo", &frog_params::turnoutNo)
+      .field("gauge", &frog_params::gauge)
+      .field("railHeight", &frog_params::railHeight)
+      .field("railHeadWidth", &frog_params::railHeadWidth)
+      .field("railBaseWidth", &frog_params::railBaseWidth);
+
+  function("createFrog", select_overload<TopoDS_Shape(const frog_params &)>(
+                             &create_frog));
+  function("createFrogWithPosition",
+           select_overload<TopoDS_Shape(const frog_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_frog));
+
+  // Turnout (道岔)
+  value_object<turnout_params>("TurnoutParams")
+      .field("turnoutNo", &turnout_params::turnoutNo)
+      .field("isLeftHand", &turnout_params::isLeftHand)
+      .field("gauge", &turnout_params::gauge)
+      .field("railHeight", &turnout_params::railHeight)
+      .field("railHeadWidth", &turnout_params::railHeadWidth)
+      .field("railBaseWidth", &turnout_params::railBaseWidth)
+      .field("webThickness", &turnout_params::webThickness)
+      .field("switchRailLength", &turnout_params::switchRailLength)
+      .field("leadCurveRadius", &turnout_params::leadCurveRadius)
+      .field("frogLength", &turnout_params::frogLength)
+      .field("sleeperCount", &turnout_params::sleeperCount)
+      .field("sleeperSpacing", &turnout_params::sleeperSpacing);
+
+  function("createTurnout",
+           select_overload<TopoDS_Shape(const turnout_params &)>(
+               &create_turnout));
+  function("createTurnoutWithPosition",
+           select_overload<TopoDS_Shape(const turnout_params &, const gp_Pnt &,
+                                        const gp_Dir &, const gp_Dir &)>(
+               &create_turnout));
+
+  // Curve path / end treatment shared structs
+  enum_<rail_curve_type>("RailCurveType")
+      .value("LINE", rail_curve_type::LINE)
+      .value("ARC", rail_curve_type::ARC)
+      .value("BEZIER", rail_curve_type::BEZIER);
+
+  enum_<rail_profile_type>("RailProfileType")
+      .value("RAIL", rail_profile_type::RAIL)
+      .value("CHANNEL", rail_profile_type::CHANNEL)
+      .value("PLATE", rail_profile_type::PLATE);
+
+  enum_<end_treatment_type>("EndTreatmentType")
+      .value("PLANE", end_treatment_type::PLANE)
+      .value("SWITCH", end_treatment_type::SWITCH)
+      .value("SCARF", end_treatment_type::SCARF)
+      .value("BELL", end_treatment_type::BELL);
+
+  value_object<end_treatment_params>("EndTreatmentParams")
+      .field("type", &end_treatment_params::type)
+      .field("toeWidth", &end_treatment_params::toeWidth)
+      .field("switchLength", &end_treatment_params::switchLength)
+      .field("planedStart", &end_treatment_params::planedStart)
+      .field("switchType", &end_treatment_params::switchType)
+      .field("planedSide", &end_treatment_params::planedSide)
+      .field("dropValue", &end_treatment_params::dropValue)
+      .field("scarfAngle", &end_treatment_params::scarfAngle)
+      .field("bellLength", &end_treatment_params::bellLength);
+
+  value_object<curve_params>("CurveParams")
+      .field("type", &curve_params::type)
+      .field("startPoint", &curve_params::startPoint)
+      .field("endPoint", &curve_params::endPoint)
+      .field("controlPoints", &get_curve_control_points,
+             &set_curve_control_points)
+      .field("radius", &curve_params::radius)
+      .field("arcDirection", &curve_params::arcDirection);
+
+  // Rail Curve (独立曲线钢轨)
+  value_object<rail_curve_params>("RailCurveParams")
+      .field("curve", &rail_curve_params::curve)
+      .field("endStart", &rail_curve_params::endStart)
+      .field("endFinish", &rail_curve_params::endFinish)
+      .field("railHeight", &rail_curve_params::railHeight)
+      .field("headWidth", &rail_curve_params::headWidth)
+      .field("baseWidth", &rail_curve_params::baseWidth)
+      .field("webThickness", &rail_curve_params::webThickness)
+      .field("headHeight", &rail_curve_params::headHeight)
+      .field("baseHeight", &rail_curve_params::baseHeight)
+      .field("headRadius", &rail_curve_params::headRadius);
+
+  function("createRailCurve",
+           select_overload<TopoDS_Shape(const rail_curve_params &)>(
+               &create_rail_curve));
+
+  // Wing Rail Curve (翼轨)
+  value_object<wing_rail_curve_params>("WingRailCurveParams")
+      .field("curve", &wing_rail_curve_params::curve)
+      .field("endStart", &wing_rail_curve_params::endStart)
+      .field("endFinish", &wing_rail_curve_params::endFinish)
+      .field("profile", &wing_rail_curve_params::profile)
+      .field("channelHeight", &wing_rail_curve_params::channelHeight)
+      .field("grooveWidth", &wing_rail_curve_params::grooveWidth)
+      .field("flangeWidth", &wing_rail_curve_params::flangeWidth)
+      .field("webThickness", &wing_rail_curve_params::webThickness)
+      .field("grooveThickness", &wing_rail_curve_params::grooveThickness)
+      .field("endConnection", &wing_rail_curve_params::endConnection);
+
+  function("createWingRailCurve",
+           select_overload<TopoDS_Shape(const wing_rail_curve_params &)>(
+               &create_wing_rail_curve));
+
+  // Guard Rail Curve (护轨曲线)
+  value_object<guard_rail_curve_params>("GuardRailCurveParams")
+      .field("curve", &guard_rail_curve_params::curve)
+      .field("endStart", &guard_rail_curve_params::endStart)
+      .field("endFinish", &guard_rail_curve_params::endFinish)
+      .field("profile", &guard_rail_curve_params::profile)
+      .field("channelHeight", &guard_rail_curve_params::channelHeight)
+      .field("grooveWidth", &guard_rail_curve_params::grooveWidth)
+      .field("flangeWidth", &guard_rail_curve_params::flangeWidth)
+      .field("webThickness", &guard_rail_curve_params::webThickness)
+      .field("grooveThickness", &guard_rail_curve_params::grooveThickness)
+      .field("raiseHeight", &guard_rail_curve_params::raiseHeight);
+
+  function("createGuardRailCurve",
+           select_overload<TopoDS_Shape(const guard_rail_curve_params &)>(
+               &create_guard_rail_curve));
+
+  // Guard Rail (护轨)
+  value_object<guard_rail_params>("GuardRailParams")
+      .field("height", &guard_rail_params::height)
+      .field("headWidth", &guard_rail_params::headWidth)
+      .field("baseWidth", &guard_rail_params::baseWidth)
+      .field("grooveWidth", &guard_rail_params::grooveWidth)
+      .field("totalLength", &guard_rail_params::totalLength)
+      .field("gaugeDistance", &guard_rail_params::gaugeDistance);
+
+  function("createGuardRail",
+           select_overload<TopoDS_Shape(const guard_rail_params &)>(
+               &create_guard_rail));
+  function("createGuardRailWithPoints",
+           select_overload<TopoDS_Shape(const guard_rail_params &,
+                                        const gp_Pnt &, const gp_Pnt &)>(
+               &create_guard_rail));
+
+  // Turnout Assembly (道岔组合)
+  value_object<turnout_assembly_params>("TurnoutAssemblyParams")
+      .field("turnoutNo", &turnout_assembly_params::turnoutNo)
+      .field("hand", &turnout_assembly_params::hand)
+      .field("gauge", &turnout_assembly_params::gauge)
+      .field("rails", &get_turnout_assembly_rails,
+             &set_turnout_assembly_rails)
+      .field("wingRails", &get_turnout_assembly_wing_rails,
+             &set_turnout_assembly_wing_rails)
+      .field("guardRails", &get_turnout_assembly_guard_rails,
+             &set_turnout_assembly_guard_rails)
+      .field("sleepers", &get_turnout_assembly_sleepers,
+             &set_turnout_assembly_sleepers)
+      .field("fasteners", &get_turnout_assembly_fasteners,
+             &set_turnout_assembly_fasteners);
+
+  function("createTurnoutAssembly",
+           select_overload<TopoDS_Shape(const turnout_assembly_params &)>(
+               &create_turnout_assembly));
+  function("createTurnoutAssemblyWithPosition",
+           select_overload<TopoDS_Shape(const turnout_assembly_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_turnout_assembly));
+
+  // Expansion Joint (钢轨伸缩调节器)
+  value_object<expansion_joint_params>("ExpansionJointParams")
+      .field("stockRail", &expansion_joint_params::stockRail)
+      .field("switchRail", &expansion_joint_params::switchRail)
+      .field("expansionCapacity", &expansion_joint_params::expansionCapacity)
+      .field("gauge", &expansion_joint_params::gauge);
+
+  function("createExpansionJoint",
+           select_overload<TopoDS_Shape(const expansion_joint_params &)>(
+               &create_expansion_joint));
+  function("createExpansionJointWithPosition",
+           select_overload<TopoDS_Shape(const expansion_joint_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_expansion_joint));
+
+  // ==========================================================================
+  // TRACK GROUP 3: OCS 件组 — from primitives_railway.hh
+  // ==========================================================================
+
+  // Cantilever Base (腕臂底座)
+  value_object<cantilever_base_params>("CantileverBaseParams")
+      .field("length", &cantilever_base_params::length)
+      .field("width", &cantilever_base_params::width)
+      .field("height", &cantilever_base_params::height)
+      .field("boltSpacing", &cantilever_base_params::boltSpacing)
+      .field("boltDiameter", &cantilever_base_params::boltDiameter)
+      .field("boltCount", &cantilever_base_params::boltCount);
+
+  function("createCantileverBase",
+           select_overload<TopoDS_Shape(const cantilever_base_params &)>(
+               &create_cantilever_base));
+  function("createCantileverBaseWithPosition",
+           select_overload<TopoDS_Shape(const cantilever_base_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_cantilever_base));
+
+  // Messenger Wire Saddle (承力索座)
+  value_object<mw_saddle_params>("MwSaddleParams")
+      .field("length", &mw_saddle_params::length)
+      .field("width", &mw_saddle_params::width)
+      .field("height", &mw_saddle_params::height)
+      .field("grooveRadius", &mw_saddle_params::grooveRadius)
+      .field("boltDiameter", &mw_saddle_params::boltDiameter);
+
+  function("createMwSaddle",
+           select_overload<TopoDS_Shape(const mw_saddle_params &)>(
+               &create_mw_saddle));
+  function("createMwSaddleWithPosition",
+           select_overload<TopoDS_Shape(const mw_saddle_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_mw_saddle));
+
+  // Balance Weight (坠砣)
+  value_object<balance_weight_params>("BalanceWeightParams")
+      .field("width", &balance_weight_params::width)
+      .field("thickness", &balance_weight_params::thickness)
+      .field("height", &balance_weight_params::height)
+      .field("centerHoleDiameter",
+             &balance_weight_params::centerHoleDiameter);
+
+  function("createBalanceWeight",
+           select_overload<TopoDS_Shape(const balance_weight_params &)>(
+               &create_balance_weight));
+  function("createBalanceWeightWithPosition",
+           select_overload<TopoDS_Shape(const balance_weight_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_balance_weight));
+
+  // Weight Rod (坠砣杆)
+  value_object<weight_rod_params>("WeightRodParams")
+      .field("rodDiameter", &weight_rod_params::rodDiameter)
+      .field("rodLength", &weight_rod_params::rodLength)
+      .field("topHoleDiameter", &weight_rod_params::topHoleDiameter);
+
+  function("createWeightRod",
+           select_overload<TopoDS_Shape(const weight_rod_params &)>(
+               &create_weight_rod));
+  function("createWeightRodWithPosition",
+           select_overload<TopoDS_Shape(const weight_rod_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_weight_rod));
+
+  // Weight Stack (坠砣串)
+  value_object<weight_stack_params>("WeightStackParams")
+      .field("blockCount", &weight_stack_params::blockCount)
+      .field("blockDiameter", &weight_stack_params::blockDiameter)
+      .field("blockHeight", &weight_stack_params::blockHeight)
+      .field("blockGap", &weight_stack_params::blockGap)
+      .field("rodDiameter", &weight_stack_params::rodDiameter)
+      .field("rodLength", &weight_stack_params::rodLength)
+      .field("holeDiameter", &weight_stack_params::holeDiameter);
+
+  function("createWeightStack",
+           select_overload<TopoDS_Shape(const weight_stack_params &)>(
+               &create_weight_stack));
+  function("createWeightStackWithPosition",
+           select_overload<TopoDS_Shape(const weight_stack_params &,
+                                        const gp_Pnt &)>(&create_weight_stack));
+
+  // Anchor Fitting (下锚金具)
+  enum_<anchor_fitting_type>("AnchorFittingType")
+      .value("ROD_AND_RING", anchor_fitting_type::ROD_AND_RING)
+      .value("DOUBLE_EAR", anchor_fitting_type::DOUBLE_EAR)
+      .value("WEDGE_CLAMP", anchor_fitting_type::WEDGE_CLAMP);
+
+  value_object<anchor_fitting_params>("AnchorFittingParams")
+      .field("type", &anchor_fitting_params::type)
+      .field("length", &anchor_fitting_params::length)
+      .field("diameter", &anchor_fitting_params::diameter);
+
+  function("createAnchorFitting",
+           select_overload<TopoDS_Shape(const anchor_fitting_params &)>(
+               &create_anchor_fitting));
+  function("createAnchorFittingWithPosition",
+           select_overload<TopoDS_Shape(const anchor_fitting_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_anchor_fitting));
+
+  // Ratchet Compensator (棘轮补偿装置)
+  value_object<ratchet_compensator_params>("RatchetCompensatorParams")
+      .field("wheelDiameter", &ratchet_compensator_params::wheelDiameter)
+      .field("wheelWidth", &ratchet_compensator_params::wheelWidth)
+      .field("ropeDiameter", &ratchet_compensator_params::ropeDiameter)
+      .field("strokeLength", &ratchet_compensator_params::strokeLength)
+      .field("stack", &ratchet_compensator_params::stack);
+
+  function("createRatchetCompensator",
+           select_overload<TopoDS_Shape(const ratchet_compensator_params &)>(
+               &create_ratchet_compensator));
+  function("createRatchetCompensatorWithPosition",
+           select_overload<TopoDS_Shape(const ratchet_compensator_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_ratchet_compensator));
+
+  // Pulley Compensator (滑轮补偿装置)
+  value_object<pulley_compensator_params>("PulleyCompensatorParams")
+      .field("pulleyDiameter", &pulley_compensator_params::pulleyDiameter)
+      .field("grooveWidth", &pulley_compensator_params::grooveWidth)
+      .field("pulleyCount", &pulley_compensator_params::pulleyCount)
+      .field("ropeDiameter", &pulley_compensator_params::ropeDiameter)
+      .field("strokeLength", &pulley_compensator_params::strokeLength)
+      .field("stack", &pulley_compensator_params::stack)
+      .field("hasLimitFrame", &pulley_compensator_params::hasLimitFrame);
+
+  function("createPulleyCompensator",
+           select_overload<TopoDS_Shape(const pulley_compensator_params &)>(
+               &create_pulley_compensator));
+  function("createPulleyCompensatorWithPosition",
+           select_overload<TopoDS_Shape(const pulley_compensator_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_pulley_compensator));
+
+  // Disconnector (隔离开关)
+  value_object<disconnector_params>("DisconnectorParams")
+      .field("baseLength", &disconnector_params::baseLength)
+      .field("baseWidth", &disconnector_params::baseWidth)
+      .field("insulatorHeight", &disconnector_params::insulatorHeight)
+      .field("bladeLength", &disconnector_params::bladeLength)
+      .field("openAngle", &disconnector_params::openAngle);
+
+  function("createDisconnector",
+           select_overload<TopoDS_Shape(const disconnector_params &)>(
+               &create_disconnector));
+  function("createDisconnectorWithPosition",
+           select_overload<TopoDS_Shape(const disconnector_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_disconnector));
+
+  // Arrester (避雷器)
+  value_object<arrester_params>("ArresterParams")
+      .field("height", &arrester_params::height)
+      .field("outerDiameter", &arrester_params::outerDiameter)
+      .field("shedDiameter", &arrester_params::shedDiameter)
+      .field("shedSpacing", &arrester_params::shedSpacing)
+      .field("shedCount", &arrester_params::shedCount);
+
+  function("createArrester",
+           select_overload<TopoDS_Shape(const arrester_params &)>(
+               &create_arrester));
+  function("createArresterWithPosition",
+           select_overload<TopoDS_Shape(const arrester_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_arrester));
+
+  // Sleeve Connector (双套筒连接器)
+  value_object<sleeve_connector_params>("SleeveConnectorParams")
+      .field("tubeDiameter", &sleeve_connector_params::tubeDiameter)
+      .field("sleeveLength", &sleeve_connector_params::sleeveLength)
+      .field("wallThickness", &sleeve_connector_params::wallThickness)
+      .field("angle", &sleeve_connector_params::angle)
+      .field("boltDiameter", &sleeve_connector_params::boltDiameter);
+
+  function("createSleeveConnector",
+           select_overload<TopoDS_Shape(const sleeve_connector_params &)>(
+               &create_sleeve_connector));
+
+  // Sleeve Ear (套管单耳)
+  value_object<sleeve_ear_params>("SleeveEarParams")
+      .field("tubeDiameter", &sleeve_ear_params::tubeDiameter)
+      .field("sleeveLength", &sleeve_ear_params::sleeveLength)
+      .field("wallThickness", &sleeve_ear_params::wallThickness)
+      .field("earHeight", &sleeve_ear_params::earHeight)
+      .field("earThickness", &sleeve_ear_params::earThickness)
+      .field("holeDiameter", &sleeve_ear_params::holeDiameter);
+
+  function("createSleeveEar",
+           select_overload<TopoDS_Shape(const sleeve_ear_params &)>(
+               &create_sleeve_ear));
+
+  // Auxiliary Wire Bracket (附加导线安装支架)
+  enum_<aux_bracket_type>("AuxBracketType")
+      .value("CROSS_ARM", aux_bracket_type::CROSS_ARM)
+      .value("WALL_MOUNT", aux_bracket_type::WALL_MOUNT)
+      .value("DOUBLE_MAST", aux_bracket_type::DOUBLE_MAST);
+
+  value_object<aux_bracket_params>("AuxBracketParams")
+      .field("type", &aux_bracket_params::type)
+      .field("mountHeight", &aux_bracket_params::mountHeight)
+      .field("overhangLength", &aux_bracket_params::overhangLength)
+      .field("bracketLength", &aux_bracket_params::bracketLength)
+      .field("bracketWidth", &aux_bracket_params::bracketWidth)
+      .field("boltSpacing", &aux_bracket_params::boltSpacing)
+      .field("boltDiameter", &aux_bracket_params::boltDiameter);
+
+  function("createAuxBracket",
+           select_overload<TopoDS_Shape(const aux_bracket_params &)>(
+               &create_aux_bracket));
+  function("createAuxBracketWithPosition",
+           select_overload<TopoDS_Shape(const aux_bracket_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_aux_bracket));
+
+  // Positioning Cable (定位索)
+  value_object<positioning_cable_params>("PositioningCableParams")
+      .field("diameter", &positioning_cable_params::diameter)
+      .field("topPoint", &positioning_cable_params::topPoint)
+      .field("bottomPoint", &positioning_cable_params::bottomPoint)
+      .field("adjustable", &positioning_cable_params::adjustable);
+
+  function("createPositioningCable",
+           select_overload<TopoDS_Shape(const positioning_cable_params &)>(
+               &create_positioning_cable));
+
+  // Auxiliary Wire (附加导线本体)
+  value_object<auxiliary_wire_params>("AuxiliaryWireParams")
+      .field("diameter", &auxiliary_wire_params::diameter)
+      .field("sag", &auxiliary_wire_params::sag)
+      .field("ratedTension", &auxiliary_wire_params::ratedTension);
+
+  function("createAuxiliaryWire",
+           select_overload<TopoDS_Shape(const auxiliary_wire_params &,
+                                        const gp_Pnt &, const gp_Pnt &)>(
+               &create_auxiliary_wire));
+
+  // Hanger Post (硬横跨吊柱)
+  enum_<hanger_post_section_type>("HangerPostSectionType")
+      .value("ROUND", hanger_post_section_type::ROUND)
+      .value("SQUARE", hanger_post_section_type::SQUARE)
+      .value("H_BEAM_H", hanger_post_section_type::H_BEAM_H);
+
+  value_object<hanger_post_params>("HangerPostParams")
+      .field("sectionType", &hanger_post_params::sectionType)
+      .field("length", &hanger_post_params::length)
+      .field("sectionSize", &hanger_post_params::sectionSize)
+      .field("wallThickness", &hanger_post_params::wallThickness)
+      .field("topFlangeSize", &hanger_post_params::topFlangeSize)
+      .field("topFlangeThick", &hanger_post_params::topFlangeThick)
+      .field("bottomFlangeSize", &hanger_post_params::bottomFlangeSize)
+      .field("bottomFlangeThick", &hanger_post_params::bottomFlangeThick)
+      .field("boltDiameter", &hanger_post_params::boltDiameter)
+      .field("boltSpacing", &hanger_post_params::boltSpacing);
+
+  function("createHangerPost",
+           select_overload<TopoDS_Shape(const hanger_post_params &)>(
+               &create_hanger_post));
+  function("createHangerPostWithPosition",
+           select_overload<TopoDS_Shape(const hanger_post_params &,
+                                        const gp_Pnt &, const gp_Dir &)>(
+               &create_hanger_post));
+
+  // ==========================================================================
+  // TRACK GROUP 4: 横跨/装配组 — from primitives_railway.hh
+  // ==========================================================================
+
+  // Head Span (软横跨)
+  value_object<head_span_params>("HeadSpanParams")
+      .field("span", &head_span_params::span)
+      .field("hangPointCount", &head_span_params::hangPointCount)
+      .field("hangPointSpacing", &head_span_params::hangPointSpacing)
+      .field("crossCatenaryDiameter",
+             &head_span_params::crossCatenaryDiameter)
+      .field("crossCatenarySag", &head_span_params::crossCatenarySag)
+      .field("upperRopeDiameter", &head_span_params::upperRopeDiameter)
+      .field("lowerRopeDiameter", &head_span_params::lowerRopeDiameter)
+      .field("insulatorLength", &head_span_params::insulatorLength);
+
+  function("createHeadSpan",
+           select_overload<TopoDS_Shape(const head_span_params &)>(
+               &create_head_span));
+  function("createHeadSpanWithMasts",
+           select_overload<TopoDS_Shape(const head_span_params &,
+                                        const gp_Pnt &, const gp_Pnt &,
+                                        const gp_Dir &)>(&create_head_span));
+
+  // Transverse Span (硬横跨)
+  enum_<beam_section_type>("BeamSectionType")
+      .value("BOX", beam_section_type::BOX)
+      .value("H_BEAM_T", beam_section_type::H_BEAM_T)
+      .value("TRUSS", beam_section_type::TRUSS)
+      .value("COMBO", beam_section_type::COMBO);
+
+  value_object<transverse_span_params>("TransverseSpanParams")
+      .field("span", &transverse_span_params::span)
+      .field("beamType", &transverse_span_params::beamType)
+      .field("beamHeight", &transverse_span_params::beamHeight)
+      .field("beamWidth", &transverse_span_params::beamWidth)
+      .field("beamThickness", &transverse_span_params::beamThickness)
+      .field("mastHeight", &transverse_span_params::mastHeight)
+      .field("mastWidth", &transverse_span_params::mastWidth);
+
+  function("createTransverseSpan",
+           select_overload<TopoDS_Shape(const transverse_span_params &)>(
+               &create_transverse_span));
+  function("createTransverseSpanWithPosition",
+           select_overload<TopoDS_Shape(const transverse_span_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_transverse_span));
+
+  // Suspension Hard Span (悬索式硬横跨)
+  value_object<suspension_hard_span_params>("SuspensionHardSpanParams")
+      .field("span", &suspension_hard_span_params::span)
+      .field("mastHeight", &suspension_hard_span_params::mastHeight)
+      .field("mastWidth", &suspension_hard_span_params::mastWidth)
+      .field("cableDiameter", &suspension_hard_span_params::cableDiameter)
+      .field("cableSag", &suspension_hard_span_params::cableSag)
+      .field("dropperCableDiameter",
+             &suspension_hard_span_params::dropperCableDiameter)
+      .field("dropperCount", &suspension_hard_span_params::dropperCount)
+      .field("dropperSpacing", &suspension_hard_span_params::dropperSpacing)
+      .field("insulatorLength",
+             &suspension_hard_span_params::insulatorLength)
+      .field("insulatorDiameter",
+             &suspension_hard_span_params::insulatorDiameter);
+
+  function("createSuspensionHardSpan",
+           select_overload<TopoDS_Shape(const suspension_hard_span_params &)>(
+               &create_suspension_hard_span));
+  function("createSuspensionHardSpanWithPosition",
+           select_overload<TopoDS_Shape(const suspension_hard_span_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(
+               &create_suspension_hard_span));
+
+  // Portal Frame (梁顶门型架)
+  value_object<portal_frame_params>("PortalFrameParams")
+      .field("frameHeight", &portal_frame_params::frameHeight)
+      .field("frameWidth", &portal_frame_params::frameWidth)
+      .field("postDiameter", &portal_frame_params::postDiameter)
+      .field("postWallThick", &portal_frame_params::postWallThick)
+      .field("beamDiameter", &portal_frame_params::beamDiameter)
+      .field("beamWallThick", &portal_frame_params::beamWallThick)
+      .field("beamLength", &portal_frame_params::beamLength)
+      .field("basePlateLength", &portal_frame_params::basePlateLength)
+      .field("basePlateWidth", &portal_frame_params::basePlateWidth)
+      .field("basePlateThick", &portal_frame_params::basePlateThick)
+      .field("hangPointCount", &portal_frame_params::hangPointCount)
+      .field("hangPointSpacing", &portal_frame_params::hangPointSpacing)
+      .field("boltSpacing", &portal_frame_params::boltSpacing)
+      .field("boltDiameter", &portal_frame_params::boltDiameter);
+
+  function("createPortalFrame",
+           select_overload<TopoDS_Shape(const portal_frame_params &)>(
+               &create_portal_frame));
+  function("createPortalFrameWithPosition",
+           select_overload<TopoDS_Shape(const portal_frame_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_portal_frame));
+
+  // Crossing (线岔)
+  value_object<crossing_params>("CrossingParams")
+      .field("limitPipeLength", &crossing_params::limitPipeLength)
+      .field("pipeDiameter", &crossing_params::pipeDiameter)
+      .field("wireDiameter", &crossing_params::wireDiameter)
+      .field("heightDiff", &crossing_params::heightDiff);
+
+  function("createCrossing",
+           select_overload<TopoDS_Shape(const crossing_params &)>(
+               &create_crossing));
+  function("createCrossingWithPosition",
+           select_overload<TopoDS_Shape(const crossing_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_crossing));
+
+  // Mast Assembly (支柱装配)
+  value_object<mast_assembly_params>("MastAssemblyParams")
+      .field("mastType", &mast_assembly_params::mastType)
+      .field("mastHeight", &mast_assembly_params::mastHeight)
+      .field("cantileverType", &mast_assembly_params::cantileverType)
+      .field("hasCrossArm", &mast_assembly_params::hasCrossArm)
+      .field("armDiameter", &mast_assembly_params::armDiameter)
+      .field("stagger", &mast_assembly_params::stagger)
+      .field("compType", &mast_assembly_params::compType)
+      .field("ratedTension", &mast_assembly_params::ratedTension)
+      .field("hasGuyWire", &mast_assembly_params::hasGuyWire)
+      .field("contactHeight", &mast_assembly_params::contactHeight)
+      .field("structureHeight", &mast_assembly_params::structureHeight)
+      .field("sideOffset", &mast_assembly_params::sideOffset);
+
+  function("createMastAssembly",
+           select_overload<TopoDS_Shape(const mast_assembly_params &)>(
+               &create_mast_assembly));
+  function("createMastAssemblyWithPosition",
+           select_overload<TopoDS_Shape(const mast_assembly_params &,
+                                        const gp_Pnt &, const gp_Dir &,
+                                        const gp_Dir &)>(&create_mast_assembly));
+
+  // Suspension Cable (悬索)
+  enum_<suspension_cable_type>("SuspensionCableType")
+      .value("CATENARY", suspension_cable_type::CATENARY)
+      .value("FIXED_ROPE", suspension_cable_type::FIXED_ROPE)
+      .value("DROPPER", suspension_cable_type::DROPPER);
+
+  value_object<suspension_cable_params>("SuspensionCableParams")
+      .field("startPoint", &suspension_cable_params::startPoint)
+      .field("endPoint", &suspension_cable_params::endPoint)
+      .field("diameter", &suspension_cable_params::diameter)
+      .field("sag", &suspension_cable_params::sag)
+      .field("cableType", &suspension_cable_params::cableType)
+      .field("tension", &suspension_cable_params::tension);
+
+  function("createSuspensionCable",
+           select_overload<TopoDS_Shape(const suspension_cable_params &)>(
+               &create_suspension_cable));
+
+  // Ballast From Sleepers (枕木线驱动道床)
+  value_object<ballast_from_sleepers_params>("BallastFromSleepersParams")
+      .field("sleepers", &get_ballast_from_sleepers_sleepers,
+             &set_ballast_from_sleepers_sleepers)
+      .field("topWidth", &ballast_from_sleepers_params::topWidth)
+      .field("thickness", &ballast_from_sleepers_params::thickness)
+      .field("sideSlope", &ballast_from_sleepers_params::sideSlope)
+      .field("sectionType", &ballast_from_sleepers_params::sectionType);
+
+  function("createBallastFromSleepers",
+           select_overload<TopoDS_Shape(const ballast_from_sleepers_params &)>(
+               &create_ballast_from_sleepers));
 }

@@ -2856,3 +2856,739 @@ export declare interface BoreholeParams {
 }
 
 export declare function createBorehole(params: BoreholeParams): { [key: string]: TopoShape };
+// ==========================================================================
+// 铁路扩展声明 (primitives_railway) — 与 go-topo src/primitives_railway.hh 对应
+// 字段名 camelCase, 与 topotypes railway 包 JSON 键名一致 (例外见各注记)
+// ==========================================================================
+
+// 轨枕截面形状枚举
+export declare type SleeperShapeType = {
+    RECTANGULAR: {},
+    TRAPEZOIDAL: {}
+}
+
+// 中心线段类型枚举
+export declare type CenterlineCurveType = {
+    LINE: {},
+    ARC: {},
+    BEZIER: {}
+}
+
+// 钢轨曲线类型枚举
+export declare type RailCurveType = {
+    LINE: {},
+    ARC: {},
+    BEZIER: {}
+}
+
+// 钢轨断面类型枚举
+export declare type RailProfileType = {
+    RAIL: {},
+    CHANNEL: {},
+    PLATE: {}
+}
+
+// 端部处理方式枚举
+export declare type EndTreatmentType = {
+    PLANE: {},
+    SWITCH: {},
+    SCARF: {},
+    BELL: {}
+}
+
+// 下锚金具类型枚举
+export declare type AnchorFittingType = {
+    ROD_AND_RING: {},
+    DOUBLE_EAR: {},
+    WEDGE_CLAMP: {}
+}
+
+// 附加导线支架类型枚举
+export declare type AuxBracketType = {
+    CROSS_ARM: {},
+    WALL_MOUNT: {},
+    DOUBLE_MAST: {}
+}
+
+// 硬横跨吊柱截面类型枚举
+export declare type HangerPostSectionType = {
+    ROUND: {},
+    SQUARE: {},
+    H_BEAM_H: {}
+}
+
+// 硬横跨梁截面类型枚举
+export declare type BeamSectionType = {
+    BOX: {},
+    H_BEAM_T: {},
+    TRUSS: {},
+    COMBO: {}
+}
+
+// 悬索类型枚举
+export declare type SuspensionCableType = {
+    CATENARY: {},
+    FIXED_ROPE: {},
+    DROPPER: {}
+}
+
+// 钢轨参数结构体
+export declare interface RailParams {
+    railHeight: number;
+    headWidth: number;
+    baseWidth: number;
+    webThickness: number;
+    headHeight: number;
+    baseHeight: number;
+    headRadius: number;
+    standardLength: number;
+}
+
+export declare function createRail(params: RailParams): TopoDS_Shape;
+export declare function createRailWithPoints(params: RailParams, startPoint: gp_Pnt, endPoint: gp_Pnt): TopoDS_Shape;
+
+// 轨枕参数结构体
+export declare interface SleeperParams {
+    shapeType: SleeperShapeType;
+    length: number;
+    width: number;
+    height: number;
+    gauge: number;
+    railBaseWidth: number;
+    grooveDepth: number;
+    spacing: number;
+}
+
+export declare function createSleeper(params: SleeperParams): TopoDS_Shape;
+export declare function createSleeperWithPosition(params: SleeperParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 中心线段结构体
+export declare interface CenterlineSegment {
+    type: CenterlineCurveType;
+    points: gp_Pnt[];
+}
+
+// 道床参数结构体 (topotypes Ballast 用 centerline 点列, 本结构为中心线段列)
+export declare interface BallastParams {
+    topWidth: number;
+    thickness: number;
+    sideSlope: number;
+    centerlineSegments: CenterlineSegment[];
+    tiltAngle: number;
+}
+
+export declare function createBallast(params: BallastParams): TopoDS_Shape;
+
+// 轨道板参数结构体
+export declare interface TrackSlabParams {
+    length: number;
+    width: number;
+    thickness: number;
+    railSeatCount: number;
+    railSeatSpacing: number;
+    cementAsphaltThickness: number;
+}
+
+export declare function createTrackSlab(params: TrackSlabParams): TopoDS_Shape;
+export declare function createTrackSlabWithPosition(params: TrackSlabParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 扣件参数结构体
+export declare interface FastenerParams {
+    spacing: number;
+    gauge: number;
+    padThickness: number;
+    padLength: number;
+    padWidth: number;
+}
+
+export declare function createFastener(params: FastenerParams): TopoDS_Shape;
+export declare function createFastenerWithPosition(params: FastenerParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 扣件点参数结构体
+export declare interface FastenerPointParams {
+    position: gp_Pnt;
+    railNormal: gp_Dir;
+    type: number;
+    railBaseWidth: number;
+    padThickness: number;
+}
+
+export declare function createFastenerPoint(params: FastenerPointParams): TopoDS_Shape;
+
+// 枕木直线参数结构体
+export declare interface SleeperLineParams {
+    startPoint: gp_Pnt;
+    endPoint: gp_Pnt;
+    width: number;
+    height: number;
+    hasEndSlope: boolean;
+    sleeperType: number;
+    gauge: number;
+    grooveWidth: number;
+    grooveDepth: number;
+    grooveYs: number[];
+    shapeType: number;
+}
+
+export declare function createSleeperLine(params: SleeperLineParams): TopoDS_Shape;
+
+// 轨排对参数结构体
+export declare interface RailPairParams {
+    centerline: gp_Pnt[];
+    gauge: number;
+    superElevation: number;
+    railHeight: number;
+    railHeadWidth: number;
+    railBaseWidth: number;
+}
+
+export declare function createRailPair(params: RailPairParams): TopoDS_Shape;
+export declare function createRailPairWithPosition(params: RailPairParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 轨枕阵列参数结构体
+export declare interface SleeperLayoutParams {
+    centerline: gp_Pnt[];
+    length: number;
+    width: number;
+    height: number;
+    spacing: number;
+    gauge: number;
+}
+
+export declare function createSleeperLayout(params: SleeperLayoutParams): TopoDS_Shape;
+
+// 直线轨道段参数结构体 (topotypes StraightTrack 无 webThickness, 以默认断面推导)
+export declare interface StraightTrackParams {
+    startPoint: gp_Pnt;
+    endPoint: gp_Pnt;
+    gauge: number;
+    railHeight: number;
+    railHeadWidth: number;
+    railBaseWidth: number;
+    webThickness: number;
+    sleeperLength: number;
+    sleeperWidth: number;
+    sleeperHeight: number;
+    sleeperSpacing: number;
+    ballastTopWidth: number;
+    ballastThickness: number;
+    ballastSlope: number;
+}
+
+export declare function createStraightTrack(params: StraightTrackParams): TopoDS_Shape;
+export declare function createStraightTrackWithPosition(params: StraightTrackParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 曲线轨道段参数结构体 (topotypes CurveTrack 无 webThickness)
+export declare interface CurveTrackParams {
+    curveCenter: gp_Pnt;
+    startAngle: number;
+    sweepAngle: number;
+    curveRadius: number;
+    gauge: number;
+    superElevation: number;
+    railHeight: number;
+    railHeadWidth: number;
+    railBaseWidth: number;
+    webThickness: number;
+    sleeperLength: number;
+    sleeperWidth: number;
+    sleeperHeight: number;
+    sleeperSpacing: number;
+    ballastTopWidth: number;
+    ballastThickness: number;
+    ballastSlope: number;
+}
+
+export declare function createCurveTrack(params: CurveTrackParams): TopoDS_Shape;
+export declare function createCurveTrackWithPosition(params: CurveTrackParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 减速顶参数结构体 (topotypes RetarderPoint 的 deviceType 对应本结构 type)
+export declare interface RetarderPointParams {
+    position: gp_Pnt;
+    rotation: number;
+    side: number;
+    type: number;
+    mountType: number;
+    height: number;
+    bodyDiameter: number;
+    capDiameter: number;
+    capHeight: number;
+    transitionHeight: number;
+    armLength: number;
+    armWidth: number;
+    armThickness: number;
+    boltDiameter: number;
+    portDiameter: number;
+}
+
+export declare function createRetarderPoint(params: RetarderPointParams): TopoDS_Shape;
+export declare function createRetarderPointWithPosition(params: RetarderPointParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 尖轨参数结构体
+export declare interface SwitchRailParams {
+    length: number;
+    railHeight: number;
+    railHeadWidth: number;
+    railBaseWidth: number;
+    webThickness: number;
+    tipWidth: number;
+    curveRadius: number;
+    isLeftHand: boolean;
+}
+
+export declare function createSwitchRail(params: SwitchRailParams): TopoDS_Shape;
+export declare function createSwitchRailWithPosition(params: SwitchRailParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 辙叉参数结构体
+export declare interface FrogParams {
+    turnoutNo: number;
+    gauge: number;
+    railHeight: number;
+    railHeadWidth: number;
+    railBaseWidth: number;
+}
+
+export declare function createFrog(params: FrogParams): TopoDS_Shape;
+export declare function createFrogWithPosition(params: FrogParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 道岔参数结构体 (topotypes Turnout 无 webThickness)
+export declare interface TurnoutParams {
+    turnoutNo: number;
+    isLeftHand: boolean;
+    gauge: number;
+    railHeight: number;
+    railHeadWidth: number;
+    railBaseWidth: number;
+    webThickness: number;
+    switchRailLength: number;
+    leadCurveRadius: number;
+    frogLength: number;
+    sleeperCount: number;
+    sleeperSpacing: number;
+}
+
+export declare function createTurnout(params: TurnoutParams): TopoDS_Shape;
+export declare function createTurnoutWithPosition(params: TurnoutParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 端部处理参数结构体
+export declare interface EndTreatmentParams {
+    type: EndTreatmentType;
+    toeWidth: number;
+    switchLength: number;
+    planedStart: number;
+    switchType: number;
+    planedSide: number;
+    dropValue: number;
+    scarfAngle: number;
+    bellLength: number;
+}
+
+// 曲线路径参数结构体
+export declare interface CurveParams {
+    type: RailCurveType;
+    startPoint: gp_Pnt;
+    endPoint: gp_Pnt;
+    controlPoints: gp_Pnt[];
+    radius: number;
+    arcDirection: number;
+}
+
+// 独立曲线钢轨参数结构体
+export declare interface RailCurveParams {
+    curve: CurveParams;
+    endStart: EndTreatmentParams;
+    endFinish: EndTreatmentParams;
+    railHeight: number;
+    headWidth: number;
+    baseWidth: number;
+    webThickness: number;
+    headHeight: number;
+    baseHeight: number;
+    headRadius: number;
+}
+
+export declare function createRailCurve(params: RailCurveParams): TopoDS_Shape;
+
+// 翼轨曲线参数结构体
+export declare interface WingRailCurveParams {
+    curve: CurveParams;
+    endStart: EndTreatmentParams;
+    endFinish: EndTreatmentParams;
+    profile: RailProfileType;
+    channelHeight: number;
+    grooveWidth: number;
+    flangeWidth: number;
+    webThickness: number;
+    grooveThickness: number;
+    endConnection: number;
+}
+
+export declare function createWingRailCurve(params: WingRailCurveParams): TopoDS_Shape;
+
+// 护轨曲线参数结构体
+export declare interface GuardRailCurveParams {
+    curve: CurveParams;
+    endStart: EndTreatmentParams;
+    endFinish: EndTreatmentParams;
+    profile: RailProfileType;
+    channelHeight: number;
+    grooveWidth: number;
+    flangeWidth: number;
+    webThickness: number;
+    grooveThickness: number;
+    raiseHeight: number;
+}
+
+export declare function createGuardRailCurve(params: GuardRailCurveParams): TopoDS_Shape;
+
+// 护轨参数结构体
+export declare interface GuardRailParams {
+    height: number;
+    headWidth: number;
+    baseWidth: number;
+    grooveWidth: number;
+    totalLength: number;
+    gaugeDistance: number;
+}
+
+export declare function createGuardRail(params: GuardRailParams): TopoDS_Shape;
+export declare function createGuardRailWithPoints(params: GuardRailParams, startPoint: gp_Pnt, endPoint: gp_Pnt): TopoDS_Shape;
+
+// 道岔组合参数结构体
+export declare interface TurnoutAssemblyParams {
+    turnoutNo: number;
+    hand: number;
+    gauge: number;
+    rails: RailCurveParams[];
+    wingRails: WingRailCurveParams[];
+    guardRails: GuardRailCurveParams[];
+    sleepers: SleeperLineParams[];
+    fasteners: FastenerPointParams[];
+}
+
+export declare function createTurnoutAssembly(params: TurnoutAssemblyParams): TopoDS_Shape;
+export declare function createTurnoutAssemblyWithPosition(params: TurnoutAssemblyParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 钢轨伸缩调节器参数结构体
+export declare interface ExpansionJointParams {
+    stockRail: RailCurveParams;
+    switchRail: RailCurveParams;
+    expansionCapacity: number;
+    gauge: number;
+}
+
+export declare function createExpansionJoint(params: ExpansionJointParams): TopoDS_Shape;
+export declare function createExpansionJointWithPosition(params: ExpansionJointParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 腕臂底座参数结构体
+export declare interface CantileverBaseParams {
+    length: number;
+    width: number;
+    height: number;
+    boltSpacing: number;
+    boltDiameter: number;
+    boltCount: number;
+}
+
+export declare function createCantileverBase(params: CantileverBaseParams): TopoDS_Shape;
+export declare function createCantileverBaseWithPosition(params: CantileverBaseParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 承力索座参数结构体
+export declare interface MwSaddleParams {
+    length: number;
+    width: number;
+    height: number;
+    grooveRadius: number;
+    boltDiameter: number;
+}
+
+export declare function createMwSaddle(params: MwSaddleParams): TopoDS_Shape;
+export declare function createMwSaddleWithPosition(params: MwSaddleParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 坠砣参数结构体
+export declare interface BalanceWeightParams {
+    width: number;
+    thickness: number;
+    height: number;
+    centerHoleDiameter: number;
+}
+
+export declare function createBalanceWeight(params: BalanceWeightParams): TopoDS_Shape;
+export declare function createBalanceWeightWithPosition(params: BalanceWeightParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 坠砣杆参数结构体
+export declare interface WeightRodParams {
+    rodDiameter: number;
+    rodLength: number;
+    topHoleDiameter: number;
+}
+
+export declare function createWeightRod(params: WeightRodParams): TopoDS_Shape;
+export declare function createWeightRodWithPosition(params: WeightRodParams, position: gp_Pnt, direction: gp_Dir): TopoDS_Shape;
+
+// 坠砣串参数结构体
+export declare interface WeightStackParams {
+    blockCount: number;
+    blockDiameter: number;
+    blockHeight: number;
+    blockGap: number;
+    rodDiameter: number;
+    rodLength: number;
+    holeDiameter: number;
+}
+
+export declare function createWeightStack(params: WeightStackParams): TopoDS_Shape;
+export declare function createWeightStackWithPosition(params: WeightStackParams, position: gp_Pnt): TopoDS_Shape;
+
+// 下锚金具参数结构体 (topotypes AnchorFitting 的 fittingType 对应本结构 type)
+export declare interface AnchorFittingParams {
+    type: AnchorFittingType;
+    length: number;
+    diameter: number;
+}
+
+export declare function createAnchorFitting(params: AnchorFittingParams): TopoDS_Shape;
+export declare function createAnchorFittingWithPosition(params: AnchorFittingParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 棘轮补偿装置参数结构体
+export declare interface RatchetCompensatorParams {
+    wheelDiameter: number;
+    wheelWidth: number;
+    ropeDiameter: number;
+    strokeLength: number;
+    stack: WeightStackParams;
+}
+
+export declare function createRatchetCompensator(params: RatchetCompensatorParams): TopoDS_Shape;
+export declare function createRatchetCompensatorWithPosition(params: RatchetCompensatorParams, position: gp_Pnt, direction: gp_Dir): TopoDS_Shape;
+
+// 滑轮补偿装置参数结构体
+export declare interface PulleyCompensatorParams {
+    pulleyDiameter: number;
+    grooveWidth: number;
+    pulleyCount: number;
+    ropeDiameter: number;
+    strokeLength: number;
+    stack: WeightStackParams;
+    hasLimitFrame: boolean;
+}
+
+export declare function createPulleyCompensator(params: PulleyCompensatorParams): TopoDS_Shape;
+export declare function createPulleyCompensatorWithPosition(params: PulleyCompensatorParams, position: gp_Pnt, direction: gp_Dir): TopoDS_Shape;
+
+// 隔离开关参数结构体
+export declare interface DisconnectorParams {
+    baseLength: number;
+    baseWidth: number;
+    insulatorHeight: number;
+    bladeLength: number;
+    openAngle: number;
+}
+
+export declare function createDisconnector(params: DisconnectorParams): TopoDS_Shape;
+export declare function createDisconnectorWithPosition(params: DisconnectorParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 避雷器参数结构体
+export declare interface ArresterParams {
+    height: number;
+    outerDiameter: number;
+    shedDiameter: number;
+    shedSpacing: number;
+    shedCount: number;
+}
+
+export declare function createArrester(params: ArresterParams): TopoDS_Shape;
+export declare function createArresterWithPosition(params: ArresterParams, position: gp_Pnt, direction: gp_Dir): TopoDS_Shape;
+
+// 双套筒连接器参数结构体
+export declare interface SleeveConnectorParams {
+    tubeDiameter: number;
+    sleeveLength: number;
+    wallThickness: number;
+    angle: number;
+    boltDiameter: number;
+}
+
+export declare function createSleeveConnector(params: SleeveConnectorParams): TopoDS_Shape;
+
+// 套管单耳参数结构体
+export declare interface SleeveEarParams {
+    tubeDiameter: number;
+    sleeveLength: number;
+    wallThickness: number;
+    earHeight: number;
+    earThickness: number;
+    holeDiameter: number;
+}
+
+export declare function createSleeveEar(params: SleeveEarParams): TopoDS_Shape;
+
+// 附加导线安装支架参数结构体 (topotypes AuxBracket 的 bracketType 对应本结构 type)
+export declare interface AuxBracketParams {
+    type: AuxBracketType;
+    mountHeight: number;
+    overhangLength: number;
+    bracketLength: number;
+    bracketWidth: number;
+    boltSpacing: number;
+    boltDiameter: number;
+}
+
+export declare function createAuxBracket(params: AuxBracketParams): TopoDS_Shape;
+export declare function createAuxBracketWithPosition(params: AuxBracketParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 定位索参数结构体
+export declare interface PositioningCableParams {
+    diameter: number;
+    topPoint: gp_Pnt;
+    bottomPoint: gp_Pnt;
+    adjustable: boolean;
+}
+
+export declare function createPositioningCable(params: PositioningCableParams): TopoDS_Shape;
+
+// 附加导线本体参数结构体
+export declare interface AuxiliaryWireParams {
+    diameter: number;
+    sag: number;
+    ratedTension: number;
+}
+
+export declare function createAuxiliaryWire(params: AuxiliaryWireParams, startPoint: gp_Pnt, endPoint: gp_Pnt): TopoDS_Shape;
+
+// 硬横跨吊柱参数结构体
+export declare interface HangerPostParams {
+    sectionType: HangerPostSectionType;
+    length: number;
+    sectionSize: number;
+    wallThickness: number;
+    topFlangeSize: number;
+    topFlangeThick: number;
+    bottomFlangeSize: number;
+    bottomFlangeThick: number;
+    boltDiameter: number;
+    boltSpacing: number;
+}
+
+export declare function createHangerPost(params: HangerPostParams): TopoDS_Shape;
+export declare function createHangerPostWithPosition(params: HangerPostParams, position: gp_Pnt, direction: gp_Dir): TopoDS_Shape;
+
+// 软横跨参数结构体
+export declare interface HeadSpanParams {
+    span: number;
+    hangPointCount: number;
+    hangPointSpacing: number;
+    crossCatenaryDiameter: number;
+    crossCatenarySag: number;
+    upperRopeDiameter: number;
+    lowerRopeDiameter: number;
+    insulatorLength: number;
+}
+
+export declare function createHeadSpan(params: HeadSpanParams): TopoDS_Shape;
+export declare function createHeadSpanWithMasts(params: HeadSpanParams, mast1: gp_Pnt, mast2: gp_Pnt, upDir: gp_Dir): TopoDS_Shape;
+
+// 硬横跨参数结构体
+export declare interface TransverseSpanParams {
+    span: number;
+    beamType: BeamSectionType;
+    beamHeight: number;
+    beamWidth: number;
+    beamThickness: number;
+    mastHeight: number;
+    mastWidth: number;
+}
+
+export declare function createTransverseSpan(params: TransverseSpanParams): TopoDS_Shape;
+export declare function createTransverseSpanWithPosition(params: TransverseSpanParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 悬索式硬横跨参数结构体
+export declare interface SuspensionHardSpanParams {
+    span: number;
+    mastHeight: number;
+    mastWidth: number;
+    cableDiameter: number;
+    cableSag: number;
+    dropperCableDiameter: number;
+    dropperCount: number;
+    dropperSpacing: number;
+    insulatorLength: number;
+    insulatorDiameter: number;
+}
+
+export declare function createSuspensionHardSpan(params: SuspensionHardSpanParams): TopoDS_Shape;
+export declare function createSuspensionHardSpanWithPosition(params: SuspensionHardSpanParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 梁顶门型架参数结构体
+export declare interface PortalFrameParams {
+    frameHeight: number;
+    frameWidth: number;
+    postDiameter: number;
+    postWallThick: number;
+    beamDiameter: number;
+    beamWallThick: number;
+    beamLength: number;
+    basePlateLength: number;
+    basePlateWidth: number;
+    basePlateThick: number;
+    hangPointCount: number;
+    hangPointSpacing: number;
+    boltSpacing: number;
+    boltDiameter: number;
+}
+
+export declare function createPortalFrame(params: PortalFrameParams): TopoDS_Shape;
+export declare function createPortalFrameWithPosition(params: PortalFrameParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 线岔参数结构体
+export declare interface CrossingParams {
+    limitPipeLength: number;
+    pipeDiameter: number;
+    wireDiameter: number;
+    heightDiff: number;
+}
+
+export declare function createCrossing(params: CrossingParams): TopoDS_Shape;
+export declare function createCrossingWithPosition(params: CrossingParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 支柱装配参数结构体
+export declare interface MastAssemblyParams {
+    mastType: number;
+    mastHeight: number;
+    cantileverType: number;
+    hasCrossArm: boolean;
+    armDiameter: number;
+    stagger: number;
+    compType: number;
+    ratedTension: number;
+    hasGuyWire: boolean;
+    contactHeight: number;
+    structureHeight: number;
+    sideOffset: number;
+}
+
+export declare function createMastAssembly(params: MastAssemblyParams): TopoDS_Shape;
+export declare function createMastAssemblyWithPosition(params: MastAssemblyParams, position: gp_Pnt, direction: gp_Dir, upDir: gp_Dir): TopoDS_Shape;
+
+// 悬索参数结构体
+export declare interface SuspensionCableParams {
+    startPoint: gp_Pnt;
+    endPoint: gp_Pnt;
+    diameter: number;
+    sag: number;
+    cableType: SuspensionCableType;
+    tension: number;
+}
+
+export declare function createSuspensionCable(params: SuspensionCableParams): TopoDS_Shape;
+
+// 枕木线驱动道床参数结构体
+export declare interface BallastFromSleepersParams {
+    sleepers: SleeperLineParams[];
+    topWidth: number;
+    thickness: number;
+    sideSlope: number;
+    sectionType: number;
+}
+
+export declare function createBallastFromSleepers(params: BallastFromSleepersParams): TopoDS_Shape;
