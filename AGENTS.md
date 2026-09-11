@@ -24,6 +24,8 @@ make clean      # 清理构建产物
 
 **mtime 增量坑**: `gen/compile.go` 只按 `.cc` 源文件与 `.o` 的 mtime 判断是否重编, **不追踪头文件依赖** — 改了 `.hh` 或 go-topo 侧头文件后, 依赖它的 `.o` 不会自动重编, 需手动删除对应 `.o` 或 `touch` 源文件, 否则链接进的还是旧实现。
 
+**孤儿 .o 坑**: 链接按 glob 收集 `build/src/**/*.o` (`gen/build.go`) — go-topo 侧**删除/重命名**源文件后 (如 2026-09 `primitives.cc` 拆分为 5 个专业文件), 残留的旧 `.o` 会被一并链接, 造成重复符号; 需手动 `rm build/src/*.o` 再重编。
+
 ## 测试
 
 ```sh
@@ -36,9 +38,13 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `test/railway_primitives.test.ts` — 52 个铁路 Primitive 类冒烟 (`setDefault` → `build` → shape 非空 / bbox 有限)
 - `test/railway_layout.test.ts` — 锚段/站场布局闭环 (计算口径 / JSON 往返 / 命名唯一 / 编辑再生成 bbox / 与 Go layout JSON 互通)
 
+## go-topo 同步基线
+
+当前同步至 go-topo `52aa12f28` (2026-09-08, 含审计修复轮: C++ 核心零签名变化, cgo C API 层大改与 WASM 无关)。TS 层已与 Go 层对齐的防御: 锚段柱数 `Math.ceil(totalLen/spanLen)+1` (`CalcOcsSpanPositions`)、6 个铁路类 build 入口零值兜底 (`withDefaults`)、52 个铁路类 build 入口 NaN 拒绝 (`primitives_guard.go` 的 `hasNaN` 对应 `BasePrimitive.assertNoNaN`)。已知差异: OCC 异常 (`Standard_Failure` 非 `std::exception` 子类) 逃逸 Embind 时以裸指针数字抛出, JS 侧 try/catch 可捕获但不透明 (Go 侧 C API 统一 catch 转 error)。
+
 ## 铁路覆盖现状
 
-- **58 个 `create_*` 铁路函数**已绑定 (75+2 导出符号), 覆盖轨道/道岔/OCS 件/横跨装配 + 悬索三索型 + 枕木驱动道床
+- **59 个 `create_*` 铁路函数**已绑定 (76+2 导出符号), 覆盖轨道/道岔/OCS 件/横跨装配 + 悬索三索型 (含 centerline 变体) + 枕木驱动道床
 - **52 个铁路 Primitive 类**: `packages/topo-primitives/lib/railway/index.ts` (`RAILWAY/Xxx`, `createRLPrimitive` 分发)
 - **2 个 TS layout 闭环**:
   - `lib/railway/anchor_section.ts` — `computeAnchorSectionLayout` / `createAnchorSectionFromLayout` / `anchorSectionLayout{To,From}JSON` (柱位/之字拉出值/弛度/吊弦公式, 子件 `mast_i`/`cw_i`/`mw_i`/`dropper_{span}_{idx}`)

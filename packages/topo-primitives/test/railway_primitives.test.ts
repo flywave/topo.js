@@ -88,4 +88,10 @@ describe("railway primitives", () => {
         const r = checkShape(shape);
         expect(r.ok, `${_name}: ${r.reason ?? ""}`).toBe(true);
     });
+
+    it("NaN 参数守卫: SteelMast 传 NaN → build() 拒绝", () => {
+        const prim = new SteelMastPrimitive(tp).setDefault();
+        prim.setParams({ ...prim.params, height: NaN } as any);
+        expect(() => prim.build()).toThrow(/NaN/);
+    });
 });

@@ -137,7 +137,7 @@ export function calcOcsSpanPositions(input: OcsSpanInput): OcsSpanOutput {
     const acc = polyArcLens(cl);
     const totalLen = acc[acc.length - 1];
     out.totalLength = totalLen;
-    out.mastCount = Math.trunc(totalLen / spanLen) + 1;
+    out.mastCount = Math.ceil(totalLen / spanLen) + 1;
     if (out.mastCount < 2) out.mastCount = 2;
 
     const mastSpacing = totalLen / (out.mastCount - 1);

@@ -36,6 +36,13 @@ export abstract class BasePrimitive<T = any, O = any> implements Primitive<T, O>
         return res;
     }
 
+    // NaN 守卫: 深度检查 params 中是否含 NaN, 有则拒绝 build (与 Go hasNaN 语义一致)
+    protected assertNoNaN(): void {
+        if (_hasNaN(this.params)) {
+            throw new Error(`${this.getType()}: 参数含 NaN, 已拒绝`);
+        }
+    }
+
     toJson(): string {
         return JSON.stringify(this.toObject());
     }
@@ -66,3 +73,27 @@ export function radToAngle(rad: number): number {
 export function angleToRad(angle: number): number {
     return angle * Math.PI / 180;
 }
+
+// ---- NaN 守卫 (与 Go primitives_guard.go hasNaN 语义一致) ----
+function _anyNaN(v: any): boolean {
+    if (v !== v) return true; // NaN !== NaN
+    if (v === null || v === undefined || typeof v !== 'object') return false;
+    if (ArrayBuffer.isView(v)) {
+        for (let i = 0; i < (v as any).length; i++) {
+            if (_anyNaN((v as any)[i])) return true;
+        }
+        return false;
+    }
+    if (Array.isArray(v)) {
+        for (let i = 0; i < v.length; i++) {
+            if (_anyNaN(v[i])) return true;
+        }
+        return false;
+    }
+    for (const key of Object.keys(v)) {
+        if (_anyNaN(v[key])) return true;
+    }
+    return false;
+}
+
+function _hasNaN(v: any): boolean { return _anyNaN(v); }

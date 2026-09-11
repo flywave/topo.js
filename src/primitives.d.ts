@@ -3581,6 +3581,7 @@ export declare interface SuspensionCableParams {
 }
 
 export declare function createSuspensionCable(params: SuspensionCableParams): TopoDS_Shape;
+export declare function createSuspensionCableCenterline(params: SuspensionCableParams): TopoDS_Wire;
 
 // 枕木线驱动道床参数结构体
 export declare interface BallastFromSleepersParams {

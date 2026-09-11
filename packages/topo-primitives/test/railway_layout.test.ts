@@ -72,23 +72,23 @@ describe("anchor section layout", () => {
         tp = await getTopo();
     });
 
-    it("150m/45m: 4 柱 3 跨", () => {
+    it("150m/45m: 5 柱 4 跨 (ceil 语义)", () => {
         const layout = buildAnchorLayout();
-        expect(layout.masts.length).toBe(4);
-        expect(layout.spans.length).toBe(3);
+        expect(layout.masts.length).toBe(5);
+        expect(layout.spans.length).toBe(4);
     });
 
-    it("柱位 x=i*50000(等分), y=2900(CX)", () => {
+    it("柱位 x=i*37500(等分), y=2900(CX)", () => {
         const layout = buildAnchorLayout();
-        for (let i = 0; i < 4; i++) {
-            expect(Math.abs(layout.masts[i].position[0] - i * 50000)).toBeLessThan(1e-6);
+        for (let i = 0; i < 5; i++) {
+            expect(Math.abs(layout.masts[i].position[0] - i * 37500)).toBeLessThan(1e-6);
             expect(Math.abs(layout.masts[i].position[1] - 2900)).toBeLessThan(1e-6);
         }
     });
 
     it("拉出值之字 ±300, 接触线悬挂点 y=stagger", () => {
         const layout = buildAnchorLayout();
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 5; i++) {
             const want = i % 2 === 0 ? 300 : -300;
             expect(layout.masts[i].stagger).toBe(want);
             expect(Math.abs(layout.masts[i].contactPoint[1] - want)).toBeLessThan(1e-6);
@@ -106,14 +106,14 @@ describe("anchor section layout", () => {
     it("端柱为锚柱", () => {
         const layout = buildAnchorLayout();
         expect(layout.masts[0].isTensionMast).toBe(true);
-        expect(layout.masts[3].isTensionMast).toBe(true);
+        expect(layout.masts[4].isTensionMast).toBe(true);
         expect(layout.masts[1].isTensionMast).toBe(false);
     });
 
-    it("跨距=hypot(50000,600), 弛度 22.5/675", () => {
+    it("跨距=hypot(37500,600), 弛度 22.5/675", () => {
         const layout = buildAnchorLayout();
-        const spanLenWant = Math.hypot(50000, 600);
-        for (let i = 0; i < 3; i++) {
+        const spanLenWant = Math.hypot(37500, 600);
+        for (let i = 0; i < 4; i++) {
             const sp = layout.spans[i];
             expect(sp.fromMast).toBe(i);
             expect(sp.toMast).toBe(i + 1);
@@ -123,12 +123,12 @@ describe("anchor section layout", () => {
         }
     });
 
-    it("每跨 6 根吊弦, t=k/7, 长度=抛物线弧垂差", () => {
+    it("每跨 4 根吊弦, t=k/5, 长度=抛物线弧垂差", () => {
         const layout = buildAnchorLayout();
         for (const sp of layout.spans) {
-            expect(sp.droppers.length).toBe(6);
-            const mid = sp.droppers[2];
-            expect(Math.abs(mid.t - 3 / 7)).toBeLessThan(1e-9);
+            expect(sp.droppers.length).toBe(4);
+            const mid = sp.droppers[1];
+            expect(Math.abs(mid.t - 2 / 5)).toBeLessThan(1e-9);
             const wantLen = 1400 - 4 * (675 - 22.5) * mid.t * (1 - mid.t);
             expect(Math.abs(mid.length - wantLen)).toBeLessThan(1e-6);
         }
@@ -140,15 +140,15 @@ describe("anchor section layout", () => {
         expect(JSON.stringify(anchorSectionLayoutFromJSON(json))).toBe(json);
     });
 
-    it("再生成: 根名 anchor_section, 29 子件命名唯一", () => {
+    it("再生成: 根名 anchor_section, 30 子件命名唯一", () => {
         const as = createAnchorSectionFromLayout(buildAnchorLayout(), tp);
         expect(as).not.toBeNull();
         expect(as.name()).toBe("anchor_section");
         const names = collectNames(as);
         expect(new Set(names).size).toBe(names.length);
-        // root + 4 mast + 3 cw + 3 mw + 18 dropper = 29
-        expect(names.length).toBe(29);
-        for (const n of ["mast_0", "mast_3", "cw_0", "mw_2", "dropper_0_0", "dropper_2_5"]) {
+        // root + 5 mast + 4 cw + 4 mw + 16 dropper = 30
+        expect(names.length).toBe(30);
+        for (const n of ["mast_0", "mast_4", "cw_0", "mw_3", "dropper_0_0", "dropper_3_3"]) {
             expect(findChild(as, n), `子件 ${n}`).not.toBeNull();
         }
     });
@@ -191,6 +191,21 @@ describe("anchor section layout", () => {
             expect(s.contactSag).toBe(25);
             expect(s.messengerSag).toBe(750);
         }
+    });
+
+    it("非整数倍场景: 125m/50m → 4 柱, 实际跨距 ≤ 标准跨距", () => {
+        const cl: [number, number, number][] = [];
+        for (let x = 0; x <= 125000; x += 5000) cl.push([x, 0, 0]);
+        const layout = computeAnchorSectionLayout({
+            centerline: cl,
+            spanLength: 50000,
+            mastHeight: 8000,
+            mastType: 1,
+            hasCompensator: false,
+        });
+        expect(layout.masts.length).toBe(4);
+        const actualSpan = 125000 / (layout.masts.length - 1);
+        expect(actualSpan).toBeLessThanOrEqual(50000);
     });
 
     it("Go 锚段 JSON 互通: 2 柱 1 跨 16 子件", () => {

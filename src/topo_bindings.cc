@@ -4561,6 +4561,89 @@ EMSCRIPTEN_BINDINGS(Topo) {
           }))
       // 几何操作方法
       .function("remove", &compound::remove)
+      // 布尔运算实例方法
+      .function(
+          "cut",
+          emscripten::optional_override(
+              [](compound &self, emscripten::val toCutVal,
+                 emscripten::val tolVal) -> emscripten::val {
+                try {
+                  std::vector<shape> toCut;
+                  if (toCutVal.isArray()) {
+                    const size_t length = toCutVal["length"].as<size_t>();
+                    for (size_t i = 0; i < length; i++) {
+                      toCut.push_back(toCutVal[i].as<shape>());
+                    }
+                  }
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  return emscripten::val(self.cut(toCut, tol));
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Compound.cut: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Compound.cut: unknown error"))
+                      .throw_();
+                }
+              }))
+      .function(
+          "fuse",
+          emscripten::optional_override(
+              [](compound &self, emscripten::val toFuseVal,
+                 emscripten::val glueVal,
+                 emscripten::val tolVal) -> emscripten::val {
+                try {
+                  std::vector<shape> toFuse;
+                  if (toFuseVal.isArray()) {
+                    const size_t length = toFuseVal["length"].as<size_t>();
+                    for (size_t i = 0; i < length; i++) {
+                      toFuse.push_back(toFuseVal[i].as<shape>());
+                    }
+                  }
+                  bool glue =
+                      glueVal.isUndefined() ? false : glueVal.as<bool>();
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  return emscripten::val(self.fuse(toFuse, glue, tol));
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Compound.fuse: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Compound.fuse: unknown error"))
+                      .throw_();
+                }
+              }))
+      .function(
+          "intersect",
+          emscripten::optional_override(
+              [](compound &self, emscripten::val toIntersectVal,
+                 emscripten::val tolVal) -> emscripten::val {
+                try {
+                  std::vector<shape> toIntersect;
+                  if (toIntersectVal.isArray()) {
+                    const size_t length =
+                        toIntersectVal["length"].as<size_t>();
+                    for (size_t i = 0; i < length; i++) {
+                      toIntersect.push_back(toIntersectVal[i].as<shape>());
+                    }
+                  }
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  return emscripten::val(self.intersect(toIntersect, tol));
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Compound.intersect: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Compound.intersect: unknown error"))
+                      .throw_();
+                }
+              }))
       // 值访问和类型方法
       .function("value",
                 emscripten::select_overload<const TopoDS_Compound &() const>(
@@ -4943,21 +5026,33 @@ EMSCRIPTEN_BINDINGS(Topo) {
           emscripten::optional_override(
               [](emscripten::val shapesVal, emscripten::val tolVal,
                  emscripten::val glueVal) -> emscripten::val {
-                std::vector<shape> shapes;
-                if (shapesVal.isArray()) {
-                  const size_t length = shapesVal["length"].as<size_t>();
-                  for (size_t i = 0; i < length; i++) {
-                    shapes.push_back(shapesVal[i].as<shape>());
+                try {
+                  std::vector<shape> shapes;
+                  if (shapesVal.isArray()) {
+                    const size_t length = shapesVal["length"].as<size_t>();
+                    for (size_t i = 0; i < length; i++) {
+                      shapes.push_back(shapesVal[i].as<shape>());
+                    }
                   }
-                }
-                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  bool glue =
+                      glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-                auto result = flywave::topo::fuse(shapes, tol, glue);
-                if (result) {
-                  return emscripten::val(*result);
+                  auto result = flywave::topo::fuse(shapes, tol, glue);
+                  if (result) {
+                    return emscripten::val(*result);
+                  }
+                  return emscripten::val::undefined();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.fuse: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.fuse: unknown error"))
+                      .throw_();
                 }
-                return emscripten::val::undefined();
               }))
       .class_function(
           "cut",
@@ -4965,16 +5060,28 @@ EMSCRIPTEN_BINDINGS(Topo) {
               [](emscripten::val shpVal, emscripten::val toolVal,
                  emscripten::val tolVal,
                  emscripten::val glueVal) -> emscripten::val {
-                auto shp = shpVal.as<shape>();
-                auto tool = toolVal.as<shape>();
-                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+                try {
+                  auto shp = shpVal.as<shape>();
+                  auto tool = toolVal.as<shape>();
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  bool glue =
+                      glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-                auto result = flywave::topo::cut(shp, tool, tol, glue);
-                if (result) {
-                  return emscripten::val(*result);
+                  auto result = flywave::topo::cut(shp, tool, tol, glue);
+                  if (result) {
+                    return emscripten::val(*result);
+                  }
+                  return emscripten::val::undefined();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.cut: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.cut: unknown error"))
+                      .throw_();
                 }
-                return emscripten::val::undefined();
               }))
       .class_function(
           "cutMulti",
@@ -4982,22 +5089,34 @@ EMSCRIPTEN_BINDINGS(Topo) {
               [](emscripten::val shpVal, emscripten::val toCutsVal,
                  emscripten::val tolVal,
                  emscripten::val glueVal) -> emscripten::val {
-                auto shp = shpVal.as<shape>();
-                std::vector<shape> toCuts;
-                if (toCutsVal.isArray()) {
-                  const size_t length = toCutsVal["length"].as<size_t>();
-                  for (size_t i = 0; i < length; i++) {
-                    toCuts.push_back(toCutsVal[i].as<shape>());
+                try {
+                  auto shp = shpVal.as<shape>();
+                  std::vector<shape> toCuts;
+                  if (toCutsVal.isArray()) {
+                    const size_t length = toCutsVal["length"].as<size_t>();
+                    for (size_t i = 0; i < length; i++) {
+                      toCuts.push_back(toCutsVal[i].as<shape>());
+                    }
                   }
-                }
-                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  bool glue =
+                      glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-                auto result = flywave::topo::cut(shp, toCuts, tol, glue);
-                if (result) {
-                  return emscripten::val(*result);
+                  auto result = flywave::topo::cut(shp, toCuts, tol, glue);
+                  if (result) {
+                    return emscripten::val(*result);
+                  }
+                  return emscripten::val::undefined();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.cutMulti: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.cutMulti: unknown error"))
+                      .throw_();
                 }
-                return emscripten::val::undefined();
               }))
       .class_function(
           "intersect",
@@ -5005,17 +5124,29 @@ EMSCRIPTEN_BINDINGS(Topo) {
               [](emscripten::val shpVal, emscripten::val toIntersectVal,
                  emscripten::val tolVal,
                  emscripten::val glueVal) -> emscripten::val {
-                auto shp = shpVal.as<shape>();
-                auto toIntersect = toIntersectVal.as<shape>();
-                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+                try {
+                  auto shp = shpVal.as<shape>();
+                  auto toIntersect = toIntersectVal.as<shape>();
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  bool glue =
+                      glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-                auto result =
-                    flywave::topo::intersect(shp, toIntersect, tol, glue);
-                if (result) {
-                  return emscripten::val(*result);
+                  auto result =
+                      flywave::topo::intersect(shp, toIntersect, tol, glue);
+                  if (result) {
+                    return emscripten::val(*result);
+                  }
+                  return emscripten::val::undefined();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.intersect: ") + e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.intersect: unknown error"))
+                      .throw_();
                 }
-                return emscripten::val::undefined();
               }))
       .class_function(
           "intersectMulti",
@@ -5023,23 +5154,39 @@ EMSCRIPTEN_BINDINGS(Topo) {
               [](emscripten::val shpVal, emscripten::val toIntersectsVal,
                  emscripten::val tolVal,
                  emscripten::val glueVal) -> emscripten::val {
-                auto shp = shpVal.as<shape>();
-                std::vector<shape> toIntersects;
-                if (toIntersectsVal.isArray()) {
-                  const size_t length = toIntersectsVal["length"].as<size_t>();
-                  for (size_t i = 0; i < length; i++) {
-                    toIntersects.push_back(toIntersectsVal[i].as<shape>());
+                try {
+                  auto shp = shpVal.as<shape>();
+                  std::vector<shape> toIntersects;
+                  if (toIntersectsVal.isArray()) {
+                    const size_t length =
+                        toIntersectsVal["length"].as<size_t>();
+                    for (size_t i = 0; i < length; i++) {
+                      toIntersects.push_back(
+                          toIntersectsVal[i].as<shape>());
+                    }
                   }
-                }
-                double tol = tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
-                bool glue = glueVal.isUndefined() ? false : glueVal.as<bool>();
+                  double tol =
+                      tolVal.isUndefined() ? 0.0 : tolVal.as<double>();
+                  bool glue =
+                      glueVal.isUndefined() ? false : glueVal.as<bool>();
 
-                auto result =
-                    flywave::topo::intersect(shp, toIntersects, tol, glue);
-                if (result) {
-                  return emscripten::val(*result);
+                  auto result =
+                      flywave::topo::intersect(shp, toIntersects, tol, glue);
+                  if (result) {
+                    return emscripten::val(*result);
+                  }
+                  return emscripten::val::undefined();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.intersectMulti: ") +
+                            e.what())
+                      .throw_();
+                } catch (...) {
+                  emscripten::val::global("Error")
+                      .new_(std::string(
+                          "ShapeOps.intersectMulti: unknown error"))
+                      .throw_();
                 }
-                return emscripten::val::undefined();
               }))
       .class_function(
           "splitMulti",

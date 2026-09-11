@@ -131,6 +131,60 @@ function fromPntList(pts: any[]): [number, number, number][] {
     return (pts || []).map((p) => fromPnt(p));
 }
 
+// ---- withDefaults 兜底零值参数 (与 Go primitives_railway.go withDefaults 逐字段一致) ----
+// Go 侧条件: if p.Field <= 0 { p.Field = default }; TS 侧同等语义
+
+function applyWeightStackDefaults(p: any): void {
+    if (p.blockCount <= 0) p.blockCount = 8;
+    if (p.blockDiameter <= 0) p.blockDiameter = 380;
+    if (p.blockHeight <= 0) p.blockHeight = 75;
+    if (p.blockGap <= 0) p.blockGap = 2;
+    if (p.rodDiameter <= 0) p.rodDiameter = 20;
+    if (p.rodLength <= 0) p.rodLength = 1200;
+    if (p.holeDiameter <= 0) p.holeDiameter = 30;
+}
+
+function applyMastAssemblyDefaults(p: any): void {
+    if (p.mastHeight <= 0) p.mastHeight = 8000;
+    if (p.contactHeight <= 0) p.contactHeight = 5300;
+    if (p.structureHeight <= 0) p.structureHeight = 1400;
+    if (p.sideOffset <= 0) p.sideOffset = 2900;
+    if (p.armDiameter <= 0) p.armDiameter = 60;
+}
+
+function applyRatchetCompensatorDefaults(p: any): void {
+    if (p.wheelDiameter <= 0) p.wheelDiameter = 400;
+    if (p.wheelWidth <= 0) p.wheelWidth = 60;
+    if (p.ropeDiameter <= 0) p.ropeDiameter = 9;
+    if (p.strokeLength <= 0) p.strokeLength = 1200;
+    if (p.stack) applyWeightStackDefaults(p.stack);
+}
+
+function applyDisconnectorDefaults(p: any): void {
+    if (p.baseLength <= 0) p.baseLength = 900;
+    if (p.baseWidth <= 0) p.baseWidth = 220;
+    if (p.insulatorHeight <= 0) p.insulatorHeight = 600;
+    if (p.bladeLength <= 0) p.bladeLength = 800;
+    if (p.openAngle <= 0) p.openAngle = 75;
+}
+
+function applyArresterDefaults(p: any): void {
+    if (p.height <= 0) p.height = 800;
+    if (p.outerDiameter <= 0) p.outerDiameter = 120;
+    if (p.shedDiameter <= 0) p.shedDiameter = 160;
+    if (p.shedSpacing <= 0) p.shedSpacing = 60;
+    if (p.shedCount <= 0) p.shedCount = 8;
+}
+
+function applyPulleyCompensatorDefaults(p: any): void {
+    if (p.pulleyDiameter <= 0) p.pulleyDiameter = 250;
+    if (p.grooveWidth <= 0) p.grooveWidth = 14;
+    if (p.pulleyCount <= 0) p.pulleyCount = 2;
+    if (p.ropeDiameter <= 0) p.ropeDiameter = 9;
+    if (p.strokeLength <= 0) p.strokeLength = 1000;
+    if (p.stack) applyWeightStackDefaults(p.stack);
+}
+
 export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, RodInsulatorObject> {
 
     constructor(tp: TopoInstance, params?: RodInsulatorObject) {
@@ -168,6 +222,7 @@ export class RodInsulatorPrimitive extends BasePrimitive<RodInsulatorParams, Rod
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRodInsulator(this.params), false);
         }
@@ -251,6 +306,7 @@ export class CrossArmPrimitive extends BasePrimitive<CrossArmParams, CrossArmObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCrossArm(this.params), false);
         }
@@ -321,6 +377,7 @@ export class LevelCantileverPrimitive extends BasePrimitive<LevelCantileverParam
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createLevelCantilever(this.params), false);
         }
@@ -381,6 +438,7 @@ export class SlantCantileverPrimitive extends BasePrimitive<SlantCantileverParam
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSlantCantilever(this.params), false);
         }
@@ -441,6 +499,7 @@ export class CantileverBracePrimitive extends BasePrimitive<CantileverBraceParam
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCantileverBrace(this.params), false);
         }
@@ -504,6 +563,7 @@ export class RegArmBracketPrimitive extends BasePrimitive<RegArmBracketParams, R
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRegArmBracket(this.params), false);
         }
@@ -573,6 +633,7 @@ export class RegistrationArmPrimitive extends BasePrimitive<RegistrationArmParam
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRegistrationArm(this.params), false);
         }
@@ -643,6 +704,7 @@ export class CurvedArmPrimitive extends BasePrimitive<CurvedArmParams, CurvedArm
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCurvedArm(this.params), false);
         }
@@ -715,6 +777,7 @@ export class DropperPrimitive extends BasePrimitive<DropperParams, DropperObject
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createDropper(this.params), false);
         }
@@ -785,6 +848,7 @@ export class GuyWirePrimitive extends BasePrimitive<GuyWireParams, GuyWireObject
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createGuyWire(this.params), false);
         }
@@ -861,6 +925,7 @@ export class ContactWirePrimitive extends BasePrimitive<ContactWireParams, Conta
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createContactWire(this.params, new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(1000, 0, 0)), false);
         }
@@ -929,6 +994,7 @@ export class MessengerWirePrimitive extends BasePrimitive<MessengerWireParams, M
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createMessengerWire(this.params, new this.tp.gp_Pnt_3(0, 0, 0), new this.tp.gp_Pnt_3(1000, 0, 0)), false);
         }
@@ -993,6 +1059,7 @@ export class MastBracketPrimitive extends BasePrimitive<MastBracketParams, MastB
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createMastBracket(this.params), false);
         }
@@ -1067,6 +1134,7 @@ export class SteelMastPrimitive extends BasePrimitive<SteelMastParams, SteelMast
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSteelMast(this.params), false);
         }
@@ -1146,6 +1214,7 @@ export class ConcreteMastPrimitive extends BasePrimitive<ConcreteMastParams, Con
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createConcreteMast(this.params), false);
         }
@@ -1225,6 +1294,7 @@ export class OcsFoundationPrimitive extends BasePrimitive<OcsFoundationParams, O
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createOcsFoundation(this.params), false);
         }
@@ -1482,6 +1552,7 @@ export class CantileverBasePrimitive extends BasePrimitive<CantileverBaseParams,
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCantileverBase(this.params), false);
         }
@@ -1547,6 +1618,7 @@ export class MWSaddlePrimitive extends BasePrimitive<MwSaddleParams, MWSaddleObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createMwSaddle(this.params), false);
         }
@@ -1609,6 +1681,7 @@ export class BalanceWeightPrimitive extends BasePrimitive<BalanceWeightParams, B
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createBalanceWeight(this.params), false);
         }
@@ -1668,6 +1741,7 @@ export class WeightRodPrimitive extends BasePrimitive<WeightRodParams, WeightRod
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createWeightRod(this.params), false);
         }
@@ -1737,6 +1811,7 @@ export class AnchorFittingPrimitive extends BasePrimitive<AnchorFittingParams, A
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createAnchorFitting(this.params), false);
         }
@@ -1795,6 +1870,7 @@ export class CrossingPrimitive extends BasePrimitive<CrossingParams, CrossingObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCrossing(this.params), false);
         }
@@ -1859,6 +1935,7 @@ export class HeadSpanPrimitive extends BasePrimitive<HeadSpanParams, HeadSpanObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createHeadSpan(this.params), false);
         }
@@ -1944,6 +2021,7 @@ export class TransverseSpanPrimitive extends BasePrimitive<TransverseSpanParams,
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createTransverseSpan(this.params), false);
         }
@@ -2028,6 +2106,7 @@ export class HangerPostPrimitive extends BasePrimitive<HangerPostParams, HangerP
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createHangerPost(this.params), false);
         }
@@ -2110,6 +2189,7 @@ export class PortalFramePrimitive extends BasePrimitive<PortalFrameParams, Porta
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createPortalFrame(this.params), false);
         }
@@ -2196,6 +2276,7 @@ export class SuspensionHardSpanPrimitive extends BasePrimitive<SuspensionHardSpa
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSuspensionHardSpan(this.params), false);
         }
@@ -2268,6 +2349,7 @@ export class PositioningCablePrimitive extends BasePrimitive<PositioningCablePar
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createPositioningCable(this.params), false);
         }
@@ -2343,6 +2425,7 @@ export class AuxBracketPrimitive extends BasePrimitive<AuxBracketParams, AuxBrac
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createAuxBracket(this.params), false);
         }
@@ -2413,6 +2496,7 @@ export class RailPrimitive extends BasePrimitive<RailParams, RailObject> {
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRail(this.params), false);
         }
@@ -2494,6 +2578,7 @@ export class SleeperPrimitive extends BasePrimitive<SleeperParams, SleeperObject
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSleeper(this.params), false);
         }
@@ -2562,11 +2647,16 @@ export class BallastPrimitive extends BasePrimitive<BallastParams, BallastObject
     }
 
     public valid(): boolean {
-        return this.params.topWidth > 0 && this.params.thickness > 0
-            && this.params.centerlineSegments !== undefined && this.params.centerlineSegments.length > 0;
+        if (!(this.params.topWidth > 0) || !(this.params.thickness > 0)) return false;
+        if (!this.params.centerlineSegments || this.params.centerlineSegments.length === 0) return false;
+        for (const seg of this.params.centerlineSegments) {
+            if (!seg.points || seg.points.length < 2) return false;
+        }
+        return true;
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createBallast(this.params), false);
         }
@@ -2635,6 +2725,7 @@ export class TrackSlabPrimitive extends BasePrimitive<TrackSlabParams, TrackSlab
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createTrackSlab(this.params), false);
         }
@@ -2700,6 +2791,7 @@ export class FastenerPrimitive extends BasePrimitive<FastenerParams, FastenerObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createFastener(this.params), false);
         }
@@ -2764,6 +2856,7 @@ export class GuardRailPrimitive extends BasePrimitive<GuardRailParams, GuardRail
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createGuardRail(this.params), false);
         }
@@ -2836,6 +2929,8 @@ export class MastAssemblyPrimitive extends BasePrimitive<MastAssemblyParams, Mas
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
+        applyMastAssemblyDefaults(this.params);
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createMastAssembly(this.params), false);
         }
@@ -2915,6 +3010,8 @@ export class WeightStackPrimitive extends BasePrimitive<WeightStackParams, Weigh
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
+        applyWeightStackDefaults(this.params);
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createWeightStack(this.params), false);
         }
@@ -2990,6 +3087,8 @@ export class RatchetCompensatorPrimitive extends BasePrimitive<RatchetCompensato
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
+        applyRatchetCompensatorDefaults(this.params);
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRatchetCompensator(this.params), false);
         }
@@ -3051,6 +3150,7 @@ export class AuxiliaryWirePrimitive extends BasePrimitive<AuxiliaryWireParams, A
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createAuxiliaryWire(
                 this.params,
@@ -3113,6 +3213,8 @@ export class DisconnectorPrimitive extends BasePrimitive<DisconnectorParams, Dis
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
+        applyDisconnectorDefaults(this.params);
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createDisconnector(this.params), false);
         }
@@ -3176,6 +3278,8 @@ export class ArresterPrimitive extends BasePrimitive<ArresterParams, ArresterObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
+        applyArresterDefaults(this.params);
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createArrester(this.params), false);
         }
@@ -3249,6 +3353,8 @@ export class PulleyCompensatorPrimitive extends BasePrimitive<PulleyCompensatorP
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
+        applyPulleyCompensatorDefaults(this.params);
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createPulleyCompensator(this.params), false);
         }
@@ -3316,6 +3422,7 @@ export class SleeveConnectorPrimitive extends BasePrimitive<SleeveConnectorParam
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSleeveConnector(this.params), false);
         }
@@ -3380,6 +3487,7 @@ export class SleeveEarPrimitive extends BasePrimitive<SleeveEarParams, SleeveEar
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSleeveEar(this.params), false);
         }
@@ -3448,6 +3556,7 @@ export class SwitchRailPrimitive extends BasePrimitive<SwitchRailParams, SwitchR
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSwitchRail(this.params), false);
         }
@@ -3516,6 +3625,7 @@ export class FrogPrimitive extends BasePrimitive<FrogParams, FrogObject> {
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createFrog(this.params), false);
         }
@@ -3586,6 +3696,7 @@ export class TurnoutPrimitive extends BasePrimitive<TurnoutParams, TurnoutObject
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createTurnout(this.params), false);
         }
@@ -3671,6 +3782,7 @@ export class StraightTrackPrimitive extends BasePrimitive<StraightTrackParams, S
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createStraightTrack(this.params), false);
         }
@@ -3763,6 +3875,7 @@ export class CurveTrackPrimitive extends BasePrimitive<CurveTrackParams, CurveTr
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createCurveTrack(this.params), false);
         }
@@ -3850,6 +3963,7 @@ export class RailPairPrimitive extends BasePrimitive<RailPairParams, RailPairObj
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRailPair(this.params), false);
         }
@@ -3917,6 +4031,7 @@ export class SleeperLayoutPrimitive extends BasePrimitive<SleeperLayoutParams, S
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createSleeperLayout(this.params), false);
         }
@@ -3992,6 +4107,7 @@ export class RetarderPointPrimitive extends BasePrimitive<RetarderPointParams, R
     }
 
     public build(): Shape | undefined {
+        this.assertNoNaN();
         if (this.valid()) {
             return new this.tp.Shape(this.tp.createRetarderPoint(this.params), false);
         }

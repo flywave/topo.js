@@ -6021,6 +6021,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("createSuspensionCable",
            select_overload<TopoDS_Shape(const suspension_cable_params &)>(
                &create_suspension_cable));
+  function("createSuspensionCableCenterline",
+           select_overload<TopoDS_Wire(const suspension_cable_params &)>(
+               &create_suspension_cable_centerline));
 
   // Ballast From Sleepers (枕木线驱动道床)
   value_object<ballast_from_sleepers_params>("BallastFromSleepersParams")
