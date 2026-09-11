@@ -40,7 +40,7 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 
 ## go-topo 同步基线
 
-当前同步至 go-topo `52aa12f28` (2026-09-08, 含审计修复轮: C++ 核心零签名变化, cgo C API 层大改与 WASM 无关)。TS 层已与 Go 层对齐的防御: 锚段柱数 `Math.ceil(totalLen/spanLen)+1` (`CalcOcsSpanPositions`)、6 个铁路类 build 入口零值兜底 (`withDefaults`)、52 个铁路类 build 入口 NaN 拒绝 (`primitives_guard.go` 的 `hasNaN` 对应 `BasePrimitive.assertNoNaN`)。已知差异: OCC 异常 (`Standard_Failure` 非 `std::exception` 子类) 逃逸 Embind 时以裸指针数字抛出, JS 侧 try/catch 可捕获但不透明 (Go 侧 C API 统一 catch 转 error)。
+当前同步至 go-topo `52aa12f28` (2026-09-08, 含审计修复轮: C++ 核心零签名变化, cgo C API 层大改与 WASM 无关) + 布尔修复 (纯实体 compound 递归拍平消除嵌套自干涉 UB、`Standard_Failure` 翻译为 `std::runtime_error`/`boost::none`, go-topo 侧见 `shape_ops.hh` `append_flattened`)。TS 层已与 Go 层对齐的防御: 锚段柱数 `Math.ceil(totalLen/spanLen)+1` (`CalcOcsSpanPositions`)、6 个铁路类 build 入口零值兜底 (`withDefaults`)、52 个铁路类 build 入口 NaN 拒绝 (`primitives_guard.go` 的 `hasNaN` 对应 `BasePrimitive.assertNoNaN`)。异常通道: 布尔家族 (Compound/ShapeOps 的 cut/fuse/intersect) 绑定层已将 C++ 异常翻译为可读 JS Error; 其余绑定面仍是裸指针数字 (Embind 不翻译 C++ 异常, 已确认该构建连 std::exception 也不翻译); 空 shape 调 `bbox()` 会抛异常 (预存在, Go 侧同样报错, 双侧一致)。
 
 ## 铁路覆盖现状
 
