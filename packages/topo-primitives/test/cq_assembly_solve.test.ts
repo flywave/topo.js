@@ -28,7 +28,7 @@ beforeAll(async () => {
     (globalThis as any).Assembly = tp.Assembly;
     // Location 构造器对 gp_Trsf/TopLoc_Location/gp_Pnt/gp_Vec/gp_Pln/topo_vector 做 instanceof
     for (const n of ["gp_Trsf", "TopLoc_Location", "gp_Pnt", "gp_Vec", "gp_Pln"]) {
-        if ((globalThis as any)[n] === undefined && (tp as any)[n] !== undefined) {
+        if ((tp as any)[n] !== undefined) {
             (globalThis as any)[n] = (tp as any)[n];
         }
     }

@@ -5,6 +5,14 @@
 using namespace flywave;
 using namespace flywave::topo;
 
+
+// instanceof(emval_global(name)) 的安全包装: 全局未注册时返回 false 而不是抛
+// "Right-hand side of 'instanceof' is not an object" — 未注册全局的调用方保持旧路径。
+static bool emval_instanceof_global(const emscripten::val &v, const char *name) {
+  auto ctor = emscripten::val::global(name);
+  return !ctor.isUndefined() && v.instanceof(ctor);
+}
+
 EMSCRIPTEN_BINDINGS(Workplane) {
 
   // 封装 shape_object_type 枚举
@@ -58,14 +66,14 @@ EMSCRIPTEN_BINDINGS(Workplane) {
 
             shape_object obj;
             if (!objVal.isUndefined()) {
-              if (objVal.instanceof(emscripten::val::global("Shape"))) {
+              if (emval_instanceof_global(objVal, "Shape")) {
                 obj = objVal.as<shape>();
               } else if (objVal.instanceof(emscripten::val::global("Vector"))) {
                 obj = objVal.as<topo_vector>();
               } else if (objVal.instanceof(
                              emscripten::val::global("Location"))) {
                 obj = objVal.as<topo_location>();
-              } else if (objVal.instanceof(emscripten::val::global("Sketch"))) {
+              } else if (emval_instanceof_global(objVal, "Sketch")) {
                 obj = objVal.as<std::shared_ptr<sketch>>();
               }
             }
@@ -87,13 +95,13 @@ EMSCRIPTEN_BINDINGS(Workplane) {
               return shape_object_type::blank;
             }
 
-            if (objVal.instanceof(emscripten::val::global("Shape"))) {
+            if (emval_instanceof_global(objVal, "Shape")) {
               return shape_object_type::shape;
             } else if (objVal.instanceof(emscripten::val::global("Vector"))) {
               return shape_object_type::vector;
-            } else if (objVal.instanceof(emscripten::val::global("Location"))) {
+            } else if (emval_instanceof_global(objVal, "Location")) {
               return shape_object_type::location;
-            } else if (objVal.instanceof(emscripten::val::global("Sketch"))) {
+            } else if (emval_instanceof_global(objVal, "Sketch")) {
               return shape_object_type::sketch;
             } else {
               return shape_object_type::blank;
@@ -150,7 +158,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
           "add",
           emscripten::optional_override([](workplane &self,
                                            emscripten::val arg) {
-            if (arg.instanceof(emscripten::val::global("Workplane"))) {
+            if (emval_instanceof_global(arg, "Workplane")) {
               auto other = arg.as<std::shared_ptr<workplane>>();
               auto &r = self.add(*other);
               return emscripten::val(r.shared_from_this());
@@ -160,14 +168,14 @@ EMSCRIPTEN_BINDINGS(Workplane) {
               objs.reserve(len);
               for (size_t i = 0; i < len; ++i) {
                 emscripten::val item = arg[i];
-                if (item.instanceof(emscripten::val::global("Shape"))) {
+                if (emval_instanceof_global(item, "Shape")) {
                   objs.push_back(item.as<shape>());
                 } else if (item.instanceof(emscripten::val::global("Vector"))) {
                   objs.push_back(item.as<topo_vector>());
                 } else if (item.instanceof(
                                emscripten::val::global("Location"))) {
                   objs.push_back(item.as<topo_location>());
-                } else if (item.instanceof(emscripten::val::global("Sketch"))) {
+                } else if (emval_instanceof_global(item, "Sketch")) {
                   objs.push_back(item.as<std::shared_ptr<sketch>>());
                 }
               }
@@ -175,13 +183,13 @@ EMSCRIPTEN_BINDINGS(Workplane) {
               return emscripten::val(r.shared_from_this());
             } else {
               shape_object obj;
-              if (arg.instanceof(emscripten::val::global("Shape"))) {
+              if (emval_instanceof_global(arg, "Shape")) {
                 obj = arg.as<shape>();
               } else if (arg.instanceof(emscripten::val::global("Vector"))) {
                 obj = arg.as<topo_vector>();
-              } else if (arg.instanceof(emscripten::val::global("Location"))) {
+              } else if (emval_instanceof_global(arg, "Location")) {
                 obj = arg.as<topo_location>();
-              } else if (arg.instanceof(emscripten::val::global("Sketch"))) {
+              } else if (emval_instanceof_global(arg, "Sketch")) {
                 obj = arg.as<std::shared_ptr<sketch>>();
               }
               auto &r = self.add(obj);
@@ -362,11 +370,11 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   auto planeName = mirrorObj.as<std::string>();
                   return emscripten::val(
                       self.mirror(planeName, basePoint, unionResult));
-                } else if (mirrorObj.typeOf().as<std::string>() == "gp_Vec") {
+                } else if (emval_instanceof_global(mirrorObj, "gp_Vec")) {
                   auto normal = mirrorObj.as<gp_Vec>();
                   return emscripten::val(
                       self.mirror(normal, basePoint, unionResult));
-                } else if (mirrorObj.typeOf().as<std::string>() == "face") {
+                } else if (emval_instanceof_global(mirrorObj, "Face")) {
                   auto mirrorFace = mirrorObj.as<face>();
                   return emscripten::val(
                       self.mirror(mirrorFace, basePoint, unionResult));
@@ -485,7 +493,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       }
 
                       auto first = pntListVal[0];
-                      if (first.typeOf().as<std::string>() == "Location") {
+                      if (emval_instanceof_global(first, "Location")) {
                         std::vector<topo_location> points;
                         for (unsigned i = 0;
                              i < pntListVal["length"].as<unsigned>(); i++) {
@@ -758,11 +766,11 @@ EMSCRIPTEN_BINDINGS(Workplane) {
           emscripten::optional_override(
               [](workplane &self, emscripten::val argVal,
                  bool useLocalCoordinates, bool combine, bool clean) {
-                if (argVal.typeOf().as<std::string>() == "shape") {
+                if (emval_instanceof_global(argVal, "Shape")) {
                   auto shapeObj = argVal.as<shape>();
                   return emscripten::val(self.eachpoint(
                       shapeObj, useLocalCoordinates, combine, clean));
-                } else if (argVal.typeOf().as<std::string>() == "workplane") {
+                } else if (emval_instanceof_global(argVal, "Workplane")) {
                   auto wp = argVal.as<std::shared_ptr<workplane>>();
                   return emscripten::val(
                       self.eachpoint(*wp, useLocalCoordinates, combine, clean));
@@ -969,7 +977,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       double distance = argVal.as<double>();
                       return emscripten::val(self.extrude(
                           distance, combine, clean, both, taper));
-                    } else if (argVal.typeOf().as<std::string>() == "face") {
+                    } else if (emval_instanceof_global(argVal, "Face")) {
                       auto f = argVal.as<topo::face>();
                       return emscripten::val(
                           self.extrude(f, combine, clean, both, taper));
@@ -1053,10 +1061,10 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                            emscripten::val otherVal, bool clean,
                                            bool glue, double tol) {
             try {
-              if (otherVal.typeOf().as<std::string>() == "workplane") {
+              if (emval_instanceof_global(otherVal, "Workplane")) {
                 auto wp = otherVal.as<std::shared_ptr<workplane>>();
                 return emscripten::val(self.union_(*wp, clean, glue, tol));
-              } else if (otherVal.typeOf().as<std::string>() == "solid") {
+              } else if (emval_instanceof_global(otherVal, "Solid")) {
                 auto s = otherVal.as<topo::solid>();
                 return emscripten::val(self.union_(s, clean, glue, tol));
               } else {
@@ -1082,10 +1090,10 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                                  emscripten::val otherVal,
                                                  bool clean, double tol) {
                   try {
-                    if (otherVal.typeOf().as<std::string>() == "workplane") {
+                    if (emval_instanceof_global(otherVal, "Workplane")) {
                       auto wp = otherVal.as<std::shared_ptr<workplane>>();
                       return emscripten::val(self.cut(*wp, clean, tol));
-                    } else if (otherVal.typeOf().as<std::string>() == "solid") {
+                    } else if (emval_instanceof_global(otherVal, "Solid")) {
                       auto s = otherVal.as<topo::solid>();
                       return emscripten::val(self.cut(s, clean, tol));
                     } else {
@@ -1111,11 +1119,11 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                                                  emscripten::val otherVal,
                                                  bool clean, double tol) {
                   try {
-                    if (otherVal.typeOf().as<std::string>() == "workplane") {
+                    if (emval_instanceof_global(otherVal, "Workplane")) {
                       auto wp = otherVal.as<std::shared_ptr<workplane>>();
                       return emscripten::val(
                           self.intersect(*wp, clean, tol));
-                    } else if (otherVal.typeOf().as<std::string>() == "solid") {
+                    } else if (emval_instanceof_global(otherVal, "Solid")) {
                       auto s = otherVal.as<topo::solid>();
                       return emscripten::val(self.intersect(s, clean, tol));
                     } else {
@@ -1151,7 +1159,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   double distance = untilVal.as<double>();
                   return emscripten::val(
                       self.cut_blind(distance, clean, both, taper));
-                } else if (untilVal.typeOf().as<std::string>() == "face") {
+                } else if (emval_instanceof_global(untilVal, "Face")) {
                   auto f = untilVal.as<topo::face>();
                   return emscripten::val(self.cut_blind(f, clean, both, taper));
                 } else {
@@ -1204,7 +1212,7 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                 std::vector<gp_Pnt> points =
                     pointsVal.as<std::vector<gp_Pnt>>();
 
-                if (edgesOrWpVal.typeOf().as<std::string>() == "workplane") {
+                if (emval_instanceof_global(edgesOrWpVal, "Workplane")) {
                   auto wp = edgesOrWpVal.as<std::shared_ptr<workplane>>();
                   return emscripten::val(self.interp_plate(
                       *wp, points, thickness, combine, clean, degree,
@@ -1520,13 +1528,13 @@ EMSCRIPTEN_BINDINGS(Workplane) {
               std::vector<shape_object> vec;
               for (unsigned i = 0; i < result["length"].as<unsigned>(); i++) {
                 emscripten::val item = result[i];
-                if (item.typeOf().as<std::string>() == "shape") {
+                if (emval_instanceof_global(item, "Shape")) {
                   vec.emplace_back(item.as<shape>());
                 } else if (item.typeOf().as<std::string>() == "topo_vector") {
                   vec.emplace_back(item.as<topo_vector>());
                 } else if (item.typeOf().as<std::string>() == "topo_location") {
                   vec.emplace_back(item.as<topo_location>());
-                } else if (item.typeOf().as<std::string>() == "sketch") {
+                } else if (emval_instanceof_global(item, "Sketch")) {
                   vec.emplace_back(item.as<std::shared_ptr<sketch>>());
                 } else {
                   vec.emplace_back(); // 默认构造一个空的 shape_object

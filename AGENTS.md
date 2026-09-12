@@ -42,6 +42,12 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `test/railway_primitives.test.ts` — 52 个铁路 Primitive 类冒烟 (`setDefault` → `build` → shape 非空 / bbox 有限)
 - `test/railway_layout.test.ts` — 锚段/站场布局闭环 (计算口径 / JSON 往返 / 命名唯一 / 编辑再生成 bbox / 与 Go layout JSON 互通)
 - `test/cq_examples.test.ts` — 33 个 CadQuery 官方示例 1:1 移植 (与 go-topo `workplane_examples_test.go` 逐行对应), 与 Go 侧提取的 golden bbox (`test/cq/goldens.json`, 35 条, 口径 = `Value()` 栈首对象 bbox) 逐坐标对账 (容差 1e-6)
+- 绑定层全量覆盖 (移植 go-topo 同名 Go 测试, parity 断言; skip 项 = 绑定缺口, 见"已知坑"的缺口清单):
+  - `test/shapes_edge_wire.test.ts` / `shapes_face_solid.test.ts` / `shapes_compound.test.ts` — 核心形状族 (Edge/Wire/Vertex/Face/Solid/Shell/CompSolid/Compound/Shape)
+  - `test/shape_ops_selector.test.ts` — ShapeOps + Selector
+  - `test/geometry_mesh_standard.test.ts` — GeometryCreator/gp 几何类型/mesh/standard
+  - `test/workplane_full.test.ts` / `sketch_ops.test.ts` / `assembly_full.test.ts` — Workplane/Sketch/Assembly 全方法
+  - `test/primitives_{foundation,gasket_anchor,cable_stretch,plate_steel_infra}.test.ts` — 非铁路 create_* 族 (约 300 例, value_object 参数全字段初始化 + enum 传枚举对象)
 
 ## CadQuery 兼容层
 
@@ -69,8 +75,15 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 
 ## 已知坑
 
+- **类型分发已修复但依赖全局注册**: workplane 绑定族曾用 `typeOf() == "workplane"/"solid"/"face"...` 做参数分发 — `typeOf()` 只返回 JS 原始类型, 类名检查全是死分支 (union/cut/mirror-by-vec/extrude-face/pushPoints-Location 等永远错路由)。2026-09 已全部改为 `instanceof` 并经 `emval_instanceof_global` 安全包装 (全局未注册时降级旧路径不抛错); 正确分发要求调用方注册全局类 — 库侧经 `ensureAssemblyGlobals` (`lib/railway/layout_utils.ts`, 覆盖 Workplane/Assembly/Location/Shape/Solid/Face/Compound/Sketch/gp_Vec/gp_Pnt/gp_Trsf/TopLoc_Location/gp_Pln) 兜底; 测试/脚本里直接用装配 API 时需先经库函数或手动调用
+- **绑定缺口清单** (测试 skip 项, 未绑/不可用于 WASM):
+  - 迭代器 `*Iterator.next()` (返回 `boost::optional<T>`): Edge/Wire/Vertex/Face/Shell/CompSolid/Compound — 遍历改用 `faces()/edges()/solids()` 等数组方法
+  - Workplane: `get/getRange/getIndices/exportTo/addShapes`; Assembly: `get/setLocation/replace/parametric 系列`; Shape: `Share/WriteToStl`; Compound: `toSolid/inertia`; ShapeOps: `GetShapeOutline`; `createCableWireCenterline`
+  - `Shape.exportStep` 在 WASM 写不出文件 ("Step File could not be created", emscripten FS 限制); `Shape1D.params(gp_Pnt[])` vector 编组缺口; `Edge.makeSpline` 拒收 `Vector.toPnt()` 产物 (用 `new tp.gp_Pnt_3` 构造); `Edge.makeEdgeFromCurve` 不接受 TrimmedCurve 子类型 (无自动 upcast); `makeSolidFromCylinderAngle` 重载选择错误 (mass=0, 用 `makeSolidFromCylinder` 替代); `gp_Cone_2` 构造运行期崩溃
+  - 2D 类型族 (Point2/Dir2/XY/Vector2/独立 Trsf) 未暴露; `Quantity_Color` 用 `new tp.Quantity_Color_3(r,g,b,tp.Quantity_TOC_RGB)` 构造
 - **`Assembly.getElements()` 绑定有 bug** (assembly_element 无法转 emval) — 遍历装配用 `children()` / `name()` / `obj()` / `flatten()`
 - `Assembly.create` / `add` 依赖全局注册, 库里经 `ensureAssemblyGlobals` (`lib/railway/layout_utils.ts`) 兜底; 测试/脚本里直接用装配 API 时需先经库函数或手动调用。同理 `Location` 构造器对 `gp_Trsf`/`TopLoc_Location`/`gp_Pnt`/`gp_Vec`/`gp_Pln`/`topo_vector` 做 instanceof, 用前也需注册同名全局 (参考 `test/cq_assembly_solve.test.ts` 的 beforeAll)
 - `Assembly.create/add` 的 `loc` 参数走值类型编组 (`as<topo_location>()`), 传 `new tp.Location(...)` 构造的对象; `Location` 类是按值注册的, 不是 shared_ptr
 - Embind `value_object` 字段必须全量初始化, 缺字段报 `Missing field: "xxx"`; enum 字段用 `tp.EnumType.VALUE` 赋值, 不要传裸数字
+- **测试文件的全局类注册必须无条件覆盖** (`g[name] = tp[name]`): vitest 给每个测试文件独立的模块注册表, `helpers/topo.ts` 的单例在不同文件间可能是**不同的 WASM 实例**; `if (g.X === undefined)` 守卫会让先跑文件的类残留在全局, 后续文件的 embind 对象对它做 `instanceof` 必失败 ("Right-hand side of 'instanceof' is not an object" 或静默错路由)
 - 不要在 `packages/topo-primitives` 跑裸 `tsc` (会把 `.js`/`.d.ts` 写进 `lib/` 源码目录), 构建用 `pnpm build` (rollup)

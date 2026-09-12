@@ -146,10 +146,13 @@ export function standardRailDims(kgPerMeter: number): [number, number, number] {
 // Assembly embind 绑定内部使用 instanceof(val.global("Workplane")/"Assembly") 判别子件类型,
 // 而 embind 类只挂在模块实例上、不进全局, Node/浏览器下直接调 Assembly.create/add 会抛
 // "Right-hand side of 'instanceof' is not an object"。这里把模块类补到 globalThis 兜底。
+// workplane 绑定族的类型分发 (union/cut/mirror/eachPoint/pushPoints/extrude-face 等) 同样依赖
+// 这些全局 (未注册时安全降级为旧路径, 不会抛 — 见 workplane_bindings.cc emval_instanceof_global)。
 export function ensureAssemblyGlobals(topo: any): void {
     const g = globalThis as any;
-    if (g.Workplane === undefined && topo.Workplane !== undefined) g.Workplane = topo.Workplane;
-    if (g.Assembly === undefined && topo.Assembly !== undefined) g.Assembly = topo.Assembly;
+    for (const name of ["Workplane", "Assembly", "Location", "Shape", "Solid", "Face", "Compound", "Sketch", "gp_Vec", "gp_Pnt", "gp_Trsf", "TopLoc_Location", "gp_Pln"] as const) {
+        if (g[name] === undefined && topo[name] !== undefined) g[name] = topo[name];
+    }
 }
 
 // gp_Pnt / gp_Dir 构造小助手 (dir 自动水平/单位化由调用方保证)
