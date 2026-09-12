@@ -311,8 +311,16 @@ describe("cable wire", () => {
         expect(r.ok, `CreateCableWireCurved: ${r.reason ?? ""}`).toBe(true);
     });
 
-    it.skip("CreateCableWireCenterline — JS binding does not exist (no createCableWireCenterline in embind)", () => {
-        // Go side: CreateCableWireCenterline
+    it("CreateCableWireCenterline", () => {
+        const wire = tp.createCableWireCenterline({
+            points: [
+                pnt(0, 0, 0),
+                pnt(50, 5, 0),
+                pnt(100, 0, 0),
+            ],
+            outsideDiameter: 10.0,
+        });
+        expect(wire).toBeDefined();
     });
 
     it("CreateCableWireWithPlace", () => {

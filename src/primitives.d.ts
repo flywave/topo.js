@@ -1324,6 +1324,7 @@ export declare function createCableWireWithPosition(
     direction1: gp_Dir,
     direction2: gp_Dir
 ): TopoDS_Shape;
+export declare function createCableWireCenterline(params: CableWireParams): TopoDS_Wire;
 
 // 电缆接头参数结构体
 export declare interface CableJointParams {

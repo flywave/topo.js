@@ -3368,6 +3368,9 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       select_overload<TopoDS_Shape(const cable_wire_params &, const gp_Pnt &,
                                    const gp_Dir &, const gp_Dir &)>(
           &create_cable_wire));
+  function("createCableWireCenterline",
+           select_overload<TopoDS_Wire(const cable_wire_params &)>(
+               &create_cable_wire_centerline));
 
   // 电缆接头参数结构体绑定
   value_object<cable_joint_params>("CableJointParams")

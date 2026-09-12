@@ -16,6 +16,7 @@
 #include "vector.hh"
 #include "vertex.hh"
 #include "wire.hh"
+#include <Geom_TrimmedCurve.hxx>
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -989,16 +990,8 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // 位置和方向操作
       .function("location", emscripten::optional_override(
                                 [](const shape &self) -> emscripten::val {
-                                  double loc[3];
-                                  if (self.location(loc)) {
-                                    emscripten::val result =
-                                        emscripten::val::array();
-                                    result.call<void>("push", loc[0]);
-                                    result.call<void>("push", loc[1]);
-                                    result.call<void>("push", loc[2]);
-                                    return result;
-                                  }
-                                  return emscripten::val::null();
+                                  topo_location loc = self.location();
+                                  return emscripten::val(loc);
                                 }))
       .function("setLocation", &shape::set_location)
       .function("located", &shape::located)
@@ -1193,6 +1186,15 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // 导出导入
       .function("exportStep", &shape::export_step)
       .function("exportBrep", &shape::export_brep)
+      .function("writeToStl", emscripten::optional_override(
+                                  [](const shape &self,
+                                     const std::string &path,
+                                     emscripten::val deflectionVal) {
+                                    double deflection = deflectionVal.isUndefined()
+                                                            ? 0.1
+                                                            : deflectionVal.as<double>();
+                                    return self.export_stl(path, deflection);
+                                  }))
       .class_function("importFromBrep", &shape::import_from_brep)
       // 其他实用方法
       .function("clean", &shape::clean)
@@ -1458,7 +1460,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
   class_<vertex_iterator>("VertexIterator")
       .constructor<shape &>()
       .function("reset", &vertex_iterator::reset)
-      .function("next", &vertex_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](vertex_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 绑定ParamMode枚举
   emscripten::enum_<shape1d::ParamMode>("ParamMode")
@@ -1494,8 +1503,16 @@ EMSCRIPTEN_BINDINGS(Topo) {
           emscripten::select_overload<double(gp_Pnt) const>(&shape1d::param_at))
       .function("params",
                 emscripten::optional_override(
-                    [](const shape1d &self, const std::vector<gp_Pnt> &points,
+                    [](const shape1d &self, emscripten::val pointsVal,
                        emscripten::val tol) {
+                      std::vector<gp_Pnt> points;
+                      if (pointsVal.isArray()) {
+                        const size_t length = pointsVal["length"].as<size_t>();
+                        points.reserve(length);
+                        for (size_t i = 0; i < length; ++i) {
+                          points.push_back(pointsVal[i].as<gp_Pnt>());
+                        }
+                      }
                       double tolerance =
                           tol.isUndefined() ? 1e-6 : tol.as<double>();
                       std::vector<double> vec = self.params(points, tolerance);
@@ -1852,6 +1869,13 @@ EMSCRIPTEN_BINDINGS(Topo) {
           emscripten::select_overload<edge(const Handle(Geom_Curve) &)>(
               &edge::make_edge))
       .class_function(
+          "makeEdgeFromCurveTrimmed",
+          emscripten::optional_override([](emscripten::val curveVal) {
+            Handle(Geom_Curve) curve =
+                curveVal.as<Handle(Geom_TrimmedCurve)>();
+            return edge::make_edge(curve);
+          }))
+      .class_function(
           "makeEdgeFromCurveParm",
           emscripten::select_overload<edge(const Handle(Geom_Curve) &,
                                            Standard_Real, Standard_Real)>(
@@ -2107,7 +2131,8 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .class_function(
           "makeSpline",
           emscripten::optional_override(
-              [](emscripten::val pointsVal, double tolerance, bool periodic) {
+              [](emscripten::val pointsVal, emscripten::val toleranceVal,
+                 emscripten::val periodicVal) {
                 std::vector<gp_Pnt> points;
                 if (!pointsVal.isUndefined() && !pointsVal.isNull()) {
                   const size_t length = pointsVal["length"].as<size_t>();
@@ -2116,6 +2141,11 @@ EMSCRIPTEN_BINDINGS(Topo) {
                     points.push_back(pointsVal[i].as<gp_Pnt>());
                   }
                 }
+                double tolerance = toleranceVal.isUndefined()
+                                       ? 1e-6
+                                       : toleranceVal.as<double>();
+                bool periodic =
+                    periodicVal.isUndefined() ? false : periodicVal.as<bool>();
                 return edge::make_spline(points, tolerance, periodic);
               }))
       .class_function(
@@ -2379,7 +2409,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<edge_iterator>("EdgeIterator")
       .constructor<shape &>()
       .function("reset", &edge_iterator::reset)
-      .function("next", &edge_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](edge_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   emscripten::enum_<wire::curve_type>("WireCurveType")
       .value("LINE", wire::curve_type::line)
@@ -2753,7 +2790,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<wire_iterator>("WireIterator")
       .constructor<shape &>()
       .function("reset", &wire_iterator::reset)
-      .function("next", &wire_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](wire_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 添加bool_op_type枚举绑定
   emscripten::enum_<bool_op_type>("BooleanOperationType")
@@ -3693,13 +3737,27 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<shell_iterator>("ShellIterator")
       .constructor<shape &>()
       .function("reset", &shell_iterator::reset)
-      .function("next", &shell_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](shell_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 绑定face_iterator类
   emscripten::class_<face_iterator>("FaceIterator")
       .constructor<shape &>()
       .function("reset", &face_iterator::reset)
-      .function("next", &face_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](face_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 绑定shape3d类，继承自shape
   emscripten::class_<shape3d, emscripten::base<shape>>("Shape3D")
@@ -3792,9 +3850,12 @@ EMSCRIPTEN_BINDINGS(Topo) {
       // 基本几何体创建方法 - 圆柱
       .class_function(
           "makeSolidFromCylinderAngle",
-          emscripten::select_overload<solid(
-              const Standard_Real, const Standard_Real, const Standard_Real)>(
-              &solid::make_solid_from_cylinder))
+          emscripten::optional_override(
+              [](double R, double H, emscripten::val angleVal) {
+                double angle = angleVal.isUndefined() ? 2 * M_PI
+                                                      : angleVal.as<double>();
+                return solid::make_solid_from_cylinder(R, H, angle);
+              }))
       .class_function(
           "makeSolidFromCylinderAxis2",
           emscripten::select_overload<solid(const gp_Ax2 &, const Standard_Real,
@@ -4533,7 +4594,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<solid_iterator>("SolidIterator")
       .constructor<shape &>()
       .function("reset", &solid_iterator::reset)
-      .function("next", &solid_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](solid_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 绑定compound类，继承自shape3d
   emscripten::class_<compound, emscripten::base<shape3d>>("Compound")
@@ -4659,7 +4727,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<compound_iterator>("CompoundIterator")
       .constructor<shape &>()
       .function("reset", &compound_iterator::reset)
-      .function("next", &compound_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](compound_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 绑定comp_solid类，继承自solid
   emscripten::class_<comp_solid, emscripten::base<solid>>("CompSolid")
@@ -4701,7 +4776,14 @@ EMSCRIPTEN_BINDINGS(Topo) {
   emscripten::class_<comp_solid_iterator>("CompSolidIterator")
       .constructor<shape &>()
       .function("reset", &comp_solid_iterator::reset)
-      .function("next", &comp_solid_iterator::next);
+      .function("next", emscripten::optional_override(
+                            [](comp_solid_iterator &self) -> emscripten::val {
+                              auto result = self.next();
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            }));
 
   // 绑定mesh类
   emscripten::class_<mesh>("Mesh")
@@ -5548,7 +5630,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                     isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
 
                 boost::optional<shape> mode;
-                if (!modeVal.isNull()) {
+                if (!modeVal.isNull() && !modeVal.isUndefined()) {
                   mode = modeVal.as<shape>();
                 }
                 auto transitionMode = transitionModeVal.isUndefined()
@@ -5579,7 +5661,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                     isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
 
                 boost::optional<shape> mode;
-                if (!modeVal.isNull()) {
+                if (!modeVal.isNull() && !modeVal.isUndefined()) {
                   mode = modeVal.as<shape>();
                 }
                 auto transitionMode = transitionModeVal.isUndefined()
@@ -5614,7 +5696,7 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 bool isFrenet =
                     isFrenetVal.isUndefined() ? false : isFrenetVal.as<bool>();
                 boost::optional<shape> mode;
-                if (!modeVal.isNull()) {
+                if (!modeVal.isNull() && !modeVal.isUndefined()) {
                   mode = modeVal.as<shape>();
                 }
 
@@ -6105,5 +6187,29 @@ EMSCRIPTEN_BINDINGS(Topo) {
                               return emscripten::val(result);
                             }
                             return emscripten::val::undefined();
-                          }));
+                          }))
+      .class_function(
+          "getShapeOutline",
+          emscripten::optional_override(
+              [](emscripten::val shapeVal, emscripten::val numSamplesVal,
+                 emscripten::val simplifyVal) -> emscripten::val {
+                auto shp = shapeVal.as<shape>();
+                int numSamples =
+                    numSamplesVal.isUndefined() ? 200 : numSamplesVal.as<int>();
+                bool simplify =
+                    simplifyVal.isUndefined() ? false : simplifyVal.as<bool>();
+
+                auto outlines =
+                    flywave::topo::get_shape_outline(shp, numSamples, simplify);
+
+                emscripten::val outer = emscripten::val::array();
+                for (const auto &inner : outlines) {
+                  emscripten::val innerArr = emscripten::val::array();
+                  for (const auto &pt : inner) {
+                    innerArr.call<void>("push", emscripten::val(pt));
+                  }
+                  outer.call<void>("push", innerArr);
+                }
+                return outer;
+              }));
 }

@@ -202,7 +202,17 @@ EMSCRIPTEN_BINDINGS(Assembly) {
                   auto elements = self.get_elements();
                   emscripten::val result = emscripten::val::array();
                   for (auto &elem : elements) {
-                    result.call<void>("push", emscripten::val(elem));
+                    emscripten::val obj = emscripten::val::object();
+                    obj.set("shape", emscripten::val(elem.shp));
+                    obj.set("name",
+                            emscripten::val(std::string(elem.name)));
+                    obj.set("location", emscripten::val(elem.location));
+                    if (elem.color) {
+                      obj.set("color", emscripten::val(*elem.color));
+                    } else {
+                      obj.set("color", emscripten::val::null());
+                    }
+                    result.call<void>("push", obj);
                   }
                   return result;
                 }))

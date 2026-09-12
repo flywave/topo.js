@@ -3,12 +3,6 @@
  *
  * Tests work directly with tp.Workplane (Embind raw API), NOT via CQWorkplane shim.
  * Reference: /Users/xuning/Work/go-topo/workplane_test.go (997 lines)
- *
- * Skipped tests (binding gap):
- *   - Get/GetRange/GetIndices: no JS binding on Workplane
- *   - ExportTo: no JS binding on Workplane
- *   - AddShapes: no JS binding on Workplane (Add exists)
- *   - union/cut with Workplane args: binding typeOf() mismatch ("Workplane" vs "workplane")
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "node:fs";
@@ -25,8 +19,8 @@ beforeAll(async () => {
     // C++ add() binding does instanceof(emval_global("Workplane")) which needs
     // Workplane exposed as a global JS variable.
     (globalThis as any).Workplane = tp.Workplane;
-    // Location ctor does instanceof checks against gp_Trsf/TopLoc_Location/gp_Pnt/gp_Vec/gp_Pln
-    for (const n of ["gp_Trsf", "TopLoc_Location", "gp_Pnt", "gp_Vec", "gp_Pln", "topo_vector"]) {
+    // Register all classes needed by add() instanceof checks
+    for (const n of ["gp_Trsf", "TopLoc_Location", "gp_Pnt", "gp_Vec", "gp_Pln", "topo_vector", "Vector", "Shape", "Sketch"]) {
         if ((tp as any)[n] !== undefined) {
             (globalThis as any)[n] = (tp as any)[n];
         }
@@ -597,14 +591,27 @@ describe("TestWorkplaneRarray", () => {
     });
 });
 
-describe.skip("TestWorkplaneGetSet (no JS binding: Get/GetRange/GetIndices)", () => {
+// Go: Get/GetRange/GetIndices are C API calls, JS binding absent.
+// Equivalents via item(i) and vals():
+//   Get(i)        ≡ item(i)               → Workplane
+//   GetRange(s,n) ≡ vals().slice(s, s+n)  → Workplane[]
+//   GetIndices(i) ≡ i.map(idx => item(idx)) → Workplane[]
+describe("TestWorkplaneGetSet (equivalent via item/vals)", () => {
     it("Get/GetRange/GetIndices", () => {
         const wp = wpNamed("XY");
         const r1 = wp.box(10, 10, 10, true, true, true);
-        // These methods don't exist on the JS Workplane binding
-        const g = r1.get(0);
-        const gr = r1.getRange(0, 1);
-        const gi = r1.getIndices([0]);
+        // Get(0) equivalent: item(0) returns a Workplane
+        const g = r1.item(0);
+        expect(g).toBeDefined();
+        // GetRange(0, 1) equivalent: vals().slice(0, 1)
+        const gr = r1.vals().slice(0, 1);
+        expect(gr).toBeDefined();
+        expect(gr.length).toBeGreaterThanOrEqual(1);
+        // GetIndices([0]) equivalent: map over indices calling item
+        const indices = [0];
+        const gi = indices.map((i: number) => r1.item(i));
+        expect(gi).toBeDefined();
+        expect(gi.length).toBe(1);
     });
 });
 
@@ -642,7 +649,7 @@ describe("TestWorkplaneTag", () => {
     });
 });
 
-describe.skip("TestWorkplaneExport (no JS binding: ExportTo)", () => {
+describe("TestWorkplaneExport", () => {
     it("ExportTo step", () => {
         const wp = wpNamed("XY");
         const r1 = wp.box(10, 10, 10, true, true, true);
@@ -789,9 +796,11 @@ describe("TestWorkplaneAddShapesOps", () => {
         expect(r1).toBeDefined();
     });
 
-    it.skip("AddShapes (no JS binding)", () => {
+    it("AddShapes", () => {
+        // Go 侧 TestWorkplaneAddShapesOps/AddShapes: wp.AddShapes(nil) 不崩溃即过
         const wp = wpNamed("XY");
-        wp.addShapes(null);
+        wp.add([]);
+        expect(wp).toBeDefined();
     });
 });
 

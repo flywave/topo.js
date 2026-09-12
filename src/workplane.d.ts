@@ -433,4 +433,5 @@ export declare class Workplane {
     size(): number;
     hasParent(): boolean;
     parent(): Workplane | null;
+    exportTo(path: string): Workplane;
 }

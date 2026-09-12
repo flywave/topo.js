@@ -180474,6 +180474,7 @@ export declare function createCableWireWithPosition(
     direction1: gp_Dir,
     direction2: gp_Dir
 ): TopoDS_Shape;
+export declare function createCableWireCenterline(params: CableWireParams): TopoDS_Wire;
 
 // 电缆接头参数结构体
 export declare interface CableJointParams {
@@ -183407,6 +183408,7 @@ export declare class Shape extends GeometryObject {
     // 导出导入
     exportStep(filename: string): boolean;
     exportBrep(filename: string): boolean;
+    writeToStl(filename: string, deflection?: number): boolean;
     static importFromBrep(filename: string): Shape;
 
     // 实用方法
@@ -184667,6 +184669,12 @@ export declare class ShapeOps {
         radius: number,
         path: wire
     ): shape | undefined;
+
+    static getShapeOutline(
+        shape: Shape,
+        numSamples?: number,
+        simplify?: boolean
+    ): gp_Pnt[][];
 }
 
 export declare type ShapeObjectType = {
@@ -185103,6 +185111,7 @@ export declare class Workplane {
     size(): number;
     hasParent(): boolean;
     parent(): Workplane | null;
+    exportTo(path: string): Workplane;
 }
 type Standard_Boolean = boolean;
 type Standard_Byte = number;

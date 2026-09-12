@@ -1647,5 +1647,13 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                 }))
       .function("parent", emscripten::optional_override([](workplane &self) {
                   return emscripten::val(self.parent());
-                }));
+                }))
+      .function(
+          "exportTo",
+          emscripten::optional_override([](workplane &self,
+                                           const std::string &path) {
+            self.export_to(path);
+            return emscripten::val(self.shared_from_this());
+          }),
+          emscripten::allow_raw_pointers());
 }

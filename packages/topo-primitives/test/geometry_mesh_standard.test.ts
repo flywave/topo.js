@@ -464,7 +464,13 @@ describe("standard_test.go port", () => {
     // Go: NewConeFromAxis2(a, 30, 5), Angle(), Radius()
     // JS: gp_Cone constructors expect gp_Ax3; gp_Cone_1() default works but
     //     gp_Cone_2(ax3, angle, radius) has issues (throws with undefined msg)
-    it.skip("TestCone — gp_Cone_2(ax3, angle, radius) throws at runtime", () => {});
+    it("TestCone — gp_Cone_2(ax3, angle, radius)", () => {
+      const ax3 = new tp.gp_Ax3_3(pnt(0, 0, 0), dir(0, 0, 1), dir(1, 0, 0));
+      const cone = new tp.gp_Cone_2(ax3, Math.PI / 6, 5);
+      expect(cone).toBeDefined();
+      expect(cone.SemiAngle()).toBeCloseTo(Math.PI / 6, 5);
+      expect(cone.RefRadius()).toBeCloseTo(5, TOL);
+    });
 
     // --- TestCylinderGeom ---
     // Go: NewCylinderFromAxis2(a, 5), Axis(), Radius()
@@ -551,9 +557,26 @@ describe("standard_test.go port", () => {
 
     // --- TestColor ---
     // Go: NewColor([1,0.5,0]), RGB() → [255,127,0], RGBF(), RGBD()
-    // JS: Quantity_Color_1() default constructor exists, but SetValues_1 doesn't set values
-    //     and Values() crashes WASM; binding gap
-    it.skip("TestColor — Quantity_Color binding incomplete (SetValues/Values broken)", () => {});
+    // JS: Quantity_Color_3(r,g,b,Quantity_TOC_RGB) 构造可用, Red/Green/Blue 查询可用;
+    //     SetValues_2/Values 参数编组有缺口, 保持 skip
+    it("TestColor — construction and basic RGB queries", () => {
+        const c = new tp.Quantity_Color_3(1.0, 0.5, 0.0, tp.Quantity_TypeOfColor.Quantity_TOC_RGB);
+        expect(c).toBeDefined();
+        expect(c.Red()).toBeCloseTo(1.0, 5);
+        expect(c.Green()).toBeCloseTo(0.5, 5);
+        expect(c.Blue()).toBeCloseTo(0.0, 5);
+    });
+
+    it("TestColor SetValues/Values — parameter marshalling gap in WASM binding", () => {
+      // SetValues_2 with 4 args (r,g,b,type) is the correct setter
+      // Values() uses C++ output references (Standard_Real&) which embind can't marshal
+      // Workaround: use Red()/Green()/Blue() getters + SetValues_2 setter
+      const c = new tp.Quantity_Color_3(0.0, 0.0, 0.0, tp.Quantity_TypeOfColor.Quantity_TOC_RGB);
+      c.SetValues_2(1.0, 0.5, 0.0, tp.Quantity_TypeOfColor.Quantity_TOC_RGB);
+      expect(c.Red()).toBeCloseTo(1.0, 5);
+      expect(c.Green()).toBeCloseTo(0.5, 5);
+      expect(c.Blue()).toBeCloseTo(0.0, 5);
+    });
 
     // --- TestBBox ---
     // Go: NewBBox([0,10,0,10,0,10]), Data() → 6-element array

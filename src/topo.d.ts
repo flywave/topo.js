@@ -422,6 +422,7 @@ export declare class Shape extends GeometryObject {
     // 导出导入
     exportStep(filename: string): boolean;
     exportBrep(filename: string): boolean;
+    writeToStl(filename: string, deflection?: number): boolean;
     static importFromBrep(filename: string): Shape;
 
     // 实用方法
@@ -1682,4 +1683,10 @@ export declare class ShapeOps {
         radius: number,
         path: wire
     ): shape | undefined;
+
+    static getShapeOutline(
+        shape: Shape,
+        numSamples?: number,
+        simplify?: boolean
+    ): gp_Pnt[][];
 }

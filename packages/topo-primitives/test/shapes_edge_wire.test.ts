@@ -165,8 +165,7 @@ describe("Edge (port of edge_test.go)", () => {
             expect(p).toBeGreaterThanOrEqual(0);
         });
 
-        it.skip("params — binding gap: gp_Pnt[] unbound type", () => {
-            // Go: e.Params(pts, tol) — JS params(gp_Pnt[], tol) has unbound type for gp_Pnt[]
+        it("params", () => {
             const e = edgeFromLine();
             const pts = [
                 new tp.gp_Pnt_3(0, 0, 0),
@@ -334,9 +333,8 @@ describe("Edge (port of edge_test.go)", () => {
     });
 
     describe("TestEdgeIterator", () => {
-        it.skip("iterate — binding gap: EdgeIterator.next has unbound return type", () => {
+        it("iterate", () => {
             // Go: it := TopoMakeEdgeIterator(*shape); for { e := it.Next(); if e == nil { break } }
-            // JS: EdgeIterator.next() has unbound type boost::optional<edge>
             const rect = tp.Edge.makeRect(10, 10);
             const it = new tp.EdgeIterator(rect);
             expect(it).toBeDefined();
@@ -636,8 +634,8 @@ describe("Wire (port of wire_test.go)", () => {
             expect(p).toBeGreaterThanOrEqual(0);
         });
 
-        it.skip("params — binding gap: gp_Pnt[] unbound type", () => {
-            // Same binding gap as Edge.params
+        it("params", () => {
+            // Same binding as Edge.params
             const w = makeRectWire();
             const pts = [w.startPoint(), w.endPoint()];
             const params = w.params(pts, 1e-6);
@@ -715,9 +713,8 @@ describe("Wire (port of wire_test.go)", () => {
     });
 
     describe("TestWireIterator", () => {
-        it.skip("iterate — binding gap: WireIterator.next has unbound return type", () => {
+        it("iterate", () => {
             // Go: it := TopoMakeWireIterator(*w.ToShape()); for { v := it.Next(); ... }
-            // JS: WireIterator.next() has unbound type boost::optional<wire>
             const w = makeRectWire();
             const it = new tp.WireIterator(w);
             expect(it).toBeDefined();
@@ -836,9 +833,8 @@ describe("Vertex (port of vertex_test.go)", () => {
     });
 
     describe("TestVertexIterator", () => {
-        it.skip("iterate — binding gap: VertexIterator.next has unbound return type", () => {
+        it("iterate", () => {
             // Go: it := TopoMakeVertexIterator(*shape); for { v := it.Next(); ... }
-            // JS: VertexIterator.next() has unbound type boost::optional<vertex>
             const rect = tp.Edge.makeRect(10, 10);
             const it = new tp.VertexIterator(rect);
             expect(it).toBeDefined();
