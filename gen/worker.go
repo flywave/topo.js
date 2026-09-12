@@ -20,7 +20,7 @@ func setEmCache() {
 	}
 }
 
-func runWorkers(workDir string, buildDir string, basePath string, args map[string]string, files []string, buildFn func(string, string, string, map[string]string, string, chan<- error)) {
+func runWorkers(workDir string, buildDir string, basePath string, args map[string]string, files []string, buildFn func(string, string, string, map[string]string, string, chan<- error)) error {
 	setEmCache()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -63,10 +63,12 @@ func runWorkers(workDir string, buildDir string, basePath string, args map[strin
 		close(done)
 	}()
 
+	errCount := 0
 	select {
 	case <-done:
 	case err := <-errChan:
 		fmt.Fprintf(os.Stderr, "构建过程中出错: %v\n", err)
+		errCount++
 		cancel()
 	}
 
@@ -74,6 +76,12 @@ func runWorkers(workDir string, buildDir string, basePath string, args map[strin
 	close(errChan)
 
 	for err := range errChan {
+		errCount++
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
+
+	if errCount > 0 {
+		return fmt.Errorf("%d 个源文件编译失败", errCount)
+	}
+	return nil
 }

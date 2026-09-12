@@ -9,3 +9,4 @@ export * from "./gim/gs";
 export * from "./gim/gt";
 export * from "./types";
 export * from "./geology";
+export * as CQ from "./cq";

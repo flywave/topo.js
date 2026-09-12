@@ -44,11 +44,16 @@ func BuildTopoSource(workDir string, args map[string]string) error {
 		return fmt.Errorf("收集topo包含路径失败: %w", err)
 	}
 
+	// NLopt headers for sketch_solver.cc (#include <nlopt.hpp>)
+	includePaths = append(includePaths,
+		path.Join(workDir, "/../go-topo/external/nlopt/src/api"),
+		path.Join(workDir, "external/nlopt-wasm"),
+	)
+
 	filesToBuild, err := collectTopoFilesToBuild(workDir, topoSourceBasePath)
 	if err != nil {
 		return fmt.Errorf("收集topo源文件失败: %w", err)
 	}
 
-	runWorkers(workDir, "build/src", topoSourceBasePath, args, filesToBuild, BuildObjectFile)
-	return nil
+	return runWorkers(workDir, "build/src", topoSourceBasePath, args, filesToBuild, BuildObjectFile)
 }

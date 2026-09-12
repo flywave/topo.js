@@ -1,7 +1,8 @@
 [
     {
         "exports": [
-            "SketchMode"
+            "SketchMode",
+            "SketchConstraintKind"
         ],
         "kind": "enum"
     },

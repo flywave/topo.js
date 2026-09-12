@@ -1,10 +1,22 @@
 #include "binding.hh"
 #include "sketch.hh"
+#include <Standard_Failure.hxx>
 
 using namespace flywave;
 using namespace flywave::topo;
 
 EMSCRIPTEN_BINDINGS(Sketch) {
+
+  enum_<sketch_constraint_kind>("SketchConstraintKind")
+      .value("FIXED", sketch_constraint_kind::FIXED)
+      .value("FIXED_POINT", sketch_constraint_kind::FIXED_POINT)
+      .value("COINCIDENT", sketch_constraint_kind::COINCIDENT)
+      .value("ANGLE", sketch_constraint_kind::ANGLE)
+      .value("LENGTH", sketch_constraint_kind::LENGTH)
+      .value("DISTANCE", sketch_constraint_kind::DISTANCE)
+      .value("RADIUS", sketch_constraint_kind::RADIUS)
+      .value("ORIENTATION", sketch_constraint_kind::ORIENTATION)
+      .value("ARC_ANGLE", sketch_constraint_kind::ARC_ANGLE);
 
   enum_<Mode>("SketchMode")
       .value("ADD", Mode::ADD)
@@ -1075,6 +1087,139 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 };
                 auto &r = self.sort(comp);
                 return emscripten::val(r.shared_from_this());
+              }),
+          emscripten::allow_raw_pointers())
+
+      // constrain - 添加约束 (单 tag 或双 tag)
+      .function(
+          "constrain",
+          emscripten::optional_override(
+              [](sketch &self, emscripten::val tag1Val,
+                 emscripten::val tag2OrKindVal,
+                 emscripten::val kindOrValVal,
+                 emscripten::val valVal) -> emscripten::val {
+                try {
+                  std::string tag1 = tag1Val.as<std::string>();
+                  sketch_constraint_kind kind;
+                  sketch_constraint_value cval = boost::blank();
+
+                  // value 编组: number→double; [a,b]→pair;
+                  // [a|null, b|null, c]→tuple<optional,optional,double>
+                  auto parseValue = [](emscripten::val v,
+                                       sketch_constraint_value &out) {
+                    if (v.isUndefined() || v.isNull()) {
+                      return;
+                    }
+                    if (v.isArray()) {
+                      size_t len = v["length"].as<size_t>();
+                      if (len == 2) {
+                        double a =
+                            v[0].isNumber() ? v[0].as<double>() : 0.0;
+                        double b =
+                            v[1].isNumber() ? v[1].as<double>() : 0.0;
+                        out = std::make_pair(a, b);
+                      } else if (len == 3) {
+                        boost::optional<double> o0 =
+                            v[0].isNumber()
+                                ? boost::make_optional(v[0].as<double>())
+                                : boost::none;
+                        boost::optional<double> o1 =
+                            v[1].isNumber()
+                                ? boost::make_optional(v[1].as<double>())
+                                : boost::none;
+                        double d =
+                            v[2].isNumber() ? v[2].as<double>() : 0.0;
+                        out = std::make_tuple(o0, o1, d);
+                      }
+                    } else if (v.isNumber()) {
+                      out = v.as<double>();
+                    }
+                  };
+
+                  if (tag2OrKindVal.isString()) {
+                    // 4-arg form: constrain(tag1, tag2, kind, value)
+                    std::string tag2 = tag2OrKindVal.as<std::string>();
+                    kind = kindOrValVal.as<sketch_constraint_kind>();
+                    parseValue(valVal, cval);
+                    self.constrain(tag1, tag2, kind, cval);
+                  } else {
+                    // 2/3-arg form: constrain(tag, kind[, value])
+                    kind = tag2OrKindVal.as<sketch_constraint_kind>();
+                    parseValue(kindOrValVal, cval);
+                    self.constrain(tag1, kind, cval);
+                  }
+                  return emscripten::val(self.shared_from_this());
+                } catch (const Standard_Failure &f) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Sketch.constrain: ") +
+                            (f.GetMessageString() ? f.GetMessageString()
+                                                  : f.DynamicType()->Name()))
+                      .throw_();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Sketch.constrain: ") + e.what())
+                      .throw_();
+                }
+                return emscripten::val::undefined();
+              }),
+          emscripten::allow_raw_pointers())
+
+      // solve - 求解约束
+      .function(
+          "solve",
+          emscripten::optional_override([](sketch &self) -> emscripten::val {
+            try {
+              self.solve();
+              return emscripten::val(self.shared_from_this());
+            } catch (const Standard_Failure &f) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Sketch.solve: ") +
+                        (f.GetMessageString() ? f.GetMessageString()
+                                              : f.DynamicType()->Name()))
+                  .throw_();
+            } catch (const std::exception &e) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Sketch.solve: ") + e.what())
+                  .throw_();
+            }
+            return emscripten::val::undefined();
+          }),
+          emscripten::allow_raw_pointers())
+
+      // solve_status - 获取求解状态
+      .function(
+          "solve_status",
+          emscripten::optional_override(
+              [](sketch &self) -> emscripten::val {
+                emscripten::val result = emscripten::val::object();
+                for (const auto &pair : self.solve_status()) {
+                  if (pair.second.type() == typeid(double)) {
+                    result.set(pair.first,
+                               emscripten::val(boost::get<double>(pair.second)));
+                  } else if (pair.second.type() == typeid(int)) {
+                    result.set(pair.first,
+                               emscripten::val(boost::get<int>(pair.second)));
+                  } else if (pair.second.type() == typeid(std::string)) {
+                    result.set(
+                        pair.first,
+                        emscripten::val(boost::get<std::string>(pair.second)));
+                  } else if (pair.second.type() ==
+                             typeid(std::vector<std::vector<double>>)) {
+                    const auto &rows =
+                        boost::get<std::vector<std::vector<double>>>(
+                            pair.second);
+                    emscripten::val arr = emscripten::val::array();
+                    for (size_t i = 0; i < rows.size(); ++i) {
+                      emscripten::val row = emscripten::val::array();
+                      for (size_t j = 0; j < rows[i].size(); ++j) {
+                        row.set(j, emscripten::val(rows[i][j]));
+                      }
+                      arr.set(i, row);
+                    }
+                    result.set(pair.first, arr);
+                  }
+                }
+                return result;
               }),
           emscripten::allow_raw_pointers());
 }

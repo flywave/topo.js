@@ -6,6 +6,18 @@ export declare type SketchMode = {
   REPLACE: {},
 }
 
+export declare type SketchConstraintKind = {
+  FIXED: {},
+  FIXED_POINT: {},
+  COINCIDENT: {},
+  ANGLE: {},
+  LENGTH: {},
+  DISTANCE: {},
+  RADIUS: {},
+  ORIENTATION: {},
+  ARC_ANGLE: {},
+}
+
 export declare type SketchVal = Shape | Location
 
 export declare class Sketch {
@@ -218,4 +230,11 @@ export declare class Sketch {
 
   apply(f: (vals: Array<Shape | Location>) => Array<Shape | Location>): Sketch;
   sort(comp: (a: Shape | Location, b: Shape | Location) => boolean): Sketch;
+
+  constrain(tag: string, kind: SketchConstraintKind, value?: number | [number, number] | [number | null, number | null, number]): Sketch;
+  constrain(tag1: string, tag2: string, kind: SketchConstraintKind, value?: number | [number, number] | [number | null, number | null, number]): Sketch;
+
+  solve(): Sketch;
+
+  solve_status(): Record<string, number | string | number[][]>;
 }

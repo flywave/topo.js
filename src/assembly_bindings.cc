@@ -1,11 +1,44 @@
 #include "assembly.hh"
 #include "binding.hh"
 #include "compound.hh"
+#include <Standard_Failure.hxx>
 
 using namespace flywave;
 using namespace flywave::topo;
 
+static constraint_param parse_constraint_param(emscripten::val v) {
+  if (v.isUndefined() || v.isNull()) {
+    return boost::blank{};
+  }
+  if (v.isNumber()) {
+    return v.as<double>();
+  }
+  if (v.isArray()) {
+    size_t len = v["length"].as<size_t>();
+    if (len == 2) {
+      std::array<double, 2> a = {v[0].as<double>(), v[1].as<double>()};
+      return a;
+    } else if (len == 3) {
+      std::array<double, 3> a = {v[0].as<double>(), v[1].as<double>(),
+                                 v[2].as<double>()};
+      return a;
+    }
+  }
+  return boost::blank{};
+}
+
 EMSCRIPTEN_BINDINGS(Assembly) {
+
+  emscripten::enum_<constraint_kind>("AssemblyConstraintKind")
+      .value("Point", constraint_kind::Point)
+      .value("Axis", constraint_kind::Axis)
+      .value("PointInPlane", constraint_kind::PointInPlane)
+      .value("PointOnLine", constraint_kind::PointOnLine)
+      .value("Plane", constraint_kind::Plane)
+      .value("Fixed", constraint_kind::Fixed)
+      .value("FixedPoint", constraint_kind::FixedPoint)
+      .value("FixedAxis", constraint_kind::FixedAxis)
+      .value("FixedRotation", constraint_kind::FixedRotation);
 
   emscripten::enum_<assembly_export_mode>("AssemblyExportMode")
       .value("DEFAULT", assembly_export_mode::defalut_)
@@ -37,7 +70,7 @@ EMSCRIPTEN_BINDINGS(Assembly) {
 
                 auto loc = locVal.isUndefined()
                                ? nullptr
-                               : locVal.as<std::shared_ptr<topo_location>>();
+                               : std::make_shared<topo_location>(locVal.as<topo_location>());
                 auto color =
                     colorVal.isUndefined()
                         ? nullptr
@@ -82,7 +115,7 @@ EMSCRIPTEN_BINDINGS(Assembly) {
               auto subAssembly = objVal.as<std::shared_ptr<assembly>>();
               auto loc = locVal.isUndefined()
                              ? nullptr
-                             : locVal.as<std::shared_ptr<topo_location>>();
+                             : std::make_shared<topo_location>(locVal.as<topo_location>());
               auto color = colorVal.isUndefined()
                                ? nullptr
                                : std::make_shared<Quantity_Color>(
@@ -101,7 +134,7 @@ EMSCRIPTEN_BINDINGS(Assembly) {
 
               auto loc = locVal.isUndefined()
                              ? nullptr
-                             : locVal.as<std::shared_ptr<topo_location>>();
+                             : std::make_shared<topo_location>(locVal.as<topo_location>());
               auto color = colorVal.isUndefined()
                                ? nullptr
                                : std::make_shared<Quantity_Color>(
@@ -204,5 +237,165 @@ EMSCRIPTEN_BINDINGS(Assembly) {
                     result.call<void>("push", emscripten::val(child));
                   }
                   return result;
-                }));
+                }))
+      .function(
+          "constrain",
+          emscripten::optional_override([](assembly &self, emscripten::val q1,
+                                           emscripten::val q2OrKind,
+                                           emscripten::val kindOrParam,
+                                           emscripten::val paramVal)
+                                             -> emscripten::val {
+            try {
+              if (q1.isString() && q2OrKind.isString()) {
+                // constrain(q1, q2, kind, param?)
+                constraint_kind kind = q2OrKind.as<constraint_kind>();
+                constraint_param p =
+                    kindOrParam.isUndefined()
+                        ? constraint_param(boost::blank{})
+                        : parse_constraint_param(kindOrParam);
+                self.constrain(q1.as<std::string>(), q2OrKind.as<std::string>(),
+                               kind, p);
+              } else if (q1.isString() && !q2OrKind.isString() &&
+                         !q2OrKind.isUndefined()) {
+                // constrain(q1, kind, param?)
+                constraint_kind kind = q2OrKind.as<constraint_kind>();
+                constraint_param p =
+                    kindOrParam.isUndefined()
+                        ? constraint_param(boost::blank{})
+                        : parse_constraint_param(kindOrParam);
+                self.constrain(q1.as<std::string>(), kind, p);
+              } else {
+                emscripten::val::global("Error")
+                    .new_(std::string("Assembly.constrain: invalid arguments"))
+                    .throw_();
+              }
+              return emscripten::val(self.shared_from_this());
+            } catch (const Standard_Failure &f) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Assembly.constrain: ") +
+                        (f.GetMessageString() ? f.GetMessageString()
+                                              : f.DynamicType()->Name()))
+                  .throw_();
+            } catch (const std::exception &e) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Assembly.constrain: ") + e.what())
+                  .throw_();
+            }
+            return emscripten::val::undefined();
+          }),
+          emscripten::allow_raw_pointers())
+      .function(
+          "constrain1",
+          emscripten::optional_override(
+              [](assembly &self, const std::string &q1,
+                 constraint_kind kind, emscripten::val paramVal)
+                  -> emscripten::val {
+                try {
+                  constraint_param p =
+                      paramVal.isUndefined()
+                          ? constraint_param(boost::blank{})
+                          : parse_constraint_param(paramVal);
+                  self.constrain(q1, kind, p);
+                  return emscripten::val(self.shared_from_this());
+                } catch (const Standard_Failure &f) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Assembly.constrain1: ") +
+                            (f.GetMessageString() ? f.GetMessageString()
+                                                  : f.DynamicType()->Name()))
+                      .throw_();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Assembly.constrain1: ") + e.what())
+                      .throw_();
+                }
+                return emscripten::val::undefined();
+              }),
+          emscripten::allow_raw_pointers())
+      .function(
+          "constrain2",
+          emscripten::optional_override(
+              [](assembly &self, const std::string &id1, emscripten::val s1Val,
+                 const std::string &id2, emscripten::val s2Val,
+                 constraint_kind kind, emscripten::val paramVal)
+                  -> emscripten::val {
+                try {
+                  shape s1 = s1Val.as<shape>();
+                  shape s2 = s2Val.as<shape>();
+                  constraint_param p =
+                      paramVal.isUndefined()
+                          ? constraint_param(boost::blank{})
+                          : parse_constraint_param(paramVal);
+                  self.constrain(id1, s1, id2, s2, kind, p);
+                  return emscripten::val(self.shared_from_this());
+                } catch (const Standard_Failure &f) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Assembly.constrain2: ") +
+                            (f.GetMessageString() ? f.GetMessageString()
+                                                  : f.DynamicType()->Name()))
+                      .throw_();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Assembly.constrain2: ") + e.what())
+                      .throw_();
+                }
+                return emscripten::val::undefined();
+              }),
+          emscripten::allow_raw_pointers())
+      .function(
+          "constrain3",
+          emscripten::optional_override(
+              [](assembly &self, const std::string &id1, emscripten::val s1Val,
+                 constraint_kind kind, emscripten::val paramVal)
+                  -> emscripten::val {
+                try {
+                  shape s1 = s1Val.as<shape>();
+                  constraint_param p =
+                      paramVal.isUndefined()
+                          ? constraint_param(boost::blank{})
+                          : parse_constraint_param(paramVal);
+                  self.constrain(id1, s1, kind, p);
+                  return emscripten::val(self.shared_from_this());
+                } catch (const Standard_Failure &f) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Assembly.constrain3: ") +
+                            (f.GetMessageString() ? f.GetMessageString()
+                                                  : f.DynamicType()->Name()))
+                      .throw_();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Assembly.constrain3: ") + e.what())
+                      .throw_();
+                }
+                return emscripten::val::undefined();
+              }),
+          emscripten::allow_raw_pointers())
+      .function(
+          "solve",
+          emscripten::optional_override([](assembly &self, int verbosity)
+                                            -> emscripten::val {
+            try {
+              self.solve(verbosity);
+            } catch (const Standard_Failure &f) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Assembly.solve: ") +
+                        (f.GetMessageString() ? f.GetMessageString()
+                                              : f.DynamicType()->Name()))
+                  .throw_();
+            } catch (const std::exception &e) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Assembly.solve: ") + e.what())
+                  .throw_();
+            }
+            return emscripten::val(self.shared_from_this());
+          }),
+          emscripten::allow_raw_pointers())
+      .function("hasError", emscripten::optional_override(
+                                [](assembly &self) { return self.has_error(); }))
+      .function("getError", emscripten::optional_override(
+                                [](assembly &self) -> emscripten::val {
+                                  if (self.has_error()) {
+                                    return emscripten::val(self.error());
+                                  }
+                                  return emscripten::val::null();
+                                }));
 }

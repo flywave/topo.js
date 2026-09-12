@@ -53,6 +53,7 @@ func init() {
 		newRunBuildCmd(),
 		newGenerateCmd(),
 		newBuildOggCmd(),
+		newBuildNloptCmd(),
 		newBuildBindingsCmd(),
 		newBuildTopoBindingsCmd(),
 		newBuildTopoCmd(),
@@ -103,7 +104,24 @@ func newBuildOggCmd() *cobra.Command {
 		Short: "构建OGG源",
 		Run: func(cmd *cobra.Command, args []string) {
 			argsMap := map[string]string{"threading": threading}
-			gen.BuildOggSource(dirPath, argsMap)
+			if err := gen.BuildOggSource(dirPath, argsMap); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		},
+	}
+}
+
+func newBuildNloptCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "build-nlopt",
+		Short: "构建NLopt优化库源码",
+		Run: func(cmd *cobra.Command, args []string) {
+			argsMap := map[string]string{"threading": threading}
+			if err := gen.BuildNloptSource(dirPath, argsMap); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 		},
 	}
 }
@@ -128,7 +146,10 @@ func newBuildTopoBindingsCmd() *cobra.Command {
 		Short: "构建Topo绑定源码",
 		Run: func(cmd *cobra.Command, args []string) {
 			argsMap := map[string]string{"threading": threading}
-			gen.BuildTopoBindingsSource(dirPath, argsMap)
+			if err := gen.BuildTopoBindingsSource(dirPath, argsMap); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 			gen.GenSourceTypescriptDefs(dirPath)
 		},
 	}
@@ -140,7 +161,10 @@ func newBuildTopoCmd() *cobra.Command {
 		Short: "构建Topo源码",
 		Run: func(cmd *cobra.Command, args []string) {
 			argsMap := map[string]string{"threading": threading}
-			gen.BuildTopoSource(dirPath, argsMap)
+			if err := gen.BuildTopoSource(dirPath, argsMap); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 		},
 	}
 }

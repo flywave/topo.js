@@ -74,6 +74,5 @@ func BuildOggSource(workDir string, args map[string]string) error {
 		return fmt.Errorf("收集OCCT源文件失败: %w", err)
 	}
 
-	runWorkers(workDir, "build/occt", oggSourceBasePath, args, filesToBuild, BuildObjectFile)
-	return nil
+	return runWorkers(workDir, "build/occt", oggSourceBasePath, args, filesToBuild, BuildObjectFile)
 }

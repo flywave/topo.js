@@ -1,5 +1,6 @@
 #include "binding.hh"
 #include "workplane.hh"
+#include <Standard_Failure.hxx>
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -384,11 +385,39 @@ EMSCRIPTEN_BINDINGS(Workplane) {
           "shell",
           emscripten::optional_override(
               [](workplane &self, double thickness, const std::string &kind) {
-                return emscripten::val(self.shell(thickness, kind));
+                try {
+                  return emscripten::val(self.shell(thickness, kind));
+                } catch (const Standard_Failure &f) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Workplane.shell: ") +
+                            (f.GetMessageString() ? f.GetMessageString()
+                                                  : f.DynamicType()->Name()))
+                      .throw_();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Workplane.shell: ") + e.what())
+                      .throw_();
+                }
+                return emscripten::val();
               }))
       .function("fillet", emscripten::optional_override(
                               [](workplane &self, double radius) {
-                                return emscripten::val(self.fillet(radius));
+                                try {
+                                  return emscripten::val(self.fillet(radius));
+                                } catch (const Standard_Failure &f) {
+                                  emscripten::val::global("Error")
+                                      .new_(std::string("Workplane.fillet: ") +
+                                            (f.GetMessageString()
+                                                 ? f.GetMessageString()
+                                                 : f.DynamicType()->Name()))
+                                      .throw_();
+                                } catch (const std::exception &e) {
+                                  emscripten::val::global("Error")
+                                      .new_(std::string("Workplane.fillet: ") +
+                                            e.what())
+                                      .throw_();
+                                }
+                                return emscripten::val();
                               }))
       .function("chamfer",
                 emscripten::optional_override([](workplane &self, double length,
@@ -397,7 +426,21 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   if (!length2Val.isUndefined()) {
                     length2 = length2Val.as<double>();
                   }
-                  return emscripten::val(self.chamfer(length, length2));
+                  try {
+                    return emscripten::val(self.chamfer(length, length2));
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.chamfer: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.chamfer: ") + e.what())
+                        .throw_();
+                  }
+                  return emscripten::val();
                 }))
       .function("transformed",
                 emscripten::optional_override([](workplane &self,
@@ -420,7 +463,8 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   return emscripten::val(self.rarray(xSpacing, ySpacing, xCount,
                                                      yCount, centerAll));
                 } else {
-                  auto center = centerVal.as<std::pair<bool, bool>>();
+                  std::pair<bool, bool> center = {centerVal[0].as<bool>(),
+                                                  centerVal[1].as<bool>()};
                   return emscripten::val(
                       self.rarray(xSpacing, ySpacing, xCount, yCount, center));
                 }
@@ -809,8 +853,23 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       if (!depthVal.isUndefined()) {
                         depth = depthVal.as<double>();
                       }
-                      return emscripten::val(self.cbore_hole(
-                          diameter, cboreDiameter, cboreDepth, depth, clean));
+                      try {
+                        return emscripten::val(self.cbore_hole(
+                            diameter, cboreDiameter, cboreDepth, depth, clean));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.cboreHole: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.cboreHole: ") +
+                                  e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
       .function("cskHole",
                 emscripten::optional_override(
@@ -820,8 +879,23 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       if (!depthVal.isUndefined()) {
                         depth = depthVal.as<double>();
                       }
-                      return emscripten::val(self.csk_hole(
-                          diameter, cskDiameter, cskAngle, depth, clean));
+                      try {
+                        return emscripten::val(self.csk_hole(
+                            diameter, cskDiameter, cskAngle, depth, clean));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.cskHole: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.cskHole: ") +
+                                  e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
       .function("hole",
                 emscripten::optional_override(
@@ -831,14 +905,43 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       if (!depthVal.isUndefined()) {
                         depth = depthVal.as<double>();
                       }
-                      return emscripten::val(self.hole(diameter, depth, clean));
+                      try {
+                        return emscripten::val(self.hole(diameter, depth, clean));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.hole: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.hole: ") + e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
       .function("twistExtrude",
                 emscripten::optional_override(
                     [](workplane &self, double distance, double angleDegrees,
                        bool combine, bool clean) {
-                      return emscripten::val(self.twist_extrude(
-                          distance, angleDegrees, combine, clean));
+                      try {
+                        return emscripten::val(self.twist_extrude(
+                            distance, angleDegrees, combine, clean));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.twistExtrude: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.twistExtrude: ") +
+                                  e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
 
       .function("extrude",
@@ -861,19 +964,33 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                     taper = taperVal.as<double>();
                   }
 
-                  if (argVal.typeOf().as<std::string>() == "number") {
-                    double distance = argVal.as<double>();
-                    return emscripten::val(
-                        self.extrude(distance, combine, clean, both, taper));
-                  } else if (argVal.typeOf().as<std::string>() == "face") {
-                    auto f = argVal.as<topo::face>();
-                    return emscripten::val(
-                        self.extrude(f, combine, clean, both, taper));
-                  } else {
-                    auto faceType = argVal.as<face_index_type>();
-                    return emscripten::val(
-                        self.extrude(faceType, combine, clean, both, taper));
+                  try {
+                    if (argVal.typeOf().as<std::string>() == "number") {
+                      double distance = argVal.as<double>();
+                      return emscripten::val(self.extrude(
+                          distance, combine, clean, both, taper));
+                    } else if (argVal.typeOf().as<std::string>() == "face") {
+                      auto f = argVal.as<topo::face>();
+                      return emscripten::val(
+                          self.extrude(f, combine, clean, both, taper));
+                    } else {
+                      auto faceType = argVal.as<face_index_type>();
+                      return emscripten::val(self.extrude(
+                          faceType, combine, clean, both, taper));
+                    }
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.extrude: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.extrude: ") + e.what())
+                        .throw_();
                   }
+                  return emscripten::val();
                 }))
       .function("sweep",
                 emscripten::optional_override(
@@ -896,68 +1013,129 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                         auxSpine = auxSpineVal.as<std::shared_ptr<workplane>>();
                       }
 
-                      if (pathVal.typeOf().as<std::string>() == "workplane") {
-                        auto wp = pathVal.as<std::shared_ptr<workplane>>();
-                        return emscripten::val(self.sweep(
-                            *wp, multisection, makeSolid, isFrenet, combine,
-                            clean, transition, normal, auxSpine));
-                      } else if (pathVal.typeOf().as<std::string>() == "wire") {
-                        auto wire = pathVal.as<topo::wire>();
-                        return emscripten::val(self.sweep(
-                            wire, multisection, makeSolid, isFrenet, combine,
-                            clean, transition, normal, auxSpine));
-                      } else {
-                        auto edge = pathVal.as<topo::edge>();
-                        return emscripten::val(self.sweep(
-                            edge, multisection, makeSolid, isFrenet, combine,
-                            clean, transition, normal, auxSpine));
+                      try {
+                        if (pathVal.typeOf().as<std::string>() ==
+                            "workplane") {
+                          auto wp =
+                              pathVal.as<std::shared_ptr<workplane>>();
+                          return emscripten::val(self.sweep(
+                              *wp, multisection, makeSolid, isFrenet, combine,
+                              clean, transition, normal, auxSpine));
+                        } else if (pathVal.typeOf().as<std::string>() ==
+                                   "wire") {
+                          auto wire = pathVal.as<topo::wire>();
+                          return emscripten::val(self.sweep(
+                              wire, multisection, makeSolid, isFrenet, combine,
+                              clean, transition, normal, auxSpine));
+                        } else {
+                          auto edge = pathVal.as<topo::edge>();
+                          return emscripten::val(self.sweep(
+                              edge, multisection, makeSolid, isFrenet, combine,
+                              clean, transition, normal, auxSpine));
+                        }
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.sweep: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.sweep: ") + e.what())
+                            .throw_();
                       }
+                      return emscripten::val();
                     }))
       .function(
           "union",
           emscripten::optional_override([](workplane &self,
                                            emscripten::val otherVal, bool clean,
                                            bool glue, double tol) {
-            if (otherVal.typeOf().as<std::string>() == "workplane") {
-              auto wp = otherVal.as<std::shared_ptr<workplane>>();
-              return emscripten::val(self.union_(*wp, clean, glue, tol));
-            } else if (otherVal.typeOf().as<std::string>() == "solid") {
-              auto s = otherVal.as<topo::solid>();
-              return emscripten::val(self.union_(s, clean, glue, tol));
-            } else {
-              auto com = otherVal.as<topo::compound>();
-              return emscripten::val(self.union_(com, clean, glue, tol));
+            try {
+              if (otherVal.typeOf().as<std::string>() == "workplane") {
+                auto wp = otherVal.as<std::shared_ptr<workplane>>();
+                return emscripten::val(self.union_(*wp, clean, glue, tol));
+              } else if (otherVal.typeOf().as<std::string>() == "solid") {
+                auto s = otherVal.as<topo::solid>();
+                return emscripten::val(self.union_(s, clean, glue, tol));
+              } else {
+                auto com = otherVal.as<topo::compound>();
+                return emscripten::val(self.union_(com, clean, glue, tol));
+              }
+            } catch (const Standard_Failure &f) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Workplane.union: ") +
+                        (f.GetMessageString()
+                             ? f.GetMessageString()
+                             : f.DynamicType()->Name()))
+                  .throw_();
+            } catch (const std::exception &e) {
+              emscripten::val::global("Error")
+                  .new_(std::string("Workplane.union: ") + e.what())
+                  .throw_();
             }
+            return emscripten::val();
           }))
       .function("cut",
                 emscripten::optional_override([](workplane &self,
                                                  emscripten::val otherVal,
                                                  bool clean, double tol) {
-                  if (otherVal.typeOf().as<std::string>() == "workplane") {
-                    auto wp = otherVal.as<std::shared_ptr<workplane>>();
-                    return emscripten::val(self.cut(*wp, clean, tol));
-                  } else if (otherVal.typeOf().as<std::string>() == "solid") {
-                    auto s = otherVal.as<topo::solid>();
-                    return emscripten::val(self.cut(s, clean, tol));
-                  } else {
-                    auto com = otherVal.as<topo::compound>();
-                    return emscripten::val(self.cut(com, clean, tol));
+                  try {
+                    if (otherVal.typeOf().as<std::string>() == "workplane") {
+                      auto wp = otherVal.as<std::shared_ptr<workplane>>();
+                      return emscripten::val(self.cut(*wp, clean, tol));
+                    } else if (otherVal.typeOf().as<std::string>() == "solid") {
+                      auto s = otherVal.as<topo::solid>();
+                      return emscripten::val(self.cut(s, clean, tol));
+                    } else {
+                      auto com = otherVal.as<topo::compound>();
+                      return emscripten::val(self.cut(com, clean, tol));
+                    }
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.cut: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.cut: ") + e.what())
+                        .throw_();
                   }
+                  return emscripten::val();
                 }))
       .function("intersect",
                 emscripten::optional_override([](workplane &self,
                                                  emscripten::val otherVal,
                                                  bool clean, double tol) {
-                  if (otherVal.typeOf().as<std::string>() == "workplane") {
-                    auto wp = otherVal.as<std::shared_ptr<workplane>>();
-                    return emscripten::val(self.intersect(*wp, clean, tol));
-                  } else if (otherVal.typeOf().as<std::string>() == "solid") {
-                    auto s = otherVal.as<topo::solid>();
-                    return emscripten::val(self.intersect(s, clean, tol));
-                  } else {
-                    auto comp = otherVal.as<topo::compound>();
-                    return emscripten::val(self.intersect(comp, clean, tol));
+                  try {
+                    if (otherVal.typeOf().as<std::string>() == "workplane") {
+                      auto wp = otherVal.as<std::shared_ptr<workplane>>();
+                      return emscripten::val(
+                          self.intersect(*wp, clean, tol));
+                    } else if (otherVal.typeOf().as<std::string>() == "solid") {
+                      auto s = otherVal.as<topo::solid>();
+                      return emscripten::val(self.intersect(s, clean, tol));
+                    } else {
+                      auto comp = otherVal.as<topo::compound>();
+                      return emscripten::val(
+                          self.intersect(comp, clean, tol));
+                    }
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.intersect: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.intersect: ") + e.what())
+                        .throw_();
                   }
+                  return emscripten::val();
                 }))
       .function(
           "cutBlind",
@@ -997,8 +1175,23 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                         axisEnd = axisEndVal.as<gp_Pnt>();
                       }
 
-                      return emscripten::val(self.revolve(
-                          angleDegrees, axisStart, axisEnd, combine, clean));
+                      try {
+                        return emscripten::val(self.revolve(
+                            angleDegrees, axisStart, axisEnd, combine, clean));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.revolve: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.revolve: ") +
+                                  e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
       .function(
           "interpPlate",
@@ -1104,6 +1297,48 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                       }
                     }))
       .function(
+          "box",
+          emscripten::optional_override(
+              [](workplane &self, double l, double w, double h,
+                 emscripten::val centerVal, emscripten::val combineVal,
+                 emscripten::val cleanVal) {
+                bool combine = true;
+                if (!combineVal.isUndefined()) {
+                  combine = combineVal.as<bool>();
+                }
+                bool clean = true;
+                if (!cleanVal.isUndefined()) {
+                  clean = cleanVal.as<bool>();
+                }
+                try {
+                  if (centerVal.isUndefined()) {
+                    return emscripten::val(
+                        self.box(l, w, h, false, combine, clean));
+                  } else if (centerVal.typeOf().as<std::string>() ==
+                             "boolean") {
+                    bool centerAll = centerVal.as<bool>();
+                    return emscripten::val(
+                        self.box(l, w, h, centerAll, combine, clean));
+                  } else {
+                    auto center = centerVal.as<std::array<bool, 3>>();
+                    return emscripten::val(
+                        self.box(l, w, h, center, combine, clean));
+                  }
+                } catch (const Standard_Failure &f) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Workplane.box: ") +
+                            (f.GetMessageString()
+                                 ? f.GetMessageString()
+                                 : f.DynamicType()->Name()))
+                      .throw_();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("Workplane.box: ") + e.what())
+                      .throw_();
+                }
+                return emscripten::val();
+              }))
+      .function(
           "combine",
           emscripten::optional_override([](workplane &self, bool clean,
                                            bool glue, emscripten::val tolVal) {
@@ -1116,12 +1351,43 @@ EMSCRIPTEN_BINDINGS(Workplane) {
       .function("cutThruAll",
                 emscripten::optional_override(
                     [](workplane &self, bool clean, double taper) {
-                      return emscripten::val(self.cut_thru_all(clean, taper));
+                      try {
+                        return emscripten::val(
+                            self.cut_thru_all(clean, taper));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.cutThruAll: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.cutThruAll: ") +
+                                  e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
       .function("loft",
                 emscripten::optional_override(
                     [](workplane &self, bool ruled, bool combine, bool clean) {
-                      return emscripten::val(self.loft(ruled, combine, clean));
+                      try {
+                        return emscripten::val(
+                            self.loft(ruled, combine, clean));
+                      } catch (const Standard_Failure &f) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.loft: ") +
+                                  (f.GetMessageString()
+                                       ? f.GetMessageString()
+                                       : f.DynamicType()->Name()))
+                            .throw_();
+                      } catch (const std::exception &e) {
+                        emscripten::val::global("Error")
+                            .new_(std::string("Workplane.loft: ") + e.what())
+                            .throw_();
+                      }
+                      return emscripten::val();
                     }))
       .function("section", emscripten::optional_override(
                                [](workplane &self, emscripten::val heightVal) {
@@ -1143,8 +1409,22 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   if (!kindVal.isUndefined()) {
                     kind = kindVal.as<GeomAbs_JoinType>();
                   }
-                  return emscripten::val(
-                      self.offset2d(d, kind, forConstruction));
+                  try {
+                    return emscripten::val(
+                        self.offset2d(d, kind, forConstruction));
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.offset2d: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.offset2d: ") + e.what())
+                        .throw_();
+                  }
+                  return emscripten::val();
                 }))
       .function("sketch", emscripten::optional_override([](workplane &self) {
                   return emscripten::val(self.sketch());

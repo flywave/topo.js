@@ -3,16 +3,16 @@ TOOL := $(WORKDIR)/build/topo
 CONFIG := gen/topo.full.yml
 THREADING := single-threaded
 
-.PHONY: all help clean tool ogg topo topo-bindings bindings gen-ts run rebuild multi
+.PHONY: all help clean tool ogg nlopt topo topo-bindings bindings gen-ts run rebuild multi
 
 # ─── 完整构建（常用） ────────────────────────────────────────────────
 
-all: tool ogg topo topo-bindings bindings run gen-ts
+all: tool ogg nlopt topo topo-bindings bindings run gen-ts
 	@printf '\n✅ WASM 构建完成: packages/topo-wasm/src/topo.full.{js,wasm,d.ts}\n'
 
-# 快速重编：跳过 OCCT，只重编 go-topo + bindings + 链接（日常开发用）
+# 快速重编：跳过 OCCT，只重编 NLopt + go-topo + bindings + 链接（日常开发用）
 rebuild:
-	$(MAKE) topo topo-bindings bindings run gen-ts
+	$(MAKE) nlopt topo topo-bindings bindings run gen-ts
 	@printf '\n✅ 快速重编完成\n'
 
 # 多线程完整构建
@@ -29,20 +29,24 @@ ogg: tool
 	@printf '=== 2/6: 编译 OCCT 库 ===\n'
 	$(TOOL) build-ogg -d $(WORKDIR) -t $(THREADING)
 
+nlopt: tool
+	@printf '=== 3/7: 编译 NLopt 优化库 ===\n'
+	$(TOOL) build-nlopt -d $(WORKDIR) -t $(THREADING)
+
 topo: tool
-	@printf '=== 3/6: 编译 go-topo 源码 ===\n'
+	@printf '=== 4/7: 编译 go-topo 源码 ===\n'
 	$(TOOL) build-topo -d $(WORKDIR) -t $(THREADING)
 
 topo-bindings: tool
-	@printf '=== 4/6: 编译 bindings 源码 + TS 定义 ===\n'
+	@printf '=== 5/7: 编译 bindings 源码 + TS 定义 ===\n'
 	$(TOOL) build-topo-bindings -d $(WORKDIR) -t $(THREADING)
 
 bindings: tool
-	@printf '=== 5/6: 编译自定义绑定代码 ===\n'
+	@printf '=== 6/7: 编译自定义绑定代码 ===\n'
 	$(TOOL) build-bindings -d $(WORKDIR) -t $(THREADING)
 
 run: tool
-	@printf '=== 6/6: 链接 WASM ===\n'
+	@printf '=== 7/7: 链接 WASM ===\n'
 	$(TOOL) run -d $(WORKDIR) -c $(CONFIG) -t $(THREADING)
 
 gen-ts: tool
@@ -62,12 +66,13 @@ clean:
 help:
 	@printf '\n用法: make [target]\n\n'
 	@printf '目标:\n'
-	@printf '  all       完整构建（OCCT + go-topo + bindings + 链接）\n'
+	@printf '  all       完整构建（OCCT + NLopt + go-topo + bindings + 链接）\n'
 	@printf '  rebuild   快速重编（跳过 OCCT，日常开发用）\n'
 	@printf '  multi     多线程完整构建\n'
 	@printf '  clean     清理构建产物\n'
 	@printf '  tool      只构建 gen 工具\n'
 	@printf '  ogg       只编译 OCCT 库\n'
+	@printf '  nlopt     只编译 NLopt 优化库\n'
 	@printf '  topo      只编译 go-topo 源码\n'
 	@printf '  topo-bindings  只编译 bindings 源码\n'
 	@printf '  bindings  只编译自定义绑定代码\n'

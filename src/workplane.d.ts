@@ -362,6 +362,15 @@ export declare class Workplane {
         maxSegments?: number
     ): Workplane;
 
+    box(
+        l: number,
+        w: number,
+        h: number,
+        center?: boolean | [boolean, boolean, boolean],
+        combine?: boolean,
+        clean?: boolean
+    ): Workplane;
+
     sphere(
         radius: number,
         direct?: { x: number, y: number, z: number },

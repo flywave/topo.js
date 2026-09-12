@@ -83,6 +83,5 @@ func BuildTopoBindingsSource(workDir string, args map[string]string) error {
 		return fmt.Errorf("收集topo绑定源文件失败: %w", err)
 	}
 
-	runWorkers(workDir, "build/src", topoBindingsBasePath, args, filesToBuild, BuildObjectFile)
-	return nil
+	return runWorkers(workDir, "build/src", topoBindingsBasePath, args, filesToBuild, BuildObjectFile)
 }
