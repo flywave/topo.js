@@ -27,6 +27,8 @@ make clean      # 清理构建产物
 
 **孤儿 .o 坑**: 链接按 glob 收集 `build/src/**/*.o` (`gen/build.go`) — go-topo 侧**删除/重命名**源文件后 (如 2026-09 `primitives.cc` 拆分为 5 个专业文件), 残留的旧 `.o` 会被一并链接, 造成重复符号; 需手动 `rm build/src/*.o` 再重编。
 
+**链接步骤的 metadce 偶发损坏 wasm**: `make rebuild` 的 `emcc -O3` 内含 `wasm-metadce`, 它以 `-o` **原地**改写 `packages/topo-wasm/src/topo.full.wasm`。偶发 `[parse exception: Section extends beyond end of input]` 会让该文件被截断 (曾见 66.1MB → 64.2MB), 而 `make` 只是报 `run` 失败 —— 产物已被破坏但仓库看着还在。处理: `git checkout -- packages/topo-wasm/src/topo.full.wasm` 还原后重跑, 重跑即成功 (同参数此前已成功多次, 属偶发而非代码问题)。注意 `make ... | tail` 会把退出码换成 `tail` 的, 别用管道判断成败。
+
 **编译错误必须看日志**: gen 的 `runWorkers` 现已向上传播编译错误 (2026-09 修复, 此前单个 `.cc` 编译失败只打印不报错, `make rebuild` 仍绿 — `sketch_bindings.cc` 曾因此长期缺席 wasm 而无人察觉)。改绑定后若行为不符, 先查构建日志有没有编译失败。
 
 **NLopt**: `make rebuild`/`all` 序列含 `nlopt` 步骤 (`gen/compile_nlopt.go`, 编译 `../go-topo/external/nlopt/src` 的 48 个 .c → `build/src/nlopt/`); cmake 配置头不自动生成, 手维护在 `external/nlopt-wasm/` (`nlopt_config.h` + `nlopt.hpp`), nlopt 升级时需重新审阅。
@@ -43,6 +45,10 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `test/railway_primitives.test.ts` — 52 个铁路 Primitive 类冒烟 (`setDefault` → `build` → shape 非空 / bbox 有限)
 - `test/railway_layout.test.ts` — 锚段/站场布局闭环 (计算口径 / JSON 往返 / 命名唯一 / 编辑再生成 bbox / 与 Go layout JSON 互通)
 - `test/cq_examples.test.ts` — 33 个 CadQuery 官方示例 1:1 移植 (与 go-topo `workplane_examples_test.go` 逐行对应), 与 Go 侧提取的 golden bbox (`test/cq/goldens.json`, 35 条, 口径 = `Value()` 栈首对象 bbox) 逐坐标对账 (容差 1e-6)
+  - **golden 再生成流程** (go-topo 几何变更后必须走, 不要手改数字): ① go-topo `cmake --build build --target topo` + `cp build/src/libtopo.a libs/darwin_arm/` (**只构建 topo 目标**, 全量 build 会连带重编 external/icu) ② `GOLDEN_DUMP=/tmp/g.json CC=/usr/bin/clang CXX=/usr/bin/clang++ go test -run Test_example -count=1 .` (dump 机制见 go-topo `goldens_dump_test.go`, 例子里 35 处 `recordGolden` 由 `GOLDEN_DUMP` 环境变量启用, 不设置时零副作用) ③ 用新 JSON 覆盖对应条目 ④ `make rebuild` 重建 WASM ⑤ 跑 `cq_examples` 对账
+  - **坑: 不要用导出的 `.step` 反推 golden**。STEP 往返对镜像/偏移/多实体示例不等价 (曾实测 11/16/23 三例偏差达 5 倍), 口径必须是内存中 `Value()` 的 bbox
+  - **golden 是"当前 go-topo 的输出"快照, 不是独立预言机**: 修 go-topo 几何 bug 后 golden 会合法漂移, 此时按上面流程重生成; 关键判据是 Go 与 WASM 在新 golden 下同时通过 (两侧共用同一份 C++, 修好后应逐位一致, 曾实测 ex_29 xMin 双侧 `-50.82392200292494` 完全相等)
+  - **改 golden 前后都要问「新值是否比旧值更对」**: 本轮两次重生成各有一条独立佐证 (ex_29 先由 x/y 零展布的退化直线变成实体; 后续绕向修复又把它从 z `-48..51` 拉回构造本身蕴含的 `0..51`)。仅「两侧一致」不足以证明正确性 —— 一致只证明 parity。
 - 绑定层全量覆盖 (移植 go-topo 同名 Go 测试, parity 断言; skip 项 = 绑定缺口, 见"已知坑"的缺口清单):
   - `test/shapes_edge_wire.test.ts` / `shapes_face_solid.test.ts` / `shapes_compound.test.ts` — 核心形状族 (Edge/Wire/Vertex/Face/Solid/Shell/CompSolid/Compound/Shape)
   - `test/shape_ops_selector.test.ts` — ShapeOps + Selector
@@ -62,6 +68,8 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - 其他 go-topo cq 层语义偏差 (golden 已如实复现): `val()` = 栈首对象 (example_25 只含末次挤出, 不含基座), `Value()` 经 C API 类型切片体积不可得 (golden 仅 bbox 可对账), `shell(kind="")` 必抛 `Unknown join type` (go-topo 示例传 `""` 是移植错误, CadQuery 应为 `"arc"`), Embind 侧 `extrude` 的 `taper=0` 视为启用拔模 (传 `undefined` 才是无拔模, 与 C API 的 0→none 口径不同, shim `extrudeSimple` 已处理)
 
 ## go-topo 同步基线
+
+**本地补丁 (未提交上游)**: `go-topo/src/face.cc` `face::make_from_wires` 删除冗余的 `faceBuilder.Add(wireRef)` — 构造器已把该 wire 注册为外环, 重复 Add 会把同一条 wire 再注册为内环, OCCT 对内/外环重合返回**两个重合面**的 compound, 于是 workplane `get_faces()` 回退路径产出两个面、`extrude` 挤出两个重叠棱柱: 体积恰好翻倍且 `isValid() === false`。影响 `Workplane.polyline().close()` / `moveTo-lineTo-close` / `Workplane.rect`(CQ shim 全部暴露)。修复后 `cq_examples` 的 25/28/29 三例 bbox 合法漂移并已按上述流程重生成 (其中 29 原本是 x/y 零展布的**退化直线**, 现为 101×151×99 实体; 25 纳入更多几何; 28 仍属 `safe_call` 退化链)。`test/workplane_full.test.ts` 的 `Workplane profile extrusion validity` 覆盖此修复。**内环绕向 (已分析, 未落地)**: OCCT 把与外环**同绕向**的内环读成凸台而非孔 —— 面拓扑正确但材料侧反了 (面积被加上而非减掉, 实体 `isValid()` false)。修复方案已实测成立: 用 `ShapeFix_Face::FixOrientation()` (与 `face::make_face(wire, vector<wire>)` 同法), 并以「内环取样点确实落在外环内」为闸门 (`BRepClass_FaceClassifier`)。**闸门不可省**: `workplane::get_faces()` 把首条之后的 wire 一律当内环, 对互不相交的轮廓 (braille 例的 6 个独立圆) 是误判, 无闸门修复会把该例压平。带闸门时 35 条 golden 保住 34 条。**未落地的唯一原因**: 剩下那一条 `example_29_enclosure` 是 `safe_call` 退化链, 其 golden 记录的是**链在哪一步冻结**而非几何; 修复使 WASM 与 Go 的冻结点分叉 (WASM 侧抛裸指针异常), 而两侧 OCCT 同为 7.7.2 同一份源码, 差异源于 AGENTS 已记载的「Go 静默退化 / JS 抛异常」语义分歧。**落地前提**: 先决定那 7 条退化 golden 该如何断言 (例如改为断言"退化/抛异常"而非 bbox)。当前由 `test/workplane_full.test.ts` 的 `it.fails` 与 go-topo `face_wire_winding_test.go` 的 skip 项各自钉住。
 
 当前同步至 go-topo `52aa12f28` (2026-09-08, 含审计修复轮: C++ 核心零签名变化, cgo C API 层大改与 WASM 无关) + 布尔修复 (纯实体 compound 递归拍平消除嵌套自干涉 UB、`Standard_Failure` 翻译为 `std::runtime_error`/`boost::none`, go-topo 侧见 `shape_ops.hh` `append_flattened`)。TS 层已与 Go 层对齐的防御: 锚段柱数 `Math.ceil(totalLen/spanLen)+1` (`CalcOcsSpanPositions`)、6 个铁路类 build 入口零值兜底 (`withDefaults`)、52 个铁路类 build 入口 NaN 拒绝 (`primitives_guard.go` 的 `hasNaN` 对应 `BasePrimitive.assertNoNaN`)。异常通道: 布尔家族 (Compound/ShapeOps 的 cut/fuse/intersect) 绑定层已将 C++ 异常翻译为可读 JS Error; 其余绑定面仍是裸指针数字 (Embind 不翻译 C++ 异常, 已确认该构建连 std::exception 也不翻译); 空 shape 调 `bbox()` 会抛异常 (预存在, Go 侧同样报错, 双侧一致)。
 

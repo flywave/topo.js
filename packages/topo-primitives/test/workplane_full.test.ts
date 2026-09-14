@@ -583,6 +583,146 @@ describe("TestWorkplanePolygonByVertices", () => {
     });
 });
 
+// These were previously broken. face::make_from_wires (go-topo src/face.cc)
+// registered the outer wire a second time as an inner wire:
+//
+//     BRepBuilderAPI_MakeFace faceBuilder(wireRef);
+//     faceBuilder.Add(wireRef);            // <- the same wire, again
+//
+// OCCT answers a coincident inner/outer pair with a compound of two coincident
+// faces, so the workplane's get_faces() fallback yielded two faces and extrude
+// built two overlapping prisms: exactly twice the volume, and isValid() false.
+// Fixed in go-topo (the redundant Add removed), which moves three bboxes in
+// cq_examples.test.ts — examples 25/28/29, whose goldens were regenerated from
+// the fixed library. See the AGENTS notes for that baseline update.
+//
+// These assertions are what kept the defect honest: they check validity and
+// volume, which the old bbox-only coverage did not.
+describe("Workplane profile extrusion validity", () => {
+    /** Volume via BRepGProp, which works on any shape (unlike Shape.volume). */
+    function volumeOf(shape: any): number {
+        const props = new tp.GProp_GProps_1();
+        try {
+            tp.BRepGProp.VolumeProperties_1(shape.value(), props, true, false, false);
+            return props.Mass();
+        } finally {
+            props.delete();
+        }
+    }
+
+    it("polyline + close extrudes to one valid solid", () => {
+        const wp = wpNamed("XY");
+        const pts = [
+            new tp.gp_Pnt_3(0, 0, 0),
+            new tp.gp_Pnt_3(10, 0, 0),
+            new tp.gp_Pnt_3(10, 10, 0),
+            new tp.gp_Pnt_3(0, 10, 0),
+        ];
+        const solid = wp.polyline(pts, false, false).close().extrude(5, true, true, false, undefined);
+        const val = solid.val();
+
+        expect(val.isValid()).toBe(true);
+        expect(volumeOf(val)).toBeCloseTo(10 * 10 * 5, 3);
+    });
+
+    it("moveTo/lineTo chain extrudes to one valid solid", () => {
+        const wp = wpNamed("XY");
+        const solid = wp
+            .moveTo(-5, -5)
+            .lineTo(5, -5)
+            .lineTo(5, 5)
+            .lineTo(-5, 5)
+            .close()
+            .extrude(5, true, true, false, undefined);
+        const val = solid.val();
+
+        expect(val.isValid()).toBe(true);
+        expect(volumeOf(val)).toBeCloseTo(10 * 10 * 5, 3);
+    });
+
+    it("Workplane.rect extrudes to one valid solid", () => {
+        const wp = wpNamed("XY");
+        const solid = wp.rect(20, 10, true, false).extrude(5, true, true, false, undefined);
+        const val = solid.val();
+
+        expect(val.isValid()).toBe(true);
+        expect(volumeOf(val)).toBeCloseTo(20 * 10 * 5, 3);
+    });
+
+    it("an inner wire wound opposite to the outer is a hole", () => {
+        const wp = wpNamed("XY");
+        const outer = [
+            new tp.gp_Pnt_3(0, 0, 0),
+            new tp.gp_Pnt_3(20, 0, 0),
+            new tp.gp_Pnt_3(20, 10, 0),
+            new tp.gp_Pnt_3(0, 10, 0),
+        ];
+        const innerCW = [
+            new tp.gp_Pnt_3(8, 3, 0),
+            new tp.gp_Pnt_3(8, 7, 0),
+            new tp.gp_Pnt_3(12, 7, 0),
+            new tp.gp_Pnt_3(12, 3, 0),
+        ];
+        const solid = wp
+            .polyline(outer, false, false)
+            .close()
+            .polyline(innerCW, false, false)
+            .close()
+            .extrude(5, true, true, false, undefined);
+        const val = solid.val();
+
+        expect(val.isValid()).toBe(true);
+        expect(volumeOf(val)).toBeCloseTo((20 * 10 - 4 * 4) * 5, 3);
+    });
+
+    // Known defect, deliberately not fixed. An inner wire wound the SAME way as the
+    // outer is read by OCCT as a boss, not a hole: the inner square is added to the
+    // solid instead of subtracted (vol 1080 = (200+16)*5 rather than 920) and the
+    // result is not valid.
+    //
+    // The repair is understood and verified: ShapeFix_Face::FixOrientation() makes
+    // this case valid, provided it is gated on the added wires actually lying
+    // inside the outer one — workplane::get_faces() labels every wire after the
+    // first as "inner", which is wrong for disjoint profiles, and repairing those
+    // flattens the braille example (6 separate circles) rather than fixing
+    // anything. With the gate, 34 of 35 goldens are preserved.
+    //
+    // It is not landed because it also moves example_29_enclosure — one of the
+    // examples whose golden records WHERE go-topo's safe_call chain froze rather
+    // than any geometry. Under the repair the WASM's frozen state diverges from
+    // Go's, so parity cannot be restored without first deciding how the degraded
+    // examples should be asserted. See AGENTS.md, and go-topo
+    // face_wire_winding_test.go for the C++-side proof and the skipped case.
+    //
+    // `it.fails` keeps the suite green while pinning the behaviour, and reports a
+    // real failure the moment the defect is fixed.
+    it.fails("an inner wire wound the same way as the outer is a hole", () => {
+        const wp = wpNamed("XY");
+        const outer = [
+            new tp.gp_Pnt_3(0, 0, 0),
+            new tp.gp_Pnt_3(20, 0, 0),
+            new tp.gp_Pnt_3(20, 10, 0),
+            new tp.gp_Pnt_3(0, 10, 0),
+        ];
+        const innerCCW = [
+            new tp.gp_Pnt_3(8, 3, 0),
+            new tp.gp_Pnt_3(12, 3, 0),
+            new tp.gp_Pnt_3(12, 7, 0),
+            new tp.gp_Pnt_3(8, 7, 0),
+        ];
+        const solid = wp
+            .polyline(outer, false, false)
+            .close()
+            .polyline(innerCCW, false, false)
+            .close()
+            .extrude(5, true, true, false, undefined);
+        const val = solid.val();
+
+        expect(val.isValid()).toBe(true);
+        expect(volumeOf(val)).toBeCloseTo((20 * 10 - 4 * 4) * 5, 3);
+    });
+});
+
 describe("TestWorkplaneRarray", () => {
     it("Rarray", () => {
         const wp = wpNamed("XY");
