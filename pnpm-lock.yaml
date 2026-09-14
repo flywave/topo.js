@@ -143,6 +143,61 @@ importers:
         specifier: ^4.15.1
         version: 4.15.2(webpack-cli@5.1.4)(webpack@5.99.8)
 
+  packages/topo-img2cad:
+    dependencies:
+      three:
+        specifier: '>=0.174.0'
+        version: 0.176.0
+      topo-js:
+        specifier: workspace:*
+        version: link:../topo-js
+      topo-primitives:
+        specifier: workspace:*
+        version: link:../topo-primitives
+      topo-threejs:
+        specifier: workspace:*
+        version: link:../topo-threejs
+      topo-wasm:
+        specifier: workspace:*
+        version: link:../topo-wasm
+    devDependencies:
+      '@rollup/plugin-commonjs':
+        specifier: ^25.0.1
+        version: 25.0.8(rollup@3.10.1)
+      '@rollup/plugin-json':
+        specifier: ^6.0.0
+        version: 6.0.0(rollup@3.10.1)
+      '@rollup/plugin-node-resolve':
+        specifier: ^15.0.0
+        version: 15.0.1(rollup@3.10.1)
+      '@rollup/plugin-terser':
+        specifier: ^0.4.3
+        version: 0.4.4(rollup@3.10.1)
+      '@rollup/plugin-typescript':
+        specifier: ^11.1.0
+        version: 11.1.6(rollup@3.10.1)(tslib@2.8.1)(typescript@5.1.6)
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      '@types/three':
+        specifier: ^0.174.0
+        version: 0.174.0
+      rollup:
+        specifier: 3.10.1
+        version: 3.10.1
+      rollup-plugin-sourcemaps:
+        specifier: ^0.6.3
+        version: 0.6.3(@types/node@20.19.43)(rollup@3.10.1)
+      rollup-plugin-ts:
+        specifier: 3.1.1
+        version: 3.1.1(@swc/core@1.11.24(@swc/helpers@0.4.37))(@swc/helpers@0.4.37)(rollup@3.10.1)(typescript@5.1.6)
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+      vitest:
+        specifier: ^0.28.5
+        version: 0.28.5(terser@5.39.1)
+
   packages/topo-js:
     dependencies:
       flatbush:
@@ -877,6 +932,19 @@ packages:
       rollup:
         optional: true
 
+  '@rollup/plugin-typescript@11.1.6':
+    resolution: {integrity: sha512-R92yOmIACgYdJ7dJ97p4K69I8gg6IEHt8M7dUBxN3W6nrO8uUxX5ixl0yU/N3aZTi8WhPuICvOHXQvF6FaykAA==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^2.14.0||^3.0.0||^4.0.0
+      tslib: '*'
+      typescript: '>=3.7.0'
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+      tslib:
+        optional: true
+
   '@rollup/plugin-virtual@3.0.2':
     resolution: {integrity: sha512-10monEYsBp3scM4/ND4LNH5Rxvh3e/cVeL3jWTgZ2SrQ+BmUoQcopVQvnaMcOnykb1VkxUFuDAN+0FnpTFRy2A==}
     engines: {node: '>=14.0.0'}
@@ -1142,6 +1210,9 @@ packages:
 
   '@types/node@17.0.45':
     resolution: {integrity: sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==}
+
+  '@types/node@20.19.43':
+    resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
 
   '@types/node@22.15.18':
     resolution: {integrity: sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg==}
@@ -5134,7 +5205,7 @@ snapshots:
     dependencies:
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
       '@types/yargs': 15.0.19
       chalk: 4.1.2
 
@@ -5530,6 +5601,12 @@ snapshots:
     optionalDependencies:
       rollup: 3.10.1
 
+  '@rollup/plugin-json@6.0.0(rollup@3.10.1)':
+    dependencies:
+      '@rollup/pluginutils': 5.1.4(rollup@3.10.1)
+    optionalDependencies:
+      rollup: 3.10.1
+
   '@rollup/plugin-json@6.0.0(rollup@3.28.0)':
     dependencies:
       '@rollup/pluginutils': 5.1.4(rollup@3.28.0)
@@ -5573,6 +5650,15 @@ snapshots:
       terser: 5.39.1
     optionalDependencies:
       rollup: 3.28.0
+
+  '@rollup/plugin-typescript@11.1.6(rollup@3.10.1)(tslib@2.8.1)(typescript@5.1.6)':
+    dependencies:
+      '@rollup/pluginutils': 5.1.4(rollup@3.10.1)
+      resolve: 1.22.10
+      typescript: 5.1.6
+    optionalDependencies:
+      rollup: 3.10.1
+      tslib: 2.8.1
 
   '@rollup/plugin-virtual@3.0.2(rollup@3.28.0)':
     optionalDependencies:
@@ -5754,11 +5840,11 @@ snapshots:
   '@types/body-parser@1.19.5':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/bonjour@3.5.13':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/chai-subset@1.3.6(@types/chai@4.3.20)':
     dependencies:
@@ -5769,11 +5855,11 @@ snapshots:
   '@types/connect-history-api-fallback@1.5.4':
     dependencies:
       '@types/express-serve-static-core': 5.0.6
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/eslint-scope@3.7.7':
     dependencies:
@@ -5791,14 +5877,14 @@ snapshots:
 
   '@types/express-serve-static-core@4.19.6':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
       '@types/qs': 6.9.18
       '@types/range-parser': 1.2.7
       '@types/send': 0.17.4
 
   '@types/express-serve-static-core@5.0.6':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
       '@types/qs': 6.9.18
       '@types/range-parser': 1.2.7
       '@types/send': 0.17.4
@@ -5822,7 +5908,7 @@ snapshots:
 
   '@types/http-proxy@1.17.16':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
@@ -5844,13 +5930,18 @@ snapshots:
 
   '@types/node-forge@1.3.11':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/node@17.0.45': {}
+
+  '@types/node@20.19.43':
+    dependencies:
+      undici-types: 6.21.0
 
   '@types/node@22.15.18':
     dependencies:
       undici-types: 6.21.0
+    optional: true
 
   '@types/normalize-package-data@2.4.4': {}
 
@@ -5869,7 +5960,7 @@ snapshots:
   '@types/send@0.17.4':
     dependencies:
       '@types/mime': 1.3.5
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/serve-index@1.9.4':
     dependencies:
@@ -5878,12 +5969,12 @@ snapshots:
   '@types/serve-static@1.15.7':
     dependencies:
       '@types/http-errors': 2.0.4
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
       '@types/send': 0.17.4
 
   '@types/sockjs@0.3.36':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/stats.js@0.17.4': {}
 
@@ -5904,7 +5995,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -7388,7 +7479,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.0.5
+      minimatch: 3.1.2
       once: 1.4.0
       path-is-absolute: 1.0.1
 
@@ -7824,7 +7915,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -9013,6 +9104,14 @@ snapshots:
     dependencies:
       glob: 9.3.5
 
+  rollup-plugin-sourcemaps@0.6.3(@types/node@20.19.43)(rollup@3.10.1):
+    dependencies:
+      '@rollup/pluginutils': 3.1.0(rollup@3.10.1)
+      rollup: 3.10.1
+      source-map-resolve: 0.6.0
+    optionalDependencies:
+      '@types/node': 20.19.43
+
   rollup-plugin-sourcemaps@0.6.3(@types/node@22.15.18)(rollup@3.10.1):
     dependencies:
       '@rollup/pluginutils': 3.1.0(rollup@3.10.1)
@@ -9645,7 +9744,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite-node@0.28.5(@types/node@22.15.18)(terser@5.39.1):
+  vite-node@0.28.5(@types/node@20.19.43)(terser@5.39.1):
     dependencies:
       cac: 6.7.14
       debug: 4.4.1
@@ -9654,7 +9753,7 @@ snapshots:
       picocolors: 1.1.1
       source-map: 0.6.1
       source-map-support: 0.5.21
-      vite: 4.5.14(@types/node@22.15.18)(terser@5.39.1)
+      vite: 4.5.14(@types/node@20.19.43)(terser@5.39.1)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -9696,6 +9795,16 @@ snapshots:
     dependencies:
       vite: 4.5.14(@types/node@22.15.18)(terser@5.39.1)
 
+  vite@4.5.14(@types/node@20.19.43)(terser@5.39.1):
+    dependencies:
+      esbuild: 0.18.20
+      postcss: 8.5.3
+      rollup: 3.28.0
+    optionalDependencies:
+      '@types/node': 20.19.43
+      fsevents: 2.3.3
+      terser: 5.39.1
+
   vite@4.5.14(@types/node@22.15.18)(terser@5.39.1):
     dependencies:
       esbuild: 0.18.20
@@ -9710,7 +9819,7 @@ snapshots:
     dependencies:
       '@types/chai': 4.3.20
       '@types/chai-subset': 1.3.6(@types/chai@4.3.20)
-      '@types/node': 22.15.18
+      '@types/node': 20.19.43
       '@vitest/expect': 0.28.5
       '@vitest/runner': 0.28.5
       '@vitest/spy': 0.28.5
@@ -9729,8 +9838,8 @@ snapshots:
       tinybench: 2.9.0
       tinypool: 0.3.1
       tinyspy: 1.1.1
-      vite: 4.5.14(@types/node@22.15.18)(terser@5.39.1)
-      vite-node: 0.28.5(@types/node@22.15.18)(terser@5.39.1)
+      vite: 4.5.14(@types/node@20.19.43)(terser@5.39.1)
+      vite-node: 0.28.5(@types/node@20.19.43)(terser@5.39.1)
       why-is-node-running: 2.3.0
     transitivePeerDependencies:
       - less

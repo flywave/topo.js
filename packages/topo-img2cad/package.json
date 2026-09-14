@@ -1,0 +1,44 @@
+{
+  "name": "topo-img2cad",
+  "version": "0.1.0",
+  "description": "AI-driven parametric CAD model generation from images using topo.js",
+  "type": "module",
+  "main": "dist/umd/index.js",
+  "module": "dist/es/index.js",
+  "types": "dist/es/index.d.ts",
+  "bin": {
+    "topo-img2cad": "dist/es/cli/index.js"
+  },
+  "scripts": {
+    "build": "rollup -c rollup.config.js",
+    "dev": "rollup -w -c rollup.config.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "three": ">=0.174.0"
+  },
+  "dependencies": {
+    "topo-primitives": "workspace:*",
+    "topo-js": "workspace:*",
+    "topo-threejs": "workspace:*",
+    "topo-wasm": "workspace:*"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.1",
+    "@rollup/plugin-json": "^6.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^0.4.3",
+    "@rollup/plugin-typescript": "^11.1.0",
+    "@types/node": "^20.0.0",
+    "@types/three": "^0.174.0",
+    "rollup": "3.10.1",
+    "rollup-plugin-sourcemaps": "^0.6.3",
+    "rollup-plugin-ts": "3.1.1",
+    "typescript": "^5.1.6",
+    "vitest": "^0.28.5"
+  },
+  "files": [
+    "dist"
+  ]
+}
