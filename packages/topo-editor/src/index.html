@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>topo.js Editor</title>
+</head>
+<body>
+  <div id="app">
+    <div id="toolbar">
+      <select id="example-select"></select>
+      <button id="btn-run" title="Ctrl/Cmd+Enter">Run</button>
+      <button id="btn-reset-camera" title="Reset camera">Reset View</button>
+      <label id="wireframe-label">
+        <input type="checkbox" id="chk-wireframe" /> Wireframe
+      </label>
+    </div>
+    <div id="main">
+      <div id="editor-pane">
+        <div id="editor"></div>
+      </div>
+      <div id="divider"></div>
+      <div id="viewport-pane">
+        <canvas id="viewport-canvas"></canvas>
+      </div>
+    </div>
+    <div id="statusbar">
+      <span id="status-time"></span>
+      <span id="status-shapes"></span>
+      <span id="status-error"></span>
+    </div>
+  </div>
+</body>
+</html>

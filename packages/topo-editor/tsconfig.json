@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "isolatedModules": false,
+    "composite": true,
+    "paths": {
+      "topo-js": ["../topo-js/src"],
+      "topo-primitives": ["../topo-primitives/lib"]
+    }
+  },
+  "exclude": ["node_modules", "**/node_modules/*"],
+  "include": ["src/**/*"],
+  "references": [{ "path": "../topo-js" }, { "path": "../topo-primitives" }]
+}
