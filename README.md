@@ -2,7 +2,21 @@
 
 浏览器端 3D 拓扑几何建模引擎 — [go-topo](https://github.com/flywave/go-topo) 的 WASM 移植。
 
-基于 **OpenCASCADE** 技术，通过 **Emscripten** 编译为 WebAssembly，在浏览器中提供完整的参数化 CAD 建模能力。核心 API 设计受 [cadquery](https://github.com/CadQuery/cadquery) 启发，采用工作平面-草图-实体构建的工作流。
+基于 **OpenCASCADE** 技术，通过 **Emscripten** 编译为 WebAssembly，在浏览器中提供完整的参数化 CAD 建模能力。核心 API 设计受 [CadQuery](https://github.com/CadQuery/cadquery) 启发，采用工作平面-草图-实体构建的工作流。
+
+## 截图
+
+### 可视化编辑器（topo-editor）
+
+左侧代码编辑器，右侧实时 3D 预览。支持 CadQuery 风格 API，编辑即时渲染。
+
+![topo-editor](docs/media/img1.png)
+
+### Three.js 示例（topo-example）
+
+基于 Three.js 的参数化图元展示，覆盖铁路/电力/管道/地质等 60+ 类型。
+
+![topo-example](docs/media/img2.png)
 
 ---
 
@@ -82,11 +96,19 @@ topo.js/                          # WASM 绑定 + JS SDK
 │   │       ├── projection/       # 投影系统
 │   │       └── lib2d/            # 2D 几何库
 │   │
-│   └── topo-example/             # Three.js 示例应用
+│   ├── topo-example/             # Three.js 示例应用
+│   │   └── src/
+│   │       ├── index.ts          # 入口
+│   │       ├── world.ts          # 3D 场景
+│   │       └── primitives.ts     # 图元演示
+│   │
+│   └── topo-editor/              # 可视化代码编辑器
 │       └── src/
 │           ├── index.ts          # 入口
-│           ├── world.ts          # 3D 场景
-│           └── primitives.ts     # 图元演示
+│           ├── editor.ts         # CodeMirror 6 编辑器
+│           ├── runner.ts         # 代码执行沙箱
+│           ├── viewport.ts       # Three.js 3D 视口
+│           └── examples.ts       # 10 个内置示例
 │
 ├── Makefile                      # WASM 构建自动化
 ├── patch.sh                      # WASM 补丁生成脚本
@@ -134,6 +156,14 @@ Three.js 渲染辅助包。提供 `meshToGeometry` 等函数将 WASM 输出的�
 
 基于 Three.js 的示例应用。展示 `Workplane` 建模流程，包含 30+ 示例场景。
 
+### topo-editor (`packages/topo-editor`)
+
+可视化代码编辑器，基于 CodeMirror 6 + Three.js 视口。内置 10 个示例，覆盖 CadQuery 基础操作、布尔运算、草图约束求解、装配约束求解、放样、旋转体等。编辑代码后点击 Run 即时渲染 3D 结果。启动方式：
+
+```bash
+pnpm --filter topo-editor dev   # → localhost:4002
+```
+
 ---
 
 ## 环境要求
@@ -164,11 +194,12 @@ pnpm build:js
 # 3. 构建示例
 pnpm build:example
 
-# 4. 启动开发服务器
+# 4a. 启动示例应用 (localhost:4001)
 pnpm dev
-```
 
-打开 http://localhost:4001 查看示例。
+# 4b. 启动可视化编辑器 (localhost:4002)
+pnpm --filter topo-editor dev
+```
 
 首次运行无需 WASM 构建，`packages/topo-wasm/src/` 中已包含预编译的 WASM 产物。仅当需要修改 C++ 绑定代码或更新 go-topo 内核时才需要执行 WASM 构建。
 
@@ -180,13 +211,14 @@ pnpm dev
 
 | 命令 | 功能 |
 |------|------|
-| `pnpm dev` | 启动开发服务器 → localhost:4001 |
+| `pnpm dev` | 启动示例应用 → localhost:4001 |
 | `pnpm start` | 同上 |
 | `pnpm build:js` | 依次编译 threejs → primitives → js |
 | `pnpm build:example` | 编译示例应用 (webpack) |
 | `pnpm build` | 完整 WASM 构建 (make) |
 | `pnpm rebuild` | 快速重编 WASM (跳过 OCCT) |
 | `pnpm wasm` | 快速重编 WASM |
+| `pnpm --filter topo-editor dev` | 启动可视化编辑器 → localhost:4002 |
 
 ### Makefile
 
@@ -208,15 +240,25 @@ pnpm dev
 
 ## 测试
 
-自动化测试基于 **vitest**，目前集中在 `topo-primitives` 包（铁路 Primitive 类 + 布局闭环）：
+自动化测试基于 **vitest**，覆盖 CadQuery API、参数化图元、约束求解、装配等 17 个测试文件，1100+ 测试用例：
 
 ```sh
 pnpm --filter topo-primitives test        # 一次性全量跑 (vitest run)
 pnpm --filter topo-primitives test:watch  # watch 模式
 ```
 
-- `packages/topo-primitives/test/railway_primitives.test.ts` — 52 个铁路 Primitive 类冒烟（`setDefault` → `build` → shape 非空 / bbox 有限）
-- `packages/topo-primitives/test/railway_layout.test.ts` — 锚段/站场布局闭环（计算口径、JSON 往返、命名唯一、编辑再生成 bbox、与 Go layout JSON 互通）
+主要测试文件：
+
+| 文件 | 覆盖范围 |
+|------|---------|
+| `cq_examples.test.ts` | CadQuery 风格 API（OCC Bottle / Plate / Fillet 等 10+ 示例） |
+| `cq_sketch_solver.test.ts` | 草图约束求解（线段/弧/圆/样条 + LENGTH/FIXED_POINT 约束） |
+| `cq_assembly_solve.test.ts` | 装配约束求解（Fixed/Point/Dist 约束 + 多体装配） |
+| `railway_primitives.test.ts` | 52 个铁路 Primitive 类冒烟 |
+| `railway_layout.test.ts` | 锚段/站场布局闭环（JSON 往返 + Go 互通） |
+| `shape_ops_selector.test.ts` | 布尔运算、选择器、扫掠、放样 |
+| `workplane_full.test.ts` | Workplane 链式建模全流程 |
+
 - WASM 经 `test/helpers/topo.ts` 以模块级单例加载（`topo.full.js` + `readFileSync` wasm binary），每个测试文件初始化一次
 - 注意：重几何用例（道岔/站场再生成）单文件可能跑到数分钟，`vitest.config.ts` 已把 `testTimeout` 放到 180s 并关闭多线程
 
@@ -359,32 +401,31 @@ make run            # 重新链接
 
 ## 示例代码
 
-### 基础立方体
+### CadQuery 风格 API
 
 ```typescript
-import init, { Workplane } from 'topo-wasm';
+import { requestTopoInstance } from 'topo-js';
+import { CQWorkplane, pnt, vec, gpVec, render } from 'topo-primitives';
 
-const topo = await init();
-const wp = new topo.Workplane('XY');
-const box = wp.box(10, 10, 10).val();
+const tp = await requestTopoInstance();
+const wp = new CQWorkplane(tp);
+
+// 带圆角的立方体
+const shape = wp.boxCentered(3, 3, 0.5)
+  .edges("|Z", "")
+  .fillet(0.125);
+render(shape);
 ```
 
 ### 工作平面链式调用
 
 ```typescript
-const result = new topo.Workplane('XY')
+import { Workplane } from 'topo-js';
+
+const result = new Workplane('XY')
   .box(10, 10, 10)
   .faces('>Z')
   .hole(2, 5)
-  .val();
-```
-
-### 草图 + 拉伸
-
-```typescript
-const sk = new topo.Workplane('XY')
-  .rect(10, 10)
-  .extrude(5)
   .val();
 ```
 

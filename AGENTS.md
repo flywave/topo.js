@@ -10,6 +10,7 @@ go-topo (OpenCASCADE C++ 几何内核) 的 WASM 移植: Emscripten 编译 + Embi
 - `packages/topo-primitives/` — 参数化 Primitive 类 (`lib/`, 含 `lib/railway/` 52 个铁路类 + 布局闭环)
 - `packages/topo-threejs/` / `packages/topo-js/` — Three.js 桥接 / 高层 API
 - `packages/topo-example/` — 示例应用 (webpack)
+- `packages/topo-editor/` — 可视化编辑器 (webpack + CodeMirror 6 + three.js 视口): 左侧写 JS 右侧实时渲染, 用于所见即所得验证 topo.js 接口。`pnpm --filter topo-editor dev` → http://localhost:4002 (沙箱注入 `tp`/`CQ`/`CQWorkplane`/`pnt`/`vec`/`gpVec`/`render()`, 内置 10 个与测试套件对齐的示例 snippet)。**注意**: 它经 workspace 包名引用 topo-primitives/topo-js/topo-threejs 的 **dist 构建产物**, 改了这些包的 `lib/`/`src/` 后必须先 `pnpm --filter <pkg> build` 重建 dist, 否则编辑器拿到的是旧代码 (如 CQ 导出缺失报 `CQ is not defined`)
 
 ## 构建
 
@@ -57,6 +58,7 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - **草图约束求解 (NLopt) 已补齐**: `Sketch.constrain(tag[, tag2], kind, value)` + `solve()` + `solve_status()` + `SketchConstraintKind` 枚举 (`src/sketch_bindings.cc`)。value 编组: number→double / `[a,b]`→double2 / `[t1,t2,d]`→double3 (null→none) / 省略→blank。求解后 DOF 在 `solve_status().x` (segment=[x1,y1,x2,y2], 三点弧=[cx,cy,r,a1,a2]), `status` 1-4 为 nlopt 成功码。测试: `test/cq_sketch_solver.test.ts` 33 例 (移植 go-topo `TestSketchSolver_*`, 含几何核验)
 - **装配约束求解已补齐 (NLopt 后端)**: go-topo `solver.cc` 已从 Ipopt 整体切换为 NLopt LD_SLSQP (Ipopt 依赖移除; 顺带修复 Ipopt 时代被静默掩盖的 `to_pods()` entityIndices 恒空 bug — 此前装配 solve 从未真正生效)。绑定: `Assembly.constrain/constrain1/constrain2/constrain3` + `solve(verbosity?)` + `hasError()/getError()` + `AssemblyConstraintKind` 9 值枚举 (`src/assembly_bindings.cc`), param 编组 number/`[a,b]`/`[x,y,z]`/省略。测试: `test/cq_assembly_solve.test.ts` 9 例 (含位移拉回/定点移动几何核验, 与 go-topo `TestAssemblySolve_GeometricVerification` 同口径)
 - **go-topo `safe_call` 粘性错误语义**: Go C API 把每个 workplane 调用包在 `safe_call` 里, 任一调用抛异常后 ctx 置错误标志, **后续所有调用短路 no-op**, 链冻结在抛出点前置状态 (go-topo 33 例中 7 处 golden 退化结果都源于此: 07/19/28/29/30/33)。Embind 绑定**不经** safe_call, 异常原样抛出 — TS 测试用 `Chain`/`safe` helper 显式复现该语义做 parity, 这不是 topo.js 的 bug, 但意味着**两套 API 的错误行为不同**: Go 静默退化, JS 抛异常
+- **go-topo cq 层两处"静默产空"语义** (Go 原生同现, 非 WASM bug): ① `topo::revolve` 对**旋转轴穿过截面**的轮廓静默跳过 (私有 try/catch, `_revolve` 返回空 compound) — CadQuery 标准做法是**偏离转轴的闭合轮廓** (折线偏移轮廓 revolve 正常); ② `workplane::cut(workplane)` 经 `select_shapes(vals())` 提取切割工具, 给"画圆再挤出"的 workplane 会错取轮廓 face 导致切空 — 切割工具用 `cylinder()` 等直接成型的 workplane (实体在栈首) 则正常
 - 其他 go-topo cq 层语义偏差 (golden 已如实复现): `val()` = 栈首对象 (example_25 只含末次挤出, 不含基座), `Value()` 经 C API 类型切片体积不可得 (golden 仅 bbox 可对账), `shell(kind="")` 必抛 `Unknown join type` (go-topo 示例传 `""` 是移植错误, CadQuery 应为 `"arc"`), Embind 侧 `extrude` 的 `taper=0` 视为启用拔模 (传 `undefined` 才是无拔模, 与 C API 的 0→none 口径不同, shim `extrudeSimple` 已处理)
 
 ## go-topo 同步基线
