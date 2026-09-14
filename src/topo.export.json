@@ -49,7 +49,9 @@
             "SubtractSelector",
             "NotSelector",
             "StringSyntaxSelector",
-            "ShapeOps"
+            "ShapeOps",
+            "DxfShapeReader",
+            "DxfShapeWriter"
         ],
         "kind": "class"
     },

@@ -354,13 +354,43 @@ describe("standard_test.go port", () => {
 
     // --- TestXYPoint2Vector2 ---
     // Go: NewXY, NewPoint2, NewVector2 (2D types)
-    // JS: 2D types not exposed as standalone classes
-    it.skip("TestXYPoint2Vector2 — XY/Point2/Vector2 not exposed in JS API", () => {});
+    // JS: gp_XY_2, gp_Pnt2d_3, gp_Vec2d_4 bound in WASM
+    it("TestXYPoint2Vector2", () => {
+        // XY
+        const xy = new tp.gp_XY_2(1, 2);
+        expect(xy.X()).toBeCloseTo(1, TOL);
+        expect(xy.Y()).toBeCloseTo(2, TOL);
+        // Point2d
+        const p2 = new tp.gp_Pnt2d_3(3, 4);
+        expect(p2.X()).toBeCloseTo(3, TOL);
+        expect(p2.Y()).toBeCloseTo(4, TOL);
+        // Vector2d
+        const v2 = new tp.gp_Vec2d_4(5, 6);
+        expect(v2.X()).toBeCloseTo(5, TOL);
+        expect(v2.Y()).toBeCloseTo(6, TOL);
+    });
 
     // --- TestDir2 ---
     // Go: NewDir2, NewDir2FromVector, NewDir2FromPoint (2D types)
-    // JS: Dir2 not exposed in JS API
-    it.skip("TestDir2 — Dir2 not exposed in JS API", () => {});
+    // JS: gp_Dir2d_4 (from xy), gp_Dir2d_2 (from vec2d), gp_Vec2d_5 (from two points)
+    it("TestDir2", () => {
+        // from xy
+        const d1 = new tp.gp_Dir2d_4(1, 0);
+        expect(d1.X()).toBeCloseTo(1, TOL);
+        expect(d1.Y()).toBeCloseTo(0, TOL);
+        // from vector
+        const v = new tp.gp_Vec2d_4(0, 1);
+        const d2 = new tp.gp_Dir2d_2(v);
+        expect(d2.X()).toBeCloseTo(0, TOL);
+        expect(d2.Y()).toBeCloseTo(1, TOL);
+        // from two points (p1→p2 direction)
+        const p1 = new tp.gp_Pnt2d_3(0, 0);
+        const p2 = new tp.gp_Pnt2d_3(1, 0);
+        const vFromPts = new tp.gp_Vec2d_5(p1, p2);
+        const d3 = new tp.gp_Dir2d_2(vFromPts);
+        expect(d3.X()).toBeCloseTo(1, TOL);
+        expect(d3.Y()).toBeCloseTo(0, TOL);
+    });
 
     // --- TestAxis1 ---
     // Go: NewAxis1(p, d), Point(), Dir()
@@ -392,19 +422,56 @@ describe("standard_test.go port", () => {
     });
 
     // --- TestAxis3 ---
-    // Go: NewAxis3FromV, NewAxis3
-    // JS: Axis3 not exposed in JS API
-    it.skip("TestAxis3 — Axis3 not exposed in JS API", () => {});
+    // Go: NewAxis3FromV(NewPoint3, NewDir3FromXYZ), NewAxis3(NewAxis2)
+    // JS: gp_Ax3_3(gp_Pnt, gp_Dir, gp_Dir) / gp_Ax3_4(gp_Pnt, gp_Dir) / gp_Ax3_2(gp_Ax2) bound in WASM
+    it("TestAxis3", () => {
+        // from p, n, vx
+        const a1 = new tp.gp_Ax3_3(pnt(0, 0, 0), dir(0, 0, 1), dir(1, 0, 0));
+        expect(a1).toBeDefined();
+        expect(a1.Location().X()).toBeCloseTo(0, TOL);
+        // from p, v (normal only)
+        const a2 = new tp.gp_Ax3_4(pnt(0, 0, 0), dir(0, 0, 1));
+        expect(a2).toBeDefined();
+    });
 
     // --- TestAxis2d ---
-    // Go: NewAxis2d (2D type)
-    // JS: Not exposed in JS API
-    it.skip("TestAxis2d — Axis2d not exposed in JS API", () => {});
+    // Go: NewAxis2d(NewPoint2, NewDir2)
+    // JS: gp_Ax2d_2(gp_Pnt2d, gp_Dir2d) bound in WASM
+    it("TestAxis2d", () => {
+        const p2 = new tp.gp_Pnt2d_3(0, 0);
+        const d2 = new tp.gp_Dir2d_4(1, 0);
+        const a = new tp.gp_Ax2d_2(p2, d2);
+        expect(a).toBeDefined();
+        const loc = a.Location();
+        expect(loc.X()).toBeCloseTo(0, TOL);
+        expect(loc.Y()).toBeCloseTo(0, TOL);
+        const dir = a.Direction();
+        expect(dir.X()).toBeCloseTo(1, TOL);
+        expect(dir.Y()).toBeCloseTo(0, TOL);
+    });
 
     // --- TestAxis22d ---
-    // Go: NewAxis22d (2D type)
-    // JS: Not exposed in JS API
-    it.skip("TestAxis22d — Axis22d not exposed in JS API", () => {});
+    // Go: NewAxis22d(a2d), NewAxis22dFromV(p, v), NewAxis22dFromVXY(p, vx, vy)
+    // JS: gp_Ax22d_4(ax2d, sense), gp_Ax22d_3(pnt2d, dir2d, sense), gp_Ax22d_2(pnt2d, vx, vy)
+    it("TestAxis22d", () => {
+        const p2 = new tp.gp_Pnt2d_3(0, 0);
+        const d2x = new tp.gp_Dir2d_4(1, 0);
+        const d2y = new tp.gp_Dir2d_4(0, 1);
+        // from Ax2d
+        const a2d = new tp.gp_Ax2d_2(p2, d2x);
+        const ax22 = new tp.gp_Ax22d_4(a2d, true);
+        expect(ax22).toBeDefined();
+        expect(ax22.Location().X()).toBeCloseTo(0, TOL);
+        expect(ax22.Location().Y()).toBeCloseTo(0, TOL);
+        expect(ax22.XDirection().X()).toBeCloseTo(1, TOL);
+        expect(ax22.YDirection().Y()).toBeCloseTo(1, TOL);
+        // from p, v, sense
+        const ax22b = new tp.gp_Ax22d_3(p2, d2x, true);
+        expect(ax22b).toBeDefined();
+        // from p, vx, vy
+        const ax22c = new tp.gp_Ax22d_2(p2, d2x, d2y);
+        expect(ax22c).toBeDefined();
+    });
 
     // --- TestCirc ---
     // Go: NewCircFromAxis2(a, 5), Radius() → 5
@@ -437,19 +504,48 @@ describe("standard_test.go port", () => {
     });
 
     // --- TestCirc2d ---
-    // Go: NewCirc2dFromCenterRadius
-    // JS: gp_Circ2d not exposed in JS API
-    it.skip("TestCirc2d — Circ2d not exposed in JS API", () => {});
+    // Go: NewCirc2dFromCenterRadius(NewPoint2, 5)
+    // JS: gp_Circ2d_2(gp_Ax2d, radius, isSense) bound in WASM
+    it("TestCirc2d", () => {
+        const p2 = new tp.gp_Pnt2d_3(0, 0);
+        const d2 = new tp.gp_Dir2d_4(1, 0);
+        const ax2d = new tp.gp_Ax2d_2(p2, d2);
+        const c = new tp.gp_Circ2d_2(ax2d, 5, true);
+        expect(c).toBeDefined();
+        expect(c.Radius()).toBeCloseTo(5, TOL);
+        const loc = c.Location();
+        expect(loc.X()).toBeCloseTo(0, TOL);
+        expect(loc.Y()).toBeCloseTo(0, TOL);
+    });
 
     // --- TestLine ---
     // Go: NewLineFromPointDir, NewLineFromPoint
-    // JS: Line not a standalone type; use GeometryCreator.makeLine* instead
-    it.skip("TestLine — Line not a standalone type in JS", () => {});
+    // JS: gp_Lin_3(gp_Pnt, gp_Dir) or gp_Lin_2(gp_Ax1) bound in WASM
+    it("TestLine", () => {
+        const l = new tp.gp_Lin_3(pnt(0, 0, 0), dir(1, 0, 0));
+        expect(l).toBeDefined();
+        const loc = l.Location();
+        expect(loc.X()).toBeCloseTo(0, TOL);
+        // from point + dir (two-point equivalent)
+        const l2 = new tp.gp_Lin_3(pnt(0, 0, 0), dir(1, 0, 0));
+        expect(l2).toBeDefined();
+    });
 
     // --- TestLine2d ---
-    // Go: NewLine2dFromPointDir
-    // JS: Line2d not exposed in JS API
-    it.skip("TestLine2d — Line2d not exposed in JS API", () => {});
+    // Go: NewLine2dFromPointDir(NewPoint2, NewDir2)
+    // JS: gp_Lin2d_3(gp_Pnt2d, gp_Dir2d) bound in WASM
+    it("TestLine2d", () => {
+        const p2 = new tp.gp_Pnt2d_3(0, 0);
+        const d2 = new tp.gp_Dir2d_4(1, 0);
+        const l = new tp.gp_Lin2d_3(p2, d2);
+        expect(l).toBeDefined();
+        const loc = l.Location();
+        expect(loc.X()).toBeCloseTo(0, TOL);
+        expect(loc.Y()).toBeCloseTo(0, TOL);
+        const dir2d = l.Direction();
+        expect(dir2d.X()).toBeCloseTo(1, TOL);
+        expect(dir2d.Y()).toBeCloseTo(0, TOL);
+    });
 
     // --- TestPlane ---
     // Go: NewPlaneFromPointDir(p, d)
@@ -494,9 +590,17 @@ describe("standard_test.go port", () => {
     });
 
     // --- TestElips2d ---
-    // Go: NewElips2dFromAxis2dRadius
-    // JS: Elips2d not exposed in JS API
-    it.skip("TestElips2d — Elips2d not exposed in JS API", () => {});
+    // Go: NewElips2dFromAxis2dRadius(a, 10, 5), MajorRadius(), MinorRadius()
+    // JS: gp_Elips2d_2(gp_Ax2d, major, minor, isSense) bound in WASM
+    it("TestElips2d", () => {
+        const p2 = new tp.gp_Pnt2d_3(0, 0);
+        const d2 = new tp.gp_Dir2d_4(1, 0);
+        const a2d = new tp.gp_Ax2d_2(p2, d2);
+        const e = new tp.gp_Elips2d_2(a2d, 10, 5, true);
+        expect(e).toBeDefined();
+        expect(e.MajorRadius()).toBeCloseTo(10, TOL);
+        expect(e.MinorRadius()).toBeCloseTo(5, TOL);
+    });
 
     // --- TestHyperbola ---
     // Go: NewHyperbolaFromAxis2(a, 10, 5), MajorRadius(), MinorRadius()
@@ -542,18 +646,61 @@ describe("standard_test.go port", () => {
 
     // --- TestTrsf ---
     // Go: NewTrsf(12 args), NewTrsfTranslationFromVector, NewTrsfRotationFromPointDir, NewTrsfScaleFromLine
-    // JS: Trsf not a standalone type; use Location/Matrix for transforms
-    it.skip("TestTrsf — Trsf not a standalone type in JS", () => {});
+    // JS: gp_Trsf_1() + SetValues/SetTranslation_1/SetRotation_1/SetScale bound in WASM
+    it("TestTrsf", () => {
+        // identity (12 args → SetValues)
+        const t1 = new tp.gp_Trsf_1();
+        t1.SetValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0);
+        expect(t1.Form()).toBeDefined();
+        // translation
+        const t2 = new tp.gp_Trsf_1();
+        t2.SetTranslation_1(vec(10, 0, 0));
+        const tp_ = t2.TranslationPart();
+        expect(tp_.X()).toBeCloseTo(10, TOL);
+        // rotation
+        const t3 = new tp.gp_Trsf_1();
+        t3.SetRotation_1(new tp.gp_Ax1_2(pnt(0, 0, 0), dir(0, 0, 1)), 45);
+        expect(t3.Form()).toBeDefined();
+        // scale
+        const t4 = new tp.gp_Trsf_1();
+        t4.SetScale(pnt(0, 0, 0), 2);
+        expect(t4.ScaleFactor()).toBeCloseTo(2, TOL);
+    });
 
     // --- TestTrsfMirror ---
     // Go: NewTrsfMirrorFromPoint, FromAxis1, FromPlane
-    // JS: Trsf not a standalone type
-    it.skip("TestTrsfMirror — Trsf not a standalone type in JS", () => {});
+    // JS: gp_Trsf_1() + SetMirror_1(pnt)/SetMirror_2(ax1)/SetMirror_3(ax2) bound in WASM
+    it("TestTrsfMirror", () => {
+        // mirror point
+        const t1 = new tp.gp_Trsf_1();
+        t1.SetMirror_1(pnt(0, 0, 0));
+        expect(t1.Form()).toBeDefined();
+        // mirror axis1
+        const t2 = new tp.gp_Trsf_1();
+        t2.SetMirror_2(new tp.gp_Ax1_2(pnt(0, 0, 0), dir(0, 0, 1)));
+        expect(t2.Form()).toBeDefined();
+        // mirror ax2 (plane)
+        const t3 = new tp.gp_Trsf_1();
+        t3.SetMirror_3(ax2(0, 0, 0, 0, 0, 1, 1, 0, 0));
+        expect(t3.Form()).toBeDefined();
+    });
 
     // --- TestTrsf2d ---
     // Go: NewTrsf2dTranslationFromVector, NewTrsf2dRotationFromPoint
-    // JS: Trsf2d not exposed in JS API
-    it.skip("TestTrsf2d — Trsf2d not exposed in JS API", () => {});
+    // JS: gp_Trsf2d_1() + SetTranslation_1/SetRotation bound in WASM
+    it("TestTrsf2d", () => {
+        // translation
+        const t1 = new tp.gp_Trsf2d_1();
+        t1.SetTranslation_1(new tp.gp_Vec2d_4(10, 0));
+        expect(t1.Form()).toBeDefined();
+        const tpPart = t1.TranslationPart();
+        expect(tpPart.X()).toBeCloseTo(10, TOL);
+        expect(tpPart.Y()).toBeCloseTo(0, TOL);
+        // rotation
+        const t2 = new tp.gp_Trsf2d_1();
+        t2.SetRotation(new tp.gp_Pnt2d_3(0, 0), 45);
+        expect(t2.Form()).toBeDefined();
+    });
 
     // --- TestColor ---
     // Go: NewColor([1,0.5,0]), RGB() → [255,127,0], RGBF(), RGBD()
@@ -608,13 +755,22 @@ describe("standard_test.go port", () => {
 
     // --- TestPlaneNameConstants ---
     // Go: XYPlane="XY", YZPlane="YZ", TopPlane="top", FrontPlane="front"
-    // JS: Plane name constants not exposed; use Plane.named("XY") etc.
-    it.skip("TestPlaneNameConstants — plane name constants not exposed as standalone values in JS", () => {});
+    // JS: Go-only wrapper constants with no C++ binding; verify via Plane.named() instead
+    it("TestPlaneNameConstants — verify via Plane.named()", () => {
+        expect(tp.Plane.named("XY")).toBeDefined();
+        expect(tp.Plane.named("YZ")).toBeDefined();
+        expect(tp.Plane.named("XZ")).toBeDefined();
+    });
 
     // --- TestXYZ ---
     // Go: NewXYZ([1,2,3]), Data() → [1,2,3]
-    // JS: XYZ not a standalone type; use Vector
-    it.skip("TestXYZ — XYZ not a standalone type in JS, use Vector instead", () => {});
+    // JS: gp_XYZ_2(x,y,z) bound in WASM — go-topo's XYZ wraps gp_XYZ
+    it("TestXYZ", () => {
+        const xyz = new tp.gp_XYZ_2(1, 2, 3);
+        expect(xyz.X()).toBeCloseTo(1, TOL);
+        expect(xyz.Y()).toBeCloseTo(2, TOL);
+        expect(xyz.Z()).toBeCloseTo(3, TOL);
+    });
 });
 
 // =========================================================================
@@ -706,33 +862,216 @@ describe("topo_test.go port", () => {
 
     // --- TestBuge ---
     // Go: CreateMultiSegmentPipe with ShapeProfile/PolygonProfile — go-topo specific
-    // JS: No CreateMultiSegmentPipe or ShapeProfile binding
-    it.skip("TestBuge — CreateMultiSegmentPipe/ShapeProfile not exposed in JS", () => {});
+    // JS: createMultiSegmentPipe + PolygonProfile {type: ProfileType.POLYGON, edges, inners}
+    it("TestBuge", () => {
+        const points = [
+            [pnt(0, 0, 0), pnt(13.363751136232167, -26.227833716198802, 40.422308564186096)],
+            [pnt(13.363751136232167, -26.227833716198802, 40.422308564186096), pnt(46.29231750732288, -90.69991450663656, 108.94551491551101)],
+        ];
+        const polyEdges1 = [
+            pnt(-3.171, 2.538, 0), pnt(-3.136, 3.954, 0), pnt(-2.498, 5.219, 0),
+            pnt(-1.382, 6.09, 0), pnt(0, 6.4, 0), pnt(1.382, 6.09, 0),
+            pnt(2.498, 5.219, 0), pnt(3.136, 3.954, 0), pnt(3.171, 2.538, 0),
+            pnt(2.5, 0, 0), pnt(-2.5, 0, 0), pnt(-3.171, 2.538, 0),
+        ];
+        const polyEdges2 = [
+            pnt(-3.4, 3.25, 0), pnt(-2.773, 4.717, 0), pnt(-1.553, 5.746, 0),
+            pnt(0, 6.115, 0), pnt(1.553, 5.746, 0), pnt(2.773, 4.717, 0),
+            pnt(3.4, 3.25, 0), pnt(3.4, 0, 0), pnt(-3.4, 0, 0), pnt(-3.4, 3.25, 0),
+        ];
+        const innerEdges1 = [
+            pnt(-3.078273455639578, 2.575440459011272, 0), pnt(-3.036354153205542, 3.945591360596666, 0),
+            pnt(-2.415107425541498, 5.163064134049417, 0), pnt(-1.339465963909452, 5.999496653245043, 0),
+            pnt(-0.00978236558095332, 6.3004796235756695, 0), pnt(1.3250857438602934, 6.007776113883715, 0),
+            pnt(2.410219147892808, 5.171098830877157, 0), pnt(3.0362530020384777, 3.946891104328797, 0),
+            pnt(3.0763705290048873, 2.57033053075941, 0), pnt(2.4402700090676666, 0.08020179663338835, 0),
+            pnt(-2.4484020179459174, 0.08566007382641323, 0), pnt(-3.078273455639578, 2.575440459011272, 0),
+        ];
+        const innerEdges2 = [
+            pnt(-3.3009689384399516, 3.2638870027828157, 0), pnt(-2.681019727080062, 4.6777618885065335, 0),
+            pnt(-1.5023855429647655, 5.659755134999072, 0), pnt(-0.013823869618346543, 6.0159601058725585, 0),
+            pnt(1.4854596950468153, 5.672255120809437, 0), pnt(2.678133803605064, 4.68537082388747, 0),
+            pnt(3.30065175118932, 3.2613984849103375, 0), pnt(3.328711291934881, 0.07012788391507485, 0),
+            pnt(-3.336054557835377, 0.07688290074113246, 0), pnt(-3.3009689384399516, 3.2638870027828157, 0),
+        ];
+        const dirVec = dir(-0.37127704827582503, 0.7201908387390975, 0.586070396129907);
+        const shp = tp.createMultiSegmentPipe({
+            wires: points,
+            profiles: [
+                { type: tp.ProfileType.POLYGON, edges: polyEdges1, inners: [] },
+                { type: tp.ProfileType.POLYGON, edges: polyEdges2, inners: [] },
+            ],
+            innerProfiles: [
+                { type: tp.ProfileType.POLYGON, edges: innerEdges1, inners: [] },
+                { type: tp.ProfileType.POLYGON, edges: innerEdges2, inners: [] },
+            ],
+            segmentTypes: [tp.SegmentType.LINE, tp.SegmentType.LINE],
+            transitionMode: tp.TransitionMode.TRANSFORMED,
+            upDir: dirVec,
+        });
+        expect(shp).toBeDefined();
+        expect(shp.IsNull()).toBe(false);
+    });
 
     // --- TestBug2 ---
-    // Go: CreateMultiSegmentPipe with complex wires and profiles
-    // JS: Not exposed in JS
-    it.skip("TestBug2 — CreateMultiSegmentPipe not exposed in JS", () => {});
+    // Go: CreateMultiSegmentPipe with complex wires and profiles (6 segments, mixed line/arc)
+    // JS: createMultiSegmentPipe with THREE_POINT_ARC segments
+    it("TestBug2", () => {
+        const wires = [
+            [pnt(0, 0, 0), pnt(-18.381608, -16.456729, 23.967570)],
+            [pnt(-18.381608, -16.456729, 23.967570), pnt(-20.049600, -17.830275, 26.141186)],
+            [pnt(-20.049600, -17.830275, 26.141186), pnt(-29.312281, -23.429547, 34.741874), pnt(-55.277435, -31.565721, 41.815130)],
+            [pnt(-55.277435, -31.565721, 41.815130), pnt(-255.585003, -75.656772, 31.748227)],
+            [pnt(-255.585003, -75.656772, 31.748227), pnt(-328.386169, -107.483284, 77.701580), pnt(-331.303108, -111.641479, 87.604189)],
+            [pnt(-331.303108, -111.641479, 87.604189), pnt(-334.263097, -118.631098, 102.370422)],
+        ];
+        const polygonPts = [
+            pnt(-3.9, 4, 0), pnt(-2.652, 5.403, 0), pnt(-0.939, 6.172, 0),
+            pnt(0.939, 6.172, 0), pnt(2.652, 5.403, 0), pnt(3.9, 4, 0),
+            pnt(3.9, 0, 0), pnt(-3.9, 0, 0), pnt(-3.9, 4, 0),
+        ];
+        const prof = { type: tp.ProfileType.POLYGON, edges: polygonPts, inners: [] } as any;
+        const upDir = dir(-0.301612, 0.874964, 0.378773);
+        const shp = tp.createMultiSegmentPipe({
+            wires,
+            profiles: [prof, prof, prof, prof, prof, prof],
+            innerProfiles: null,
+            segmentTypes: [
+                tp.SegmentType.LINE, tp.SegmentType.LINE, tp.SegmentType.THREE_POINT_ARC,
+                tp.SegmentType.LINE, tp.SegmentType.THREE_POINT_ARC, tp.SegmentType.LINE,
+            ],
+            transitionMode: tp.TransitionMode.TRANSFORMED,
+            upDir,
+        });
+        expect(shp).toBeDefined();
+        expect(shp.IsNull()).toBe(false);
+    });
 
     // --- TestBug3 ---
-    // Go: CreateMultiSegmentPipe
-    // JS: Not exposed in JS
-    it.skip("TestBug3 — CreateMultiSegmentPipe not exposed in JS", () => {});
+    // Go: CreateMultiSegmentPipe with 3 segments, mixed line/arc
+    it("TestBug3", () => {
+        const wires = [
+            [pnt(0, 0, 0), pnt(-35.691625, -32.978268, 46.548679)],
+            [pnt(-35.691625, -32.978268, 46.548679), pnt(-37.229320, -36.179758, 52.584004), pnt(-33.071860, -37.840417, 59.567516)],
+            [pnt(-33.071860, -37.840417, 59.567516), pnt(150.857507, -37.395352, 200.922442)],
+        ];
+        const polygonPts = [
+            pnt(-1.5, 2.1, 0), pnt(-0.875, 2.758, 0), pnt(0, 3, 0),
+            pnt(0.875, 2.758, 0), pnt(1.5, 2.1, 0), pnt(1.5, 0, 0),
+            pnt(-1.5, 0, 0), pnt(-1.5, 2.1, 0),
+        ];
+        const prof = { type: tp.ProfileType.POLYGON, edges: polygonPts, inners: [] } as any;
+        const upDir = dir(-0.301639, 0.874967, 0.378744);
+        const shp = tp.createMultiSegmentPipe({
+            wires,
+            profiles: [prof, prof, prof],
+            innerProfiles: null,
+            segmentTypes: [tp.SegmentType.LINE, tp.SegmentType.THREE_POINT_ARC, tp.SegmentType.LINE],
+            transitionMode: tp.TransitionMode.TRANSFORMED,
+            upDir,
+        });
+        expect(shp).toBeDefined();
+        expect(shp.IsNull()).toBe(false);
+    });
 
     // --- TestBug4 ---
-    // Go: CreateMultiSegmentPipeWithSplitDistances
-    // JS: Not exposed in JS
-    it.skip("TestBug4 — CreateMultiSegmentPipeWithSplitDistances not exposed in JS", () => {});
+    // Go: CreateMultiSegmentPipeWithSplitDistances with outer/inner profiles
+    // JS: createMultiSegmentPipeWithSplitDistances(params, [split1, split2])
+    it("TestBug4", () => {
+        const wires = [
+            [pnt(0, 0, 0), pnt(-128.976600, -1.038238, -99.629249)],
+        ];
+        const outerPts = [
+            pnt(0, 16.1, 0), pnt(14.25, 16.1, 0), pnt(14.25, 17.98, 0),
+            pnt(14.049, 18.948, 0), pnt(13.701, 19.873, 0), pnt(13.213, 20.734, 0),
+            pnt(12.599, 21.508, 0), pnt(9.375, 23.71, 0), pnt(5.778, 25.228, 0),
+            pnt(1.952, 26.002, 0), pnt(-1.952, 26.002, 0), pnt(-5.778, 25.228, 0),
+            pnt(-9.375, 23.71, 0), pnt(-12.599, 21.508, 0), pnt(-13.213, 20.734, 0),
+            pnt(-13.701, 19.873, 0), pnt(-14.049, 18.948, 0), pnt(-14.25, 17.98, 0),
+            pnt(-14.259, 16.1, 0), pnt(0, 16.1, 0),
+        ];
+        const innerPts = [
+            pnt(-0.00001, 16.2, 0), pnt(14.154677, 16.130224, 0), pnt(14.151671, 17.998204, 0),
+            pnt(13.949699, 18.959806, 0), pnt(13.601148, 19.878432, 0), pnt(13.113004, 20.733124, 0),
+            pnt(12.499248, 21.500956, 0), pnt(9.280031, 23.678682, 0), pnt(5.699827, 25.165638, 0),
+            pnt(1.917907, 25.907991, 0), pnt(-1.917921, 25.907986, 0), pnt(-5.699832, 25.165632, 0),
+            pnt(-9.280031, 23.67868, 0), pnt(-12.499248, 21.500956, 0), pnt(-13.113004, 20.733124, 0),
+            pnt(-13.601148, 19.878432, 0), pnt(-13.949699, 18.959806, 0), pnt(-14.151671, 17.998206, 0),
+            pnt(-14.163672, 16.130208, 0), pnt(-0.00001, 16.2, 0),
+        ];
+        const upDir = dir(-0.301619, 0.874963, 0.378768);
+        const shp = tp.createMultiSegmentPipeWithSplitDistances({
+            wires,
+            profiles: [{ type: tp.ProfileType.POLYGON, edges: outerPts, inners: [] }],
+            innerProfiles: [{ type: tp.ProfileType.POLYGON, edges: innerPts, inners: [] }],
+            segmentTypes: [tp.SegmentType.LINE],
+            transitionMode: tp.TransitionMode.TRANSFORMED,
+            upDir,
+        }, [64.3, 68.4]);
+        expect(shp).toBeDefined();
+        expect(shp.IsNull()).toBe(false);
+    });
 
     // --- TestCustomPolygonPipe ---
-    // Go: CreateMultiSegmentPipe with custom polygon profile
-    // JS: Not exposed in JS
-    it.skip("TestCustomPolygonPipe — CreateMultiSegmentPipe not exposed in JS", () => {});
+    // Go: CreateMultiSegmentPipe with custom 21-point polygon profile
+    it("TestCustomPolygonPipe", () => {
+        const wires = [
+            [pnt(0, 0, 0), pnt(0, 0, 50)],
+        ];
+        const customPts = [
+            pnt(0, 10, 0), pnt(-3.403, 9.702, 0), pnt(-6.703, 8.818, 0),
+            pnt(-9.8, 7.374, 0), pnt(-12.599, 5.415, 0), pnt(-13.168, 4.846, 0),
+            pnt(-13.63, 4.188, 0), pnt(-13.97, 3.459, 0), pnt(-14.179, 2.682, 0),
+            pnt(-14.25, 1.88, 0), pnt(-14.25, 0, 0), pnt(-5.4, 0, 0),
+            pnt(-5.4, 1.2, 0), pnt(-5.6, 1.2, 0), pnt(-5.6, 6.93, 0),
+            pnt(-4.928, 7.812, 0), pnt(-4.118, 8.57, 0), pnt(-3.193, 9.182, 0),
+            pnt(-2.18, 9.632, 0), pnt(-1.105, 9.907, 0), pnt(0, 10, 0),
+        ];
+        const upDir = dir(0, 1, 0);
+        const shp = tp.createMultiSegmentPipe({
+            wires,
+            profiles: [{ type: tp.ProfileType.POLYGON, edges: customPts, inners: [] }],
+            innerProfiles: null,
+            segmentTypes: [tp.SegmentType.LINE],
+            transitionMode: tp.TransitionMode.TRANSFORMED,
+            upDir,
+        });
+        expect(shp).toBeDefined();
+        expect(shp.IsNull()).toBe(false);
+    });
 });
 
 // =========================================================================
-// dxf_test.go — 1 test (NOT ported)
+// dxf_test.go — 1 test (ported)
 // =========================================================================
-describe("dxf_test.go — not ported", () => {
-    it.skip("dxf_test.go — dxf.cc excluded from WASM build (filtered in gen)", () => {});
+describe("dxf_test.go port", () => {
+    it("TestNewDxfReader", () => {
+        // Create a minimal valid DXF file in MEMFS with HEADER + ENTITIES
+        // DXF requires at least a HEADER section before ENTITIES
+        const dxfContent = [
+            "0", "SECTION", "2", "HEADER",
+            "9", "$INSUNITS", "70", "4",
+            "0", "ENDSEC",
+            "0", "SECTION", "2", "ENTITIES",
+            "0", "LINE", "8", "layer1",
+            "10", "0.0", "20", "0.0", "30", "0.0",
+            "11", "10.0", "21", "0.0", "31", "0.0",
+            "0", "ENDSEC",
+            "0", "EOF",
+        ].join("\n") + "\n";
+
+        const dxfPath = "/tmp/test_reader.dxf";
+        tp.FS.writeFile(dxfPath, dxfContent);
+
+        const reader = new tp.DxfShapeReader(dxfPath);
+        expect(reader).toBeDefined();
+        expect(reader.failed()).toBe(false);
+
+        reader.doRead();
+        expect(reader.failed()).toBe(false);
+        expect(reader.error()).toBe("");
+
+        const layers = reader.getLayerNames();
+        expect(layers.size()).toBeGreaterThan(0);
+    });
 });

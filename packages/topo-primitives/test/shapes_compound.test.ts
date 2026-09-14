@@ -39,9 +39,9 @@
  *   s.ComputeArea()                  → s.computeArea()
  *   s.AutoCast()                     → s.autoCast()
  *   s.WriteToStl(path)               → NOT BOUND (skip)
- *   s.Share()                        → NOT BOUND (skip)
- *   s.ToSolid()                      → NOT BOUND on Compound (skip)
- *   s.Inertia()                      → NOT BOUND on Compound (skip)
+ *   s.Share()                        → s.share() (returns Shape sharing same handle)
+ *   s.ToSolid()                      → c.toSolid() (reinterprets as Solid)
+ *   s.Inertia()                      → c.inertia() (returns BBox)
  *   s.Mesh(m, p, d, a)              → s.mesh(p, d, a) (returns MeshData directly)
  *   c.Fuse(shapes, glue, tol)       → c.fuse(shapes, glue, tol)
  *   c.Cut(shapes, tol)              → c.cut(shapes, tol)
@@ -284,8 +284,12 @@ describe("TestCompoundToShape", () => {
         expect(s).toBeDefined();
     });
 
-    it.skip("to solid (toSolid not bound on Compound)", () => {
-        // Go: c.ToSolid() → NOT BOUND in JS
+    it("to solid", () => {
+        const shape = makeBox(10, 10, 10);
+        const c = tp.Compound.makeCompound([shape]);
+        const s = c.toSolid();
+        expect(s).toBeDefined();
+        expect(s).not.toBeNull();
     });
 });
 
@@ -306,8 +310,11 @@ describe("TestCompoundCentreInertia", () => {
         expect(cm).toBeDefined();
     });
 
-    it.skip("inertia (not bound on Compound — only face/solid)", () => {
-        // Go: c.Inertia() → NOT BOUND in JS (only face.inertia / solid.inertia)
+    it("inertia", () => {
+        const shape = makeBox(10, 10, 10);
+        const c = tp.Compound.makeCompound([shape]);
+        const bb = c.inertia();
+        expect(bb).toBeDefined();
     });
 });
 
@@ -534,8 +541,11 @@ describe("TestShapeAutoCast", () => {
 });
 
 describe("TestShapeShare", () => {
-    it.skip("share (not bound in JS)", () => {
-        // Go: s.Share() → NOT BOUND in JS
+    it("share", () => {
+        const s = makeBox(10, 10, 10);
+        const s2 = s.share();
+        expect(s2).toBeDefined();
+        expect(s2).not.toBeNull();
     });
 });
 

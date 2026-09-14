@@ -470,6 +470,7 @@ export declare class Shape extends GeometryObject {
     // 其他方法
     value(): TopoDS_Shape;
     copy(deep?: boolean): Shape;
+    share(): Shape;
     shapeType(): TopAbs_ShapeEnum;
     geomType(): ShapeGeomType;
 }
@@ -1266,6 +1267,12 @@ export declare class Compound extends Shape3D {
     value(): TopoDS_Compound;
     type(): GeometryObjectType;
     copy(deep?: boolean): Shape;
+
+    // 类型转换
+    toSolid(): Solid;
+
+    // 几何属性
+    inertia(): BBox;
 }
 
 export declare class CompoundIterator {
@@ -1689,4 +1696,17 @@ export declare class ShapeOps {
         numSamples?: number,
         simplify?: boolean
     ): gp_Pnt[][];
+}
+
+export declare class DxfShapeReader {
+    constructor(filepath: string);
+    failed(): boolean;
+    doRead(): void;
+    error(): string;
+    getLayerNames(): string[];
+}
+
+export declare class DxfShapeWriter {
+    constructor(filepath: string);
+    write(): boolean;
 }

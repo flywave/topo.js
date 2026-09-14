@@ -3,14 +3,18 @@
  *
  * Reference: /Users/xuning/Work/go-topo/assembly_test.go
  * Skips: solve tests (covered in cq_assembly_solve.test.ts),
- *        get/setLocation/replace/parametric (no WASM bindings),
  *        getElements (known bug)
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CQWorkplane } from "../lib/cq/index";
+import {
+    registerParametricBuilder,
+    rebuildFromParametric,
+    ParametricAssembly,
+} from "../lib/assembly/parametric";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -615,27 +619,264 @@ describe("Assembly full API (non-solve)", () => {
     });
 
     // =========================================================================
-    // TestAssemblyParametric — no parametric API in WASM bindings, skip
+    // TestAssemblyParametric
     // =========================================================================
     describe("TestAssemblyParametric", () => {
-        it.skip("add and query — no parametric API in WASM bindings", () => {});
-        it.skip("params survive SetLocation and Replace — no parametric API in WASM bindings", () => {});
-        it.skip("remove clears params — no parametric API in WASM bindings", () => {});
+        beforeAll(() => {
+            registerParametricBuilder("test_box", (params: any) => {
+                const wp = new CQWorkplane(tp, "XY");
+                const shape = wp.boxCentered(params.width, params.length, params.height).value();
+                return { shape };
+            });
+        });
+        afterAll(() => {
+            registerParametricBuilder("test_box", null);
+        });
+
+        it("add and query", () => {
+            const pas = new ParametricAssembly(tp, makeBox10(), "root");
+            // Add a child without parametric (Go: "plain")
+            pas.addObjectParams(makeBox5(), undefined, "plain", undefined, null);
+            // Add a parametric box
+            pas.addObjectParams(makeBox2(), undefined, "box1", undefined, {
+                type: "test_box",
+                params: { width: 4, length: 4, height: 4 },
+            });
+            expect(pas.hasError()).toBe(false);
+
+            const [pd, ok] = pas.getParametric("box1");
+            expect(ok).toBe(true);
+            expect(pd).toBeDefined();
+            expect(pd!.type).toBe("test_box");
+            expect(pd!.params.width).toBe(4);
+
+            // Plain element has no parametric data
+            const [, okPlain] = pas.getParametric("plain");
+            expect(okPlain).toBe(false);
+
+            // Nonexistent element has no parametric data
+            const [, okMiss] = pas.getParametric("nonexistent");
+            expect(okMiss).toBe(false);
+        });
+
+        it("params survive SetLocation and Replace", () => {
+            const pas = new ParametricAssembly(tp, makeBox10(), "root");
+            pas.addObjectParams(makeBox2(), undefined, "box1", undefined, {
+                type: "test_box",
+                params: { width: 4, length: 4, height: 4 },
+            });
+
+            // Create a translation location (1,2,3) via gp_Trsf
+            const trsf = new tp.gp_Trsf_1();
+            trsf.SetValues(1, 0, 0, 1, 0, 1, 0, 2, 0, 0, 1, 3);
+            const loc = new tp.Location(trsf);
+            pas.setLocation("box1", loc);
+            expect(pas.hasError()).toBe(false);
+
+            const [pd1, ok1] = pas.getParametric("box1");
+            expect(ok1).toBe(true);
+            expect(pd1!.type).toBe("test_box");
+
+            // Replace geometry, parametrics should survive
+            const newShp = wp().boxCentered(8, 8, 8).value();
+            pas.replace("box1", newShp);
+            const [pd2, ok2] = pas.getParametric("box1");
+            expect(ok2).toBe(true);
+            expect(pd2!.type).toBe("test_box");
+        });
+
+        it("remove clears params", () => {
+            const pas = new ParametricAssembly(tp, makeBox10(), "root");
+            pas.addObjectParams(makeBox2(), undefined, "box1", undefined, {
+                type: "test_box",
+                params: { width: 4, length: 4, height: 4 },
+            });
+            pas.remove("box1");
+            const [, ok] = pas.getParametric("box1");
+            expect(ok).toBe(false);
+        });
     });
 
     // =========================================================================
-    // TestAssemblyExportParametric — no parametric API, skip
+    // TestAssemblyExportParametric
     // =========================================================================
     describe("TestAssemblyExportParametric", () => {
-        it.skip("export hierarchy — no parametric API in WASM bindings", () => {});
+        beforeAll(() => {
+            registerParametricBuilder("test_box", (params: any) => {
+                const wp = new CQWorkplane(tp, "XY");
+                const shape = wp.boxCentered(params.width, params.length, params.height).value();
+                return { shape };
+            });
+        });
+        afterAll(() => {
+            registerParametricBuilder("test_box", null);
+        });
+
+        it("export hierarchy", () => {
+            const rootShp = makeBox10();
+            const pas = new ParametricAssembly(tp, rootShp, "root");
+
+            // Add box1 with color and location
+            const trsf = new tp.gp_Trsf_1();
+            trsf.SetValues(1, 0, 0, 1, 0, 1, 0, 2, 0, 0, 1, 3);
+            const loc = new tp.Location(trsf);
+            const red = new tp.Quantity_Color_3(1, 0, 0, tp.Quantity_TypeOfColor.Quantity_TOC_RGB);
+            pas.addObjectParams(rootShp, loc, "box1", red, {
+                type: "test_box",
+                params: { width: 4, length: 5, height: 6 },
+            });
+
+            // Create a child sub-assembly with its own parametric data
+            const childShp = makeBox2();
+            const child = tp.Assembly.create(childShp, undefined, "sub");
+            // Attach parametric data to the child assembly wrapper
+            child._parametricData = { type: "test_box", params: { width: 2, length: 2, height: 2 } };
+            child._childParametrics = new Map();
+
+            // Add a parametric grandchild to the child
+            const innerNode = { data: { type: "test_box", params: { width: 1, length: 1, height: 1 } }, children: new Map() };
+            child._childParametrics.set("inner", innerNode);
+            child.add(makeBox2(), undefined, "inner", undefined);
+
+            pas.addAssemblyParams(child, undefined, "", undefined, {
+                type: "test_box",
+                params: { width: 2, length: 2, height: 2 },
+            });
+            expect(pas.hasError()).toBe(false);
+
+            const json = pas.exportParametric();
+            const root = JSON.parse(json);
+
+            expect(root.name).toBe("root");
+            expect(root.children.length).toBe(2);
+
+            const box1 = root.children.find((ch: any) => ch.name === "box1");
+            const sub = root.children.find((ch: any) => ch.name === "sub");
+            expect(box1).toBeDefined();
+            expect(sub).toBeDefined();
+
+            // box1: type, location, color
+            expect(box1.type).toBe("test_box");
+            expect(box1.location).toBeDefined();
+            expect(box1.location[3]).toBe(1);
+            expect(box1.location[7]).toBe(2);
+            expect(box1.location[11]).toBe(3);
+            expect(box1.color).toBeDefined();
+            expect(box1.color[0]).toBe(1);
+
+            // sub: type + nested child
+            expect(sub.type).toBe("test_box");
+            expect(sub.children).toBeDefined();
+            expect(sub.children.length).toBe(1);
+            expect(sub.children[0].name).toBe("inner");
+            expect(sub.children[0].type).toBe("test_box");
+        });
     });
 
     // =========================================================================
-    // TestAssemblyRebuildParametric — no rebuild API, skip
+    // TestAssemblyRebuildParametric
     // =========================================================================
     describe("TestAssemblyRebuildParametric", () => {
-        it.skip("export rebuild round trip — no rebuild API in WASM bindings", () => {});
-        it.skip("unregistered type error — no rebuild API in WASM bindings", () => {});
-        it.skip("invalid JSON — no rebuild API in WASM bindings", () => {});
+        beforeAll(() => {
+            registerParametricBuilder("test_box", (params: any) => {
+                const wp = new CQWorkplane(tp, "XY");
+                const shape = wp.boxCentered(params.width, params.length, params.height).value();
+                return { shape };
+            });
+        });
+        afterAll(() => {
+            registerParametricBuilder("test_box", null);
+        });
+
+        it("export rebuild round trip", () => {
+            // Build source assembly
+            const rootShp = makeBox10();
+            const pas = new ParametricAssembly(tp, rootShp, "root");
+
+            const trsf = new tp.gp_Trsf_1();
+            trsf.SetValues(1, 0, 0, 1, 0, 1, 0, 2, 0, 0, 1, 3);
+            const loc = new tp.Location(trsf);
+            pas.addObjectParams(makeBox10(), loc, "box1", undefined, {
+                type: "test_box",
+                params: { width: 4, length: 5, height: 6 },
+            });
+
+            const childShp = makeBox2();
+            const child = tp.Assembly.create(childShp, undefined, "sub");
+            child._parametricData = { type: "test_box", params: { width: 2, length: 2, height: 2 } };
+            child._childParametrics = new Map();
+            pas.addAssemblyParams(child, undefined, "", undefined, {
+                type: "test_box",
+                params: { width: 2, length: 2, height: 2 },
+            });
+
+            const json = pas.exportParametric();
+
+            // Rebuild from JSON
+            const rebuilt = rebuildFromParametric(tp, json);
+
+            // Verify root name and child count
+            expect(rebuilt.name()).toBe("root");
+            expect(rebuilt.children().length).toBe(2);
+
+            // Verify geometry: find box1 and check bbox
+            const rebuiltChildren = rebuilt.children();
+            let box1El: any;
+            for (let i = 0; i < rebuiltChildren.length; i++) {
+                if (rebuiltChildren[i].name() === "box1") {
+                    box1El = rebuiltChildren[i];
+                    break;
+                }
+            }
+            expect(box1El).toBeDefined();
+
+            const bb = box1El.obj().bbox();
+            // Width (X) ≈ 4
+            const w = bb.xLength();
+            expect(w).toBeGreaterThanOrEqual(3.9);
+            expect(w).toBeLessThanOrEqual(4.1);
+            // Length (Y) ≈ 5
+            const l = bb.yLength();
+            expect(l).toBeGreaterThanOrEqual(4.9);
+            expect(l).toBeLessThanOrEqual(5.1);
+            // Height (Z) ≈ 6
+            const h = bb.zLength();
+            expect(h).toBeGreaterThanOrEqual(5.9);
+            expect(h).toBeLessThanOrEqual(6.1);
+
+            // Verify location from JSON (1,2,3) translation
+            const boxLoc = box1El.location();
+            const boxTrsf = boxLoc.toTrsf();
+            expect(boxTrsf.Value(1, 4)).toBeCloseTo(1, 6);
+            expect(boxTrsf.Value(2, 4)).toBeCloseTo(2, 6);
+            expect(boxTrsf.Value(3, 4)).toBeCloseTo(3, 6);
+
+            // Rebuilt tree should still carry parametric data
+            // Wrap in ParametricAssembly to access getParametric
+            const rebuiltPA = ParametricAssembly.fromNative(tp, rebuilt);
+            const [pdBox1, okBox1] = rebuiltPA.getParametric("box1");
+            expect(okBox1).toBe(true);
+            const [pdSub, okSub] = rebuiltPA.getParametric("sub");
+            expect(okSub).toBe(true);
+            expect(pdSub!.type).toBe("test_box");
+
+            // Second round trip: export rebuilt → rebuild again
+            const json2 = rebuiltPA.exportParametric();
+            const rebuilt2 = rebuildFromParametric(tp, json2);
+            expect(rebuilt2.name()).toBe("root");
+            expect(rebuilt2.children().length).toBe(2);
+        });
+
+        it("unregistered type error", () => {
+            const json = JSON.stringify({
+                name: "root",
+                children: [{ name: "x", type: "no_such_type", params: {} }],
+            });
+            expect(() => rebuildFromParametric(tp, json)).toThrow("no_such_type");
+        });
+
+        it("invalid JSON", () => {
+            expect(() => rebuildFromParametric(tp, "{not json")).toThrow();
+        });
     });
 });

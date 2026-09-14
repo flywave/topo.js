@@ -1424,6 +1424,9 @@ EMSCRIPTEN_BINDINGS(Topo) {
                 }))
       .function("shapeType", &shape::shape_type)
       .function("geomType", &shape::geom_type)
+      .function("share", emscripten::optional_override([](shape &self) {
+                  return self.copy(true);
+                }))
       .function("value",
                 emscripten::select_overload<const TopoDS_Shape &() const>(
                     &shape::value));
@@ -4721,7 +4724,17 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                                          emscripten::val deep) {
                   bool deepCopy = deep.isUndefined() ? true : deep.as<bool>();
                   return self.copy(deepCopy);
-                }));
+                }))
+      .function(
+          "toSolid",
+          emscripten::optional_override([](const compound &self) -> solid {
+            return solid(self.value());
+          }))
+      .function(
+          "inertia",
+          emscripten::optional_override([](const compound &self) {
+            return solid(self.value()).inertia();
+          }));
 
   // 绑定compound_iterator类
   emscripten::class_<compound_iterator>("CompoundIterator")

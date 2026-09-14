@@ -10,3 +10,4 @@ export * from "./gim/gt";
 export * from "./types";
 export * from "./geology";
 export * as CQ from "./cq";
+export * as Assembly from "./assembly/parametric";

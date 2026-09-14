@@ -76,16 +76,18 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 ## 已知坑
 
 - **类型分发已修复但依赖全局注册**: workplane 绑定族曾用 `typeOf() == "workplane"/"solid"/"face"...` 做参数分发 — `typeOf()` 只返回 JS 原始类型, 类名检查全是死分支 (union/cut/mirror-by-vec/extrude-face/pushPoints-Location 等永远错路由)。2026-09 已全部改为 `instanceof` 并经 `emval_instanceof_global` 安全包装 (全局未注册时降级旧路径不抛错); 正确分发要求调用方注册全局类 — 库侧经 `ensureAssemblyGlobals` (`lib/railway/layout_utils.ts`, 覆盖 Workplane/Assembly/Location/Shape/Solid/Face/Compound/Sketch/gp_Vec/gp_Pnt/gp_Trsf/TopLoc_Location/gp_Pln) 兜底; 测试/脚本里直接用装配 API 时需先经库函数或手动调用
-- **绑定缺口清单** (测试 skip 项, 未绑/不可用于 WASM):
-  - 迭代器 `*Iterator.next()` (返回 `boost::optional<T>`): Edge/Wire/Vertex/Face/Shell/CompSolid/Compound — 遍历改用 `faces()/edges()/solids()` 等数组方法
-  - Workplane: `get/getRange/getIndices/exportTo/addShapes`; Assembly: `get/setLocation/replace/parametric 系列`; Shape: `Share/WriteToStl`; Compound: `toSolid/inertia`; ShapeOps: `GetShapeOutline`; `createCableWireCenterline`
-  - `Shape.exportStep` 在 WASM 写非 `/tmp/` 路径时仍失败 (emscripten MEMFS 限制, `/tmp/` 路径可用); `Shape1D.params(gp_Pnt[])` vector 编组缺口
+- **绑定缺口清单** (剩余测试 skip 项 ~21, 未绑/不可用于 WASM):
+  - Assembly 参数化注册表**已移植**: `lib/assembly/parametric.ts` (纯 TS 实现 Go 的 assembly_parametric.go — 全局 builder 注册表 + ParametricAssembly 组合原生 Assembly + JS 侧配方状态, JSON schema 与 Go 互通), 经 `Assembly` 命名空间导出
+  - helix sweep/fitCenterline **已解锁**: 崩溃根因是 TS 测试参数与 Go `CreatePipe` 不匹配 — Go 内部用 Frenet 模式扫掠, 测试须 `sweepWithFace(face, path, combine, clean, isFrenet=true, TRANSFORMED)`; 非 Frenet 螺旋管拓扑不同, `fit_centerline_from_shape` 对有端盖实体不回退 PCA 是设计行为 (bounding_pipe.cc:655)
+  - dxf **已编入并绑定** (DxfShapeReader/DxfShapeWriter, `src/dxf_bindings.cc`): `std::set<std::string>` embind 不支持需转 vector 注册; dxf_shape 的 entity value_object 未绑 (需要时再补)
+  - `Shape.exportStep`/`exportTo`/`writeToStl` 在 WASM 写**非 `/tmp/` 路径**失败 (emscripten MEMFS 不映射宿主 FS), 统一用 `/tmp/` 路径 + `tp.FS.readFile` 读回验证
   - `Edge.makeSpline` 已修复: 可选参数 tolerance/periodic 改为 `emscripten::val`, 缺省 `1e-6`/`false`
   - `Edge.makeEdgeFromCurve` 仍不接受 `Handle_Geom_TrimmedCurve`; 已补 `Edge.makeEdgeFromCurveTrimmed(trimmedCurve)` 包装函数
   - `makeSolidFromCylinderAngle(R,H)` 已修复: 缺省 angle=2π (完整圆柱), mass 正确
+  - go-topo 的 Point2/Dir2/Line/Trsf/XY/Vector2/SketchObject 是 Go 层包装类型 (C++ 无对应类), 测试已用已绑的 gp 类 (gp_Pnt2d/gp_Dir2d/gp_Ax2d/gp_Circ2d/gp_Trsf 等) 适配解锁; 仅 `TestGeomConstants` (Go 层枚举常量) 与 `sketch object from nil` (Go 侧同样 skip) 保持 skip
+  - `Shape1D.params(gp_Pnt[])` 已修复数组编组; `Quantity_Color` 用 `new tp.Quantity_Color_3(r,g,b,tp.Quantity_TOC_RGB)` 构造, `SetValues_2` 可用, `Values()` 因 C++ output reference 参数 embind 无法编组, 用 `Red()/Green()/Blue()` 替代
   - `gp_Cone_2(ax3,angle,radius)` 已修复, 可正常使用
   - `Shape.location()` 已修复: 返回 `topo_location` 对象 (含旋转), 可直接传回 `setLocation()`
-  - `Quantity_Color.SetValues_2(r,g,b,type)` 可用; `Values()` 因 C++ output reference 参数 embind 无法编组, 用 `Red()/Green()/Blue()` 替代
   - 2D 类型族 (Point2/Dir2/XY/Vector2/独立 Trsf) 未暴露; `Quantity_Color` 用 `new tp.Quantity_Color_3(r,g,b,tp.Quantity_TOC_RGB)` 构造
 - **`Assembly.getElements()` 已修复** — 原 `assembly_element` value_object 无法转 emval, 改为返回 plain JS object `{shape, name, location, color}`; 遍历装配仍推荐 `children()` / `name()` / `obj()` / `flatten()`
 - `Assembly.create` / `add` 依赖全局注册, 库里经 `ensureAssemblyGlobals` (`lib/railway/layout_utils.ts`) 兜底; 测试/脚本里直接用装配 API 时需先经库函数或手动调用。同理 `Location` 构造器对 `gp_Trsf`/`TopLoc_Location`/`gp_Pnt`/`gp_Vec`/`gp_Pln`/`topo_vector` 做 instanceof, 用前也需注册同名全局 (参考 `test/cq_assembly_solve.test.ts` 的 beforeAll)

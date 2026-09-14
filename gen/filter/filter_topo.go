@@ -17,8 +17,6 @@ func FilterTopoFile(fileName string) bool {
 	}
 
 	excludedFiles := []string{
-		"dxf_shape.cc",
-		"dxf.cc",
 		"ifc.cc",
 	}
 
