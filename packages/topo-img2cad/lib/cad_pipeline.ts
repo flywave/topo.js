@@ -29,6 +29,7 @@ import {
 import {
   reprojectShape,
   reprojectAgainstRaster,
+  getMeshData,
   DEFAULT_THRESHOLDS,
   type ReferenceSilhouette,
   type ReprojectionReport,
@@ -37,7 +38,7 @@ import {
 import { validateGeometry } from "./validators/geometric.js";
 import { quickSyntaxCheck } from "./validators/code_syntax.js";
 import { executeInSandbox } from "./stages/review.js";
-import { checkViewConsistency, type Bounds2D } from "./cad/project.js";
+import { checkViewConsistency, isKnownView, type Bounds2D } from "./cad/project.js";
 import {
   buildViewReferencesFromImage,
   ORTHOGRAPHIC_VIEW_KINDS,
@@ -242,11 +243,11 @@ export class CadPipeline {
     let review = this.config.tp ? this.review(tree, build) : undefined;
     let refinements = 0;
 
-    while (
-      refinements < maxRefinements &&
-      !this.gatesPassing(lint, review) &&
-      this.isWorthRefining(lint, review)
-    ) {
+    // "Is there something a tree edit could fix" is the whole question. Asking
+    // separately whether the gates passed used to disable the loop for exactly
+    // the cases worth repairing: a silhouette that matches at IoU 0.75 is graded
+    // a warning, so the gates "pass" and no repair is ever attempted.
+    while (refinements < maxRefinements && this.isWorthRefining(lint, review)) {
       refinements++;
       this.log(`refinement ${refinements}: repairing the feature tree`);
 
@@ -258,25 +259,27 @@ export class CadPipeline {
         );
         const candidateTree = { ...repaired, provenance: tree.provenance };
         const candidateLint = lintFeatureTree(candidateTree);
+        const candidateBuild = runBuildFromTree(candidateTree);
 
-        // Accept a repair only if it measurably reduces blocking errors. An
-        // equal-priority repair is no progress; retrying would burn the budget
-        // on no-ops.
-        const before = countErrors(lint.issues) + countErrors(review?.issues);
-        const after = countErrors(candidateLint.issues);
-        if (after >= before) {
-          this.warnings.push(
-            after > before
-              ? `refinement ${refinements} produced a worse tree (${after} blocking issues vs ${before}) — keeping the previous tree`
-              : `refinement ${refinements} did not improve the tree (still ${after} blocking issues) — stopping rather than burning the remaining budget`,
-          );
+        // The candidate has to be MEASURED before it can be judged, and measuring
+        // overwrites the body the run would export if the candidate is rejected.
+        const shapeBefore = this.reviewedShape;
+        const candidateReview = this.config.tp ? this.review(candidateTree, candidateBuild) : undefined;
+
+        const verdict = acceptRepair(
+          { lint, review },
+          { lint: candidateLint, review: candidateReview },
+        );
+        if (!verdict.ok) {
+          this.reviewedShape = shapeBefore;
+          this.warnings.push(`refinement ${refinements} ${verdict.reason}`);
           break;
         }
 
         tree = candidateTree;
         lint = candidateLint;
-        build = runBuildFromTree(tree);
-        review = this.config.tp ? this.review(tree, build) : undefined;
+        build = candidateBuild;
+        review = candidateReview;
       } catch (e) {
         this.warnings.push(
           `refinement ${refinements} failed: ${e instanceof Error ? e.message : String(e)}`,
@@ -493,9 +496,10 @@ export class CadPipeline {
       if (!ORTHOGRAPHIC_VIEW_KINDS.has(view.kind)) continue;
 
       const imageRef = imageRefs.find((r) => r.viewId === view.id);
+      const along = projectionKeyFor(view);
       const report = imageRef
         ? reprojectAgainstRaster(shape, {
-            view: view.kind,
+            view: along,
             mask: imageRef.mask,
             maskWidth: imageRef.maskWidth,
             maskHeight: imageRef.maskHeight,
@@ -504,13 +508,13 @@ export class CadPipeline {
             height: Math.max(rasterSize, imageRef.maskHeight),
             thresholds,
           })
-        : this.reprojectAgainstSupplied(shape, view, refs?.[view.id], rasterSize, thresholds);
+        : this.reprojectAgainstSupplied(shape, along, refs?.[view.id], rasterSize, thresholds);
 
       if (!report) continue;
       for (const issue of report.issues) {
         // A size mismatch against a model-placed frame is not evidence that the
         // dimensions are wrong, and the repair loop must not be told that it is.
-        if (issue.code === "RPR_LOW_IOU" && imageRef?.scaleFromModelEstimate) {
+        if (issue.code === "RPR_LOW_IOU" && imageRef?.scaleUnverified) {
           issue.suggestion =
             "This comparison is placed using the model's own pixel estimate of the drawing's scale, so a size mismatch may be a misread scale rather than a wrong dimension — check the scale evidence before resizing the part";
         }
@@ -518,7 +522,9 @@ export class CadPipeline {
       }
       results.push(...report.views);
       for (const r of report.views) {
-        consistencyInputs.push({ id: view.id, kind: view.kind, bounds: r.modelBounds });
+        // Paired on the axis actually projected, so a mislabelled view does not
+        // also raise a spurious cross-view inconsistency.
+        consistencyInputs.push({ id: view.id, kind: along, bounds: r.modelBounds });
       }
     }
 
@@ -551,14 +557,14 @@ export class CadPipeline {
   /** A caller-supplied reference in model coordinates, if there is one. */
   private reprojectAgainstSupplied(
     shape: unknown,
-    view: ViewSpec,
+    along: string,
     reference: ReferenceSilhouette | undefined,
     rasterSize: number,
     thresholds: ReprojectionThresholds,
   ): ReprojectionReport | undefined {
     if (!reference) return undefined;
     return reprojectShape(shape, {
-      view: view.kind,
+      view: along,
       reference,
       width: reference.width || rasterSize,
       height: reference.height || rasterSize,
@@ -569,10 +575,6 @@ export class CadPipeline {
   // -----------------------------------------------------------------------
   // Refinement
   // -----------------------------------------------------------------------
-
-  private gatesPassing(lint: FeatureTreeLint, review?: CadReviewOutcome): boolean {
-    return lint.passed && (review?.passed ?? true);
-  }
 
   /**
    * Only spend a refinement when there is something a tree edit could fix.
@@ -602,7 +604,16 @@ export class CadPipeline {
       "CAD_EXECUTION",
       "CAD_NO_SHAPE",
     ]);
-    return issues.some((i) => i.severity === "error" && fixableByTreeEdit.has(i.code ?? ""));
+    return issues.some((i) => {
+      const code = i.code ?? "";
+      if (!fixableByTreeEdit.has(code)) return false;
+      // Measured verdicts are worth acting on whether or not they rose to
+      // "error". A silhouette that matches at IoU 0.75 is a part a quarter too
+      // small, and grading that a warning while refusing to repair it means the
+      // loop never engages for the very error the measurement exists to catch.
+      if (MEASURED_CODES.has(code)) return true;
+      return i.severity === "error";
+    });
   }
 
   private async refineTree(
@@ -642,12 +653,17 @@ export class CadPipeline {
       const geo = validateGeometry(this.config.tp, sandbox.shape);
       if (!geo.report.shapeValid || !geo.report.bbox) return null;
       const [x0, y0, z0, x1, y1, z1] = geo.report.bbox;
+      const com = geo.report.centerOfMass ?? [0, 0, 0];
       return {
         volume: geo.report.volume ?? 0,
         dx: x1 - x0,
         dy: y1 - y0,
         dz: z1 - z0,
         faces: geo.report.faceCount ?? 0,
+        comX: com[0],
+        comY: com[1],
+        comZ: com[2],
+        moment: vertexMoment(sandbox.shape) ?? 0,
       };
     });
   }
@@ -672,6 +688,50 @@ function buildContext(viewSet: ViewSet): string {
   return parts.join(". ");
 }
 
+/**
+ * The axis to project a view along.
+ *
+ * `kind` is a drafting label — "front", "top" — and `projectionPlane` is the
+ * geometric fact about which plane the drawing measured. A model that calls a
+ * sheet's front view "front" while recording that it is the XY plane, and builds
+ * its geometry on XY, is only mislabelling it. Projecting along the label then
+ * looks at the part's 10mm edge rather than its 120x80 face, and reports a
+ * silhouette mismatch of 0.15 for a part that is exactly right — measured, on a
+ * live run. The plane is unambiguous, so it wins when both are present.
+ */
+function projectionKeyFor(view: ViewSpec): string {
+  const plane = (view as { projectionPlane?: string }).projectionPlane;
+  if (typeof plane === "string" && isKnownView(plane)) return plane;
+  return view.kind;
+}
+
+/**
+ * A cheap fingerprint of where the body's material actually is.
+ *
+ * Volume, bounding box, face count and even the centre of mass are blind to a
+ * feature that moves *within* the part — relocating a bolt hole removes exactly
+ * as much material as before, and a symmetric pair of holes moving outward
+ * leaves the centroid where it was. Measured: a run's corner-hole offsets were
+ * reported as driving nothing, and every one of those four measures was
+ * genuinely unchanged.
+ *
+ * Summing the squared distance of every tessellated vertex from the origin is
+ * order-independent, needs no extra kernel calls beyond a mesh, and moves the
+ * instant any face moves.
+ */
+function vertexMoment(shape: unknown): number | undefined {
+  const mesh = getMeshData(shape);
+  if (!mesh) return undefined;
+  let sum = 0;
+  for (const positions of mesh.vertices) {
+    if (!Array.isArray(positions)) continue;
+    for (let i = 0; i + 2 < positions.length; i += 3) {
+      sum += positions[i] ** 2 + positions[i + 1] ** 2 + positions[i + 2] ** 2;
+    }
+  }
+  return Number.isFinite(sum) ? sum : undefined;
+}
+
 function extractSolveReports(captured: unknown): Record<string, RawSolveStatus> {
   if (captured && typeof captured === "object") {
     return captured as Record<string, RawSolveStatus>;
@@ -685,6 +745,78 @@ function collectIssues(lint: FeatureTreeLint, review?: CadReviewOutcome): Review
 
 function countErrors(issues?: ReviewIssue[]): number {
   return (issues ?? []).filter((i) => i.severity === "error").length;
+}
+
+/** Verdicts that came from measuring the built body, rather than from the tree's shape. */
+const MEASURED_CODES: ReadonlySet<string> = new Set([
+  "RPR_LOW_IOU",
+  "RPR_DEVIATION",
+  "RPR_VIEW_MISMATCH",
+  "RPR_EMPTY_MODEL",
+  "SKT_HIGH_RESIDUAL",
+  "SKT_NO_DOF",
+  "SKT_SOLVER_FAILED",
+]);
+
+/**
+ * How well a candidate matched the drawing, higher being better.
+ *
+ * Returns null when nothing was measured, so "no measurement" can never be
+ * mistaken for "measured and fine".
+ */
+function silhouetteScore(review?: CadReviewOutcome): number | null {
+  const views = review?.reprojection?.views;
+  if (!views || views.length === 0) return null;
+  const meanIou = views.reduce((sum, v) => sum + v.iou, 0) / views.length;
+  const dev = views.reduce(
+    (sum, v) => sum + (isFinite(v.deviation.modelToReference) ? v.deviation.modelToReference : 0),
+    0,
+  ) / views.length;
+  return meanIou;
+}
+
+/**
+ * Decide whether a repair earned its round.
+ *
+ * Fewer blocking errors always wins. Failing that, a repair may still win by
+ * converging: the loop exists to improve a MEASUREMENT, and a measurement often
+ * improves without changing how many warnings it produces — a plate a quarter too
+ * small refines to exactly right while the issue count stays at one. Judging on
+ * the count alone would reject that repair and stop with the wrong part.
+ */
+function acceptRepair(
+  before: { lint: FeatureTreeLint; review?: CadReviewOutcome },
+  after: { lint: FeatureTreeLint; review?: CadReviewOutcome },
+): { ok: boolean; reason: string } {
+  const beforeErrors = countErrors(before.lint.issues) + countErrors(before.review?.issues);
+  const afterErrors = countErrors(after.lint.issues) + countErrors(after.review?.issues);
+
+  if (afterErrors < beforeErrors) {
+    return { ok: true, reason: `reduced blocking issues ${beforeErrors} -> ${afterErrors}` };
+  }
+  if (afterErrors > beforeErrors) {
+    return {
+      ok: false,
+      reason: `produced a worse tree (${afterErrors} blocking issues vs ${beforeErrors}) — keeping the previous tree`,
+    };
+  }
+
+  const wasScore = silhouetteScore(before.review);
+  const nowScore = silhouetteScore(after.review);
+  if (wasScore !== null && nowScore !== null && nowScore > wasScore + 1e-4) {
+    return {
+      ok: true,
+      reason: `improved the silhouette IoU ${wasScore.toFixed(4)} -> ${nowScore.toFixed(4)}`,
+    };
+  }
+
+  return {
+    ok: false,
+    reason:
+      nowScore !== null && wasScore !== null && nowScore < wasScore - 1e-4
+        ? `made the silhouette worse (IoU ${wasScore.toFixed(4)} -> ${nowScore.toFixed(4)}) — keeping the previous tree`
+        : `did not improve the tree (still ${afterErrors} blocking issues) — stopping rather than burning the remaining budget`,
+  };
 }
 
 function summarizeReview(review: CadReviewOutcome): unknown {

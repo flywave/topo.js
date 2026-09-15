@@ -69,6 +69,7 @@ import type {
   SketchSpec,
 } from "./model.js";
 import { reconcileSketch, type ReconcileReport } from "./reconcile.js";
+import { chainEntities, findConnectedComponents, near } from "./chain.js";
 
 // ---------------------------------------------------------------------------
 // Plane mapping
@@ -212,12 +213,11 @@ export function tessellateArc(e: ProfileEntity, segments = 16): Array<[number, n
 }
 
 // ---------------------------------------------------------------------------
-// Chain walking
+// Chain walking (moved to ./chain.js so reconciliation can use it without an
+// import cycle; re-exported here because this module is the public surface)
 // ---------------------------------------------------------------------------
 
-function near(a: [number, number], b: [number, number], tol: number): boolean {
-  return Math.abs(a[0] - b[0]) < tol && Math.abs(a[1] - b[1]) < tol;
-}
+export { chainEntities, findConnectedComponents };
 
 function reverseEntity(e: ProfileEntity): ProfileEntity {
   return { ...e, start: e.end, end: e.start, clockwise: e.clockwise === undefined ? undefined : !e.clockwise };
@@ -230,48 +230,6 @@ function reverseEntity(e: ProfileEntity): ProfileEntity {
  * back to its authored start, which the JOIN derivation needs: the solver's
  * parameter t is relative to the authored direction.
  */
-export function chainEntities(
-  entities: ProfileEntity[],
-  tol = 1e-3,
-): Array<{ entity: ProfileEntity; forward: boolean }> | null {
-  const real = entities.filter((e) => !e.construction);
-  const chainable = real.filter((e) => e.type !== "circle");
-  if (chainable.length === 0) return null;
-
-  const used = new Set<string>();
-  const chain: Array<{ entity: ProfileEntity; forward: boolean }> = [];
-  const first = chainable[0];
-  chain.push({ entity: first, forward: true });
-  used.add(first.tag);
-  let tail = first.end!;
-  const head = first.start!;
-
-  while (true) {
-    if (near(tail, head, tol)) break;
-    let next: ProfileEntity | undefined;
-    let forward = true;
-    for (const e of chainable) {
-      if (used.has(e.tag)) continue;
-      if (near(e.start!, tail, tol)) {
-        next = e;
-        forward = true;
-        break;
-      }
-      if (near(e.end!, tail, tol)) {
-        next = e;
-        forward = false;
-        break;
-      }
-    }
-    if (!next) return null;
-    used.add(next.tag);
-    chain.push({ entity: next, forward });
-    tail = forward ? next.end! : next.start!;
-  }
-
-  if (used.size !== chainable.length) return null;
-  return chain;
-}
 
 /**
  * The point loop the chain describes, arcs tessellated.
@@ -493,67 +451,6 @@ export type ClassifiedProfile = CircleProfile | LoopProfile | MultiComponentProf
  * of an endpoint of the other. Circles are always isolated — they have no
  * endpoints to share.
  */
-function findConnectedComponents(
-  entities: ProfileEntity[],
-  tol = 1e-3,
-): ProfileEntity[][] {
-  const real = entities.filter((e) => !e.construction);
-  const circles = real.filter((e) => e.type === "circle");
-  const chainable = real.filter((e) => e.type !== "circle");
-
-  // Build adjacency by endpoint proximity.
-  const adj = new Map<string, Set<string>>();
-  for (const e of chainable) adj.set(e.tag, new Set());
-
-  for (let i = 0; i < chainable.length; i++) {
-    for (let j = i + 1; j < chainable.length; j++) {
-      const a = chainable[i];
-      const b = chainable[j];
-      if (
-        (a.start && b.start && near(a.start, b.start, tol)) ||
-        (a.start && b.end && near(a.start, b.end, tol)) ||
-        (a.end && b.start && near(a.end, b.start, tol)) ||
-        (a.end && b.end && near(a.end, b.end, tol))
-      ) {
-        adj.get(a.tag)!.add(b.tag);
-        adj.get(b.tag)!.add(a.tag);
-      }
-    }
-  }
-
-  // BFS to find connected components among chainable entities.
-  const byTag = new Map<string, ProfileEntity>();
-  for (const e of chainable) byTag.set(e.tag, e);
-
-  const visited = new Set<string>();
-  const components: ProfileEntity[][] = [];
-  for (const e of chainable) {
-    if (visited.has(e.tag)) continue;
-    const component: ProfileEntity[] = [];
-    const queue: ProfileEntity[] = [e];
-    while (queue.length > 0) {
-      const cur = queue.shift()!;
-      if (visited.has(cur.tag)) continue;
-      visited.add(cur.tag);
-      component.push(cur);
-      for (const neighbor of adj.get(cur.tag) ?? []) {
-        if (!visited.has(neighbor)) {
-          const ne = byTag.get(neighbor);
-          if (ne) queue.push(ne);
-        }
-      }
-    }
-    components.push(component);
-  }
-
-  // Each circle is its own component.
-  for (const c of circles) {
-    components.push([c]);
-  }
-
-  return components;
-}
-
 /**
  * Classify a profile into the construction it needs.
  *

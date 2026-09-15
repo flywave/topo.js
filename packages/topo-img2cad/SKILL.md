@@ -111,11 +111,32 @@ const pipeline = new CadPipeline({
 const result = await pipeline.run("./drawing.png", "Mounting plate");
 ```
 
-The refinement loop consumes `lint` + `review` issues, and a repair is accepted only
-when it reduces the count of blocking errors — an equal-priority repair is no progress,
-so the loop stops instead of burning the budget on no-ops. It also refuses to spend a
-round on something a tree edit cannot fix: an emitter defect or a missing kernel is not
-the tree's fault, and asking the model to "fix" it would corrupt a working design.
+The refinement loop consumes `lint` + `review` issues. It refuses to spend a round on
+something a tree edit cannot fix — an emitter defect or a missing kernel is not the
+tree's fault, and asking the model to "fix" it would corrupt a working design.
+
+A repair is then accepted on measured evidence, in this order:
+
+1. **Fewer blocking errors wins.**
+2. **Failing that, a better silhouette wins.** The loop exists to improve a
+   *measurement*, and a measurement routinely improves without changing how many
+   issues it produces: a plate a quarter too small refines to exactly right while the
+   issue count stays at one. Judging on the count alone rejects that repair and stops
+   with the wrong part. This was not theoretical — it is what the first version did.
+3. **A repair that makes the silhouette worse is refused**, and the previous tree is
+   kept.
+
+Two thresholds decide whether the loop engages at all, and both were wrong in ways
+worth recording:
+
+- **`RPR_LOW_IOU` fails whenever IoU < `minIou`, and warns only within 5% of it.**
+  The band used to be a fifth of the threshold wide, which graded a silhouette
+  matching at **IoU 0.75 — a part a quarter too small — as a warning**. The run
+  reported PASSED and, because the loop acted on failures, nothing was ever repaired.
+  A gate that calls a 25% size error a pass is not a gate.
+- **The loop's guard is "is there something a tree edit could fix", not "did a gate
+  fail".** Asking the second question separately disabled the loop for exactly the
+  cases worth repairing, since a warning-level mismatch does not fail a gate.
 
 ### Stage A — View intake
 
@@ -305,8 +326,47 @@ division by zero are reported rather than silently producing NaN. Expressions ar
 parsed by a small recursive-descent evaluator — **never** `eval`, so a spec from a
 model can never execute code.
 
+### `mirror` with a named source
+
+`{"op":"mirror","plane":{...},"ofFeature":"f_hole"}` reflects **that feature's tool** and
+re-cuts with it. Without `ofFeature` it mirrors the whole body, which is what it always
+did.
+
+It used to ignore `ofFeature` entirely. A live run asking to mirror a mounting hole
+about YZ and then XZ got the *body* mirrored twice and a plate **20mm thick instead of
+10, with twice the volume** — and nothing caught it. A silhouette taken along the
+sketch normal is blind to thickness, and a single view leaves no second view to
+disagree with. The tree said 10; only the tree said 10.
+
+Two limits, both measured rather than assumed:
+
+- **A reflection cannot be reflected again.** `mirror` on a Workplane that is already a
+  mirror (or the result of a `union`) fails inside the kernel with *"null function or
+  function signature mismatch"*.
+- **Composing two reflections is not a substitute.** They are mathematically a 180°
+  rotation, and the emitter tried emitting exactly that — the same 120×10×80 plate
+  came back **124.8 × 18.7**. Wrong shapes are silent, so composite reflections are
+  refused with a reason instead (*"express the pattern with a second sketch and pocket
+  instead"*) rather than approximated.
+
 `CadPipeline.verifyAssociativity` rebuilds with each parameter perturbed and confirms
-the geometry moves. A parameter that changes nothing is decorative, and is reported.
+the geometry moves. Two things had to be right for that verdict to be trustworthy,
+both found by a live run whose four "inert parameters" were all false:
+
+- **A dimension may name several entities.** Models write `LENGTH [e1, e3] = 120` for a
+  rectangle's two long edges. Reconciliation only read single-tag dimensions and
+  skipped the rest *silently* — `applied` listed the survivors, `unhonoured` was
+  empty — so a parameter reaching the sketch only through such a dimension drove
+  nothing, and the gate then blamed the parameter. Per-entity kinds (`LENGTH`,
+  `RADIUS`, `ARC_ANGLE`, `ORIENTATION`) now apply to each entity named; relational
+  kinds (`DISTANCE`, `COINCIDENT`, `JOIN`) still are not read that way.
+- **The probe has to be able to see the change.** Volume, bounding box, face count
+  and even the centre of mass are blind to a feature moving *within* the part:
+  relocating a bolt hole removes exactly as much material as before, and four
+  symmetric holes moving outward leave the centroid where it was. Measured, on all
+  four. The probe now also computes the summed squared distance of every tessellated
+  vertex from the origin — order-independent, one mesh, and it moves the instant any
+  face does. A parameter that changes nothing is decorative, and is reported.
 The L6 gate calls it automatically (one rebuild per parameter, disable with
 `checkAssociativity: false`) and only on a tree that already passes everything else —
 on a broken tree every parameter would read as inert and bury the real failure.
@@ -415,6 +475,18 @@ valid solids — see the table above for the ones that are.
   there are no per-edge tags to constrain, so no `solve()` is emitted. The L3 gate
   expects reports only from sketches that were solved — expecting one for a circle
   would report a correct sketch as a failure.
+- **`kind` is a drafting label; `projectionPlane` is the geometric fact, and the
+  gate projects along the fact.** A model that calls a sheet's view "front" while
+  recording that it is the XY plane — and building its sketches on XY — is only
+  mislabelling it. Projecting along the label looks at the part's 10mm edge instead
+  of its 120x80 face: measured at **IoU 0.154 on a part whose volume was right to six
+  significant figures.** The same rule now drives the prompt's sketch-plane guidance,
+  so the instruction and the measurement cannot disagree.
+- **A view without a `region` is only read as the whole image when the sheet holds
+  one view.** On a multi-view sheet that would blend every view into a single
+  silhouette and report a confident, meaningless IoU, so those views get no reference
+  at all and the run says so. "Cannot check this" is a worse answer than a passing one
+  and a much better answer than a wrong one.
 - Single-view images cannot reveal hidden sides; `ViewSet.undetermined` records
   what is missing rather than guessing.
 - Absolute size needs scale evidence. Without it, dimensions are relative and the

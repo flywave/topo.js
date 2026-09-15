@@ -328,7 +328,13 @@ export function evaluateReprojection(
     }
 
     if (r.iou < thresholds.minIou) {
-      const severity = r.iou < thresholds.minIou * 0.8 ? "error" : "warning";
+      // Missing the threshold fails; a warning is for landing just under it and
+      // being within measurement noise of it. The band used to be a fifth of the
+      // threshold wide, which graded a silhouette matching at IoU 0.75 — a part a
+      // quarter too small — as a warning. The run then reported PASSED, and the
+      // repair loop, which acts on failures, never engaged for the very error
+      // this measurement exists to catch.
+      const severity = r.iou < thresholds.minIou * 0.95 ? "error" : "warning";
       issues.push({
         severity,
         code: "RPR_LOW_IOU",

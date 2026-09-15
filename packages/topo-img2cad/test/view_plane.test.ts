@@ -73,6 +73,24 @@ describe("view to sketch plane", () => {
     expect(prompt).toContain("Do not default to XY.");
   });
 
+  it("prefers the plane the drawing recorded over the view's label", () => {
+    // A live run's exact shape: the model called it a front view but recorded
+    // projectionPlane XY and built on XY. Guidance derived from the label would
+    // tell it to move to XZ, contradicting what it read — and what L4 projects.
+    const prompt = buildFeatureTreePrompt({
+      objectName: "Mounting plate",
+      views: {
+        drawingKind: "engineering_drawing",
+        views: [{ id: "v_front", kind: "front", projectionPlane: "XY" }],
+        units: { length: "mm", toMillimeter: 1 },
+        undetermined: [],
+      },
+    });
+
+    expect(prompt).toContain("v_front (front view) \u2192 sketch on the XY plane");
+    expect(prompt).not.toContain("sketch on the XZ plane");
+  });
+
   it("adds no plane guidance when there is no orthographic view", () => {
     const prompt = buildFeatureTreePrompt({
       objectName: "Bracket",

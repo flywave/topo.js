@@ -50,16 +50,20 @@ export interface ViewReference {
    */
   referenceBounds?: Bounds2D;
   /**
-   * True when that frame was placed using the model's own pixel estimate.
+   * True when the frame's scale could not be checked against the drawing.
    *
-   * The real length comes from text on the drawing ("120"), which is reliable;
-   * the pixel length is a vision model's estimate of how many pixels that spans,
-   * which is the least dependable number the pipeline produces — measured at 14%
-   * off on a real drawing. A size mismatch against such a reference is at least
-   * as likely to be a misread scale as a wrong dimension, and saying so is what
-   * stops a repair loop from resizing a correct part to match it.
+   * The real length comes from text on the drawing ("120") and is reliable; the
+   * pixel length is a vision model's estimate of how many pixels that spans, and
+   * is the least dependable number the pipeline produces — measured at 14% off
+   * on a real drawing. The silhouette lets us check it: the mask IS the part, so
+   * its own extent in pixels is what that dimension refers to. When the model's
+   * estimate agrees with that measurement (or is corrected to it) the scale is
+   * verified and a size mismatch means the dimensions really are wrong. Only
+   * when the dimension plainly does not span the silhouette — a bore diameter in
+   * a much wider plate — is the scale left unchecked, and only then is a size
+   * mismatch as likely to be a misread scale as a wrong dimension.
    */
-  scaleFromModelEstimate: boolean;
+  scaleUnverified: boolean;
   /** Which mode actually discriminated part from paper. */
   silhouetteMode: "ink" | "region";
   notes: string[];
@@ -84,9 +88,12 @@ export interface ReferenceBuildOptions {
 /**
  * Build a reference silhouette for every orthographic view.
  *
- * A view without a `region` is taken to be the whole image, which is only right
- * for a single-view drawing — a multi-view sheet would blend the views into one
- * silhouette. That case is reported rather than left implicit.
+ * A view without a `region` can only be read as the whole image, and that is
+ * right only when the sheet holds one view. On a multi-view sheet it would blend
+ * every view into a single silhouette and the gate would then report a confident,
+ * meaningless IoU — so those views get no reference at all and the run says so.
+ * "Cannot check this" is a worse answer than a passing one and a much better
+ * answer than a wrong one.
  */
 export function buildViewReferences(
   viewSet: ViewSet,
@@ -108,14 +115,17 @@ export function buildViewReferences(
     return { references, notes };
   }
 
-  const regionless = orthographic.filter((v) => !v.region);
-  if (orthographic.length > 1 && regionless.length > 0) {
-    notes.push(
-      `${regionless.length} of ${orthographic.length} orthographic views have no region; the whole image is used for those, which mixes views on a multi-view sheet`,
-    );
-  }
+  // The whole image is the view only when there is just one of them.
+  const wholeImageIsTheView = orthographic.length === 1;
 
   for (const view of orthographic) {
+    if (!view.region && !wholeImageIsTheView) {
+      notes.push(
+        `view ${view.id}: the drawing holds ${orthographic.length} views and this one has no region, so its extent on the sheet is unknown — no reference silhouette was built for it, and the re-projection gate is skipped rather than comparing against a crop that would blend every view together`,
+      );
+      continue;
+    }
+
     const built = buildViewReference(view, viewSet, opts);
     if (built.reference) {
       references.push(built.reference);
@@ -210,9 +220,7 @@ function buildViewReference(
       maskWidth,
       maskHeight,
       referenceBounds,
-      // Realigned against a length the drawing states, so the frame no longer
-      // depends on the model's pixel estimate and a size check can be trusted.
-      scaleFromModelEstimate: referenceBounds !== undefined && !scale.realigned,
+      scaleUnverified: referenceBounds !== undefined && !scale.verified,
       silhouetteMode: silhouette.mode,
       notes,
     },
@@ -244,10 +252,10 @@ function realignScale(
   maskWidth: number,
   maskHeight: number,
   notes: string[],
-): { mmPerPixel: number | undefined; realigned: boolean } {
+): { mmPerPixel: number | undefined; verified: boolean } {
   const scale = viewSet.scale;
   const declared = scale?.mmPerPixel;
-  const keep = { mmPerPixel: declared, realigned: false };
+  const keep = { mmPerPixel: declared, verified: false };
   if (!scale || !declared || !isFinite(declared) || declared <= 0) return keep;
 
   // An assumed scale is a guess, so there is nothing to realign it against.
@@ -278,12 +286,14 @@ function realignScale(
   if (!isFinite(measured) || measured <= 0) return keep;
 
   const drift = Math.abs(measured - declared) / declared;
-  if (drift <= 0.02) return keep;
+  // The model's own estimate agrees with what we measured, so it is confirmed
+  // rather than merely trusted.
+  if (drift <= 0.02) return { mmPerPixel: declared, verified: true };
 
   notes.push(
     `scale realigned: the drawing's "${scale.label ?? scale.realLength}" was read as spanning ${scale.imageLength}px, but this silhouette's ${useWidth ? "width" : "height"} is ${extent}px — placing the mask at ${measured.toFixed(4)} mm/px rather than ${declared.toFixed(4)}`,
   );
-  return { mmPerPixel: measured, realigned: true };
+  return { mmPerPixel: measured, verified: true };
 }
 
 /**

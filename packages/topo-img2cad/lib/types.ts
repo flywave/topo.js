@@ -169,6 +169,15 @@ export interface GeometryReport {
   bbox?: [number, number, number, number, number, number];
   /** Volume (>0 for solids) */
   volume?: number;
+  /**
+   * Centre of mass [x, y, z].
+   *
+   * The only measure here that moves when a feature moves *within* the part —
+   * relocating a bolt hole changes no dimension of the bounding box and removes
+   * exactly as much material as before. Without it a parameter that positions a
+   * feature reads as driving nothing.
+   */
+  centerOfMass?: [number, number, number];
   /** Surface area */
   surfaceArea?: number;
   /** Whether the solid is watertight */

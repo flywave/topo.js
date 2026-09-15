@@ -164,7 +164,7 @@ describe("reference silhouettes from a drawing", () => {
     expect(ref.referenceBounds!.maxX).toBeCloseTo(120, 1);
 
     expect(ref.notes.join(" ")).toMatch(/scale realigned/);
-    expect(ref.scaleFromModelEstimate).toBe(false);
+    expect(ref.scaleUnverified).toBe(false);
   });
 
   it("leaves a scale alone when the model read it correctly", () => {
@@ -183,6 +183,9 @@ describe("reference silhouettes from a drawing", () => {
     );
 
     expect(built.references[0].notes.join(" ")).not.toMatch(/scale realigned/);
+    // The model read it right, and that was confirmed against the silhouette, so
+    // a size mismatch would be a real dimension error.
+    expect(built.references[0].scaleUnverified).toBe(false);
   });
 
   it("refuses to realign a dimension that does not span the silhouette", () => {
@@ -206,7 +209,7 @@ describe("reference silhouettes from a drawing", () => {
     expect(ref.notes.join(" ")).not.toMatch(/scale realigned/);
     // The model's own scale is kept, and still flagged as an estimate.
     expect(ref.referenceBounds!.maxX).toBeCloseTo(ref.maskWidth * (40 / 60), 6);
-    expect(ref.scaleFromModelEstimate).toBe(true);
+    expect(ref.scaleUnverified).toBe(true);
   });
 
   it("leaves an assumed scale alone, since there is nothing to realign to", () => {
@@ -251,7 +254,7 @@ describe("reference silhouettes from a drawing", () => {
     // The 120mm edge is now 120mm wide in the frame the mask is placed in, which
     // is what makes the size comparison mean anything.
     expect(ref.referenceBounds!.maxX).toBeCloseTo(120, 0);
-    expect(ref.scaleFromModelEstimate).toBe(false);
+    expect(ref.scaleUnverified).toBe(false);
     expect(ref.notes.join(" ")).toMatch(/scale realigned/);
   });
 
@@ -295,7 +298,10 @@ describe("reference silhouettes from a drawing", () => {
     expect(built.notes.join(" ")).toMatch(/no orthographic view/);
   });
 
-  it("warns that a regionless multi-view sheet is read as one silhouette", () => {
+  it("builds no reference for a regionless view on a multi-view sheet", () => {
+    // Reading the whole sheet as one view would blend every view into a single
+    // silhouette and report a confident, meaningless IoU. Skipping it is the
+    // honest answer.
     const built = buildViewReferences(
       viewSet({
         views: [
@@ -306,8 +312,16 @@ describe("reference silhouettes from a drawing", () => {
       { raster: plateDrawing(), width: 512, height: 512 },
     );
 
-    expect(built.references.length).toBe(2);
-    expect(built.notes.join(" ")).toMatch(/mixes views on a multi-view sheet/);
+    expect(built.references.length).toBe(1);
+    expect(built.references[0].viewId).toBe("v_top");
+    expect(built.notes.join(" ")).toMatch(/blend every view together/);
+  });
+
+  it("still reads a single-view sheet as the whole image", () => {
+    // One view: the sheet IS the view, so a missing region costs nothing.
+    const built = buildViewReferences(viewSet(), { raster: plateDrawing(), width: 512, height: 512 });
+    expect(built.references.length).toBe(1);
+    expect(built.notes.join(" ")).not.toMatch(/blend every view/);
   });
 
   it("crops to the view's own region", () => {

@@ -78,6 +78,30 @@ function readBounds(shape: unknown): Bounds | null {
 }
 
 /** Mass property of a shape via BRepGProp, or undefined when unavailable. */
+function measureCentreOfMass(
+  tp: any,
+  rawShape: unknown,
+): [number, number, number] | undefined {
+  if (!tp?.BRepGProp || !tp?.GProp_GProps_1) return undefined;
+  let props: { Mass(): number; CentreOfMass(): { X(): number; Y(): number; Z(): number }; delete(): void } | undefined;
+  try {
+    props = new tp.GProp_GProps_1();
+    tp.BRepGProp.VolumeProperties_1(rawShape, props, false, false, false);
+    if (!isFinite(props!.Mass()) || props!.Mass() === 0) return undefined;
+    const c = props!.CentreOfMass();
+    const point: [number, number, number] = [c.X(), c.Y(), c.Z()];
+    return point.every((v) => isFinite(v)) ? point : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    try {
+      props?.delete();
+    } catch {
+      // Nothing to release.
+    }
+  }
+}
+
 function measureMass(
   tp: any,
   rawShape: unknown,
@@ -201,6 +225,8 @@ export function validateGeometry(tp: any, shape: unknown): {
   // --- mass properties --------------------------------------------------
   const raw = unwrap(shape);
   if (tp) {
+    report.centerOfMass = measureCentreOfMass(tp, raw);
+
     const volume = measureMass(tp, raw, "volume");
     if (volume !== undefined) {
       report.volume = volume;

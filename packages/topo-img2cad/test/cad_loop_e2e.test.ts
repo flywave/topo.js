@@ -283,6 +283,35 @@ describe("the closed loop: image → tree → code → measured verdict", () => 
     expect(stl.length).toBe(84 + triangles * 50);
   }, 180_000);
 
+  it("projects along the plane the drawing records, not the view's label", async () => {
+    // A live run's exact shape: the model called the sheet's view "front" while
+    // recording that it is the XY plane, and built its sketches on XY. Projecting
+    // along the label looks at the part's 10mm edge instead of its 120x80 face
+    // and scored IoU 0.154 — on a part whose volume was right to six figures.
+    // plateTree() is the 100x60 fixture, so the drawing has to be the same part.
+    // ...and it has to show the same Ø30 bore the fixture builds.
+    const drawing = drawPlate({ name: "plate_labelled_front", width: 100, height: 60, boreDiameter: 30 });
+    const llm = scriptedLLM(JSON.stringify(plateTree()));
+    llm.setResponse("analyzeImage", JSON.stringify({
+      drawingKind: "engineering_drawing",
+      views: [{ id: "v_front", kind: "front", projectionPlane: "XY", region: [0, 0, 1, 1], confidence: 0.95 }],
+      scale: { kind: "dimension_callout", label: "100", realLength: 100, imageLength: 100 * SCALE },
+      units: { length: "mm" },
+      undetermined: [],
+    }));
+
+    const pipeline = new CadPipeline({ llm, tp, maxRefinements: 0 });
+    const result = await pipeline.run(drawing.path, "Mounting plate");
+
+    const rep = result.review!.reprojection;
+    expect(rep).toBeDefined();
+    expect(rep!.compared).toBe(true);
+    // Compared along XY, which is the face the drawing shows.
+    expect(rep!.views[0].view).toBe("XY");
+    expect(rep!.views[0].iou).toBeGreaterThan(0.9);
+    expect(rep!.passed).toBe(true);
+  }, 180_000);
+
   it("fails a model whose size disagrees with the drawing", async () => {
     // The drawing is 200mm wide where the model will be 100mm: the callout still
     // says 100mm spans the drawn width, so the model is half the size it should be.

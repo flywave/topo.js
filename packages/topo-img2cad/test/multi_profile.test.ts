@@ -18,6 +18,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { getTopo, installGlobals } from "./helpers/topo.js";
 import type { FeatureTree, SketchSpec } from "../lib/cad/model.js";
 import { runBuildFromTree } from "../lib/stages/features.js";
+import { reconcileSketch } from "../lib/cad/reconcile.js";
+import { findClosedComponents } from "../lib/cad/chain.js";
 import { executeInSandbox } from "../lib/stages/review.js";
 import { validateGeometry } from "../lib/validators/geometric.js";
 import {
@@ -446,5 +448,81 @@ describe("backward compatibility", () => {
     expect(built.code.source).toContain(".circle(");
     expect(built.code.source).toContain(".finalize()");
     expect(built.code.source).not.toContain(".assemble(");
+  });
+});
+
+/**
+ * Two disjoint loops in one sketch were previously reported as unhonoured —
+ * "entities do not form a single closed chain" — and skipped, so a multi-profile
+ * sketch raised a false alarm on every emission AND had its dimensions ignored.
+ * The alarm would have reached the repair loop, which would then have tried to
+ * fix a sketch that was correct.
+ */
+describe("reconciling a sketch with several closed profiles", () => {
+  /** Two disjoint squares, both authored 10x10 while the dimensions say 40x40. */
+  const twoLoops: SketchSpec = {
+    id: "s_two",
+    plane: { kind: "XY", origin: [0, 0, 0] },
+    entities: [
+      { tag: "a1", type: "line", start: [0, 0], end: [10, 0] },
+      { tag: "a2", type: "line", start: [10, 0], end: [10, 10] },
+      { tag: "a3", type: "line", start: [10, 10], end: [0, 10] },
+      { tag: "a4", type: "line", start: [0, 10], end: [0, 0] },
+      { tag: "b1", type: "line", start: [100, 0], end: [110, 0] },
+      { tag: "b2", type: "line", start: [110, 0], end: [110, 10] },
+      { tag: "b3", type: "line", start: [110, 10], end: [100, 10] },
+      { tag: "b4", type: "line", start: [100, 10], end: [100, 0] },
+    ],
+    constraints: [
+      { kind: "LENGTH", tags: ["a1"], value: 40 },
+      { kind: "LENGTH", tags: ["a2"], value: 40 },
+      { kind: "LENGTH", tags: ["b1"], value: 40 },
+      { kind: "LENGTH", tags: ["b2"], value: 40 },
+    ],
+  };
+
+  it("sees the sketch as several closed profiles, not a broken one", () => {
+    const components = findClosedComponents(twoLoops.entities);
+    expect(components).not.toBeNull();
+    expect(components!.length).toBe(2);
+  });
+
+  it("does not report it as unhonoured", () => {
+    const report = reconcileSketch(twoLoops).report;
+    expect(report.unhonoured).toEqual([]);
+    expect(report.closureError).toBeLessThan(1e-9);
+  });
+
+  it("applies each component's dimensions to its coordinates", () => {
+    const reconciled = reconcileSketch(twoLoops);
+    const byTag = new Map(reconciled.entities.map((e) => [e.tag, e]));
+
+    // a1 was authored 10 long and dimensioned 40; it must come out 40.
+    const a1 = byTag.get("a1")!;
+    expect(Math.hypot(a1.end![0] - a1.start![0], a1.end![1] - a1.start![1])).toBeCloseTo(40, 6);
+
+    // And so must the second, disjoint loop — the whole point.
+    const b1 = byTag.get("b1")!;
+    expect(Math.hypot(b1.end![0] - b1.start![0], b1.end![1] - b1.start![1])).toBeCloseTo(40, 6);
+  });
+
+  it("keeps the entity set", () => {
+    expect(reconcileSketch(twoLoops).report.structurePreserved).toBe(true);
+  });
+
+  it("still refuses a sketch whose pieces are not closed", () => {
+    const open: SketchSpec = {
+      id: "s_open",
+      plane: { kind: "XY", origin: [0, 0, 0] },
+      entities: [
+        { tag: "a1", type: "line", start: [0, 0], end: [10, 0] },
+        { tag: "a2", type: "line", start: [10, 0], end: [10, 10] },
+        { tag: "b1", type: "line", start: [100, 0], end: [110, 0] },
+      ],
+      constraints: [],
+    };
+    const report = reconcileSketch(open).report;
+    expect(report.unhonoured.length).toBe(1);
+    expect(report.unhonoured[0].reason).toMatch(/single closed chain/);
   });
 });

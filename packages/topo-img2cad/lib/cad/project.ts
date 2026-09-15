@@ -51,6 +51,11 @@ export function viewBasis(kind: string): ViewBasis {
   return { dir: b.dir, xAxis: b.xAxis, yAxis };
 }
 
+/** Whether `viewBasis` knows this name. */
+export function isKnownView(kind: string): boolean {
+  return Object.prototype.hasOwnProperty.call(BASES, kind);
+}
+
 /**
  * The sketch plane a view's profile belongs on.
  *

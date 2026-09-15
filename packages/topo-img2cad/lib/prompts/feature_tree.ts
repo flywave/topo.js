@@ -168,11 +168,17 @@ Output strictly valid JSON.`;
  * silhouette gate at the very end.
  */
 function planeGuidance(views: unknown): string {
-  const list = (views as { views?: Array<{ id?: string; kind?: string }> } | undefined)?.views ?? [];
+  const list = (views as { views?: Array<{ id?: string; kind?: string; projectionPlane?: string }> } | undefined)?.views ?? [];
   const rows: string[] = [];
   for (const view of list) {
     if (!view?.kind) continue;
-    const plane = sketchPlaneForView(view.kind);
+    // The plane the drawing recorded beats the drafting label, exactly as it does
+    // when the gate picks its projection axis: telling the model to sketch a view
+    // on XZ because it is called "front", while its own plane field says XY,
+    // contradicts what it read and what the measurement will use.
+    const plane = view.projectionPlane && /^(XY|XZ|YZ)$/.test(view.projectionPlane)
+      ? view.projectionPlane
+      : sketchPlaneForView(view.kind);
     if (plane) rows.push(`  ${view.id ?? view.kind} (${view.kind} view) → sketch on the ${plane} plane`);
   }
   if (rows.length === 0) return "";

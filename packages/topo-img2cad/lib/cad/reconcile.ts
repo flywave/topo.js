@@ -24,7 +24,7 @@
  */
 
 import type { ProfileEntity, SketchConstraint, SketchSpec } from "./model.js";
-import { chainEntities } from "./sketch_codegen.js";
+import { chainEntities, findClosedComponents } from "./chain.js";
 
 // ---------------------------------------------------------------------------
 // Result types
@@ -106,74 +106,117 @@ function dimsFor(tag: string, constraints: SketchConstraint[]): {
   const unhonoured: Array<{ constraint: string; reason: string }> = [];
 
   for (const c of constraints) {
-    // Only single-entity constraints shape an entity's own geometry here.
-    if (c.tags.length !== 1 || c.tags[0] !== tag) continue;
-    const label = `${c.kind}(${tag}${c.value !== undefined ? `, ${JSON.stringify(c.value)}` : ""})`;
+    // A dimension that names several entities dimensions each of them. Models
+    // write `LENGTH [e1, e3] = 120` for a rectangle's two long edges, and the
+    // reading is unambiguous for the per-entity kinds below. Skipping anything
+    // with more than one tag dropped those dimensions SILENTLY — applied listed
+    // only the constraints that survived, unhonoured was empty — so a parameter
+    // that reached the sketch only through such a dimension drove no geometry,
+    // and the associativity gate then reported the parameter itself as
+    // decorative. That is what a live run's four "inert parameters" were.
+    if (!c.tags.includes(tag)) continue;
 
-    switch (c.kind) {
-      case "LENGTH": {
-        if (typeof c.value !== "number") {
-          unhonoured.push({ constraint: label, reason: "LENGTH needs a numeric value" });
-          break;
-        }
-        if (dims.length !== undefined && Math.abs(dims.length - c.value) > 1e-9) {
+    // Relational kinds say something about a PAIR, not about each of them, so a
+    // multi-tag one must not be read per-entity.
+    const perEntity = c.tags.length === 1 || PER_ENTITY_KINDS.has(c.kind);
+    if (perEntity) {
+      const dimension = applyDimension(c, tag);
+      if (dimension.kind === "applied") {
+        const existing = dims[dimension.field];
+        if (
+          typeof existing === "number" &&
+          typeof dimension.value === "number" &&
+          Math.abs(existing - dimension.value) > 1e-9
+        ) {
           unhonoured.push({
-            constraint: label,
-            reason: `conflicts with an earlier LENGTH of ${dims.length}`,
+            constraint: dimension.label,
+            reason: `conflicts with an earlier ${c.kind} of ${existing}`,
           });
-          break;
+        } else {
+          dims[dimension.field] = dimension.value as never;
+          applied.push(dimension.label);
         }
-        dims.length = c.value;
-        applied.push(label);
-        break;
+      } else if (dimension.kind === "noted") {
+        applied.push(dimension.label);
+      } else if (dimension.kind === "unhonoured") {
+        unhonoured.push({ constraint: dimension.label, reason: dimension.reason });
       }
-      case "ORIENTATION": {
-        if (!Array.isArray(c.value) || c.value.length !== 2) {
-          unhonoured.push({ constraint: label, reason: "ORIENTATION needs [dx, dy]" });
-          break;
-        }
-        dims.direction = unit([c.value[0], c.value[1]]);
-        applied.push(label);
-        break;
-      }
-      case "RADIUS": {
-        if (typeof c.value !== "number") {
-          unhonoured.push({ constraint: label, reason: "RADIUS needs a numeric value" });
-          break;
-        }
-        dims.radius = c.value;
-        applied.push(label);
-        break;
-      }
-      case "ARC_ANGLE": {
-        if (typeof c.value !== "number") {
-          unhonoured.push({ constraint: label, reason: "ARC_ANGLE needs a numeric value" });
-          break;
-        }
-        dims.sweepDeg = c.value;
-        applied.push(label);
-        break;
-      }
-      case "FIXED":
-        // Anchoring is handled by the chain walk starting at the authored entry.
-        applied.push(label);
-        break;
-      case "JOIN":
-      case "DISTANCE":
-      case "COINCIDENT":
-        // Inter-entity; handled by the chain walk or the runtime solver.
-        break;
-      default:
-        unhonoured.push({
-          constraint: label,
-          reason: `${c.kind} has no constructive interpretation in this module`,
-        });
     }
+
+    // Constraints that are genuinely inter-entity are left to the chain walk and
+    // the runtime solver, exactly as before.
   }
 
   return { dims, applied, unhonoured };
 }
 
+/** Kinds whose meaning is "this entity has this size", so several tags each get it. */
+const PER_ENTITY_KINDS: ReadonlySet<SketchConstraint["kind"]> = new Set([
+  "LENGTH",
+  "RADIUS",
+  "ARC_ANGLE",
+  "ORIENTATION",
+]);
+
+type DimensionOutcome =
+  | { kind: "applied"; field: keyof EntityDims; value: number | Vec; label: string }
+  /** Read, but it shapes nothing here — FIXED anchors the walk rather than a field. */
+  | { kind: "noted"; label: string }
+  | { kind: "unhonoured"; label: string; reason: string }
+  | { kind: "ignored" };
+
+/** Read one per-entity dimension off a constraint. */
+function applyDimension(c: SketchConstraint, tag: string): DimensionOutcome {
+  const label = `${c.kind}(${tag}${c.value !== undefined ? `, ${JSON.stringify(c.value)}` : ""})`;
+
+  switch (c.kind) {
+    case "LENGTH":
+      if (typeof c.value !== "number") {
+        return { kind: "unhonoured", label, reason: "LENGTH needs a numeric value" };
+      }
+      return { kind: "applied", field: "length", value: c.value, label };
+
+    case "ORIENTATION":
+      if (!Array.isArray(c.value) || c.value.length !== 2) {
+        return { kind: "unhonoured", label, reason: "ORIENTATION needs [dx, dy]" };
+      }
+      return {
+        kind: "applied",
+        field: "direction",
+        value: unit([c.value[0], c.value[1]]),
+        label,
+      };
+
+    case "RADIUS":
+      if (typeof c.value !== "number") {
+        return { kind: "unhonoured", label, reason: "RADIUS needs a numeric value" };
+      }
+      return { kind: "applied", field: "radius", value: c.value, label };
+
+    case "ARC_ANGLE":
+      if (typeof c.value !== "number") {
+        return { kind: "unhonoured", label, reason: "ARC_ANGLE needs a numeric value" };
+      }
+      return { kind: "applied", field: "sweepDeg", value: c.value, label };
+
+    case "FIXED":
+      // Anchoring is handled by the chain walk starting at the authored entry.
+      return { kind: "noted", label };
+
+    case "JOIN":
+    case "DISTANCE":
+    case "COINCIDENT":
+      // Inter-entity; handled by the chain walk or the runtime solver.
+      return { kind: "ignored" };
+
+    default:
+      return {
+        kind: "unhonoured",
+        label,
+        reason: `${c.kind} has no constructive interpretation in this module`,
+      };
+  }
+}
 // ---------------------------------------------------------------------------
 // Entity anchoring
 // ---------------------------------------------------------------------------
@@ -268,26 +311,76 @@ export interface ReconcileOptions {
  * makes the last entity's exit land on the first entry exactly when the
  * dimensions describe a closed loop — and the residual is reported when they do
  * not.
+ *
+ * A sketch may equally hold SEVERAL closed profiles — a bolt-hole pattern is one
+ * sketch and one feature — so a failure to form a single chain is only a defect
+ * when the pieces are not each closed in their own right. Reconciliation used to
+ * report the multi-profile case as unhonoured and skip it entirely, which both
+ * raised a false alarm on every such sketch and meant dimensions inside it were
+ * never applied to the coordinates.
  */
 export function reconcileSketch(
   sketch: SketchSpec,
   opts: ReconcileOptions = {},
 ): ReconcileResult {
-  const applied: string[] = [];
-  const unhonoured: ReconcileReport["unhonoured"] = [];
-
   const chain = chainEntities(sketch.entities);
-  if (!chain) {
+  if (chain) return reconcileChain(sketch, chain, opts.anchor);
+
+  const components = findClosedComponents(sketch.entities);
+  if (!components) {
     return {
       entities: sketch.entities,
       report: {
-        applied,
+        applied: [],
         unhonoured: [{ constraint: "(sketch)", reason: "entities do not form a single closed chain" }],
         closureError: Infinity,
         structurePreserved: true,
       },
     };
   }
+
+  const entities: ProfileEntity[] = [];
+  const applied: string[] = [];
+  const unhonoured: ReconcileReport["unhonoured"] = [];
+  let worstClosure = 0;
+
+  for (const component of components) {
+    // A circle is exact as authored and has no chain to walk.
+    if (component.length === 1 && component[0].type === "circle") {
+      entities.push(component[0]);
+      continue;
+    }
+    const inner = chainEntities(component);
+    if (!inner) continue;
+
+    const done = reconcileChain({ ...sketch, entities: component }, inner);
+    entities.push(...done.entities);
+    applied.push(...done.report.applied);
+    unhonoured.push(...done.report.unhonoured);
+    worstClosure = Math.max(worstClosure, done.report.closureError);
+  }
+
+  const originalTags = sketch.entities.map((e) => e.tag).sort().join("|");
+  return {
+    entities,
+    report: {
+      applied,
+      unhonoured,
+      closureError: worstClosure,
+      // Components are regrouped rather than reordered within themselves, so the
+      // entity SET is what has to survive.
+      structurePreserved: entities.map((e) => e.tag).sort().join("|") === originalTags,
+    },
+  };
+}
+
+function reconcileChain(
+  sketch: SketchSpec,
+  chain: NonNullable<ReturnType<typeof chainEntities>>,
+  anchor?: Vec,
+): ReconcileResult {
+  const applied: string[] = [];
+  const unhonoured: ReconcileReport["unhonoured"] = [];
 
   // Dimensions keyed by tag, honouring the chain's traversal direction: the
   // solver's parameter t is relative to the authored direction, so an entity
@@ -298,7 +391,7 @@ export function reconcileSketch(
   }
 
   const out: ProfileEntity[] = [];
-  let cursor: Vec = opts.anchor ?? entryPoint(chain[0].entity)!;
+  let cursor: Vec = anchor ?? entryPoint(chain[0].entity)!;
 
   for (let i = 0; i < chain.length; i++) {
     const { entity, forward } = chain[i];
