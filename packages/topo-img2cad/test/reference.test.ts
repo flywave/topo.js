@@ -140,6 +140,121 @@ describe("reference silhouettes from a drawing", () => {
     expect(ref.referenceBounds!.maxY).toBeCloseTo(ref.maskHeight * 0.5, 6);
   });
 
+  it("places the mask from the stated length, not the model's pixel estimate", () => {
+    // The live failure: a 120mm edge 600px wide, reported as 684px. That put the
+    // mask's frame 14% too wide and failed a geometrically perfect part.
+    const built = buildViewReferences(
+      viewSet({
+        scale: {
+          kind: "dimension_callout",
+          label: "120",
+          realLength: 120,
+          imageLength: 226, // the model's estimate, ~14% high
+          mmPerPixel: 120 / 226,
+        },
+      }),
+      { raster: plateDrawing(), width: 512, height: 512 },
+    );
+
+    const ref = built.references[0];
+    // The silhouette is ~198px wide and the drawing says that edge is 120mm, so
+    // ~0.606 mm/px — not the 0.531 the model's estimate implies.
+    const expected = 120 / ref.maskWidth;
+    expect(ref.referenceBounds!.maxX).toBeCloseTo(ref.maskWidth * expected, 6);
+    expect(ref.referenceBounds!.maxX).toBeCloseTo(120, 1);
+
+    expect(ref.notes.join(" ")).toMatch(/scale realigned/);
+    expect(ref.scaleFromModelEstimate).toBe(false);
+  });
+
+  it("leaves a scale alone when the model read it correctly", () => {
+    const accurate = plateDrawing();
+    const built = buildViewReferences(
+      viewSet({
+        scale: {
+          kind: "dimension_callout",
+          label: "120",
+          realLength: 120,
+          imageLength: 200, // what the silhouette actually measures
+          mmPerPixel: 120 / 200,
+        },
+      }),
+      { raster: accurate, width: 512, height: 512 },
+    );
+
+    expect(built.references[0].notes.join(" ")).not.toMatch(/scale realigned/);
+  });
+
+  it("refuses to realign a dimension that does not span the silhouette", () => {
+    // A bore diameter measures something local; the silhouette is not its extent,
+    // so realigning to it would invent a scale.
+    const built = buildViewReferences(
+      viewSet({
+        scale: {
+          kind: "dimension_callout",
+          label: "Ø40",
+          realLength: 40,
+          imageLength: 60,
+          mmPerPixel: 40 / 60,
+        },
+      }),
+      { raster: plateDrawing(), width: 512, height: 512 },
+    );
+
+    const ref = built.references[0];
+    expect(ref.notes.join(" ")).toMatch(/measures something local/);
+    expect(ref.notes.join(" ")).not.toMatch(/scale realigned/);
+    // The model's own scale is kept, and still flagged as an estimate.
+    expect(ref.referenceBounds!.maxX).toBeCloseTo(ref.maskWidth * (40 / 60), 6);
+    expect(ref.scaleFromModelEstimate).toBe(true);
+  });
+
+  it("leaves an assumed scale alone, since there is nothing to realign to", () => {
+    const built = buildViewReferences(
+      viewSet({
+        scale: { kind: "assumed", realLength: 120, imageLength: 684, mmPerPixel: 120 / 684 },
+      }),
+      { raster: plateDrawing(), width: 512, height: 512 },
+    );
+
+    expect(built.references[0].notes.join(" ")).not.toMatch(/scale realigned/);
+  });
+
+  it("would have rescued the run that motivated it", () => {
+    // The measured numbers, verbatim: a 120x80 plate drawn 600x400px, whose
+    // silhouette came out 597x397, with the model reporting the 120mm edge as
+    // spanning 684px. Against that frame the built part scored IoU 0.613 and the
+    // run failed — with a solid whose volume matched the analytic value to six
+    // significant figures.
+    const raster = lineArt(700, 500, () => {});
+    const outline = rectOutline(raster, 40, 40, 636, 436);
+    for (let y = 0; y < raster.height; y++) {
+      for (let x = 0; x < raster.width; x++) outline(x, y);
+    }
+
+    const built = buildViewReferences(
+      viewSet({
+        scale: {
+          kind: "dimension_callout",
+          label: "120",
+          realLength: 120,
+          imageLength: 684, // the model's estimate
+          mmPerPixel: 120 / 684,
+        },
+      }),
+      { raster, width: 512, height: 512 },
+    );
+
+    const ref = built.references[0];
+    expect(ref.maskWidth).toBeGreaterThanOrEqual(595);
+    expect(ref.maskWidth).toBeLessThanOrEqual(598);
+    // The 120mm edge is now 120mm wide in the frame the mask is placed in, which
+    // is what makes the size comparison mean anything.
+    expect(ref.referenceBounds!.maxX).toBeCloseTo(120, 0);
+    expect(ref.scaleFromModelEstimate).toBe(false);
+    expect(ref.notes.join(" ")).toMatch(/scale realigned/);
+  });
+
   it("still builds a reference without scale, and says size will not be checked", () => {
     const built = buildViewReferences(viewSet(), { raster: plateDrawing(), width: 512, height: 512 });
 

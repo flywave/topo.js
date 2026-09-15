@@ -176,6 +176,7 @@ export function emitFeatureTreeCode(
         wpVar: `wp_${sanitizeId(id)}`,
       });
       for (const line of emitted.code) push(line);
+      warnings.push(...emitted.warnings);
       if (emitted.solved) solvedSketches.push(id);
       sketchByRef.set(id, emitted.wpVar);
       sketchKindByRef.set(id, emitted.kind);

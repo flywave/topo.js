@@ -65,6 +65,8 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `test/reference.test.ts` — 图纸 → 参考剪影 (line art 走 region 模式, 内孔必须是孔; 填充件走 ink 模式) + 工件持久化往返
 - `test/cad_loop_e2e.test.ts` — **闭环总测**: 程序生成图纸 PNG → 真 WASM 建实体 → 与图纸剪影比 IoU (实测 0.966), 并验证错尺寸图纸必须失败、无比例尺时降级为形状比较
 - 其余为既有单测 (`expr`/`profile`/`reconcile`/`projection`/`feature_tree`/`cad_pipeline`/`wasm_e2e`)
+- `test/connectivity.test.ts` — 连通性只能表述一次且必须是绑定实现的那种: 模型写的 `COINCIDENT`(绑定语义是"两段重叠")与发射器自行推导的 join 会就同一对边各说一句互相矛盾的话, 实测残差 6986.67; 去掉模型那句后为 **0**。含把旧发射结果的残差直接对内核重放的对照
+- `test/reference.test.ts` 另含比例尺再对齐: 用真实那次运行的原始数字 (120mm/684px/597px 剪影) 断言框宽回到 120mm
 - `test/llm.test.ts` / `test/sketch_expressions.test.ts` / `test/view_plane.test.ts` / `test/multi_profile.test.ts` — 真实 LLM 联调催生的修复: 网关 `x-opencode-session` 头与 thinking 模型 token 预算、**sketch 几何里的表达式求值**(模型天然会写 `"end":["overallWidth",0]`)、视图→草图基准面映射 (front→XZ)、多轮廓 sketch (四孔一次成型的实测体积与解析值一致)
 - `test/export.test.ts` — STEP/STL 导出: 字节真落在宿主 FS、STEP 头/`DATA`/终止符、STL 二进制且 `84+50n` 对齐、deflection 真的改变网格密度; 并用**三角片有符号体积**反证 STL 闭合且外向 (体积与 BREP 对齐)
 - 改了 `lib/` 或 `cli/` 后若要跑 `topo-img2cad` 命令, 必须先 `pnpm --filter topo-img2cad build` (CLI 从 `dist/` 跑)

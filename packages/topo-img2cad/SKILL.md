@@ -247,6 +247,19 @@ into a degenerate fan at zero residual. Joining is a zero-distance constraint
 between entity parameters — `DISTANCE [t1, t2, 0]` — and the emitter derives those
 from the profile's adjacency so connectivity can never be omitted.
 
+Which also means **connectivity must be stated exactly once, and a model's
+`COINCIDENT` must not be emitted at all.** A live run spelled a plate's four edge
+pairs `COINCIDENT`; the emitter derived the joins itself and emitted both, so every
+edge pair carried two contradictory statements and the solver reported a residual
+of **6986.67 where the same sketch with only the derived joins reports 0**
+(measured). `mergeConstraintsVerbose` now drops a model `COINCIDENT` — the pair is
+covered by derivation, or, if it is not, the constraint has no parameter pair to
+translate into and would be emitted with the wrong meaning either way. Every drop
+is reported, because silently discarding a constraint the model wrote is its own
+kind of lie. Note the failure was invisible in the solid: reconciliation places the
+geometry and `solve()` does not write back, so the part came out exactly right and
+only L3 noticed.
+
 ### Placement
 
 The sketch path ignores the datum plane's origin: a profile lands where its own
@@ -427,15 +440,48 @@ valid solids — see the table above for the ones that are.
   region, will produce a wrong reference and therefore a wrong verdict. The mode
   (`ink` for solid/filled parts, `region` for line art) can be forced with
   `silhouetteMode`, and the chosen mode is reported.
-- **The absolute size check rests on the model's pixel estimate.** The drawing
-  states a real length ("120") reliably, but *how many pixels that spans* is a
-  vision model eyeballing an image — measured at 14% off on a real drawing
-  (684 px reported for a 600 px edge). That 14% became a 0.61 IoU against a
-  geometrically perfect part. So `ViewReference.scaleFromModelEstimate` records the
-  provenance, the pipeline warns that the frame was placed from an estimate, and a
-  `RPR_LOW_IOU` against such a frame says *"check the scale evidence before
-  resizing the part"* rather than inviting a repair to resize a correct model to
-  match a mis-scaled reference.
+- **The absolute size check rests on the model's pixel estimate — so it is
+  realigned.** The drawing states a real length ("120") reliably; *how many pixels
+  that spans* is a vision model eyeballing an image, measured 14% high on a real
+  drawing (684 px reported for a 600 px edge). That 14% alone turned a
+  geometrically perfect part into a 0.61 IoU and a failed run. The pixel figure is
+  also the one number here we do not have to ask for — the silhouette *is* the
+  part, so its own extent in pixels is what the dimension refers to. So the mask is
+  placed at `realLength / measured pixels` instead, leaving the model's estimate
+  doing only what it is good at: saying which axis the dimension is on.
+  The correction is refused when the dimension plainly does not span the silhouette
+  — a Ø40 hole in a 120mm plate — using a deliberately tight plausibility band
+  (0.75–1.35×), because a band of "about 2×" lets exactly that case through and
+  would invent a scale a factor of two out. When no realignment happened,
+  `ViewReference.scaleFromModelEstimate` stays true, the pipeline warns that the
+  frame was placed from an estimate, and a `RPR_LOW_IOU` against such a frame says
+  *"check the scale evidence before resizing the part"* rather than inviting a
+  repair to resize a correct model to match a mis-scaled reference.
+- **`maxTokens` may need to be generous for a thinking model.** On a slow pass the
+  same `mimo-v2.5` call that normally answers in 2k tokens spent all 12,288 on
+  reasoning and returned nothing; the provider says so by name instead of reporting
+  a missing JSON object. When the endpoint degrades this way it does so for *every*
+  call, so a run that suddenly fails on all of them is the endpoint, not the tree.
+
+### What the realignment was worth, measured
+
+Replaying one run's own failing case — its tree, its drawing, its 684px scale
+misread — through the fixed code, with no model involved:
+
+| | before | after |
+|---|---|---|
+| L3 solver residual | 6986.67 | **0** |
+| L4 silhouette IoU | 0.6130 | **0.9760** |
+| L4 mean deviation | 10.87 px | **0.04 px** |
+| L4 precision | 0.700 | 0.981 |
+| volume vs analytic | 1.000000 | 1.000000 |
+
+The geometry was right in both. One figure moved because the sketch stopped
+contradicting itself, the other because the mask was placed at the size the
+drawing states. An intermediate measurement read 0.895 until the *drawing* was
+fixed: it showed its four corner holes as 2mm dots while the dimension text said
+"4x Ø12". The model read the text and built Ø12, and the gate was right to
+complain — the reference was the thing that was wrong.
 - **A constraint the kernel's solver cannot satisfy is reported, not hidden.**
   Reconciliation puts the geometry where the dimensions say it goes, so a solid can
   come out exactly right while `solve()` reports a large residual — the emitted

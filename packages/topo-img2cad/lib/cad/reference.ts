@@ -183,7 +183,8 @@ function buildViewReference(
   }
   notes.push(...silhouette.notes);
 
-  const mmPerPixel = viewSet.scale?.mmPerPixel;
+  const scale = realignScale(viewSet, maskWidth, maskHeight, notes);
+  const mmPerPixel = scale.mmPerPixel;
   let referenceBounds: Bounds2D | undefined;
   if (mmPerPixel && isFinite(mmPerPixel) && mmPerPixel > 0) {
     referenceBounds = {
@@ -209,12 +210,80 @@ function buildViewReference(
       maskWidth,
       maskHeight,
       referenceBounds,
-      scaleFromModelEstimate: referenceBounds !== undefined,
+      // Realigned against a length the drawing states, so the frame no longer
+      // depends on the model's pixel estimate and a size check can be trusted.
+      scaleFromModelEstimate: referenceBounds !== undefined && !scale.realigned,
       silhouetteMode: silhouette.mode,
       notes,
     },
     notes,
   };
+}
+
+/**
+ * The millimetres per pixel to place the mask's frame with.
+ *
+ * `ViewSet.scale` carries two numbers of very different quality: `realLength`,
+ * which is text on the drawing ("120"), and `imageLength`, which is a vision
+ * model's estimate of how many pixels that spans. Measured against a real
+ * drawing the estimate was 14% high — 684 px for a 600 px edge — and that 14%
+ * alone turned a geometrically perfect part into a 0.61 IoU and a failed run.
+ *
+ * The pixel figure is also the one number here we do not have to ask for: the
+ * silhouette IS the part, so its own extent in pixels is the measurement the
+ * dimension refers to. Combining the stated length with our own measurement
+ * leaves the model's estimate doing only what it is good at — saying which axis
+ * the dimension lies on.
+ *
+ * The correction is refused when the dimension plainly does not span the
+ * silhouette (a bore diameter, say, in a plate several times wider), because
+ * then the silhouette is not the extent that dimension measures.
+ */
+function realignScale(
+  viewSet: ViewSet,
+  maskWidth: number,
+  maskHeight: number,
+  notes: string[],
+): { mmPerPixel: number | undefined; realigned: boolean } {
+  const scale = viewSet.scale;
+  const declared = scale?.mmPerPixel;
+  const keep = { mmPerPixel: declared, realigned: false };
+  if (!scale || !declared || !isFinite(declared) || declared <= 0) return keep;
+
+  // An assumed scale is a guess, so there is nothing to realign it against.
+  if (scale.kind === "assumed") return keep;
+  if (!isFinite(scale.realLength) || scale.realLength <= 0) return keep;
+  if (!isFinite(scale.imageLength) || scale.imageLength <= 0) return keep;
+
+  const nearer = (value: number, target: number) => Math.abs(Math.log(value / target));
+  const useWidth = nearer(maskWidth, scale.imageLength) <= nearer(maskHeight, scale.imageLength);
+  const extent = useWidth ? maskWidth : maskHeight;
+
+  // The whole correction rests on the dimension spanning the silhouette, so that
+  // has to be plausible before anything else. A tight band: the model's pixel
+  // estimate is being trusted only for WHICH axis the dimension is on, and an
+  // estimate that is off by more than a third is no longer evidence of that. A
+  // band of roughly 2x (the obvious-looking choice) lets a bore diameter through
+  // — a 40mm hole in a 120mm plate sits within a factor of two of the plate's
+  // height, and realigning to it would invent a scale a factor of two out.
+  const plausibility = extent / scale.imageLength;
+  if (plausibility < 0.75 || plausibility > 1.35) {
+    notes.push(
+      `the stated dimension "${scale.label ?? scale.realLength}" spans about ${scale.imageLength}px, which does not match this silhouette's ${extent}px ${useWidth ? "width" : "height"} — it measures something local, so the scale was left as the model read it`,
+    );
+    return keep;
+  }
+
+  const measured = scale.realLength / extent;
+  if (!isFinite(measured) || measured <= 0) return keep;
+
+  const drift = Math.abs(measured - declared) / declared;
+  if (drift <= 0.02) return keep;
+
+  notes.push(
+    `scale realigned: the drawing's "${scale.label ?? scale.realLength}" was read as spanning ${scale.imageLength}px, but this silhouette's ${useWidth ? "width" : "height"} is ${extent}px — placing the mask at ${measured.toFixed(4)} mm/px rather than ${declared.toFixed(4)}`,
+  );
+  return { mmPerPixel: measured, realigned: true };
 }
 
 /**

@@ -375,14 +375,83 @@ export function deriveJoinConstraints(entities: ProfileEntity[]): SketchConstrai
 }
 
 /** The sketch's own constraints plus the derived joins, de-duplicated. */
+export interface DroppedConstraint {
+  kind: SketchConstraintKind;
+  tags: string[];
+  reason: string;
+}
+
+export interface MergeConstraintsResult {
+  constraints: SketchConstraint[];
+  dropped: DroppedConstraint[];
+}
+
+/**
+ * Merge the model's constraints with the joins derived from the profile.
+ *
+ * Connectivity must be stated exactly once, and in the form the binding actually
+ * implements. `JOIN` is "the endpoints of these two entities meet"; the binding's
+ * `COINCIDENT` is "these two segments overlap", which for a rectangle's adjacent
+ * edges is a contradiction of the derived join rather than a repetition of it.
+ *
+ * Getting this wrong is not a cosmetic matter: a model that spelled connectivity
+ * `COINCIDENT` had both constraints emitted for all four edge pairs of a plate,
+ * and the sketch solver reported a residual of 6986.67 where the same sketch with
+ * only the derived joins reports 0 (measured). The geometry still came out right,
+ * because reconciliation places it and `solve()` does not write back — so the
+ * failure surfaced only as L3 refusing to certify a correct part.
+ */
+export function mergeConstraintsVerbose(sketch: SketchSpec): MergeConstraintsResult {
+  const derived = deriveJoinConstraints(sketch.entities);
+  const derivedPairs = new Set(derived.map((c) => pairKey(c.tags)));
+
+  const constraints: SketchConstraint[] = [];
+  const dropped: DroppedConstraint[] = [];
+
+  for (const c of sketch.constraints) {
+    const statesConnectivity = c.kind === "JOIN" || c.kind === "COINCIDENT";
+    if (!statesConnectivity || c.tags.length !== 2) {
+      constraints.push(c);
+      continue;
+    }
+
+    if (derivedPairs.has(pairKey(c.tags))) {
+      dropped.push({
+        kind: c.kind,
+        tags: c.tags,
+        reason: "the emitter already derives this join from the profile's adjacency",
+      });
+      continue;
+    }
+
+    // An explicit JOIN that names its own parameter pair is a complete
+    // statement, so it is honoured as written.
+    if (c.kind === "JOIN" && Array.isArray(c.value) && c.value.length >= 2) {
+      constraints.push(c);
+      continue;
+    }
+
+    // Anything else would be emitted with the binding's "these overlap" meaning,
+    // which is not what the model meant and not something a profile wants.
+    dropped.push({
+      kind: c.kind,
+      tags: c.tags,
+      reason:
+        c.kind === "COINCIDENT"
+          ? "COINCIDENT in this binding means the two segments overlap, not that their endpoints meet; the profile's adjacency did not make this pair consecutive, so there was no join to derive"
+          : "the join names no parameter pair for its endpoints and the adjacency did not supply one",
+    });
+  }
+
+  return { constraints: [...constraints, ...derived], dropped };
+}
+
 export function mergeConstraints(sketch: SketchSpec): SketchConstraint[] {
-  const explicit = new Set(
-    sketch.constraints.filter((c) => c.kind === "JOIN").map((c) => [...c.tags].sort().join("|")),
-  );
-  const derived = deriveJoinConstraints(sketch.entities).filter(
-    (c) => !explicit.has([...c.tags].sort().join("|")),
-  );
-  return [...sketch.constraints, ...derived];
+  return mergeConstraintsVerbose(sketch).constraints;
+}
+
+function pairKey(tags: string[]): string {
+  return [...tags].sort().join("|");
 }
 
 // ---------------------------------------------------------------------------
@@ -565,6 +634,8 @@ export interface EmittedProfile {
    * sketch that failed to solve.
    */
   solved: boolean;
+  /** Constraints that were left out, and why. Surfaced by the caller. */
+  warnings: string[];
   /** Code building the placed sketch. */
   code: string[];
   /**
@@ -650,6 +721,7 @@ export function emitProfileGeometry(
       wpVar: opts.wpVar,
       kind: "circle",
       solved: false,
+      warnings: [],
       code,
       placement: planeTo3D(sketch.plane, classified.centre[0], classified.centre[1]),
       reconciliation: reconciled.report,
@@ -681,7 +753,8 @@ export function emitProfileGeometry(
     }
 
     // --- constraints ------------------------------------------------------
-    for (const c of mergeConstraints({ ...sketch, entities: reconciled.entities })) {
+    const merged = mergeConstraintsVerbose({ ...sketch, entities: reconciled.entities });
+    for (const c of merged.constraints) {
       code.push(`${I}${emitConstraint(skVar, c)}`);
     }
 
@@ -701,6 +774,7 @@ export function emitProfileGeometry(
       wpVar: opts.wpVar,
       kind: "loop",
       solved: true,
+      warnings: constraintWarnings(sketch.id, merged.dropped),
       code,
       placement: planeTo3D(sketch.plane, 0, 0),
       reconciliation: reconciled.report,
@@ -713,6 +787,7 @@ export function emitProfileGeometry(
   // gets its own sketch, finalised to a workplane, and the wrapper's
   // extrude() method extrudes each workplane on demand and unions the results.
   const code: string[] = [];
+  const droppedAll: DroppedConstraint[] = [];
   const wpVars: string[] = []; // workplane variables (one per component)
   const placementExprs: string[] = []; // placement translate expressions
   let hasLoop = false;
@@ -767,7 +842,9 @@ export function emitProfileGeometry(
         ? sketch.constraints.filter((c) => c.tags.every((t) => compEntityTags.has(t)))
         : [];
       const compSketch = { ...sketch, entities: reconciledComp, constraints: compConstraints };
-      for (const c of mergeConstraints(compSketch)) {
+      const compMerged = mergeConstraintsVerbose(compSketch);
+      droppedAll.push(...compMerged.dropped);
+      for (const c of compMerged.constraints) {
         code.push(`${I}${emitConstraint(compSkVar, c)}`);
       }
 
@@ -798,10 +875,17 @@ export function emitProfileGeometry(
     wpVar: opts.wpVar,
     kind: "multi",
     solved: hasLoop,
+    warnings: constraintWarnings(sketch.id, droppedAll),
     code,
     placement: planeTo3D(sketch.plane, 0, 0),
     reconciliation: reconciled.report,
   };
+}
+
+function constraintWarnings(sketchId: string, dropped: DroppedConstraint[]): string[] {
+  return dropped.map(
+    (d) => `sketch ${sketchId}: dropped ${d.kind} on ${d.tags.join("+")} — ${d.reason}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
