@@ -98,7 +98,7 @@ describe("mirroring a named feature", () => {
     const { built } = build(tree);
 
     expect(built.code.source).toContain('tool_f_hole.mirror("YZ", undefined, true)');
-    expect(built.code.source).toContain("body = body.cut(tool_f_mx_1_0, true, 0);");
+    expect(built.code.source).toContain("body = body.cut(tool_f_mx, true, 0);");
     // The body itself is never mirrored.
     expect(built.code.source).not.toMatch(/body = body\.mirror/);
   }, 120_000);
@@ -112,21 +112,47 @@ describe("mirroring a named feature", () => {
     expect(sandbox.error).toBeUndefined();
   }, 120_000);
 
-  it("refuses a mirror of a mirror rather than emitting something that throws", () => {
-    // A Workplane that is already a reflection cannot be mirrored again — the
-    // kernel rejects it — and composing two reflections another way measured
-    // wrong (a 120x10x80 plate came back 124.8 x 18.7).
+  it("composes: mirroring a mirror gives all four corners", () => {
+    // `mirror(plane, base, copy=true)` keeps the original, so the second mirror
+    // reflects the pair and the pattern is four holes. The plate is sketched on
+    // XZ, so across the WIDTH is YZ and across the HEIGHT is XY.
     const tree = plateWithFeatureToMirror([
-      { id: "f_mx", name: "Mirror in X", op: { op: "mirror", plane: { kind: "YZ", origin: [0, 0, 0] }, ofFeature: "f_hole" } },
-      { id: "f_my", name: "Mirror in Y", op: { op: "mirror", plane: { kind: "XZ", origin: [0, 0, 0] }, ofFeature: "f_mx" } },
+      { id: "f_mx", name: "Mirror across width", op: { op: "mirror", plane: { kind: "YZ", origin: [0, 0, 0] }, ofFeature: "f_hole" } },
+      { id: "f_my", name: "Mirror across height", op: { op: "mirror", plane: { kind: "XY", origin: [0, 0, 0] }, ofFeature: "f_mx" } },
     ]);
 
-    const { built, sandbox } = build(tree);
+    const { built, sandbox, geo } = build(tree);
     expect(sandbox.error).toBeUndefined();
-    expect(built.warnings.join(" ")).toMatch(/mirroring a mirror is not supported/);
-    expect(built.code.source).toContain("// skipped:");
+    expect(built.warnings.filter((w) => /mirror/.test(w))).toEqual([]);
 
-    // And what it did emit is a sound part, not a broken one.
-    expect(validateGeometry(tp, sandbox.shape).report.shapeValid).toBe(true);
+    expect(geo!.report.shapeValid).toBe(true);
+    const bbox = geo!.report.bbox!;
+    expect(bbox[3] - bbox[0]).toBeCloseTo(120, 2);
+    expect(bbox[4] - bbox[1]).toBeCloseTo(10, 2);
+    expect(bbox[5] - bbox[2]).toBeCloseTo(80, 2);
+
+    const fourHoles = 120 * 80 * 10 - 4 * Math.PI * 6 * 6 * 10;
+    expect(geo!.report.volume!).toBeCloseTo(fourHoles, 0);
+  }, 120_000);
+
+  it("refuses a mirror through the plane the feature already lies in", () => {
+    // This is the mistake a live run made: it called the feature's own plane
+    // "mirror in Y". The reflection lands exactly on the original, and the
+    // kernel's fuse of the two coincident tools fails outright — so the emitter
+    // refuses it rather than crashing or silently dropping half the pattern.
+    const tree = plateWithFeatureToMirror([
+      { id: "f_mx", name: "Mirror across width", op: { op: "mirror", plane: { kind: "YZ", origin: [0, 0, 0] }, ofFeature: "f_hole" } },
+      { id: "f_my", name: "Mirror in the feature's own plane", op: { op: "mirror", plane: { kind: "XZ", origin: [0, 0, 0] }, ofFeature: "f_mx" } },
+    ]);
+
+    const { built, sandbox, geo } = build(tree);
+    expect(sandbox.error).toBeUndefined();
+    expect(built.warnings.join(" ")).toMatch(/the mirrored feature is sketched on XZ too/);
+    expect(built.warnings.join(" ")).toMatch(/mirror about one of the OTHER planes/);
+
+    // Two sound holes rather than a crash, and the gap is stated.
+    expect(geo!.report.shapeValid).toBe(true);
+    const twoHoles = 120 * 80 * 10 - 2 * Math.PI * 6 * 6 * 10;
+    expect(geo!.report.volume!).toBeCloseTo(twoHoles, 0);
   }, 120_000);
 });

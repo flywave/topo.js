@@ -338,16 +338,23 @@ about YZ and then XZ got the *body* mirrored twice and a plate **20mm thick inst
 sketch normal is blind to thickness, and a single view leaves no second view to
 disagree with. The tree said 10; only the tree said 10.
 
-Two limits, both measured rather than assumed:
+**Mirroring a mirror composes**: `mirror(plane, base, copy=true)` returns the tool *union
+its reflection*, so the second mirror reflects the pair. A corner hole mirrored about YZ
+and then about XY is all four corners in two features, and measured exactly
+`120·80·10 − π·20²·10 − 4·π·6²·10`.
 
-- **A reflection cannot be reflected again.** `mirror` on a Workplane that is already a
-  mirror (or the result of a `union`) fails inside the kernel with *"null function or
-  function signature mismatch"*.
-- **Composing two reflections is not a substitute.** They are mathematically a 180°
-  rotation, and the emitter tried emitting exactly that — the same 120×10×80 plate
-  came back **124.8 × 18.7**. Wrong shapes are silent, so composite reflections are
-  refused with a reason instead (*"express the pattern with a second sketch and pocket
-  instead"*) rather than approximated.
+One case is refused, and it is the case models get wrong. **A feature lies IN its own
+sketch plane, so reflecting it through that plane changes nothing** — the reflection
+lands exactly on the original, and the kernel's fuse of two coincident tools fails
+outright (*"null function or function signature mismatch"*). A live run mirrored a hole
+about XZ to move it "across the height" when the plate was sketched on XZ and the height
+is world Z: XZ is the plane the feature already occupies, so it moved nothing. The
+emitter detects this by walking the source feature back to its sketch plane and refuses
+with the reason and the remedy, rather than crashing or silently dropping half a
+four-hole pattern. The prompt now states the convention in the same words.
+
+The same-plane check needs the mirrored feature's own plane, so it follows `ofFeature`
+back through any intervening mirrors to whatever carries the sketch.
 
 `CadPipeline.verifyAssociativity` rebuilds with each parameter perturbed and confirms
 the geometry moves. Two things had to be right for that verdict to be trustworthy,
@@ -521,14 +528,20 @@ valid solids — see the table above for the ones that are.
   part, so its own extent in pixels is what the dimension refers to. So the mask is
   placed at `realLength / measured pixels` instead, leaving the model's estimate
   doing only what it is good at: saying which axis the dimension is on.
-  The correction is refused when the dimension plainly does not span the silhouette
-  — a Ø40 hole in a 120mm plate — using a deliberately tight plausibility band
-  (0.75–1.35×), because a band of "about 2×" lets exactly that case through and
-  would invent a scale a factor of two out. When no realignment happened,
-  `ViewReference.scaleFromModelEstimate` stays true, the pipeline warns that the
-  frame was placed from an estimate, and a `RPR_LOW_IOU` against such a frame says
-  *"check the scale evidence before resizing the part"* rather than inviting a
-  repair to resize a correct model to match a mis-scaled reference.
+  **Which dimensions may be used for that is decided by the label, not the
+  arithmetic.** A dimension measuring a *feature* — `Ø40`, `R12`, a thickness — has
+  no relation to the silhouette's own extent, so realigning to it invents a scale.
+  A ratio test cannot separate the two: measured across live runs the model's pixel
+  estimate for a genuine overall dimension has been off by up to **46%**, which
+  lands exactly where a bore diameter would. Drawings mark feature dimensions with a
+  prefix, so `Ø`/`⌀`/`φ`/`R`/`DIA`/`RADIUS`/`THK` labels are excluded outright, and
+  the remaining overall dimensions get a wide band (0.4–2.5×) because being strict
+  here means falling back to the very number the correction exists to replace.
+  When no realignment happened, `ViewReference.scaleUnverified` stays true, the
+  pipeline warns that the frame was placed from an estimate, and a `RPR_LOW_IOU`
+  against such a frame says *"check the scale evidence before resizing the part"*
+  rather than inviting a repair to resize a correct model to match a mis-scaled
+  reference.
 - **`maxTokens` may need to be generous for a thinking model.** On a slow pass the
   same `mimo-v2.5` call that normally answers in 2k tokens spent all 12,288 on
   reasoning and returned nothing; the provider says so by name instead of reporting

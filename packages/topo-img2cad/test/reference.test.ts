@@ -188,9 +188,11 @@ describe("reference silhouettes from a drawing", () => {
     expect(built.references[0].scaleUnverified).toBe(false);
   });
 
-  it("refuses to realign a dimension that does not span the silhouette", () => {
-    // A bore diameter measures something local; the silhouette is not its extent,
-    // so realigning to it would invent a scale.
+  it("refuses a feature dimension, however the label spells it", () => {
+    // A bore diameter measures a feature; the silhouette is not its extent, so
+    // realigning to it would invent a scale. The label says so, and that beats
+    // any ratio test — a genuinely mis-estimated overall dimension lands in the
+    // same numeric range (see the next case).
     const built = buildViewReferences(
       viewSet({
         scale: {
@@ -205,7 +207,7 @@ describe("reference silhouettes from a drawing", () => {
     );
 
     const ref = built.references[0];
-    expect(ref.notes.join(" ")).toMatch(/measures something local/);
+    expect(ref.notes.join(" ")).toMatch(/measures a feature rather than the part/);
     expect(ref.notes.join(" ")).not.toMatch(/scale realigned/);
     // The model's own scale is kept, and still flagged as an estimate.
     expect(ref.referenceBounds!.maxX).toBeCloseTo(ref.maskWidth * (40 / 60), 6);
@@ -221,6 +223,39 @@ describe("reference silhouettes from a drawing", () => {
     );
 
     expect(built.references[0].notes.join(" ")).not.toMatch(/scale realigned/);
+  });
+
+  it("corrects an overall dimension the model measured badly", () => {
+    // From a live run: the model called the 120mm edge 870px when it is 597. That
+    // is 46% out — well beyond any tight band — and leaving it meant comparing a
+    // 120mm part against an 82mm frame: IoU 0.38 on a part whose geometry was
+    // right. A bare numeric label is an overall dimension, so it is corrected.
+    // The drawing the run actually used: a 120x80 plate drawn 600x400px, whose
+    // silhouette comes out 597 wide.
+    const raster = lineArt(700, 500, () => {});
+    const outline = rectOutline(raster, 40, 40, 636, 436);
+    for (let y = 0; y < raster.height; y++) {
+      for (let x = 0; x < raster.width; x++) outline(x, y);
+    }
+
+    const built = buildViewReferences(
+      viewSet({
+        scale: {
+          kind: "dimension_callout",
+          label: "120",
+          realLength: 120,
+          imageLength: 870,
+          mmPerPixel: 120 / 870,
+        },
+      }),
+      { raster, width: 512, height: 512 },
+    );
+
+    const ref = built.references[0];
+    expect(ref.maskWidth).toBeGreaterThanOrEqual(595);
+    expect(ref.notes.join(" ")).toMatch(/scale realigned/);
+    expect(ref.referenceBounds!.maxX).toBeCloseTo(120, 0);
+    expect(ref.scaleUnverified).toBe(false);
   });
 
   it("would have rescued the run that motivated it", () => {

@@ -263,21 +263,33 @@ function realignScale(
   if (!isFinite(scale.realLength) || scale.realLength <= 0) return keep;
   if (!isFinite(scale.imageLength) || scale.imageLength <= 0) return keep;
 
+  // A dimension that measures a FEATURE cannot be realigned to the silhouette,
+  // because the silhouette is not the extent it measures: a Ø40 hole in a 120mm
+  // plate has no relation to the plate's own width. The label says which this is,
+  // and that is a far better discriminator than any ratio — measured across live
+  // runs, the model's pixel estimate for a genuine overall dimension has been off
+  // by up to 46%, which overlaps almost entirely with where a bore diameter would
+  // land. Prefixes are how drawings mark feature dimensions.
+  const label = (scale.label ?? "").trim();
+  if (/^(?:ø|⌀|φ|r|dia\b|radius|thk\b|t\s*=)/i.test(label)) {
+    notes.push(
+      `the stated dimension "${label}" measures a feature rather than the part, so it cannot place the silhouette's scale — the scale was left as the model read it`,
+    );
+    return keep;
+  }
+
   const nearer = (value: number, target: number) => Math.abs(Math.log(value / target));
   const useWidth = nearer(maskWidth, scale.imageLength) <= nearer(maskHeight, scale.imageLength);
   const extent = useWidth ? maskWidth : maskHeight;
 
-  // The whole correction rests on the dimension spanning the silhouette, so that
-  // has to be plausible before anything else. A tight band: the model's pixel
-  // estimate is being trusted only for WHICH axis the dimension is on, and an
-  // estimate that is off by more than a third is no longer evidence of that. A
-  // band of roughly 2x (the obvious-looking choice) lets a bore diameter through
-  // — a 40mm hole in a 120mm plate sits within a factor of two of the plate's
-  // height, and realigning to it would invent a scale a factor of two out.
+  // With a feature dimension excluded, this still has to be plausible: an overall
+  // dimension should be within a factor of a few of the silhouette it spans. The
+  // band is wide because the estimate is poor — being strict here means falling
+  // back to the very number the correction exists to replace.
   const plausibility = extent / scale.imageLength;
-  if (plausibility < 0.75 || plausibility > 1.35) {
+  if (!isFinite(plausibility) || plausibility < 0.4 || plausibility > 2.5) {
     notes.push(
-      `the stated dimension "${scale.label ?? scale.realLength}" spans about ${scale.imageLength}px, which does not match this silhouette's ${extent}px ${useWidth ? "width" : "height"} — it measures something local, so the scale was left as the model read it`,
+      `the stated dimension "${label || scale.realLength}" spans about ${scale.imageLength}px, which does not match this silhouette's ${extent}px ${useWidth ? "width" : "height"} — it measures something local, so the scale was left as the model read it`,
     );
     return keep;
   }

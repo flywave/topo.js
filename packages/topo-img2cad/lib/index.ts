@@ -111,6 +111,7 @@ export type { ClosureReport, ProfileReport } from "./cad/profile.js";
 export {
   viewBasis,
   customBasis,
+  isKnownView,
   sketchPlaneForView,
   projectMesh,
   translateProjected,

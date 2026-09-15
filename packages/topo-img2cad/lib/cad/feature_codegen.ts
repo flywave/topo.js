@@ -215,7 +215,7 @@ export function emitFeatureTreeCode(
     sketchByRef,
     sketchKindByRef,
     placementBySketch,
-    toolVarByFeature: new Map<string, Array<{ varName: string; flips: Axis[] }>>(),
+    toolVarByFeature: new Map<string, string[]>(),
     methodsUsed,
     bodyDeclared: false,
   };
@@ -306,15 +306,10 @@ interface EmitCtx {
    * Tools a feature contributes, one entry per cut it needs.
    *
    * A list because a mirrored feature removes everything its source removed PLUS
-   * the reflection: mirror in X then in Y is four holes, not two. Each entry
-   * records which axes it is reflected in rather than a variable name, because a
-   * Workplane that is already a reflection cannot be mirrored again — the kernel
-   * rejects `mirror` (and `mirror` after `union`) with "null function or function
-   * signature mismatch" (measured). Every entry is therefore derived from the
-   * ORIGINAL tool, and a composition of two axis reflections is emitted as the
-   * single 180-degree rotation it is exactly equal to.
+   * the reflection — mirror in X and then in Z is four holes — and `mirror` keeps
+   * the original, so the accumulation is the kernel's rather than ours.
    */
-  toolVarByFeature: Map<string, Array<{ varName: string; flips: Axis[] }>>;
+  toolVarByFeature: Map<string, string[]>;
   methodsUsed: Set<string>;
   /** False until a feature has declared the body — the first one uses `let`. */
   bodyDeclared: boolean;
@@ -370,13 +365,27 @@ function multiOpReason(
   return `feature "${featureId}": "${op}" cannot use sketch "${sketchId}", which holds several disjoint profiles — those are built as a union of separate extrusions, and only extrusion ops can consume that`;
 }
 
-function toggle(flips: Axis[], axis: Axis): Axis[] {
-  return flips.includes(axis) ? flips.filter((f) => f !== axis) : [...flips, axis];
+
+/**
+ * The datum plane the named feature's sketch lies on, following mirrors back to
+ * whatever actually carries a sketch.
+ */
+function mirroredFeaturePlane(ctx: EmitCtx, featureId: string, depth = 0): string | null {
+  if (depth > 8) return null;
+  const feature = ctx.tree.features.find((f) => f.id === featureId);
+  if (!feature) return null;
+
+  const op = feature.op as { op: string; sketchId?: string; ofFeature?: string };
+  if (op.sketchId) {
+    return ctx.tree.sketches[op.sketchId]?.plane?.kind ?? null;
+  }
+  if (op.ofFeature) return mirroredFeaturePlane(ctx, op.ofFeature, depth + 1);
+  return null;
 }
 
 /** The tool a feature contributes first, for ops that repeat one source. */
 function firstTool(ctx: EmitCtx, featureId: string | undefined): string | undefined {
-  return featureId ? ctx.toolVarByFeature.get(featureId)?.[0]?.varName : undefined;
+  return featureId ? ctx.toolVarByFeature.get(featureId)?.[0] : undefined;
 }
 
 function requireSketchWp(sketchId: string | undefined, ctx: EmitCtx, featureId: string): string {
@@ -432,7 +441,7 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
         `const ${toolVar} = ${extrudeExpr(wp, depth, { taper, placement: placementOf(op.sketchId, ctx) })};`,
       );
       code.push(`body = body.cut(${toolVar}, true, 0);`);
-      ctx.toolVarByFeature.set(feature.id, [{ varName: toolVar, flips: [] }]);
+      ctx.toolVarByFeature.set(feature.id, [toolVar]);
       ctx.methodsUsed.add("extrude");
       ctx.methodsUsed.add("cut");
       if (op.through) {
@@ -612,8 +621,8 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
       // volume. L4 passed it, because a silhouette taken along the sketch normal
       // is blind to thickness and there was only one view to disagree with.
       if (op.ofFeature !== undefined) {
-        const sources = ctx.toolVarByFeature.get(op.ofFeature);
-        if (!sources || sources.length === 0) {
+        const src = firstTool(ctx, op.ofFeature);
+        if (!src) {
           return {
             code,
             warnings,
@@ -621,47 +630,35 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
           };
         }
 
-        const axis = PLANE_AXIS[planeName];
-        if (!axis) {
+        // A feature drawn IN the mirror plane is symmetric about it, so the
+        // reflection coincides with the original and the kernel's fuse of the two
+        // fails outright ("null function or function signature mismatch",
+        // measured). It is also a no-op by definition, so the only question is
+        // whether to say so or to crash. Models reach for this plane often — a
+        // live run mirrored a hole about XZ to move it across the plate's height,
+        // when an XZ-sketch plate is mirrored across its height by XY.
+        const sourcePlane = mirroredFeaturePlane(ctx, op.ofFeature);
+        if (sourcePlane && sourcePlane === planeName) {
           return {
             code,
             warnings,
-            skip: `mirror about "${planeName}" is not an axis-aligned plane, so the reflection cannot be composed`,
+            skip: `mirror about ${planeName}, but the mirrored feature is sketched on ${sourcePlane} too — a feature lying in a plane is unchanged by reflecting it through that plane. To move it across the part, mirror about one of the OTHER planes`,
           };
         }
 
-        // The source must be a plain tool. A Workplane that is already a
-        // reflection cannot be mirrored again — the kernel rejects it with "null
-        // function or function signature mismatch" (measured) — and composing two
-        // reflections some other way measured wrong. So a mirror OF A MIRROR is
-        // refused rather than approximated.
-        const alreadyReflected = sources.some((t) => t.flips.length > 0);
-        if (alreadyReflected) {
-          return {
-            code,
-            warnings,
-            skip: `mirror source "${op.ofFeature}" is itself a mirror — a reflection cannot be reflected again with this binding, so mirroring a mirror is not supported; express the pattern with a second sketch and pocket instead`,
-          };
-        }
-
-        const wanted: Array<{ varName: string; flips: Axis[] }> = [
-          ...sources,
-          ...sources.map((t) => ({ ...t, flips: toggle(t.flips, axis) })),
-        ];
-
+        // `mirror(plane, base, copy=true)` returns the tool UNION its reflection,
+        // so mirroring a mirror composes without any extra work: mirror in X then
+        // in Z is four holes. An earlier version refused to chain — a bisect had
+        // shown `mirror` failing after a `union`, and that was wrongly generalised
+        // to any reflection — which silently dropped half of a four-hole pattern.
+        const reflected = `tool_${sanitizeId(feature.id)}`;
+        ctx.methodsUsed.add("mirror");
         ctx.methodsUsed.add("cut");
-        for (const [index, source] of wanted.entries()) {
-          const names = toolVariants(code, `${feature.id}_${index}`, source.varName, [source.flips], ctx.methodsUsed);
-          if (names.length === 0) {
-            return {
-              code,
-              warnings,
-              skip: `mirror of "${op.ofFeature}" would need a composed reflection, which this binding does not support`,
-            };
-          }
-          for (const name of names) code.push(`body = body.cut(${name}, true, 0);`);
-        }
-        ctx.toolVarByFeature.set(feature.id, wanted);
+        code.push(
+          `const ${reflected} = ${src}.mirror(${JSON.stringify(planeName)}, undefined, true);`,
+        );
+        code.push(`body = body.cut(${reflected}, true, 0);`);
+        ctx.toolVarByFeature.set(feature.id, [reflected]);
         return { code, warnings };
       }
 
@@ -681,7 +678,7 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
       ctx.methodsUsed.add(op.kind);
       code.push(`body = body.${op.kind}(${toolVar}, true, false, 0);`);
       if (op.kind !== "union") {
-        ctx.toolVarByFeature.set(feature.id, [{ varName: toolVar, flips: [] }]);
+        ctx.toolVarByFeature.set(feature.id, [toolVar]);
       }
       return { code, warnings };
     }
@@ -693,60 +690,9 @@ function sanitizeId(id: string): string {
 }
 
 /** Ops that operate on material that a previous feature must have created. */
-type Axis = "x" | "y" | "z";
-
 /** The axis a named mirror plane reflects along. */
-const PLANE_AXIS: Record<string, Axis> = { YZ: "x", XZ: "y", XY: "z" };
-
 /** The plane that reflects along an axis. */
-const AXIS_PLANE: Record<Axis, string> = { x: "YZ", y: "XZ", z: "XY" };
 
-const AXES: Axis[] = ["x", "y", "z"];
-
-/**
- * A tool positioned by cutting, for every reflection of it the tree asked for.
- *
- * Zero flips is the tool itself; one flip is a mirror about that axis's plane;
- * two flips compose to exactly a 180-degree rotation about the remaining axis,
- * which is applied to the original tool rather than mirroring a reflection.
- */
-function toolVariants(
-  code: string[],
-  featureId: string,
-  baseVar: string,
-  flips: Axis[][],
-  methodsUsed: Set<string>,
-): string[] {
-  const stem = sanitizeId(featureId);
-  const names: string[] = [];
-
-  flips.forEach((flip, index) => {
-    if (flip.length === 0) {
-      names.push(baseVar);
-      return;
-    }
-    const name = `tool_${stem}_${index}`;
-    if (flip.length === 1) {
-      const plane = AXIS_PLANE[flip[0]];
-      methodsUsed.add("mirror");
-      code.push(`const ${name} = ${baseVar}.mirror(${JSON.stringify(plane)}, undefined, true);`);
-    } else {
-      // Two reflections compose to a 180-degree rotation in principle, and the
-      // emitter tried it — but the result measured wrong (a 120x10x80 plate came
-      // back 124.8 x 18.7), so the composition is not emitted. Refusing is the
-      // only honest option: a silently wrong shape is far worse than a reported
-      // gap, and the caller can express the same pattern another way.
-      return;
-    }
-    names.push(name);
-  });
-
-  return names;
-}
-
-function axisVector(axis: Axis): string {
-  return axis === "x" ? "1, 0, 0" : axis === "y" ? "0, 1, 0" : "0, 0, 1";
-}
 
 const NEEDS_EXISTING_BODY: ReadonlySet<FeatureKind> = new Set([
   "pocket",

@@ -155,7 +155,14 @@ Feature operations and their EXACT field names:
 
 A pattern's source is "ofFeature" — the id of the feature being repeated, which must
 already exist earlier in the list — and its spacing is "dx"/"dy"/"dz", not a direction
-vector. Use "mirror" for a symmetric pair rather than a two-instance pattern.
+vector.
+
+MIRROR PLANES ARE WORLD PLANES. A reflection moves a feature only if the plane cuts
+across it; reflecting a feature through the plane it already lies in changes nothing (the
+reflection lands exactly on the original). So for a feature sketched on XZ, mirror about
+YZ to shift it across the width and about XY to shift it across the height — XZ moves it
+nowhere. Mirroring a mirror composes, so a corner hole mirrored about YZ and then about
+XY gives all four corners in two features.
 
 Output strictly valid JSON.`;
 
