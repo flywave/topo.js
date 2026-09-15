@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deflateSync } from "node:zlib";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -422,13 +422,19 @@ describe("decodeRaster – PNM", () => {
 // ---------------------------------------------------------------------------
 
 describe("loadRaster – format sniffing", () => {
-  it("throws actionable error for JPEG", () => {
-    const fakeJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+  it("reads a real JPEG rather than refusing it", () => {
+    // JPEG support landed later; this test used to pin the refusal. It is kept as
+    // the guard that the routing stays wired.
+    const raster = loadRaster(resolve(__dirname, "../test/asset/jpeg-solid.jpg"));
+    expect(raster.width).toBe(16);
+    expect(raster.height).toBe(16);
+  });
+
+  it("names the file when a JPEG is malformed rather than the format", () => {
     const path = "/tmp/_test_fake.jpg";
-    readFileSync; // ensure available
-    require("node:fs").writeFileSync(path, fakeJpeg);
-    expect(() => loadRaster(path)).toThrow(/JPEG.*not supported/i);
-    require("node:fs").unlinkSync(path);
+    writeFileSync(path, new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]));
+    expect(() => loadRaster(path)).toThrow(/could not read .*_test_fake\.jpg.*as JPEG/);
+    unlinkSync(path);
   });
 });
 

@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveSketchValues } from "../lib/cad/resolve_sketch.js";
 import { coerceFeatureTree } from "../lib/stages/features.js";
+import { parseJsonResponse } from "../lib/prompts/feature_tree.js";
 import { runBuildFromTree } from "../lib/stages/features.js";
 import type { FeatureTree } from "../lib/cad/model.js";
 
@@ -267,5 +268,58 @@ describe("pattern field names a model reaches for", () => {
     expect(op.ofFeature).toBe("a");
     expect(op.count).toBe(4);
     expect(op.dx).toBe("10");
+  });
+});
+
+/**
+ * Model responses that are JSON-ish rather than JSON.
+ *
+ * Each case here cost a live run or would have: the responder is asked for strict
+ * JSON, mostly complies, and the failures are routine and dreary. Rejecting the
+ * whole response over one costs a model call, and in the last case cost the run —
+ * the pipeline threw out of `run()` and produced nothing at all, from a response
+ * that was otherwise perfectly good.
+ */
+describe("reading a model's JSON", () => {
+  const parse = (raw: string) => parseJsonResponse(raw, "test");
+
+  it("unwraps a markdown fence", () => {
+    expect(parse('```json\n{"a": 1}\n```')).toEqual({ a: 1 });
+  });
+
+  it("drops a line comment", () => {
+    expect(parse('{ "a": 1, // the width\n "b": 2 }')).toEqual({ a: 1, b: 2 });
+  });
+
+  it("drops a trailing comma", () => {
+    expect(parse('{ "a": 1, "b": [1, 2,], }')).toEqual({ a: 1, b: [1, 2] });
+  });
+
+  it("drops a member written without a key", () => {
+    // Verbatim from a run that died here: a bare description sitting where
+    // `"key": value` belongs. Nothing in the schema can consume it.
+    const raw = `{
+      "parameters": [
+        { "name": "clampWidth", "expr": "100", "unit": "mm",
+          "width of clamp body from drawing view v_front_b" },
+        { "name": "verticalSideHeight", "expr": "40", "unit": "mm" }
+      ]
+    }`;
+    expect(parse(raw)).toEqual({
+      parameters: [
+        { name: "clampWidth", expr: "100", unit: "mm" },
+        { name: "verticalSideHeight", expr: "40", unit: "mm" },
+      ],
+    });
+  });
+
+  it("keeps bare strings that are array elements, where they are legal", () => {
+    // The same shape is valid inside an array, and dropping those would throw
+    // away real content.
+    expect(parse('{ "notes": ["first", "second"] }')).toEqual({ notes: ["first", "second"] });
+  });
+
+  it("still refuses text that is not an object", () => {
+    expect(() => parse("no json here")).toThrow(/No JSON object found/);
   });
 });

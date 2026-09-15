@@ -333,6 +333,48 @@ export function deriveJoinConstraints(entities: ProfileEntity[]): SketchConstrai
 }
 
 /** The sketch's own constraints plus the derived joins, de-duplicated. */
+/**
+ * Constraint kinds the binding actually implements.
+ *
+ * `tp.SketchConstraintKind` has exactly these; anything else is `undefined`, and
+ * passing `undefined` where an enum is expected fails inside Embind's marshaller
+ * with an error whose message is itself `undefined` — which is how a live run
+ * ended with no body at all and the report "Cannot read properties of undefined
+ * (reading 'value')". A model asked for a horizontality constraint will reach for
+ * `HORIZONTAL`, which is the name every other CAD system uses.
+ */
+const EMITTABLE_CONSTRAINT_KINDS: ReadonlySet<string> = new Set([
+  "FIXED",
+  "FIXED_POINT",
+  "COINCIDENT",
+  "ANGLE",
+  "LENGTH",
+  "DISTANCE",
+  "RADIUS",
+  "ORIENTATION",
+  "ARC_ANGLE",
+  // The project's own spelling for an endpoint join, mapped to DISTANCE below.
+  "JOIN",
+]);
+
+/**
+ * Relations the binding has no kind for, but that mean something it can express.
+ *
+ * `HORIZONTAL` and `VERTICAL` are the names every CAD system uses and the binding
+ * has neither — a live run wrote 17 such constraints across one sketch and every
+ * one was dropped. They are not lost causes: "this line is horizontal" IS
+ * `ORIENTATION [1, 0]`, which the binding has and which reconciliation already
+ * applies to the geometry. Translating them turns a dropped intent into a
+ * constraint the emitter enforces.
+ *
+ * The rest — PARALLEL, PERPENDICULAR, TANGENT, SYMMETRIC — are inter-entity and
+ * have no confident mapping, so they are still refused rather than guessed at.
+ */
+const TRANSLATED_RELATIONS: Record<string, readonly [number, number]> = {
+  HORIZONTAL: [1, 0],
+  VERTICAL: [0, 1],
+};
+
 export interface DroppedConstraint {
   kind: SketchConstraintKind;
   tags: string[];
@@ -367,6 +409,40 @@ export function mergeConstraintsVerbose(sketch: SketchSpec): MergeConstraintsRes
   const dropped: DroppedConstraint[] = [];
 
   for (const c of sketch.constraints) {
+    const translation = TRANSLATED_RELATIONS[c.kind];
+    if (translation) {
+      // Only lines have a direction to fix.
+      const lines = c.tags.filter(
+        (tag) => sketch.entities.find((e) => e.tag === tag)?.type === "line",
+      );
+      if (lines.length === 0) {
+        dropped.push({
+          kind: c.kind,
+          tags: c.tags,
+          reason: `${c.kind} applies to lines and none of these tags is one`,
+        });
+        continue;
+      }
+      for (const tag of lines) {
+        constraints.push({
+          kind: "ORIENTATION",
+          tags: [tag],
+          value: [translation[0], translation[1]],
+          note: `${c.kind} expressed as a direction`,
+        });
+      }
+      continue;
+    }
+
+    if (!EMITTABLE_CONSTRAINT_KINDS.has(c.kind)) {
+      dropped.push({
+        kind: c.kind,
+        tags: c.tags,
+        reason: `the binding implements ${[...EMITTABLE_CONSTRAINT_KINDS].filter((k) => k !== "JOIN").join(", ")} — it has no ${c.kind}, and emitting K.${c.kind} is undefined`,
+      });
+      continue;
+    }
+
     const statesConnectivity = c.kind === "JOIN" || c.kind === "COINCIDENT";
     if (!statesConnectivity || c.tags.length !== 2) {
       constraints.push(c);

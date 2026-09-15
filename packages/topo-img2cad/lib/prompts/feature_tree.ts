@@ -394,33 +394,90 @@ function extractBalancedObject(text: string): string | null {
 /**
  * Drop what JSON does not allow but models write anyway.
  *
- * Comments and a trailing comma before a closing brace or bracket are the two
- * that turn up; both are removable without changing the meaning of the document,
- * which is why this can be done silently.
+ * Three things turn up in practice: comments, a trailing comma before a closing
+ * brace or bracket, and a member with no key — a bare string sitting where
+ * `"key": value` should be. All three are removable without changing what the
+ * document means, which is why this can be done silently. The third is worth its
+ * own state machine: it killed a whole run, and the response it appeared in was
+ * otherwise perfect.
  */
-function repairJsonish(text: string): string {
+export function repairJsonish(text: string): string {
   let out = "";
+  const stack: string[] = [];
   let inString = false;
   let escaped = false;
+  /** Where the current string began in `out` — earlier repairs shift the offsets. */
+  let stringOutStart = 0;
+  /** True inside an object when the next member still needs its key. */
+  let expectingKey = false;
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     const next = text[i + 1];
 
     if (inString) {
+      if (escaped) {
+        escaped = false;
+        out += ch;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        out += ch;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        if (expectingKey && !followedByColon(text, i + 1)) {
+          // A bare string where a key belongs, with no ':' after it: a value the
+          // model wrote without a key. Nothing in the schema can consume it, so
+          // dropping it loses nothing — and keeping it costs the whole response.
+          // Drops the string AND the comma that separated it — whitespace sits
+          // between the two, so trimming has to account for it or the response
+          // trades one syntax error for a trailing comma.
+          out = out.slice(0, stringOutStart).replace(/[\s,]+$/, "");
+          const end = skipToMemberEnd(text, i + 1);
+          i = Math.max(i, end - 1);
+          expectingKey = end > i + 1;
+          continue;
+        }
+        out += ch;
+        continue;
+      }
       out += ch;
-      if (escaped) escaped = false;
-      else if (ch === "\\") escaped = true;
-      else if (ch === '"') inString = false;
       continue;
     }
 
     if (ch === '"') {
       inString = true;
+      stringOutStart = out.length;
       out += ch;
       continue;
     }
 
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+      out += ch;
+      expectingKey = ch === "{";
+      continue;
+    }
+    if (ch === "}" || ch === "]") {
+      stack.pop();
+      out += ch;
+      expectingKey = stack[stack.length - 1] === "{";
+      continue;
+    }
+    if (ch === ":") {
+      expectingKey = false;
+      out += ch;
+      continue;
+    }
+    if (ch === ",") {
+      if (isClosingNext(text, i + 1)) continue;
+      out += ch;
+      expectingKey = stack[stack.length - 1] === "{";
+      continue;
+    }
     if (ch === "/" && next === "/") {
       while (i < text.length && text[i] !== "\n") i++;
       out += "\n";
@@ -433,14 +490,43 @@ function repairJsonish(text: string): string {
       continue;
     }
 
-    if (ch === "," && isClosingNext(text, i + 1)) {
-      continue;
-    }
-
     out += ch;
   }
 
   return out;
+}
+
+/** Does the next non-whitespace character close a `"key":` pair? */
+function followedByColon(text: string, from: number): boolean {
+  for (let i = from; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") continue;
+    return ch === ":";
+  }
+  return false;
+}
+
+/** Position just past the value starting at `from` — the next `,` or closer. */
+function skipToMemberEnd(text: string, from: number): number {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = from; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") {
+      if (depth === 0) return i;
+      depth--;
+    } else if (ch === "," && depth === 0) return i;
+  }
+  return text.length;
 }
 
 /** When only whitespace separates a comma from `}` or `]`, the comma is spurious. */

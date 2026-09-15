@@ -297,6 +297,30 @@ same thing a drafter does by leaving one edge undimensioned — and the residual
 reported when even that cannot close the loop. A contradictory pair of lengths, or
 a constraint with no constructive reading, is reported rather than dropped.
 
+## Constraint Kinds the Binding Actually Has
+
+`tp.SketchConstraintKind` offers exactly **FIXED, FIXED_POINT, COINCIDENT, ANGLE,
+LENGTH, DISTANCE, RADIUS, ORIENTATION, ARC_ANGLE**. Every other name a model reaches
+for is `undefined`, and passing `undefined` where an enum is expected fails inside
+Embind's marshaller with an error whose message is itself `undefined` — a live run
+lost its entire body to that.
+
+So the emitter maps what it can and refuses what it cannot, by name:
+
+| Written | Emitted | Why |
+|---|---|---|
+| `HORIZONTAL` (per line) | `ORIENTATION [1, 0]` | exactly the same statement, and reconciliation applies it |
+| `VERTICAL` (per line) | `ORIENTATION [0, 1]` | idem |
+| `JOIN` | `DISTANCE [t1, t2, 0]` | zero distance between entity parameters is what joining is |
+| `COINCIDENT` | *dropped* | the binding's meaning is "these overlap"; connectivity is derived instead |
+| `PARALLEL`, `PERPENDICULAR`, `TANGENT`, `SYMMETRIC` | *dropped, reported* | inter-entity with no confident mapping — a guess would be silent |
+
+The same rule covers the other two ways a model's intent outruns the binding:
+a **fillet selector** must be a selector (`|Z`, `#Z`, `>Z`), not a sentence, or the
+marshaller throws an `undefined` error; and a **through pocket carrying the pad's
+own sketch** removes the body it was meant to modify, which is reported as
+`DIN_REMOVES_WHOLE_BODY` rather than surfacing as "volume 0".
+
 ## Feature Operations
 
 | Op | Notes |
@@ -499,10 +523,22 @@ valid solids — see the table above for the ones that are.
 - Absolute size needs scale evidence. Without it, dimensions are relative and the
   pipeline says so — and L4 degrades from a size check to a shape check, which it
   reports rather than hides.
-- **Only PNG and PGM/PPM drawings can be measured against.** There is no JPEG
-  decoder and no image dependency is wanted; a JPEG drawing still produces a model,
-  but L4 has no pixels to compare with and says so. Convert to PNG for the full loop.
-  PNG must be non-interlaced (Adam7 is rejected with a message saying so).
+- **PNG, JPEG and PNM are readable; PNG must be non-interlaced** (Adam7 is
+  rejected with a message saying so), and JPEG must be baseline sequential. A
+  progressive JPEG is refused by name rather than mis-decoded. The decoder is
+  hand-written like the PNG one, so the package still has no image dependency.
+- **The ink/paper cut is read off each image (Otsu), not fixed.** A fixed
+  threshold is a bet that the drawing is crisp black on white. A real scanned
+  catenary drawing was 89% near-white with its lines in mid-gray, so only 1% of
+  pixels fell below 128: nothing closed, no region was found, and the gate had
+  nothing to compare against. Adaptive thresholds land on the same value for
+  genuine black-on-white art.
+- **A drawing with no single part has no silhouette to give.** One part's region
+  dominates its drawing's enclosed area (83% for a real plate); a catenary
+  illustration's largest region held 13% across 64 regions, because it is nine
+  components plus annotation boxes. Below half, no reference is built and the run
+  says the drawing looks like an assembly. Measuring a model against the largest
+  of those regions would answer a question nobody asked, confidently.
 - **STL export is binary only.** The binding hardcodes it; there is no ASCII switch,
   and post-processing an STL to change that is out of scope here.
 - **A STEP is checked for structure, not re-read.** There is no STEP importer in the

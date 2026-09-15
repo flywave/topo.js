@@ -180,6 +180,19 @@ function buildViewReference(
     };
   }
 
+  // One part has one silhouette, so its region dominates the drawing's enclosed
+  // area. An assembly does not: a real catenary illustration's largest region was
+  // 12.9% of it, because the drawing is nine components plus annotation boxes.
+  // Measuring a model against the largest of those would answer a question nobody
+  // asked and report the answer with full confidence.
+  if (silhouette.largestShare < 0.5) {
+    return {
+      notes: [
+        `view ${view.id}: this drawing has no single part silhouette — its largest enclosed region holds only ${(silhouette.largestShare * 100).toFixed(0)}% of the enclosed area across ${silhouette.components} regions, which is what an assembly or a schematic looks like. No reference was built for it; a whole-part silhouette has to come from a drawing of one part.`,
+      ],
+    };
+  }
+
   const local = cropSilhouetteToBBox(silhouette);
   const mask = local.mask;
   const maskWidth = local.width;

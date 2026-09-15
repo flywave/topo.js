@@ -519,6 +519,13 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
     }
 
     case "fillet": {
+      if (op.selector && !looksLikeSelector(op.selector)) {
+        return {
+          code,
+          warnings,
+          skip: `fillet selector ${JSON.stringify(op.selector)} is a description, not an edge selector — expected something like "|Z", "#Z" or ">Z"`,
+        };
+      }
       if (!op.selector) {
         return { code, warnings, skip: "fillet has no edge selector" };
       }
@@ -530,6 +537,13 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
     }
 
     case "chamfer": {
+      if (op.selector && !looksLikeSelector(op.selector)) {
+        return {
+          code,
+          warnings,
+          skip: `chamfer selector ${JSON.stringify(op.selector)} is a description, not an edge selector — expected something like "|Z", "#Z" or ">Z"`,
+        };
+      }
       if (!op.selector) {
         return { code, warnings, skip: "chamfer has no edge selector" };
       }
@@ -693,6 +707,22 @@ function sanitizeId(id: string): string {
 /** The axis a named mirror plane reflects along. */
 /** The plane that reflects along an axis. */
 
+
+/**
+ * Does this look like a CadQuery edge selector rather than prose?
+ *
+ * A selector is built from direction markers and axis letters — `|Z` (parallel to
+ * Z), `#Z`, `>Z` — combined with `and` / `or` / `not`. A model that writes a
+ * description instead ("Edges of mounting block and protector intersection") does
+ * not get an empty edge set: the binding fails while marshalling the argument and
+ * throws an error whose message is `undefined`, which killed a whole live run
+ * after the body had already been built correctly.
+ */
+function looksLikeSelector(selector: string): boolean {
+  const withoutConnectors = selector.replace(/\b(?:and|or|not)\b/gi, " ");
+  return /^[\s|#<>+\-()XYZxyz,.0-9]*$/.test(withoutConnectors)
+    && /[|#<>+\-]/.test(selector);
+}
 
 const NEEDS_EXISTING_BODY: ReadonlySet<FeatureKind> = new Set([
   "pocket",

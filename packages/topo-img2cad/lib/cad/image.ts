@@ -17,6 +17,7 @@
  */
 
 import { deflateSync, inflateSync } from "node:zlib";
+import { decodeJpeg, isJpeg } from "./jpeg.js";
 import { readFileSync } from "node:fs";
 import type { Bounds2D } from "./project.js";
 
@@ -31,7 +32,7 @@ export interface Raster {
   opaque: Uint8Array;
 }
 
-export type RasterFormat = "png" | "pnm";
+export type RasterFormat = "png" | "pnm" | "jpeg";
 
 export interface DecodeOptions {
   /** Alpha at or above this counts as opaque. Default 128. */
@@ -56,6 +57,16 @@ export interface Silhouette {
   bbox: PixelBox;
   mode: "ink" | "region";
   components: number;
+  /**
+   * Share of all component area held by the selected one.
+   *
+   * One part has one silhouette, so its region dominates the drawing. An assembly
+   * or a schematic does not: a real catenary illustration's largest enclosed
+   * region held 12.9% of the enclosed area, because it is nine parts and some
+   * annotation boxes. Comparing a model against the largest of those would be a
+   * confident answer to a question nobody asked.
+   */
+  largestShare: number;
   notes: string[];
 }
 
@@ -461,6 +472,48 @@ function decodePNM(buf: Uint8Array): { raster: Raster; format: RasterFormat } {
   return { raster: { width, height, gray, opaque }, format: "pnm" };
 }
 
+/**
+ * The ink/paper cut that best separates THIS image, by Otsu's method.
+ *
+ * A fixed threshold is a bet that the drawing is crisp black on white. Scans and
+ * rendered illustrations are not: a real catenary drawing measured 89% near-white
+ * with its lines in mid-gray, so only 1% of pixels fell below 128 — nothing
+ * closed, no enclosed region was found, and the whole re-projection gate had
+ * nothing to compare against. Otsu reads the cut off the image's own histogram
+ * instead, and for genuine black-on-white art it lands on the same value a
+ * constant would have.
+ */
+export function otsuThreshold(gray: Uint8Array): number {
+  const hist = new Uint32Array(256);
+  for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
+
+  const total = gray.length;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+  let sumB = 0;
+  let weightB = 0;
+  let best = 128;
+  let bestBetween = -1;
+
+  for (let t = 0; t < 256; t++) {
+    weightB += hist[t];
+    if (weightB === 0) continue;
+    const weightF = total - weightB;
+    if (weightF === 0) break;
+
+    sumB += t * hist[t];
+    const meanB = sumB / weightB;
+    const meanF = (sum - sumB) / weightF;
+    const between = weightB * weightF * (meanB - meanF) * (meanB - meanF);
+    if (between > bestBetween) {
+      bestBetween = between;
+      best = t;
+    }
+  }
+  return best;
+}
+
 // ---- Public decode API ----
 
 export function decodeRaster(
@@ -474,11 +527,11 @@ export function decodeRaster(
   const magic = pnmMagic(buf);
   if (magic) return decodePNM(buf);
 
-  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xd8) {
-    throw new Error("JPEG is not supported — re-save as PNG, PGM (P5), or PPM (P6)");
+  if (isJpeg(buf)) {
+    return { raster: decodeJpeg(buf), format: "jpeg" };
   }
 
-  throw new Error("Unrecognised image format (expected PNG, PGM, or PPM)");
+  throw new Error("Unrecognised image format (expected PNG, JPEG, PGM, or PPM)");
 }
 
 export function loadRaster(path: string, opts?: DecodeOptions): Raster {
@@ -486,22 +539,24 @@ export function loadRaster(path: string, opts?: DecodeOptions): Raster {
   const first = buf.slice(0, 8);
   const isPNG = first.length >= 8 && first.every((v, i) => v === PNG_SIGNATURE[i]);
   const magic = pnmMagic(buf);
-  const isJPEG = buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xd8;
-
   let fmt: string;
   if (isPNG) fmt = "PNG";
   else if (magic) fmt = magic;
-  else if (isJPEG) fmt = "JPEG";
+  else if (isJpeg(buf)) fmt = "JPEG";
   else fmt = "unknown";
 
   if (fmt === "JPEG") {
-    throw new Error(
-      `JPEG is not supported — convert "${path}" to PNG, PGM (P5), or PPM (P6)`,
-    );
+    try {
+      return decodeJpeg(buf);
+    } catch (e) {
+      throw new Error(
+        `could not read "${path}" as JPEG: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
   if (!isPNG && !magic) {
     throw new Error(
-      `Unrecognised format (detected ${fmt}) for "${path}" — expected PNG, PGM, or PPM`,
+      `Unrecognised format (detected ${fmt}) for "${path}" — expected PNG, JPEG, PGM, or PPM`,
     );
   }
 
@@ -605,7 +660,8 @@ function labelComponents(
 
 export function extractSilhouette(raster: Raster, opts?: SilhouetteOptions): Silhouette {
   const mode = opts?.mode ?? "auto";
-  const threshold = opts?.threshold ?? 128;
+  // Read the cut off the image unless the caller pinned one.
+  const threshold = opts?.threshold ?? otsuThreshold(raster.gray);
   const alphaMin = opts?.alphaMin ?? 128;
   const minPixels = opts?.minComponentPixels ?? 16;
   const { width, height, gray, opaque } = raster;
@@ -616,7 +672,10 @@ export function extractSilhouette(raster: Raster, opts?: SilhouetteOptions): Sil
   const ink = new Uint8Array(total);
   let inkCount = 0;
   for (let i = 0; i < total; i++) {
-    if (opaque[i] && gray[i] < threshold) {
+    // `<=`, matching Otsu's own convention: its class B is the values up to and
+    // including the threshold. A crisp black-on-white drawing is exactly bimodal,
+    // so Otsu legitimately returns 0 there — and `< 0` would call nothing ink.
+    if (opaque[i] && gray[i] <= threshold) {
       ink[i] = 1;
       inkCount++;
     }
@@ -665,8 +724,20 @@ export function extractSilhouette(raster: Raster, opts?: SilhouetteOptions): Sil
     bbox: result.bbox,
     mode: chosenMode,
     components: result.components,
+    largestShare: result.largestShare,
     notes,
   };
+}
+
+function shareOfLargest(counts: Map<number, number>, keep: number[]): number {
+  let largest = 0;
+  let all = 0;
+  for (const [label, count] of counts) {
+    if (!keep.includes(label)) continue;
+    all += count;
+    if (count > largest) largest = count;
+  }
+  return all === 0 ? 0 : largest / all;
 }
 
 function buildSilhouette(
@@ -679,8 +750,9 @@ function buildSilhouette(
   threshold: number,
   alphaMin: number,
   minPixels: number,
-): { mask: Uint8Array; bbox: PixelBox; components: number } {
+): { mask: Uint8Array; bbox: PixelBox; components: number; largestShare: number } {
   const total = width * height;
+  let largestShare = 0;
 
   if (mode === "ink") {
     // Component-label the ink mask directly
@@ -700,6 +772,7 @@ function buildSilhouette(
     // Actually we need to count distinct labels in kept
     const distinctLabels = [...kept];
     componentCount = distinctLabels.length;
+    largestShare = shareOfLargest(counts, distinctLabels);
 
     // Find largest
     let bestLabel = 0;
@@ -711,7 +784,7 @@ function buildSilhouette(
 
     const mask = new Uint8Array(total);
     if (bestLabel === 0) {
-      return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0 };
+      return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0, largestShare: 0 };
     }
 
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -727,7 +800,7 @@ function buildSilhouette(
       }
     }
 
-    return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount };
+    return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount, largestShare };
   }
 
   // region mode: flood-fill from border non-ink pixels to find the "outside",
@@ -783,6 +856,7 @@ function buildSilhouette(
 
   const distinctLabels = [...kept];
   const componentCount = distinctLabels.length;
+  largestShare = shareOfLargest(counts, distinctLabels);
 
   let bestLabel = 0;
   let bestCount = 0;
@@ -793,7 +867,7 @@ function buildSilhouette(
 
   const mask = new Uint8Array(total);
   if (bestLabel === 0) {
-    return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0 };
+    return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0, largestShare: 0 };
   }
 
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -809,7 +883,7 @@ function buildSilhouette(
     }
   }
 
-  return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount };
+  return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount, largestShare };
 }
 
 // ---- Crop silhouette ----

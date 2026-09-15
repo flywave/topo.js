@@ -222,6 +222,7 @@ export {
   loadRaster,
   cropRaster,
   regionToPixelBox,
+  otsuThreshold,
   extractSilhouette,
   cropSilhouetteToBBox,
   resampleMaskIntoFrame,
@@ -237,6 +238,7 @@ export type {
 } from "./cad/image.js";
 
 export { encodePngGray, maskToRaster } from "./cad/image_encode.js";
+export { decodeJpeg } from "./cad/jpeg.js";
 
 export {
   buildViewReferences,
@@ -314,6 +316,7 @@ export {
   buildFeatureTreePrompt,
   buildFeatureTreeRefinePrompt,
   parseJsonResponse,
+  repairJsonish,
 } from "./prompts/feature_tree.js";
 
 export {

@@ -83,6 +83,24 @@ export function lintFeatureTree(tree: FeatureTree): FeatureTreeLint {
         suggestion: `Known sketches: ${Array.from(sketchIds).join(", ") || "(none)"}`,
       });
     }
+    // A through-cut carrying the pad's own profile is the same cross-section
+    // pushed the whole way through, so it removes the body it was meant to
+    // modify and the run ends with no shape at all. Seen live: a model gave its
+    // pivot hole the mounting block's sketch, and the result was an empty solid
+    // with the only clue being "volume 0".
+    if (op.op === "pocket" && op.through) {
+      const base = features.find((x) => x.op.op === "pad" && x.op.sketchId === op.sketchId);
+      if (base) {
+        issues.push({
+          severity: "error",
+          code: "DIN_REMOVES_WHOLE_BODY",
+          message: `Feature "${f.id}" is a through pocket using sketch "${op.sketchId}", which is also the pad "${base.id}"'s own profile — the cut covers the whole body and removes all of it`,
+          suggestion:
+            "A pocket needs its own sketch describing what to remove, not the outline of the part it is cutting into",
+        });
+      }
+    }
+
     if (op.op === "sweep" && !sketchIds.has(op.pathSketchId)) {
       issues.push({
         severity: "error",
