@@ -51,6 +51,34 @@ export function viewBasis(kind: string): ViewBasis {
   return { dir: b.dir, xAxis: b.xAxis, yAxis };
 }
 
+/**
+ * The sketch plane a view's profile belongs on.
+ *
+ * A profile is read in its view's own 2D frame, so the sketch that consumes it has
+ * to sit on the plane that frame is measured in — a front view's (x, z) is the XZ
+ * plane. Modelling a front view's profile on XY instead produces a solid that is
+ * correct in every measurement and still the wrong part, which is precisely what
+ * the re-projection gate then reports as a silhouette mismatch.
+ */
+export function sketchPlaneForView(kind: string): "XY" | "XZ" | "YZ" | null {
+  switch (kind) {
+    // screen (x, z)
+    case "front":
+    case "back":
+      return "XZ";
+    // screen (x, y)
+    case "top":
+    case "bottom":
+      return "XY";
+    // screen (y, z)
+    case "right":
+    case "left":
+      return "YZ";
+    default:
+      return null;
+  }
+}
+
 /** Basis for a photo/iso view given an explicit camera direction. */
 export function customBasis(
   dir: [number, number, number],
@@ -141,6 +169,43 @@ export function projectMesh(mesh: MeshLike, basis: ViewBasis): ProjectedMesh {
   }
 
   return { triangles, bounds: { minX, minY, maxX, maxY } };
+}
+
+/**
+ * The smallest frame containing both inputs.
+ *
+ * Two silhouettes are only comparable inside one shared frame. Taking the union
+ * rather than one side's extent keeps neither from clipping: a model larger than
+ * the reference overflows visibly into the frame instead of being cut off, so
+ * the IoU penalty reflects the real size error.
+ */
+export function unionBounds(a: Bounds2D, b: Bounds2D): Bounds2D {
+  return {
+    minX: Math.min(a.minX, b.minX),
+    minY: Math.min(a.minY, b.minY),
+    maxX: Math.max(a.maxX, b.maxX),
+    maxY: Math.max(a.maxY, b.maxY),
+  };
+}
+
+/**
+ * Shift a projected mesh within its view plane.
+ *
+ * Needed to register a model against a reference whose frame origin is
+ * arbitrary — an image-derived mask knows the part's own min corner, not where
+ * the sketch author happened to place the origin.
+ */
+export function translateProjected(projected: ProjectedMesh, dx: number, dy: number): ProjectedMesh {
+  if (dx === 0 && dy === 0) return projected;
+  return {
+    triangles: projected.triangles.map((tri) => tri.map(([x, y]): [number, number] => [x + dx, y + dy])),
+    bounds: {
+      minX: projected.bounds.minX + dx,
+      minY: projected.bounds.minY + dy,
+      maxX: projected.bounds.maxX + dx,
+      maxY: projected.bounds.maxY + dy,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

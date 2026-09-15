@@ -12,6 +12,9 @@ import type { LLMProvider, GeneratedCode } from "../types.js";
 import type { FeatureTree, Profile2D, ViewSet, ViewSpec } from "../cad/model.js";
 import { emitFeatureTreeCode } from "../cad/feature_codegen.js";
 import { resolveParameters } from "../cad/expr.js";
+import { resolveSketchValues } from "../cad/resolve_sketch.js";
+import { cropRaster, loadRaster, regionToPixelBox } from "../cad/image.js";
+import { encodePngGray } from "../cad/image_encode.js";
 import { lintFeatureTree, type FeatureTreeLint } from "../validators/design_intent.js";
 import {
   FEATURE_TREE_SYSTEM,
@@ -30,20 +33,31 @@ export interface ProfileExtractionResult {
   warnings: string[];
 }
 
+/**
+ * Read the loops of one view off the drawing.
+ *
+ * With `opts.imagePath` the model is shown that view's crop as well as the
+ * description of it. Without it, the model works from its own prose summary of
+ * the image, which is a paraphrase measured against the drawing rather than the
+ * drawing itself — so the image path is preferred wherever a vision provider is
+ * available.
+ */
 export async function runProfileExtraction(
   view: ViewSpec,
   viewSet: ViewSet,
   llm: LLMProvider,
+  opts?: { imagePath?: string },
 ): Promise<ProfileExtractionResult> {
   const scaleInfo = viewSet.scale
     ? { mmPerPixel: viewSet.scale.mmPerPixel, note: `${viewSet.scale.kind} scale` }
     : { note: "no scale evidence available" };
 
   const prompt = buildProfileExtractionPrompt(view, scaleInfo);
-  const raw = await llm.complete(prompt, PROFILE_EXTRACTION_SYSTEM);
-  const parsed = parseJsonResponse(raw, "profile extraction");
+  const answer = await completeWithView(llm, view, prompt, opts?.imagePath);
+  const parsed = parseJsonResponse(answer.raw, "profile extraction");
 
   const warnings: string[] = [];
+  if (answer.warning) warnings.push(answer.warning);
   const entities = Array.isArray(parsed.entities)
     ? (parsed.entities as Profile2D["entities"])
     : [];
@@ -67,6 +81,44 @@ export async function runProfileExtraction(
   }
 
   return { profile, warnings };
+}
+
+/**
+ * Ask the model about one view, showing it that view's pixels when it can.
+ *
+ * The crop matters: a model shown a whole multi-view sheet and asked for "the
+ * front view" mixes drawing conventions together, and the loops it returns are
+ * then wrong in a way no later stage can detect. The providers' `analyzeImage`
+ * has no system-prompt channel, so the system text is folded into the prompt.
+ */
+async function completeWithView(
+  llm: LLMProvider,
+  view: ViewSpec,
+  prompt: string,
+  imagePath?: string,
+): Promise<{ raw: string; warning?: string }> {
+  if (!imagePath) {
+    return { raw: await llm.complete(prompt, PROFILE_EXTRACTION_SYSTEM) };
+  }
+
+  try {
+    const raster = loadRaster(imagePath);
+    const cropped = view.region
+      ? cropRaster(raster, regionToPixelBox(view.region, raster.width, raster.height))
+      : raster;
+    const base64 = Buffer.from(encodePngGray(cropped)).toString("base64");
+    return { raw: await llm.analyzeImage(base64, `${PROFILE_EXTRACTION_SYSTEM}\n\n${prompt}`) };
+  } catch (e) {
+    // A drawing we cannot decode is not a reason to lose the view: the text path
+    // is weaker, not useless. But it IS weaker, and the difference is invisible
+    // in the output, so it is reported rather than swallowed.
+    const reason = e instanceof Error ? e.message : String(e);
+    const raw = await llm.complete(prompt, PROFILE_EXTRACTION_SYSTEM);
+    return {
+      raw,
+      warning: `View ${view.id}: the drawing could not be shown to the model (${reason}), so this profile was read from the view description instead of the pixels`,
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -112,6 +164,49 @@ export async function runFeatureTree(
 }
 
 /** Normalize an AI-produced tree into the typed model. */
+/**
+ * Rename the pattern fields a model reaches for to the ones the emitter knows.
+ *
+ * Asked for a pattern, models write `featureId` / `instances` / `direction` /
+ * `distance` — the vocabulary of every CAD API — while the emitter wants
+ * `ofFeature` / `count` / `dx` / `dy` / `dz`. Without this, four perfectly sound
+ * features come back as "patterns undefined, which is not a feature in this tree".
+ */
+function normalizePatternOp(op: Record<string, unknown>): Record<string, unknown> {
+  if (op.op !== "pattern_linear" && op.op !== "pattern_polar") return op;
+
+  const next = { ...op };
+  if (next.ofFeature === undefined) {
+    next.ofFeature = next.featureId ?? next.source ?? next.of;
+  }
+  if (next.count === undefined) {
+    next.count = next.instances ?? next.number;
+  }
+
+  if (next.op === "pattern_linear") {
+    const direction = Array.isArray(next.direction) ? (next.direction as number[]) : undefined;
+    const distance = next.distance;
+    const step = typeof distance === "number" ? distance : undefined;
+
+    // A direction plus a spacing is the same instruction as three components.
+    if (next.dx === undefined && direction && direction.length >= 3) {
+      const [ix, iy, iz] = direction;
+      if (step !== undefined) {
+        next.dx = ix * step;
+        next.dy = iy * step;
+        next.dz = iz * step;
+      } else if (typeof distance === "string") {
+        // Keep the spacing as the expression the model wrote; the emitter
+        // multiplies literal components by it only when they are numbers.
+        next.dx = ix === 0 ? "0" : ix === 1 ? distance : `${ix} * (${distance})`;
+        next.dy = iy === 0 ? "0" : iy === 1 ? distance : `${iy} * (${distance})`;
+        next.dz = iz === 0 ? "0" : iz === 1 ? distance : `${iz} * (${distance})`;
+      }
+    }
+  }
+  return next;
+}
+
 export function coerceFeatureTree(parsed: Record<string, unknown>): FeatureTree {
   const params = Array.isArray(parsed.parameters)
     ? (parsed.parameters as FeatureTree["parameters"])
@@ -141,7 +236,12 @@ export function coerceFeatureTree(parsed: Record<string, unknown>): FeatureTree 
       planes: datums.planes ?? {},
       axes: datums.axes ?? {},
     },
-    features: Array.isArray(parsed.features) ? (parsed.features as FeatureTree["features"]) : [],
+    features: Array.isArray(parsed.features)
+      ? (parsed.features as FeatureTree["features"]).map((f) => ({
+          ...f,
+          op: normalizePatternOp(f.op as unknown as Record<string, unknown>) as FeatureTree["features"][number]["op"],
+        }))
+      : [],
     sketches,
     parameters: params,
     designIntent: parsed.designIntent as FeatureTree["designIntent"],
@@ -155,6 +255,11 @@ export function coerceFeatureTree(parsed: Record<string, unknown>): FeatureTree 
 export interface BuildFromTreeResult {
   code: GeneratedCode;
   resolved: Record<string, number>;
+  /**
+   * Sketches the emitted code solves and reports on. Excludes circles, which are
+   * exact by construction, so a convergence check must expect these and no more.
+   */
+  solvedSketches: string[];
   warnings: string[];
   errors: string[];
 }
@@ -180,9 +285,14 @@ export function runBuildFromTree(
 ): BuildFromTreeResult {
   const resolved = resolveParameters(tree.parameters);
   const values = paramOverride ? { ...resolved.values, ...paramOverride } : resolved.values;
-  const emission = emitFeatureTreeCode(tree, values);
 
-  const warnings = [...emission.warnings];
+  // A parametric sketch holds expressions; the emitter holds numbers. Doing the
+  // substitution here keeps emission total, so a model that authors a properly
+  // associative sketch gets an associative model rather than a parse failure.
+  const sketches = resolveSketchValues(tree, values);
+  const emission = emitFeatureTreeCode(sketches.tree, values);
+
+  const warnings = [...emission.warnings, ...sketches.issues];
   const errors = [...emission.errors];
 
   for (const skipped of emission.skippedFeatures) {
@@ -196,5 +306,11 @@ export function runBuildFromTree(
     methodsUsed: emission.methodsUsed,
   };
 
-  return { code, resolved: values, warnings, errors };
+  return {
+    code,
+    resolved: values,
+    solvedSketches: emission.solvedSketches,
+    warnings,
+    errors,
+  };
 }

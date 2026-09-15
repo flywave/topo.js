@@ -18,8 +18,9 @@ import {
   runFeatureTree,
   runBuildFromTree,
   coerceFeatureTree,
+  type BuildFromTreeResult,
 } from "./stages/features.js";
-import { lintFeatureTree, checkAssociativity, type FeatureTreeLint } from "./validators/design_intent.js";
+import { lintFeatureTree, checkAssociativity, type FeatureTreeLint, type AssociativityReport } from "./validators/design_intent.js";
 import {
   evaluateSketchSolves,
   type RawSolveStatus,
@@ -27,6 +28,7 @@ import {
 } from "./validators/sketch_solve.js";
 import {
   reprojectShape,
+  reprojectAgainstRaster,
   DEFAULT_THRESHOLDS,
   type ReferenceSilhouette,
   type ReprojectionReport,
@@ -36,6 +38,14 @@ import { validateGeometry } from "./validators/geometric.js";
 import { quickSyntaxCheck } from "./validators/code_syntax.js";
 import { executeInSandbox } from "./stages/review.js";
 import { checkViewConsistency, type Bounds2D } from "./cad/project.js";
+import {
+  buildViewReferencesFromImage,
+  ORTHOGRAPHIC_VIEW_KINDS,
+  type ViewReference,
+} from "./cad/reference.js";
+import type { SilhouetteMode } from "./cad/image.js";
+import { saveArtifacts, type ArtifactPaths } from "./artifacts.js";
+import { exportShape, type ExportFormat, type ExportResult } from "./export.js";
 import {
   FEATURE_TREE_REFINE_SYSTEM,
   buildFeatureTreeRefinePrompt,
@@ -56,13 +66,48 @@ export interface CadPipelineConfig {
    */
   tp?: unknown;
   CQWorkplane?: unknown;
-  /** Reference silhouettes keyed by view id, for the re-projection gate. */
+  /**
+   * Reference silhouettes keyed by view id, for the re-projection gate.
+   *
+   * Usually unnecessary: when a `tp` instance is present the pipeline reads the
+   * reference off the drawing itself. Supply these only to override that, e.g.
+   * when the image format cannot be decoded.
+   */
   references?: Record<string, ReferenceSilhouette>;
+  /** Silhouette extraction mode for the image-derived reference. */
+  silhouetteMode?: SilhouetteMode;
+  /** Raster resolution the re-projection comparison runs at. Default 512. */
+  rasterSize?: number;
+  /**
+   * Rebuild with each parameter perturbed to confirm the model is associative.
+   * Costs one extra build per parameter; on by default because a parameter that
+   * drives nothing is the defect the whole CAD-shaped pipeline exists to avoid.
+   */
+  checkAssociativity?: boolean;
   thresholds?: ReprojectionThresholds;
   /** How many times the feature tree may be repaired. */
   maxRefinements?: number;
   /** View kinds to extract profiles for. `photo`/`iso` are not orthographic. */
   profileViewKinds?: string[];
+  /**
+   * Send the (cropped) image to the model for profile extraction as well as for
+   * view intake.
+   *
+   * Off by default so the library behaves deterministically against a scripted
+   * provider; the CLI turns it on, because reading the loops off the drawing
+   * rather than out of a prose description is the difference between measuring
+   * the drawing and measuring a paraphrase of it.
+   */
+  visionProfiles?: boolean;
+  /**
+   * Formats to write the finished body out as, into `workDir`.
+   *
+   * Defaults to both; set to `[]` to produce code and measurements only. Nothing
+   * is written when the tree produced no body.
+   */
+  exportFormats?: ExportFormat[];
+  /** STL chord tolerance in model units. Default 0.1. */
+  stlDeflection?: number;
   verbose?: boolean;
 }
 
@@ -84,6 +129,12 @@ export interface CadRunResult {
   code: GeneratedCode;
   lint: FeatureTreeLint;
   review?: CadReviewOutcome;
+  /** Proof that the parameters actually drive the geometry, when it was run. */
+  associativity?: AssociativityReport | null;
+  /** Files written, when a workDir was configured. */
+  artifacts?: ArtifactPaths;
+  /** STEP / STL written from the built body. */
+  exports?: ExportResult;
   refinements: number;
   warnings: string[];
   errors: string[];
@@ -98,6 +149,10 @@ const ORTHOGRAPHIC_KINDS = new Set(["front", "top", "right", "left", "back", "bo
 export class CadPipeline {
   private config: CadPipelineConfig;
   private warnings: string[] = [];
+  /** References read off the drawing, one per orthographic view. */
+  private imageReferences: ViewReference[] = [];
+  /** Body the last review executed, kept so it can be exported without a rebuild. */
+  private reviewedShape: unknown = null;
 
   constructor(config: CadPipelineConfig) {
     this.config = config;
@@ -115,6 +170,8 @@ export class CadPipeline {
    */
   async run(imagePath: string, objectName?: string): Promise<CadRunResult> {
     this.warnings = [];
+    this.imageReferences = [];
+    this.reviewedShape = null;
     const maxRefinements = this.config.maxRefinements ?? 3;
 
     // ---- A. view intake ------------------------------------------------
@@ -133,7 +190,9 @@ export class CadPipeline {
     for (const view of profileViews) {
       this.log(`stage B: profile for ${view.id} (${view.kind})`);
       try {
-        const result = await runProfileExtraction(view, viewSet, this.config.llm);
+        const result = await runProfileExtraction(view, viewSet, this.config.llm, {
+          imagePath: this.config.visionProfiles ? imagePath : undefined,
+        });
         profiles.push(result.profile);
         this.warnings.push(...result.warnings);
       } catch (e) {
@@ -165,8 +224,22 @@ export class CadPipeline {
     this.warnings.push(...authored.warnings);
 
     // ---- D. build + measured review, with tree-level refinement --------
+    // The reference is read off the drawing once, before any refinement: the
+    // drawing does not change when the tree does, and re-deriving it per round
+    // would only risk measuring against a different silhouette each time.
+    if (this.config.tp && !this.config.references) {
+      const built = buildViewReferencesFromImage(imagePath, viewSet, {
+        silhouetteMode: this.config.silhouetteMode,
+        width: this.config.rasterSize ?? 512,
+        height: this.config.rasterSize ?? 512,
+      });
+      this.imageReferences = built.references;
+      this.warnings.push(...built.notes);
+      this.log(`reference silhouettes: ${built.references.length} view(s)`);
+    }
+
     let build = runBuildFromTree(tree);
-    let review = this.config.tp ? this.review(tree, build.code, build.resolved) : undefined;
+    let review = this.config.tp ? this.review(tree, build) : undefined;
     let refinements = 0;
 
     while (
@@ -203,7 +276,7 @@ export class CadPipeline {
         tree = candidateTree;
         lint = candidateLint;
         build = runBuildFromTree(tree);
-        review = this.config.tp ? this.review(tree, build.code, build.resolved) : undefined;
+        review = this.config.tp ? this.review(tree, build) : undefined;
       } catch (e) {
         this.warnings.push(
           `refinement ${refinements} failed: ${e instanceof Error ? e.message : String(e)}`,
@@ -212,12 +285,81 @@ export class CadPipeline {
       }
     }
 
+    // Emitter warnings — unhonoured constraints, sketches that did not close, and
+    // values that would not resolve — are the explanation for most failures, so
+    // they have to reach the caller rather than stopping at the build step.
+    this.warnings.push(...build.warnings);
+
     const errors = [...build.errors];
     if (!lint.passed) {
       errors.push(...lint.issues.filter((i) => i.severity === "error").map((i) => `${i.code}: ${i.message}`));
     }
 
     this.log(`done: ${build.code.source.split("\n").length} lines, ${refinements} refinement(s)`);
+
+    // ---- E. associativity ------------------------------------------------
+    // A model that builds but whose parameters drive nothing is not parametric,
+    // and no geometric gate can see that. Proving it costs one rebuild per
+    // parameter, so it runs last, when the tree is the one being returned — and
+    // only on a tree that already builds, because on a broken one every
+    // parameter would be reported inert and bury the real failure.
+    let associativity: AssociativityReport | null = null;
+    const wantAssociativity = this.config.tp && (this.config.checkAssociativity ?? true);
+    if (wantAssociativity && lint.passed && review?.passed) {
+      this.log("gate L6: associativity");
+      try {
+        associativity = this.verifyAssociativity(tree, build.resolved);
+        if (associativity) {
+          review = review ?? { passed: true, issues: [], skippedFeatures: [] };
+          review.issues.push(...associativity.issues);
+          review.passed = !review.issues.some((i) => i.severity === "error");
+        }
+      } catch (e) {
+        this.warnings.push(
+          `associativity check failed to run: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+
+    let artifacts: ArtifactPaths | undefined;
+    if (this.config.workDir) {
+      try {
+        artifacts = saveArtifacts({
+          workDir: this.config.workDir,
+          tree,
+          code: build.code,
+          review,
+          references: this.imageReferences,
+        });
+      } catch (e) {
+        this.warnings.push(
+          `could not write artifacts to ${this.config.workDir}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+
+    // ---- F. deliverables ------------------------------------------------
+    let exports: ExportResult | undefined;
+    const formats = this.config.exportFormats ?? ["step", "stl"];
+    if (this.config.tp && this.config.workDir && formats.length > 0) {
+      if (this.reviewedShape == null) {
+        this.warnings.push(
+          "no body was built, so no STEP or STL was written",
+        );
+      } else {
+        this.log(`exporting: ${formats.join(", ")}`);
+        exports = exportShape(this.config.tp, this.reviewedShape, {
+          outDir: this.config.workDir,
+          basename: tree.name,
+          formats,
+          stlDeflection: this.config.stlDeflection,
+        });
+        this.warnings.push(...exports.notes);
+        for (const failure of exports.failures) {
+          this.warnings.push(`export ${failure.format.toUpperCase()} failed: ${failure.reason}`);
+        }
+      }
+    }
 
     return {
       viewSet,
@@ -227,6 +369,9 @@ export class CadPipeline {
       code: build.code,
       lint,
       review,
+      associativity,
+      artifacts,
+      exports,
       refinements,
       warnings: dedupe(this.warnings),
       errors,
@@ -238,11 +383,8 @@ export class CadPipeline {
   // -----------------------------------------------------------------------
 
   /** Run every measured gate that the available environment supports. */
-  private review(
-    tree: FeatureTree,
-    code: GeneratedCode,
-    resolved: Record<string, number>,
-  ): CadReviewOutcome {
+  private review(tree: FeatureTree, build: BuildFromTreeResult): CadReviewOutcome {
+    const code = build.code;
     const issues: ReviewIssue[] = [];
     const skippedFeatures: Array<{ id: string; reason: string }> = [];
 
@@ -275,11 +417,14 @@ export class CadPipeline {
     // geometry is not the intended geometry, even though a shape came out.
     const rawReports = extractSolveReports(sandbox.solveReports);
     if (Object.keys(rawReports).length > 0) {
+      // Only sketches the emitter actually solved can report. A circle is exact
+      // by construction and emits no solve(), so expecting a report for one
+      // would report a correct sketch as a failure.
       solves = evaluateSketchSolves(rawReports, {
-        expectedSketches: Object.keys(tree.sketches),
+        expectedSketches: build.solvedSketches,
       });
       issues.push(...solves.issues);
-    } else if (Object.keys(tree.sketches).length > 0) {
+    } else if (build.solvedSketches.length > 0) {
       issues.push({
         severity: "warning",
         code: "SKT_NO_REPORTS",
@@ -295,6 +440,7 @@ export class CadPipeline {
         suggestion: "A feature in the tree does not survive execution — check the failing operation in the feature order",
       });
     } else if (sandbox.shape != null) {
+      this.reviewedShape = sandbox.shape;
       const geo = validateGeometry(this.config.tp, sandbox.shape);
       geometry = geo.report;
       issues.push(...geo.issues);
@@ -332,23 +478,44 @@ export class CadPipeline {
 
   private reproject(tree: FeatureTree, shape: unknown): ReprojectionReport | undefined {
     const refs = this.config.references;
-    if (!refs || Object.keys(refs).length === 0) return undefined;
+    const imageRefs = this.imageReferences;
+    if (imageRefs.length === 0 && (!refs || Object.keys(refs).length === 0)) return undefined;
 
     const thresholds = this.config.thresholds ?? DEFAULT_THRESHOLDS;
+    const rasterSize = this.config.rasterSize ?? 512;
     const issues: ReviewIssue[] = [];
     const results = [];
     const consistencyInputs: Array<{ id: string; kind: string; bounds: Bounds2D }> = [];
 
+    // Only orthographic views can be projected along — a photo has no view
+    // direction, and asking for one would invent a verdict rather than measure.
     for (const view of tree.provenance?.viewSet?.views ?? []) {
-      const reference = refs[view.id];
-      const report = reprojectShape(shape, {
-        view: view.kind,
-        reference,
-        width: reference?.width ?? 512,
-        height: reference?.height ?? 512,
-        thresholds,
-      });
-      issues.push(...report.issues);
+      if (!ORTHOGRAPHIC_VIEW_KINDS.has(view.kind)) continue;
+
+      const imageRef = imageRefs.find((r) => r.viewId === view.id);
+      const report = imageRef
+        ? reprojectAgainstRaster(shape, {
+            view: view.kind,
+            mask: imageRef.mask,
+            maskWidth: imageRef.maskWidth,
+            maskHeight: imageRef.maskHeight,
+            referenceBounds: imageRef.referenceBounds,
+            width: Math.max(rasterSize, imageRef.maskWidth),
+            height: Math.max(rasterSize, imageRef.maskHeight),
+            thresholds,
+          })
+        : this.reprojectAgainstSupplied(shape, view, refs?.[view.id], rasterSize, thresholds);
+
+      if (!report) continue;
+      for (const issue of report.issues) {
+        // A size mismatch against a model-placed frame is not evidence that the
+        // dimensions are wrong, and the repair loop must not be told that it is.
+        if (issue.code === "RPR_LOW_IOU" && imageRef?.scaleFromModelEstimate) {
+          issue.suggestion =
+            "This comparison is placed using the model's own pixel estimate of the drawing's scale, so a size mismatch may be a misread scale rather than a wrong dimension — check the scale evidence before resizing the part";
+        }
+        issues.push(issue);
+      }
       results.push(...report.views);
       for (const r of report.views) {
         consistencyInputs.push({ id: view.id, kind: view.kind, bounds: r.modelBounds });
@@ -379,6 +546,24 @@ export class CadPipeline {
       issues,
       passed: !issues.some((i) => i.severity === "error"),
     };
+  }
+
+  /** A caller-supplied reference in model coordinates, if there is one. */
+  private reprojectAgainstSupplied(
+    shape: unknown,
+    view: ViewSpec,
+    reference: ReferenceSilhouette | undefined,
+    rasterSize: number,
+    thresholds: ReprojectionThresholds,
+  ): ReprojectionReport | undefined {
+    if (!reference) return undefined;
+    return reprojectShape(shape, {
+      view: view.kind,
+      reference,
+      width: reference.width || rasterSize,
+      height: reference.height || rasterSize,
+      thresholds,
+    });
   }
 
   // -----------------------------------------------------------------------

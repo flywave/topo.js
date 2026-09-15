@@ -7,6 +7,8 @@
  * outline is, what is true about it, and in what order the part is built.
  */
 
+import { sketchPlaneForView } from "../cad/project.js";
+
 // ---------------------------------------------------------------------------
 // Stage A: view intake
 // ---------------------------------------------------------------------------
@@ -130,9 +132,55 @@ Two rules matter more than anything else:
 Sketch constraint kinds available: FIXED, FIXED_POINT, COINCIDENT, ANGLE, LENGTH, DISTANCE, RADIUS, ORIENTATION, ARC_ANGLE.
 Constraint values: a number, [a, b], or [t1, t2, distance].
 
-Feature operations available: pad, pocket, revolve, sweep, loft, fillet, chamfer, shell, pattern_linear, pattern_polar, mirror, boolean.
+SKETCH VALUES MAY BE EXPRESSIONS. Every coordinate (start, end, center), and every
+dimension (radius, constraint value), may be either a number or an expression over
+the parameters — "overallWidth", "holeDiameter / 2". Use them: that is what makes the
+sketch parametric. What it must NOT be is an array standing in for arithmetic —
+write "holeDiameter / 2", not [holeDiameter, 2].
+
+Feature operations and their EXACT field names:
+
+  {"op":"pad",            "sketchId":str, "distance":expr, "symmetric":bool?, "taper":expr?}
+  {"op":"pocket",         "sketchId":str, "depth":expr?, "through":bool?, "taper":expr?}
+  {"op":"revolve",        "sketchId":str, "angle":expr, "axis":{"start":[x,y,z],"end":[x,y,z]}}
+  {"op":"sweep",          "sketchId":str, "pathSketchId":str, "frenet":bool?}
+  {"op":"loft",           "sketchIds":[str,...], "ruled":bool?}
+  {"op":"fillet",         "selector":str, "radius":expr}
+  {"op":"chamfer",        "selector":str, "length":expr}
+  {"op":"shell",          "thickness":expr, "openSelector":str?}
+  {"op":"pattern_linear", "ofFeature":str, "count":int, "dx":expr, "dy":expr, "dz":expr?}
+  {"op":"pattern_polar",  "ofFeature":str, "count":int, "axis":{"start":[x,y,z],"end":[x,y,z]}, "angle":expr?}
+  {"op":"mirror",         "plane":{...}, "ofFeature":str?}
+  {"op":"boolean",        "kind":"cut"|"union"|"intersect", "sketchId":str, "distance":expr?}
+
+A pattern's source is "ofFeature" — the id of the feature being repeated, which must
+already exist earlier in the list — and its spacing is "dx"/"dy"/"dz", not a direction
+vector. Use "mirror" for a symmetric pair rather than a two-instance pattern.
 
 Output strictly valid JSON.`;
+
+/**
+ * The plane each view's profile must be sketched on, stated for the views at hand.
+ *
+ * Derived from the projection bases rather than left to the model: a model that
+ * puts a front view's profile on XY builds a part that measures correctly in every
+ * dimension and is still wrong, and the only thing that catches it is the
+ * silhouette gate at the very end.
+ */
+function planeGuidance(views: unknown): string {
+  const list = (views as { views?: Array<{ id?: string; kind?: string }> } | undefined)?.views ?? [];
+  const rows: string[] = [];
+  for (const view of list) {
+    if (!view?.kind) continue;
+    const plane = sketchPlaneForView(view.kind);
+    if (plane) rows.push(`  ${view.id ?? view.kind} (${view.kind} view) → sketch on the ${plane} plane`);
+  }
+  if (rows.length === 0) return "";
+  return `\nSKETCH PLANE — the profile is measured in its view's own 2D frame, so the
+sketch built from it must sit on the matching datum plane:
+${rows.join("\n")}
+Use the matching plane for the profile's base sketch. Do not default to XY.`;
+}
 
 export function buildFeatureTreePrompt(input: {
   objectName: string;
@@ -151,7 +199,7 @@ ${input.profiles?.length ? `\nEXTRACTED PROFILES:\n${JSON.stringify(input.profil
 
 Units: ${input.units ?? "mm"}.
 ${input.context ? `Context: ${input.context}` : ""}
-
+${planeGuidance(input.views)}
 Return JSON:
 {
   "name": "part_name",
@@ -270,18 +318,124 @@ Return the corrected tree as JSON only.`;
 // Parsing
 // ---------------------------------------------------------------------------
 
+/**
+ * Read a JSON object out of a model response.
+ *
+ * Models are asked for strict JSON and mostly comply, but the failures are
+ * routine and dreary: a markdown fence, a `//` note explaining a dimension, a
+ * trailing comma before the closing brace. None of those change what the tree
+ * means, and rejecting the whole response over one costs an entire model call —
+ * so they are repaired. A repair is reported by the caller, not hidden.
+ */
 export function parseJsonResponse(raw: string, what: string): Record<string, unknown> {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
   const candidate = fenced ? fenced[1] : raw;
-  const braced = candidate.match(/(\{[\s\S]*\})/);
-  if (!braced) {
+
+  const objectText = extractBalancedObject(candidate);
+  if (!objectText) {
     throw new Error(`No JSON object found in ${what} response`);
   }
+
+  const cleaned = repairJsonish(objectText);
   try {
-    return JSON.parse(braced[1].trim()) as Record<string, unknown>;
+    return JSON.parse(cleaned) as Record<string, unknown>;
   } catch (e) {
     throw new Error(
       `Malformed JSON in ${what} response: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
+}
+
+/**
+ * The first complete `{...}` in the text, respecting strings and escapes.
+ *
+ * A greedy regex would run to the last brace in the response, dragging any prose
+ * that follows the JSON into the parse.
+ */
+function extractBalancedObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+/**
+ * Drop what JSON does not allow but models write anyway.
+ *
+ * Comments and a trailing comma before a closing brace or bracket are the two
+ * that turn up; both are removable without changing the meaning of the document,
+ * which is why this can be done silently.
+ */
+function repairJsonish(text: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (inString) {
+      out += ch;
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+      continue;
+    }
+
+    if (ch === "/" && next === "/") {
+      while (i < text.length && text[i] !== "\n") i++;
+      out += "\n";
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
+      i++;
+      continue;
+    }
+
+    if (ch === "," && isClosingNext(text, i + 1)) {
+      continue;
+    }
+
+    out += ch;
+  }
+
+  return out;
+}
+
+/** When only whitespace separates a comma from `}` or `]`, the comma is spurious. */
+function isClosingNext(text: string, from: number): boolean {
+  for (let i = from; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") continue;
+    return ch === "}" || ch === "]";
+  }
+  return false;
 }

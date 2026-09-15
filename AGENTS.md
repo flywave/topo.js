@@ -10,6 +10,7 @@ go-topo (OpenCASCADE C++ 几何内核) 的 WASM 移植: Emscripten 编译 + Embi
 - `packages/topo-primitives/` — 参数化 Primitive 类 (`lib/`, 含 `lib/railway/` 52 个铁路类 + 布局闭环)
 - `packages/topo-threejs/` / `packages/topo-js/` — Three.js 桥接 / 高层 API
 - `packages/topo-example/` — 示例应用 (webpack)
+- `packages/topo-img2cad/` — 图片 → 参数化 CAD 流水线: 视图识别 → 轮廓提取 → 特征树 → 代码 → **实测复核** (L4 把 BREP 实体沿图纸视图重投影, 与图纸像素剪影比 IoU/像素偏差) → 导出 STEP + 二进制 STL。`lib/` 为库, `cli/` 为 `topo-img2cad` 命令 (见 `SKILL.md`)。**注意**: ① `bin` 指向 `dist/es/cli/index.js`, 由 rollup 构建 (不是从源码跑), 改 CLI 后必须 `pnpm --filter topo-img2cad build`; ② 依赖 Node (`node:zlib` 解 PNG、`node:fs` 读图), 只支持 PNG/PNM 非隔行, 不支持 JPEG; ③ `CadPipelineConfig.references` 一般不用传 — 有 `tp` 时参考剪影直接自图纸读出; ④ **导出必须走 `lib/export.ts`** — 内核的 `exportStep`/`writeToStl` 写的是 Emscripten 内存 FS, 直接给宿主路径**不产生文件却返回 `true`** (AGENTS"已知坑"里那条的根因), 所以统一写 `/tmp` 再 `tp.FS.readFile` 读回
 - `packages/topo-editor/` — 可视化编辑器 (webpack + CodeMirror 6 + three.js 视口): 左侧写 JS 右侧实时渲染, 用于所见即所得验证 topo.js 接口。`pnpm --filter topo-editor dev` → http://localhost:4002 (沙箱注入 `tp`/`CQ`/`CQWorkplane`/`pnt`/`vec`/`gpVec`/`render()`, 内置 10 个与测试套件对齐的示例 snippet)。**注意**: 它经 workspace 包名引用 topo-primitives/topo-js/topo-threejs 的 **dist 构建产物**, 改了这些包的 `lib/`/`src/` 后必须先 `pnpm --filter <pkg> build` 重建 dist, 否则编辑器拿到的是旧代码 (如 CQ 导出缺失报 `CQ is not defined`)
 
 ## 构建
@@ -56,6 +57,18 @@ pnpm --filter topo-primitives test:watch  # watch 模式
   - `test/workplane_full.test.ts` / `sketch_ops.test.ts` / `assembly_full.test.ts` — Workplane/Sketch/Assembly 全方法
   - `test/primitives_{foundation,gasket_anchor,cable_stretch,plate_steel_infra}.test.ts` — 非铁路 create_* 族 (约 300 例, value_object 参数全字段初始化 + enum 传枚举对象)
 
+### topo-img2cad
+
+宿主包 `packages/topo-img2cad` (vitest 0.28, 10 文件 187 例, 约 5s): `pnpm --filter topo-img2cad test`。
+
+- `test/image.test.ts` — PNG/PNM 解码 (全色型/位深/滤镜) + 剪影提取; 含 `docs/media/img1.png` 真图逐像素对账 (口径已与 ImageMagick 交叉核对)
+- `test/reference.test.ts` — 图纸 → 参考剪影 (line art 走 region 模式, 内孔必须是孔; 填充件走 ink 模式) + 工件持久化往返
+- `test/cad_loop_e2e.test.ts` — **闭环总测**: 程序生成图纸 PNG → 真 WASM 建实体 → 与图纸剪影比 IoU (实测 0.966), 并验证错尺寸图纸必须失败、无比例尺时降级为形状比较
+- 其余为既有单测 (`expr`/`profile`/`reconcile`/`projection`/`feature_tree`/`cad_pipeline`/`wasm_e2e`)
+- `test/llm.test.ts` / `test/sketch_expressions.test.ts` / `test/view_plane.test.ts` / `test/multi_profile.test.ts` — 真实 LLM 联调催生的修复: 网关 `x-opencode-session` 头与 thinking 模型 token 预算、**sketch 几何里的表达式求值**(模型天然会写 `"end":["overallWidth",0]`)、视图→草图基准面映射 (front→XZ)、多轮廓 sketch (四孔一次成型的实测体积与解析值一致)
+- `test/export.test.ts` — STEP/STL 导出: 字节真落在宿主 FS、STEP 头/`DATA`/终止符、STL 二进制且 `84+50n` 对齐、deflection 真的改变网格密度; 并用**三角片有符号体积**反证 STL 闭合且外向 (体积与 BREP 对齐)
+- 改了 `lib/` 或 `cli/` 后若要跑 `topo-img2cad` 命令, 必须先 `pnpm --filter topo-img2cad build` (CLI 从 `dist/` 跑)
+
 ## CadQuery 兼容层
 
 - **`packages/topo-primitives/lib/cq/index.ts`** — `CQWorkplane` 链式 shim (经 `lib/index.ts` 以 `CQ` 命名空间导出), 方法名与 go-topo `workplane.go` 的 Go 便捷封装一一对应 (`boxCentered`/`circleCentered`/`extrudeSimple`/`holeThrough`/`loftSimple` 等), 内部调 Embind 绑定的 `tp.Workplane` 并负责参数换序/枚举映射 (`cutThruAll(taper,clean)` 换序、`workplane()` centerOption 数字→枚举、`offset2D` kind 数字→`GeomAbs_JoinType` 数值、`rarray` center→二元数组)。helper: `pnt/vec/gpVec` (gp_Pnt/Vector/gp_Vec 构造)
@@ -90,7 +103,8 @@ pnpm --filter topo-primitives test:watch  # watch 模式
   - Assembly 参数化注册表**已移植**: `lib/assembly/parametric.ts` (纯 TS 实现 Go 的 assembly_parametric.go — 全局 builder 注册表 + ParametricAssembly 组合原生 Assembly + JS 侧配方状态, JSON schema 与 Go 互通), 经 `Assembly` 命名空间导出
   - helix sweep/fitCenterline **已解锁**: 崩溃根因是 TS 测试参数与 Go `CreatePipe` 不匹配 — Go 内部用 Frenet 模式扫掠, 测试须 `sweepWithFace(face, path, combine, clean, isFrenet=true, TRANSFORMED)`; 非 Frenet 螺旋管拓扑不同, `fit_centerline_from_shape` 对有端盖实体不回退 PCA 是设计行为 (bounding_pipe.cc:655)
   - dxf **已编入并绑定** (DxfShapeReader/DxfShapeWriter, `src/dxf_bindings.cc`): `std::set<std::string>` embind 不支持需转 vector 注册; dxf_shape 的 entity value_object 未绑 (需要时再补)
-  - `Shape.exportStep`/`exportTo`/`writeToStl` 在 WASM 写**非 `/tmp/` 路径**失败 (emscripten MEMFS 不映射宿主 FS), 统一用 `/tmp/` 路径 + `tp.FS.readFile` 读回验证
+  - `assemble()` 在 `sketch.circle()` 之后调用会**崩裸指针** (单个圆也崩), 且 `circle(r,mode,tag)` **没有圆心参数**, 所以"一个 sketch 里画多个圆"在这个 API 上做不到 —— topo-img2cad 的多轮廓 sketch 改为**每个分量单独 sketch + 各自 extrude + union**, 见 `lib/cad/sketch_codegen.ts` 的 `MultiComponentProfile`(返回的是个只暴露 `extrude`/`val` 的小对象, 不是 Workplane, 故 revolve/sweep/loft 用多轮廓 sketch 会被显式 skip)
+  - `Shape.exportStep`/`exportTo`/`writeToStl` 在 WASM 写**非 `/tmp/` 路径**失败 (emscripten MEMFS 不映射宿主 FS), 统一用 `/tmp/` 路径 + `tp.FS.readFile` 读回验证 (topo-img2cad 侧已封装为 `lib/export.ts` 的 `exportShape`, 并校验文件结构)。另: STEP 导出会把 OCCT 传输统计打到 **stdout** (`loadKernel({ onKernelOutput })` 可改道 stderr), `--json` 模式必须改道否则 JSON 被污染
   - `Edge.makeSpline` 已修复: 可选参数 tolerance/periodic 改为 `emscripten::val`, 缺省 `1e-6`/`false`
   - `Edge.makeEdgeFromCurve` 仍不接受 `Handle_Geom_TrimmedCurve`; 已补 `Edge.makeEdgeFromCurveTrimmed(trimmedCurve)` 包装函数
   - `makeSolidFromCylinderAngle(R,H)` 已修复: 缺省 angle=2π (完整圆柱), mass 正确

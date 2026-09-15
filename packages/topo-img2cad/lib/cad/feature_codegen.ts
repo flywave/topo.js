@@ -24,6 +24,13 @@ export interface EmittedModel {
   methodsUsed: string[];
   /** Feature ids that made it into the output, in order. */
   emittedFeatures: string[];
+  /**
+   * Sketches whose emitted code runs the kernel solver and records a status.
+   *
+   * Circles are excluded: they are exact by construction and have nothing to
+   * solve, so a caller checking convergence must not expect a report for them.
+   */
+  solvedSketches: string[];
   /** Features that were dropped, with the reason. */
   skippedFeatures: Array<{ id: string; reason: string }>;
 }
@@ -41,7 +48,21 @@ export interface EmitModelOptions {
 
 const NO_TAPER = "undefined";
 
+/**
+ * Format a number for emission, refusing anything that is not one.
+ *
+ * The tree is authored by a model, so a coordinate or dimension can arrive as a
+ * string, an array, or undefined. Calling `.toFixed` on that used to throw
+ * "v.toFixed is not a function" from inside the emitter, which names neither the
+ * value nor the field — the caller only learns that some sketch failed. This
+ * names the value instead.
+ */
 function num(v: number): string {
+  if (typeof v !== "number" || !Number.isFinite(v)) {
+    throw new Error(
+      `expected a finite number to emit, got ${v === undefined ? "undefined" : JSON.stringify(v)}`,
+    );
+  }
   return Number.isInteger(v) ? String(v) : String(Number(v.toFixed(6)));
 }
 
@@ -104,6 +125,7 @@ export function emitFeatureTreeCode(
   const errors: string[] = [];
   const methodsUsed = new Set<string>();
   const emittedFeatures: string[] = [];
+  const solvedSketches: string[] = [];
   const skippedFeatures: Array<{ id: string; reason: string }> = [];
 
   const lines: string[] = [];
@@ -143,6 +165,7 @@ export function emitFeatureTreeCode(
   // runs wherever this code runs. `assemble()` inside the emission is what turns
   // the loose edges into a face that extrude can consume.
   const sketchByRef = new Map<string, string>(); // sketchId -> wpVar
+  const sketchKindByRef = new Map<string, string>(); // sketchId -> emitted kind
   const placementBySketch = new Map<string, [number, number, number]>();
   push(`${I}// ---- sketches ----`);
   for (const [id, spec] of Object.entries(tree.sketches)) {
@@ -153,7 +176,9 @@ export function emitFeatureTreeCode(
         wpVar: `wp_${sanitizeId(id)}`,
       });
       for (const line of emitted.code) push(line);
+      if (emitted.solved) solvedSketches.push(id);
       sketchByRef.set(id, emitted.wpVar);
+      sketchKindByRef.set(id, emitted.kind);
       placementBySketch.set(id, emitted.placement);
 
       const rec = emitted.reconciliation;
@@ -187,6 +212,7 @@ export function emitFeatureTreeCode(
     tree,
     params,
     sketchByRef,
+    sketchKindByRef,
     placementBySketch,
     toolVarByFeature: new Map<string, string>(),
     methodsUsed,
@@ -244,6 +270,7 @@ export function emitFeatureTreeCode(
     errors,
     methodsUsed: Array.from(methodsUsed),
     emittedFeatures,
+    solvedSketches,
     skippedFeatures,
   };
 }
@@ -270,6 +297,8 @@ interface EmitCtx {
   tree: FeatureTree;
   params: Record<string, number>;
   sketchByRef: Map<string, string>;
+  /** Sketch id → the construction it was emitted as ("circle" | "loop" | "multi"). */
+  sketchKindByRef: Map<string, string>;
   /** Sketch id → world offset that must be applied after its extrude. */
   placementBySketch: Map<string, [number, number, number]>;
   toolVarByFeature: Map<string, string>;
@@ -307,6 +336,25 @@ function evalParam(expr: string | undefined, ctx: EmitCtx, fallback: number): nu
 function placementOf(sketchId: string | undefined, ctx: EmitCtx): [number, number, number] | undefined {
   if (!sketchId) return undefined;
   return ctx.placementBySketch.get(sketchId);
+}
+
+/**
+ * Refuse an op a multi-profile sketch cannot carry.
+ *
+ * A sketch with several disjoint profiles is emitted as separate sketches joined
+ * by a union, so the variable holds a small object exposing `extrude` and `val`
+ * rather than a Workplane. Only extrusion-style ops can use it; asking it to
+ * revolve or sweep would emit code that throws "not a function" at run time,
+ * which is a worse failure than saying so now.
+ */
+function multiOpReason(
+  ctx: EmitCtx,
+  sketchId: string | undefined,
+  featureId: string,
+  op: string,
+): string | null {
+  if (!sketchId || ctx.sketchKindByRef.get(sketchId) !== "multi") return null;
+  return `feature "${featureId}": "${op}" cannot use sketch "${sketchId}", which holds several disjoint profiles — those are built as a union of separate extrusions, and only extrusion ops can consume that`;
 }
 
 function requireSketchWp(sketchId: string | undefined, ctx: EmitCtx, featureId: string): string {
@@ -374,6 +422,8 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
     }
 
     case "revolve": {
+      const reason = multiOpReason(ctx, op.sketchId, feature.id, "revolve");
+      if (reason) return { code, warnings, skip: reason };
       const wp = requireSketchWp(op.sketchId, ctx, feature.id);
       const sketch = ctx.tree.sketches[op.sketchId];
       if (sketch) {
@@ -400,6 +450,8 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
     }
 
     case "sweep": {
+      const reason = multiOpReason(ctx, op.sketchId, feature.id, "sweep");
+      if (reason) return { code, warnings, skip: reason };
       const wp = requireSketchWp(op.sketchId, ctx, feature.id);
       const pathWp = requireSketchWp(op.pathSketchId, ctx, feature.id);
       const frenet = op.frenet !== false;
@@ -414,6 +466,10 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
     }
 
     case "loft": {
+      for (const id of op.sketchIds) {
+        const reason = multiOpReason(ctx, id, feature.id, "loft");
+        if (reason) return { code, warnings, skip: reason };
+      }
       const wps = op.sketchIds.map((id) => requireSketchWp(id, ctx, feature.id));
       if (wps.length < 2) {
         return { code, warnings, skip: "loft needs at least two section sketches" };

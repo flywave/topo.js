@@ -9,6 +9,71 @@ The user attaches or points to an image of a mechanical part, bracket, plate, ho
 turned part, or an engineering drawing, and wants a parametric CAD model they can edit
 by changing dimensions.
 
+## Running It
+
+```sh
+# image → views → profiles → tree → code → measured review
+topo-img2cad drawing.png --object "Mounting plate"
+
+# edit a dimension in the emitted tree, then rebuild with no model involved
+topo-img2cad --tree .topo-img2cad/tree.json -o ./out
+```
+
+Both need `pnpm --filter topo-img2cad build` first: the `bin` entry point is built by
+rollup, not run from source. Exit code is 1 when the review fails, so it can gate CI.
+
+From a script, use the library directly:
+
+```ts
+import { CadPipeline, createLLMProvider, loadKernel } from "topo-img2cad";
+
+const { tp } = await loadKernel();          // loads topo-wasm and registers the globals
+const pipeline = new CadPipeline({
+  llm: createLLMProvider("openai"),
+  tp,                                        // omit to generate code only
+  workDir: "./out",
+  maxRefinements: 3,
+  verbose: true,
+});
+
+const result = await pipeline.run("./drawing.png", "Mounting plate");
+console.log(result.review?.passed, result.review?.reprojection?.views);
+```
+
+### Pointing it at a gateway or a reasoning model
+
+Anything OpenAI-compatible works through the `openai` provider; two settings
+matter for gateways and for thinking models, and neither is obvious from a
+failure:
+
+```ts
+const llm = createLLMProvider("openai", {
+  baseUrl: "https://opencode.ai/zen/go/v1",
+  apiKey: process.env.OPENCODE_API_KEY,
+  model: "mimo-v2.5",
+  maxTokens: 12288,
+  headers: { "x-opencode-session": "my-session-1" },
+});
+```
+
+- **Some gateways need their own routing headers.** OpenCode Go rejects a request
+  that arrives without `x-opencode-session` (`MissingSessionID`), and asks clients
+  to send their own `User-Agent` rather than a generic runtime's. Both go through
+  `headers`; the provider always sends its own `User-Agent` so it is identifiable
+  in a gateway's logs.
+- **`maxTokens` is shared with the model's thinking.** An *always-thinking* model
+  spends the budget on reasoning before it writes an answer, so a budget that is
+  comfortable for a plain model can return `content: null` with the reasoning in a
+  separate field. That reads as an empty success, so the provider raises a
+  specific error naming the budget instead of letting it surface later as
+  *"No JSON object found in view intake response"* — which blames the model's
+  output format for what is really a token limit.
+- **Thinking models are slow.** Measured against `mimo-v2.5`: minutes per call
+  rather than seconds, and the pipeline makes one call per view plus one for the
+  tree, so a full run is a background job rather than an interactive one. The CLI's
+  `--verbose` progress goes to stderr so it is safe to run under a timeout.
+
+
 ## The Core Difference From 3D Modeling
 
 This is not "place primitives and boolean them". It is CAD:
@@ -39,13 +104,18 @@ import { CadPipeline, createLLMProvider } from "topo-img2cad";
 const pipeline = new CadPipeline({
   llm: createLLMProvider("openai"),
   tp,                        // the WASM instance; omit to generate code only
-  references: { v_top: { kind: "loops", width: 512, height: 512, loops: [...] } },
   maxRefinements: 3,
   verbose: true,
 });
 
 const result = await pipeline.run("./drawing.png", "Mounting plate");
 ```
+
+The refinement loop consumes `lint` + `review` issues, and a repair is accepted only
+when it reduces the count of blocking errors — an equal-priority repair is no progress,
+so the loop stops instead of burning the budget on no-ops. It also refuses to spend a
+round on something a tree edit cannot fix: an emitter defect or a missing kernel is not
+the tree's fault, and asking the model to "fix" it would corrupt a working design.
 
 ### Stage A — View intake
 
@@ -60,6 +130,10 @@ and an explicit list of what the image cannot show.
 
 Per orthographic view: closed loops as `line` / `arc` / `circle` entities, the
 geometric relations the drawing implies, and the dimensions read off it.
+
+The view is **cropped out of the drawing and shown to the model** (`visionProfiles`,
+on by default in the CLI). Without that the model reads loops out of its own prose
+description of the image, which is a paraphrase being measured against the drawing.
 
 Output: `Profile2D` per view.
 
@@ -90,6 +164,31 @@ L4 is the gate that matters most and has no analogue in 3D modeling: the built B
 solid is projected back along the view the drawing came from, rasterized, and compared
 against the reference silhouette. The verdict is arithmetic — IoU, plus a directional
 deviation in pixels that says *which way* it is wrong.
+
+**Where the reference comes from.** The image itself. `lib/cad/image.ts` decodes the
+PNG (or PGM/PPM) with no third-party dependency, `extractSilhouette` separates part
+from paper, and `lib/cad/reference.ts` crops it to the view and registers it to model
+coordinates through the drawing's scale callout. Nothing has to be assembled by hand:
+passing `tp` is enough for L4 to run.
+
+Two things about that are worth knowing:
+
+- **Registration depends on scale evidence.** With a dimension callout the mask is
+  given an absolute size in millimetres, so a model that is 20% too big fails. Without
+  one the mask is scaled *uniformly* to fit the model: shape, aspect ratio and hole
+  positions are still checked, size is not. The report says which happened
+  (`registration: "absolute" | "normalized"`) rather than implying a size check it did
+  not make. A non-uniform fit would be worse than useless — every pair of rectangles
+  would agree.
+- **The reference is read once, before refinement.** The drawing does not change when
+  the tree does, and re-deriving it per round would risk measuring against a different
+  silhouette each time.
+
+Both silhouettes are rasterized in ONE shared frame (the union of the two extents) and
+the model is registered to the frame's min corner. Normalizing each to its own bounding
+box independently would make every pair of silhouettes agree, which is the exact
+failure this gate exists to catch.
+
 
 ## Verified API Constraints
 
@@ -195,6 +294,84 @@ model can never execute code.
 
 `CadPipeline.verifyAssociativity` rebuilds with each parameter perturbed and confirms
 the geometry moves. A parameter that changes nothing is decorative, and is reported.
+The L6 gate calls it automatically (one rebuild per parameter, disable with
+`checkAssociativity: false`) and only on a tree that already passes everything else —
+on a broken tree every parameter would read as inert and bury the real failure.
+
+**Parameters drive features, and they drive sketch geometry too.** A coordinate, a
+radius or a dimension value may be a number *or an expression over the parameters* —
+`"end": ["overallWidth", 0]`, `"radius": "holeDiameter / 2"`. `resolveSketchValues`
+substitutes the resolved numbers before emission, so a model that authors a properly
+associative sketch gets an associative model. What it must not be is an array standing
+in for arithmetic: `["holeDiameter", 2]` is reported as *"write `holeDiameter / 2`
+instead"*, because guessing that a two-element array means a division would be
+inventing intent.
+
+Resolution is per-field and names its location. An unresolvable value is reported as
+`sketch s_base: entity e1 end uses a value that did not resolve (…)` rather than
+surfacing as *"the profile does not close"*, which tells a designer nothing.
+
+A parameter referenced by nothing is reported as orphaned.
+
+## Artifacts
+
+With a `workDir` set, `lib/artifacts.ts` writes:
+
+| File | Why this one |
+|---|---|
+| `.topo-img2cad/tree.json` | the design; edit a dimension here and rebuild with `--tree` |
+| `.topo-img2cad/model.ts` | the emitted code, for reading and for use |
+| `.topo-img2cad/review.json` | every measured verdict, including IoU per view |
+| `.topo-img2cad/reference/<view>.png` | the silhouette the model was judged against |
+
+The reference PNGs matter more than they look: L4 is the one verdict a reader cannot
+check by reading the code, so when it fails, seeing the exact pixels the model was
+compared to is the difference between a bug report and a fix.
+
+## Deliverables — STEP and STL
+
+The finished body is written out in both formats, next to the artifacts rather than
+inside the dot-directory, because these are the product:
+
+```sh
+topo-img2cad drawing.png --object "Mounting plate"        # writes <name>.step and <name>.stl
+topo-img2cad --tree .topo-img2cad/tree.json -o ./out       # same, no model involved
+topo-img2cad --tree tree.json --export stl                 # one format
+topo-img2cad --tree tree.json --no-export                  # neither
+topo-img2cad --tree tree.json --stl-deflection 0.01        # finer mesh
+```
+
+| Format | What it carries | What it is for |
+|---|---|---|
+| `.step` | the exact BREP: analytic surfaces, edges, topology | editing; the format to hand to a CAD system |
+| `.stl` | a triangulation of the same body, **binary** | printing, viewing, meshing |
+
+Four things about the export that are worth knowing:
+
+- **The kernel writes into Emscripten's in-memory filesystem, not yours.** Every
+  export goes to `/tmp` inside the sandbox and is read back through `FS.readFile`.
+  Writing straight to a host path produces no file at all *and returns success* —
+  hence the read-back, and hence the tests check the files rather than the return
+  values.
+- **Every file is checked for the shape the format implies.** A STEP must open with
+  `ISO-10303-21;`, contain a `DATA` section and reach its `END-ISO-10303-21;`
+  terminator; a binary STL must be exactly `84 + 50 × triangles` bytes with a
+  non-zero triangle count. A writer that fails can leave a truncated file behind,
+  and a truncated file is worse than none.
+- **`--stl-deflection` is the STL's only quality dial**, in model units. It is the
+  chord tolerance the kernel meshes to, so it decides both fidelity and file size.
+  0.1mm is the default; 0.01 on a 100mm part roughly triples the triangle count.
+- **The STL is binary and has no units or topology.** It cannot be edited, and a
+  consumer cannot tell mm from inches. STEP is the one that stays a CAD model.
+
+Export happens even when the review failed, because a failed model's STEP is
+exactly what you need to work out why — but the CLI says so plainly
+(*"for inspection, not for use"*) and still exits 1. A file looks equally
+authoritative either way, so leaving the reader to guess would be the real defect.
+
+`--json` prints the result on stdout and routes the kernel's own output to stderr.
+That matters because STEP export prints an OCCT transfer report from C++ to stdout,
+which would otherwise land inside the JSON.
 
 ## Available CQWorkplane Methods
 
@@ -221,10 +398,53 @@ valid solids — see the table above for the ones that are.
   `RADIUS`, `ARC_ANGLE`, `FIXED`) plus loop closure. Inter-entity `DISTANCE`
   between two midpoints is emitted for the kernel to check but is not applied to
   the coordinates, and is reported as such.
+- **A circle sketch is not solver-checked.** `sketch.circle` places it exactly and
+  there are no per-edge tags to constrain, so no `solve()` is emitted. The L3 gate
+  expects reports only from sketches that were solved — expecting one for a circle
+  would report a correct sketch as a failure.
 - Single-view images cannot reveal hidden sides; `ViewSet.undetermined` records
   what is missing rather than guessing.
 - Absolute size needs scale evidence. Without it, dimensions are relative and the
-  pipeline says so.
+  pipeline says so — and L4 degrades from a size check to a shape check, which it
+  reports rather than hides.
+- **Only PNG and PGM/PPM drawings can be measured against.** There is no JPEG
+  decoder and no image dependency is wanted; a JPEG drawing still produces a model,
+  but L4 has no pixels to compare with and says so. Convert to PNG for the full loop.
+  PNG must be non-interlaced (Adam7 is rejected with a message saying so).
+- **STL export is binary only.** The binding hardcodes it; there is no ASCII switch,
+  and post-processing an STL to change that is out of scope here.
+- **A STEP is checked for structure, not re-read.** There is no STEP importer in the
+  binding surface, so the file is validated for its header, `DATA` section and
+  terminator rather than round-tripped. The STL is checked more strongly, because a
+  mesh can be: its enclosed volume is computed from the triangles and compared with
+  the BREP volume, which proves it is closed and wound outward.
+- **`Shape.exportStep` / `writeToStl` writing to a host path silently produces no
+  file.** They write into Emscripten's memory filesystem and still return `true`.
+  Always go through `exportShape`, which writes to `/tmp` inside the sandbox and
+  reads the bytes back out.
+- **The reference is what `extractSilhouette` thinks the part is.** A photograph with
+  a cluttered background, or a drawing where the part is not the largest enclosed
+  region, will produce a wrong reference and therefore a wrong verdict. The mode
+  (`ink` for solid/filled parts, `region` for line art) can be forced with
+  `silhouetteMode`, and the chosen mode is reported.
+- **The absolute size check rests on the model's pixel estimate.** The drawing
+  states a real length ("120") reliably, but *how many pixels that spans* is a
+  vision model eyeballing an image — measured at 14% off on a real drawing
+  (684 px reported for a 600 px edge). That 14% became a 0.61 IoU against a
+  geometrically perfect part. So `ViewReference.scaleFromModelEstimate` records the
+  provenance, the pipeline warns that the frame was placed from an estimate, and a
+  `RPR_LOW_IOU` against such a frame says *"check the scale evidence before
+  resizing the part"* rather than inviting a repair to resize a correct model to
+  match a mis-scaled reference.
+- **A constraint the kernel's solver cannot satisfy is reported, not hidden.**
+  Reconciliation puts the geometry where the dimensions say it goes, so a solid can
+  come out exactly right while `solve()` reports a large residual — the emitted
+  constraints and the emitted coordinates disagree. Both facts are surfaced
+  (`SKT_HIGH_RESIDUAL`), because "the volume is right" and "the sketch is
+  well-constrained" are different claims.
 - `sweep` and `loft` emission is best-effort; those bindings are not covered by
   the CQ shim and the argument order should be verified against your build.
 - Custom datum planes are refused: only XY / XZ / YZ have a verified mapping.
+- The library is Node-targeted: it reads the drawing off disk with `node:fs` and
+  decodes PNG with `node:zlib`. The UMD bundle resolves neither, so browser use
+  means supplying your own `tp`, image bytes and raster.

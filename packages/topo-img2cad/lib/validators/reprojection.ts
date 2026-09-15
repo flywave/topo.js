@@ -13,6 +13,7 @@
  */
 
 import type { ReviewIssue } from "../types.js";
+import { resampleMaskIntoFrame } from "../cad/image.js";
 import {
   chamferDistance,
   checkViewConsistency,
@@ -21,6 +22,8 @@ import {
   projectMesh,
   rasterizeLoops,
   rasterizeMesh,
+  translateProjected,
+  unionBounds,
   viewBasis,
   type Bounds2D,
   type MeshLike,
@@ -71,6 +74,18 @@ export interface ReprojectionOptions {
    * to be supplied rather than assumed.
    */
   bounds?: Bounds2D;
+  /**
+   * Shift the model so its own minimum corner lands on the frame's minimum
+   * corner before rasterizing.
+   *
+   * Required when the reference is a rasterized mask taken off an image: the
+   * mask's pixel grid fixes the frame origin to the PART's min corner, while the
+   * model's coordinates begin wherever the sketch was authored. Without this the
+   * two grids are offset by an arbitrary translation and the comparison measures
+   * the offset instead of the shape. Size and internal layout are still fully
+   * compared — only the choice of origin is normalised away.
+   */
+  register?: boolean;
   /** Mesh quality handed to Shape.mesh(). */
   meshArgs?: [number, number, number, boolean];
 }
@@ -85,6 +100,11 @@ export interface ViewReprojectionResult {
   modelBounds: Bounds2D;
   referencePixels: number;
   modelPixels: number;
+  /**
+   * What the comparison could actually see: "absolute" also checks size,
+   * "normalized" only shape.
+   */
+  registration?: RasterRegistration;
 }
 
 export interface ReprojectionReport {
@@ -244,7 +264,10 @@ export function compareProjection(
   }
 
   const refMask = referenceMask(reference, referenceBounds);
-  const modelMask = rasterizeMesh(projected, {
+  const registered = opts.register
+    ? translateProjected(projected, modelBounds.minX - projected.bounds.minX, modelBounds.minY - projected.bounds.minY)
+    : projected;
+  const modelMask = rasterizeMesh(registered, {
     width,
     height,
     flipY: true,
@@ -454,6 +477,150 @@ export function reprojectShape(
   issues.push(...gateIssues);
 
   return { compared: true, views, issues, passed };
+}
+
+/** How the image mask is placed relative to the model before comparison. */
+export type RasterRegistration = "absolute" | "normalized";
+
+export interface ReprojectAgainstRasterOptions extends ReprojectionOptions {
+  /** View to project along; a standard orthographic name or a custom basis. */
+  view: string | ViewBasis;
+  /** Reference mask, rasterized in the model-coordinate frame `referenceBounds`. */
+  mask: Uint8Array;
+  maskWidth: number;
+  maskHeight: number;
+  /**
+   * Model-coordinate frame the mask covers, derived from the drawing's scale.
+   *
+   * Omit it when the image carries no scale evidence; the mask is then fitted to
+   * the model uniformly (see `RasterRegistration`) and only shape is compared.
+   */
+  referenceBounds?: Bounds2D;
+  thresholds?: ReprojectionThresholds;
+}
+
+/**
+ * Reproject a shape against a reference mask taken from an image.
+ *
+ * A mask fixes the frame origin to the part's own min corner, which is not where
+ * the sketch author put the model's origin. So the two are placed in one frame
+ * that contains both — the union of the mask's extent and the model's — and the
+ * model is registered to the frame's min corner. The mask is resampled into that
+ * same frame, because `referenceMask` returns a mask-kind reference verbatim.
+ *
+ * With no `referenceBounds` the mask is scaled UNIFORMLY to fit the model. That
+ * drops the size check but keeps the shape one, including the aspect ratio and
+ * the position of every hole — a non-uniform fit would absorb an aspect error
+ * and make every pair of rectangles agree. The report says which of the two was
+ * done, because a size error can only be caught by the absolute comparison.
+ */
+export function reprojectAgainstRaster(
+  shape: unknown,
+  opts: ReprojectAgainstRasterOptions,
+): ReprojectionReport {
+  const kind = typeof opts.view === "string" ? opts.view : "custom";
+
+  const mesh = getMeshData(shape, opts.meshArgs);
+  if (!mesh) {
+    return {
+      compared: false,
+      views: [],
+      issues: [
+        {
+          severity: "error",
+          code: "RPR_NO_MESH",
+          message: `View "${kind}": could not triangulate the shape for projection`,
+          suggestion: "Shape.mesh() failed or returned no triangles — check the shape is a solid",
+        },
+      ],
+      passed: false,
+    };
+  }
+
+  let basis: ViewBasis;
+  try {
+    basis = typeof opts.view === "string" ? viewBasis(opts.view) : opts.view;
+  } catch (e) {
+    return {
+      compared: false,
+      views: [],
+      issues: [
+        { severity: "error", code: "RPR_BAD_VIEW", message: e instanceof Error ? e.message : String(e) },
+      ],
+      passed: false,
+    };
+  }
+
+  const projected = projectMesh(mesh, basis);
+  const modelAtOrigin = translateProjected(
+    projected,
+    -projected.bounds.minX,
+    -projected.bounds.minY,
+  );
+  const modelBounds = {
+    minX: 0,
+    minY: 0,
+    maxX: modelAtOrigin.bounds.maxX,
+    maxY: modelAtOrigin.bounds.maxY,
+  };
+
+  const registration: RasterRegistration = opts.referenceBounds ? "absolute" : "normalized";
+  const referenceBounds = opts.referenceBounds ?? fitUniformly(modelBounds, opts.maskWidth, opts.maskHeight);
+
+  const frame = unionBounds(modelBounds, referenceBounds);
+
+  const framedMask = resampleMaskIntoFrame(
+    opts.mask,
+    opts.maskWidth,
+    opts.maskHeight,
+    referenceBounds,
+    frame,
+    opts.width,
+    opts.height,
+  );
+
+  const reference: ReferenceSilhouette = {
+    kind: "mask",
+    width: opts.width,
+    height: opts.height,
+    mask: framedMask,
+  };
+
+  const result = compareProjection(modelAtOrigin, reference, {
+    width: opts.width,
+    height: opts.height,
+    referenceFrame: "reference",
+    bounds: frame,
+    view: kind,
+  });
+  result.registration = registration;
+
+  const { issues: gateIssues, passed } = evaluateReprojection([result], undefined, opts.thresholds);
+
+  return { compared: true, views: [result], issues: gateIssues, passed };
+}
+
+/**
+ * Scale a mask uniformly so it fits inside the model's extent.
+ *
+ * Uniform, not per-axis: stretching each axis independently would let any two
+ * silhouettes agree on their bounding box and hide a wrong aspect ratio, which
+ * is one of the errors this gate exists to catch.
+ */
+function fitUniformly(
+  modelBounds: Bounds2D,
+  maskWidth: number,
+  maskHeight: number,
+): Bounds2D {
+  const modelW = modelBounds.maxX - modelBounds.minX || 1;
+  const modelH = modelBounds.maxY - modelBounds.minY || 1;
+  const scale = Math.min(modelW / (maskWidth || 1), modelH / (maskHeight || 1));
+  return {
+    minX: modelBounds.minX,
+    minY: modelBounds.minY,
+    maxX: modelBounds.minX + maskWidth * scale,
+    maxY: modelBounds.minY + maskHeight * scale,
+  };
 }
 
 /**

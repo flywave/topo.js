@@ -128,7 +128,21 @@ function perpendicular(n: number[]): [number, number, number] {
   return [p[0] / len, p[1] / len, p[2] / len];
 }
 
+/**
+ * Format a number for emission, refusing anything that is not one.
+ *
+ * The tree is authored by a model, so a coordinate or dimension can arrive as a
+ * string, an array, or undefined. Calling `.toFixed` on that used to throw
+ * "v.toFixed is not a function" from inside the emitter, which names neither the
+ * value nor the field — the caller only learns that some sketch failed. This
+ * names the value instead.
+ */
 function num(v: number): string {
+  if (typeof v !== "number" || !Number.isFinite(v)) {
+    throw new Error(
+      `expected a finite number to emit, got ${v === undefined ? "undefined" : JSON.stringify(v)}`,
+    );
+  }
   return Number.isInteger(v) ? String(v) : String(Number(v.toFixed(6)));
 }
 
@@ -389,7 +403,87 @@ export interface LoopProfile {
   points: Array<[number, number]>;
 }
 
-export type ClassifiedProfile = CircleProfile | LoopProfile;
+/**
+ * A sketch holding several disjoint closed profiles.
+ *
+ * Kept non-recursive on purpose: a component is a circle or a loop, never
+ * another multi, so the nesting is impossible rather than merely unused.
+ */
+export interface MultiComponentProfile {
+  kind: "multi";
+  /** Disjoint components in deterministic order (sorted by first entity tag). */
+  components: Array<CircleProfile | LoopProfile>;
+}
+
+export type ClassifiedProfile = CircleProfile | LoopProfile | MultiComponentProfile;
+
+/**
+ * Decompose non-construction entities into connected components.
+ *
+ * Two entities share a component when one of their endpoints is within `tol`
+ * of an endpoint of the other. Circles are always isolated — they have no
+ * endpoints to share.
+ */
+function findConnectedComponents(
+  entities: ProfileEntity[],
+  tol = 1e-3,
+): ProfileEntity[][] {
+  const real = entities.filter((e) => !e.construction);
+  const circles = real.filter((e) => e.type === "circle");
+  const chainable = real.filter((e) => e.type !== "circle");
+
+  // Build adjacency by endpoint proximity.
+  const adj = new Map<string, Set<string>>();
+  for (const e of chainable) adj.set(e.tag, new Set());
+
+  for (let i = 0; i < chainable.length; i++) {
+    for (let j = i + 1; j < chainable.length; j++) {
+      const a = chainable[i];
+      const b = chainable[j];
+      if (
+        (a.start && b.start && near(a.start, b.start, tol)) ||
+        (a.start && b.end && near(a.start, b.end, tol)) ||
+        (a.end && b.start && near(a.end, b.start, tol)) ||
+        (a.end && b.end && near(a.end, b.end, tol))
+      ) {
+        adj.get(a.tag)!.add(b.tag);
+        adj.get(b.tag)!.add(a.tag);
+      }
+    }
+  }
+
+  // BFS to find connected components among chainable entities.
+  const byTag = new Map<string, ProfileEntity>();
+  for (const e of chainable) byTag.set(e.tag, e);
+
+  const visited = new Set<string>();
+  const components: ProfileEntity[][] = [];
+  for (const e of chainable) {
+    if (visited.has(e.tag)) continue;
+    const component: ProfileEntity[] = [];
+    const queue: ProfileEntity[] = [e];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      if (visited.has(cur.tag)) continue;
+      visited.add(cur.tag);
+      component.push(cur);
+      for (const neighbor of adj.get(cur.tag) ?? []) {
+        if (!visited.has(neighbor)) {
+          const ne = byTag.get(neighbor);
+          if (ne) queue.push(ne);
+        }
+      }
+    }
+    components.push(component);
+  }
+
+  // Each circle is its own component.
+  for (const c of circles) {
+    components.push([c]);
+  }
+
+  return components;
+}
 
 /**
  * Classify a profile into the construction it needs.
@@ -397,23 +491,59 @@ export type ClassifiedProfile = CircleProfile | LoopProfile;
  * Returns null when the entities do not form a single closed loop, which the
  * profile validator should already have caught. Note that this no longer
  * restricts the outline — arbitrary polygons and line/arc loops both build.
+ *
+ * When the sketch contains N >= 2 disjoint components (e.g. several circles or
+ * a mix of circles and loops), returns a `MultiComponentProfile` that lists
+ * each component separately.
  */
 export function classifyProfile(entities: ProfileEntity[]): ClassifiedProfile | null {
   const real = entities.filter((e) => !e.construction);
   if (real.length === 0) return null;
 
+  // Single circle — the fast path, unchanged.
   if (real.length === 1 && real[0].type === "circle") {
     const c = real[0];
     if (!c.center || !c.radius) return null;
     return { kind: "circle", centre: [c.center[0], c.center[1]], radius: c.radius };
   }
 
-  const chain = chainEntities(entities);
-  if (!chain) return null;
-  const points = profileToPoints(entities);
-  if (!points) return null;
+  // Multiple components — decompose and classify each one.
+  const components = findConnectedComponents(entities);
+  if (components.length === 0) return null;
+  if (components.length >= 2) {
+    const classified: Array<CircleProfile | LoopProfile> = [];
+    for (const comp of components) {
+      if (comp.length === 1 && comp[0].type === "circle") {
+        const c = comp[0];
+        if (!c.center || !c.radius) return null;
+        classified.push({ kind: "circle", centre: [c.center[0], c.center[1]], radius: c.radius });
+      } else {
+        const compChain = chainEntities(comp);
+        if (!compChain) return null;
+        const compPoints = profileToPoints(comp);
+        if (!compPoints) return null;
+        classified.push({ kind: "loop", chain: compChain, points: compPoints });
+      }
+    }
+    // Sort components by first entity tag for deterministic output.
+    classified.sort((a, b) => {
+      const tagA = a.kind === "circle" ? a.centre.join(",") : a.chain[0].entity.tag;
+      const tagB = b.kind === "circle" ? b.centre.join(",") : b.chain[0].entity.tag;
+      if (a.kind === "circle" && b.kind !== "circle") return -1;
+      if (a.kind !== "circle" && b.kind === "circle") return 1;
+      return tagA.localeCompare(tagB);
+    });
+    return { kind: "multi", components: classified };
+  }
 
-  return { kind: "loop", chain, points };
+  // Single loop — the fast path, unchanged.
+  const chain = chainEntities(entities);
+  if (chain) {
+    const points = profileToPoints(entities);
+    if (points) return { kind: "loop", chain, points };
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -425,6 +555,16 @@ export interface EmittedProfile {
   wpVar: string;
   /** Which construction was used. */
   kind: ClassifiedProfile["kind"];
+  /**
+   * Whether the emitted code runs the kernel solver and records a report.
+   *
+   * A circle is exact by construction: it has no per-edge tags to constrain and
+   * `sketch.circle` places it directly, so there is neither a solve() call nor a
+   * status to read. Callers that check solver convergence must expect reports
+   * only from sketches this is true for, or they will report a circle as a
+   * sketch that failed to solve.
+   */
+  solved: boolean;
   /** Code building the placed sketch. */
   code: string[];
   /**
@@ -451,6 +591,13 @@ export interface EmitGeometryOptions {
  * A circle uses `sketch.circle`, which is exact and verified. Everything else
  * goes through segments and three-point arcs, which is the only construction that
  * carries per-edge tags and therefore the only one that can be constrained.
+ *
+ * A multi-component sketch (several disjoint circles, or a mix of circles and
+ * loops) is emitted as separate sketches — one per component — each extruded
+ * individually and unioned into a compound.  This is necessary because the
+ * kernel's `sk.circle()` places at sketch-local (0,0) with no center parameter,
+ * so multiple circles in one sketch all overlap.  `assemble()` also crashes
+ * when called after `sk.circle()`, making single-sketch multi-circle impossible.
  */
 export function emitProfileGeometry(
   sketch: SketchSpec,
@@ -464,7 +611,12 @@ export function emitProfileGeometry(
   // reconcile.ts). The emitted code then carries the solved geometry AND the
   // constraints, so the kernel's own solver re-checks the arithmetic at runtime.
   const reconciled = reconcileSketch({ ...sketch, entities });
-  const classified = classifyProfile(reconciled.entities);
+  // Detect multi-component on ORIGINAL entities (reconciled drops disconnected
+  // pieces), but build the final profile on reconciled entities so segments
+  // carry the dimensioned coordinates.
+  const multiCheck = classifyProfile(entities);
+  const isMulti = multiCheck?.kind === "multi";
+  const classified = isMulti ? multiCheck : classifyProfile(reconciled.entities);
   if (!classified) {
     const err = reconciled.report.closureError;
     const detail = Number.isFinite(err)
@@ -484,13 +636,12 @@ export function emitProfileGeometry(
     );
   }
 
-  const skVar = `sk_${sanitize(sketch.id)}`;
-  const code: string[] = [];
-  const plane = `new tp.Workplane(${JSON.stringify(sketch.plane.kind)}, v(0, 0, 0), undefined)`;
-
-  code.push(`${I}const ${skVar} = ${plane}.sketch();`);
-
+  // --- single circle (unchanged fast path) -----------------------------
   if (classified.kind === "circle") {
+    const skVar = `sk_${sanitize(sketch.id)}`;
+    const code: string[] = [];
+    const plane = `new tp.Workplane(${JSON.stringify(sketch.plane.kind)}, v(0, 0, 0), undefined)`;
+    code.push(`${I}const ${skVar} = ${plane}.sketch();`);
     code.push(
       `${I}${skVar}.circle(${num(classified.radius)}, tp.SketchMode.ADD, ${JSON.stringify(sketch.id)});`,
     );
@@ -498,49 +649,155 @@ export function emitProfileGeometry(
     return {
       wpVar: opts.wpVar,
       kind: "circle",
+      solved: false,
       code,
       placement: planeTo3D(sketch.plane, classified.centre[0], classified.centre[1]),
       reconciliation: reconciled.report,
     };
   }
 
-  // --- entities ---------------------------------------------------------
-  for (const { entity, forward } of classified.chain) {
-    const e = forward ? entity : reverseEntity(entity);
-    const tag = JSON.stringify(e.tag);
-    const construction = e.construction ? "true" : "false";
-    if (e.type === "line") {
+  // --- single loop (unchanged fast path) -------------------------------
+  if (classified.kind === "loop") {
+    const skVar = `sk_${sanitize(sketch.id)}`;
+    const code: string[] = [];
+    const plane = `new tp.Workplane(${JSON.stringify(sketch.plane.kind)}, v(0, 0, 0), undefined)`;
+    code.push(`${I}const ${skVar} = ${plane}.sketch();`);
+
+    // --- entities ---------------------------------------------------------
+    for (const { entity, forward } of classified.chain) {
+      const e = forward ? entity : reverseEntity(entity);
+      const tag = JSON.stringify(e.tag);
+      const construction = e.construction ? "true" : "false";
+      if (e.type === "line") {
+        code.push(
+          `${I}${skVar}.segmentBetweenPoints(v(${num(e.start![0])}, ${num(e.start![1])}, 0), v(${num(e.end![0])}, ${num(e.end![1])}, 0), ${tag}, ${construction});`,
+        );
+      } else {
+        const { p1, p2, p3 } = arcThreePoints(e);
+        code.push(
+          `${I}${skVar}.arcByThreePoints(v(${num(p1[0])}, ${num(p1[1])}, 0), v(${num(p2[0])}, ${num(p2[1])}, 0), v(${num(p3[0])}, ${num(p3[1])}, 0), ${tag}, ${construction});`,
+        );
+      }
+    }
+
+    // --- constraints ------------------------------------------------------
+    for (const c of mergeConstraints({ ...sketch, entities: reconciled.entities })) {
+      code.push(`${I}${emitConstraint(skVar, c)}`);
+    }
+
+    // --- solve, report, assemble -----------------------------------------
+    code.push(`${I}${skVar}.solve();`);
+    if (opts.reportMapVar !== null) {
+      const map = opts.reportMapVar ?? "__solveReports";
+      code.push(`${I}${map}[${JSON.stringify(sketch.id)}] = ${skVar}.solve_status();`);
+    }
+    // Without assemble the sketch holds loose edges and extrude finds no wires.
+    code.push(`${I}${skVar}.assemble(tp.SketchMode.ADD, undefined);`);
+    code.push(`${I}const ${opts.wpVar} = ${skVar}.finalize();`);
+
+    // The profile's own coordinates are relative to the plane origin, so the
+    // placement is the plane origin expressed in world coordinates.
+    return {
+      wpVar: opts.wpVar,
+      kind: "loop",
+      solved: true,
+      code,
+      placement: planeTo3D(sketch.plane, 0, 0),
+      reconciliation: reconciled.report,
+    };
+  }
+
+  // --- multi-component: separate sketches per component -----------------
+  // The kernel's sk.circle() places at sketch-local (0,0) with no center
+  // parameter, and assemble() crashes after sk.circle().  So each component
+  // gets its own sketch, finalised to a workplane, and the wrapper's
+  // extrude() method extrudes each workplane on demand and unions the results.
+  const code: string[] = [];
+  const wpVars: string[] = []; // workplane variables (one per component)
+  const placementExprs: string[] = []; // placement translate expressions
+  let hasLoop = false;
+
+  for (let i = 0; i < classified.components.length; i++) {
+    const comp = classified.components[i];
+    const compWpVar = `${opts.wpVar}_wp${i}`;
+    const compSkVar = `sk_${sanitize(sketch.id)}_c${i}`;
+
+    if (comp.kind === "circle") {
+      const plane = `new tp.Workplane(${JSON.stringify(sketch.plane.kind)}, v(0, 0, 0), undefined)`;
+      code.push(`${I}const ${compSkVar} = ${plane}.sketch();`);
+      // Tag must be a valid JS string literal.
+      const tag = JSON.stringify(`${sketch.id}_c${i}`);
       code.push(
-        `${I}${skVar}.segmentBetweenPoints(v(${num(e.start![0])}, ${num(e.start![1])}, 0), v(${num(e.end![0])}, ${num(e.end![1])}, 0), ${tag}, ${construction});`,
+        `${I}${compSkVar}.circle(${num(comp.radius)}, tp.SketchMode.ADD, ${tag});`,
       );
+      code.push(`${I}const ${compWpVar} = ${compSkVar}.finalize();`);
+      wpVars.push(compWpVar);
+      // Each circle is at sketch-local (0,0); translate to its center after extrude.
+      const [cx, cy] = comp.centre;
+      const placement = planeTo3D(sketch.plane, cx, cy);
+      placementExprs.push(`.translate(gv(${num(placement[0])}, ${num(placement[1])}, ${num(placement[2])}))`);
     } else {
-      const { p1, p2, p3 } = arcThreePoints(e);
-      code.push(
-        `${I}${skVar}.arcByThreePoints(v(${num(p1[0])}, ${num(p1[1])}, 0), v(${num(p2[0])}, ${num(p2[1])}, 0), v(${num(p3[0])}, ${num(p3[1])}, 0), ${tag}, ${construction});`,
-      );
+      hasLoop = true;
+      const plane = `new tp.Workplane(${JSON.stringify(sketch.plane.kind)}, v(0, 0, 0), undefined)`;
+      code.push(`${I}const ${compSkVar} = ${plane}.sketch();`);
+
+      // Re-chain from reconciled entities so segments carry dimensioned coords.
+      const compEntityTags = new Set(comp.chain.map((c) => c.entity.tag));
+      const reconciledComp = reconciled.entities.filter((e) => compEntityTags.has(e.tag));
+      const compChain = chainEntities(reconciledComp) ?? comp.chain;
+
+      for (const { entity, forward } of compChain) {
+        const e = forward ? entity : reverseEntity(entity);
+        const tag = JSON.stringify(e.tag);
+        const construction = e.construction ? "true" : "false";
+        if (e.type === "line") {
+          code.push(
+            `${I}${compSkVar}.segmentBetweenPoints(v(${num(e.start![0])}, ${num(e.start![1])}, 0), v(${num(e.end![0])}, ${num(e.end![1])}, 0), ${tag}, ${construction});`,
+          );
+        } else {
+          const { p1, p2, p3 } = arcThreePoints(e);
+          code.push(
+            `${I}${compSkVar}.arcByThreePoints(v(${num(p1[0])}, ${num(p1[1])}, 0), v(${num(p2[0])}, ${num(p2[1])}, 0), v(${num(p3[0])}, ${num(p3[1])}, 0), ${tag}, ${construction});`,
+          );
+        }
+      }
+
+      // Constraints for this component's entities only.
+      const compConstraints = reconciledComp.length > 0
+        ? sketch.constraints.filter((c) => c.tags.every((t) => compEntityTags.has(t)))
+        : [];
+      const compSketch = { ...sketch, entities: reconciledComp, constraints: compConstraints };
+      for (const c of mergeConstraints(compSketch)) {
+        code.push(`${I}${emitConstraint(compSkVar, c)}`);
+      }
+
+      code.push(`${I}${compSkVar}.solve();`);
+      code.push(`${I}${compSkVar}.assemble(tp.SketchMode.ADD, undefined);`);
+      code.push(`${I}const ${compWpVar} = ${compSkVar}.finalize();`);
+      wpVars.push(compWpVar);
+      // Loop components are already at their correct positions in the sketch.
+      placementExprs.push("");
     }
   }
 
-  // --- constraints ------------------------------------------------------
-  for (const c of mergeConstraints({ ...sketch, entities: reconciled.entities })) {
-    code.push(`${I}${emitConstraint(skVar, c)}`);
-  }
+  // The wrapper's extrude() extrudes each workplane to the requested depth,
+  // translates each to its placement, and unions the results.  This matches
+  // what feature_codegen.ts expects: wp.extrude(dist, ...).translate(...).
+  const extrudeBody = wpVars
+    .map((wp, i) => `${wp}.extrude(dist, b1, b2, b3, taper)${placementExprs[i]}`)
+    .join(".union(");
+  const unionSuffix = wpVars.length > 1
+    ? ")" .repeat(wpVars.length - 1)
+    : "";
+  code.push(
+    `${I}const ${opts.wpVar} = { extrude: function(dist, b1, b2, b3, taper) { return ${extrudeBody}${unionSuffix}; }, val: function() { return this.extrude(1, true, true, false, undefined); } };`,
+  );
 
-  // --- solve, report, assemble -----------------------------------------
-  code.push(`${I}${skVar}.solve();`);
-  if (opts.reportMapVar !== null) {
-    const map = opts.reportMapVar ?? "__solveReports";
-    code.push(`${I}${map}[${JSON.stringify(sketch.id)}] = ${skVar}.solve_status();`);
-  }
-  // Without assemble the sketch holds loose edges and extrude finds no wires.
-  code.push(`${I}${skVar}.assemble(tp.SketchMode.ADD, undefined);`);
-  code.push(`${I}const ${opts.wpVar} = ${skVar}.finalize();`);
-
-  // The profile's own coordinates are relative to the plane origin, so the
-  // placement is the plane origin expressed in world coordinates.
+  // Placement is zero — each component is already translated to its position.
   return {
     wpVar: opts.wpVar,
-    kind: "loop",
+    kind: "multi",
+    solved: hasLoop,
     code,
     placement: planeTo3D(sketch.plane, 0, 0),
     reconciliation: reconciled.report,

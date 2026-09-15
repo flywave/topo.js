@@ -46,7 +46,7 @@ export {
   MockProvider,
   createLLMProvider,
 } from "./llm.js";
-export type { LLMProviderType } from "./llm.js";
+export type { LLMProviderType, OpenAIProviderOptions } from "./llm.js";
 
 // ---------------------------------------------------------------------------
 // CAD model — the feature-based document
@@ -94,6 +94,9 @@ export type {
 export { evaluateExpression, resolveParameters, ExpressionError } from "./cad/expr.js";
 export type { ResolvedParameters } from "./cad/expr.js";
 
+export { resolveSketchValues, parametersUsedBySketches } from "./cad/resolve_sketch.js";
+export type { ResolvedSketchValues } from "./cad/resolve_sketch.js";
+
 export { reconcileSketch, entryPoint, exitPoint } from "./cad/reconcile.js";
 export type { ReconcileReport, ReconcileResult, ReconcileOptions } from "./cad/reconcile.js";
 
@@ -108,7 +111,10 @@ export type { ClosureReport, ProfileReport } from "./cad/profile.js";
 export {
   viewBasis,
   customBasis,
+  sketchPlaneForView,
   projectMesh,
+  translateProjected,
+  unionBounds,
   rasterizeMesh,
   rasterizeLoops,
   compareMasks,
@@ -189,6 +195,7 @@ export type { DiagnosedIssue, RefinementLoopResult } from "./stages/refine.js";
 // ---------------------------------------------------------------------------
 export {
   reprojectShape,
+  reprojectAgainstRaster,
   compareProjection,
   evaluateReprojection,
   getMeshData,
@@ -199,10 +206,69 @@ export type {
   ReferenceSilhouette,
   ReprojectionOptions,
   ReprojectShapeOptions,
+  ReprojectAgainstRasterOptions,
+  RasterRegistration,
   ViewReprojectionResult,
   ReprojectionReport,
   ReprojectionThresholds,
 } from "./validators/reprojection.js";
+
+// ---------------------------------------------------------------------------
+// Drawing rasters — the image side of the loop
+// ---------------------------------------------------------------------------
+export {
+  decodeRaster,
+  loadRaster,
+  cropRaster,
+  regionToPixelBox,
+  extractSilhouette,
+  cropSilhouetteToBBox,
+  resampleMaskIntoFrame,
+} from "./cad/image.js";
+export type {
+  Raster,
+  RasterFormat,
+  DecodeOptions,
+  PixelBox,
+  SilhouetteMode,
+  SilhouetteOptions,
+  Silhouette,
+} from "./cad/image.js";
+
+export { encodePngGray, maskToRaster } from "./cad/image_encode.js";
+
+export {
+  buildViewReferences,
+  buildViewReferencesFromImage,
+  ORTHOGRAPHIC_VIEW_KINDS,
+} from "./cad/reference.js";
+export type {
+  ViewReference,
+  ReferenceBuildResult,
+  ReferenceBuildOptions,
+} from "./cad/reference.js";
+
+// ---------------------------------------------------------------------------
+// Kernel loading and artifacts
+// ---------------------------------------------------------------------------
+export { loadKernel, installKernelGlobals, KERNEL_GLOBALS } from "./kernel.js";
+export type { Kernel, LoadKernelOptions } from "./kernel.js";
+
+export {
+  exportShape,
+  sanitizeBasename,
+  formatExtension,
+  formatOfPath,
+} from "./export.js";
+export type {
+  ExportFormat,
+  ExportOptions,
+  ExportedFile,
+  ExportResult,
+} from "./export.js";
+
+export { saveArtifacts, loadTree, ARTIFACT_DIR } from "./artifacts.js";
+export type { ArtifactPaths, SaveArtifactOptions } from "./artifacts.js";
 
 export {
   evaluateSketchSolves,

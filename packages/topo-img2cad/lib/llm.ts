@@ -11,16 +11,55 @@ import type { LLMProvider } from "./types.js";
 // OpenAI adapter (GPT-4o / GPT-4o-mini)
 // ---------------------------------------------------------------------------
 
+export interface OpenAIProviderOptions {
+  apiKey?: string;
+  model?: string;
+  baseUrl?: string;
+  /**
+   * Completion budget, shared with any reasoning tokens the model emits.
+   *
+   * A "thinking" model spends this on its reasoning first, so a budget that is
+   * comfortable for a plain model can leave nothing for the answer — see the
+   * null-content error below.
+   */
+  maxTokens?: number;
+  /**
+   * Extra request headers, for gateways that need their own routing fields.
+   *
+   * OpenCode Go, for one, requires a stable `x-opencode-session` per
+   * conversation or it rejects the request outright.
+   */
+  headers?: Record<string, string>;
+  /**
+   * Per-request timeout in seconds.
+   *
+   * Node's fetch gives up on response headers after 300s, and a reasoning model
+   * working on a 16k-character prompt with an image routinely needs longer — the
+   * failure is a bare `fetch failed`, which says nothing about why. Raising this
+   * is the fix; the default leaves headroom above the runtime's.
+   */
+  timeoutSeconds?: number;
+}
+
+const DEFAULT_MAX_TOKENS = 4096;
+const DEFAULT_TIMEOUT_SECONDS = 900;
+
 export class OpenAIProvider implements LLMProvider {
   readonly name = "openai";
   private apiKey: string;
   private model: string;
   private baseUrl: string;
+  private maxTokens: number;
+  private headers: Record<string, string>;
+  private timeoutSeconds: number;
 
-  constructor(opts?: { apiKey?: string; model?: string; baseUrl?: string }) {
+  constructor(opts?: OpenAIProviderOptions) {
     this.apiKey = opts?.apiKey ?? process.env.OPENAI_API_KEY ?? "";
     this.model = opts?.model ?? "gpt-4o";
     this.baseUrl = opts?.baseUrl ?? "https://api.openai.com/v1";
+    this.maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS;
+    this.headers = opts?.headers ?? {};
+    this.timeoutSeconds = opts?.timeoutSeconds ?? DEFAULT_TIMEOUT_SECONDS;
     if (!this.apiKey) {
       throw new Error("OpenAI API key required. Set OPENAI_API_KEY or pass apiKey.");
     }
@@ -56,21 +95,67 @@ export class OpenAIProvider implements LLMProvider {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
+        // Gateways ask clients to identify themselves rather than arrive as a
+        // generic runtime; it also makes this pipeline visible in their logs.
+        "User-Agent": `topo-img2cad/0.1.0`,
+        ...this.headers,
       },
       body: JSON.stringify({
         model: this.model,
         messages,
         temperature: 0.3,
-        max_tokens: 4096,
+        max_tokens: this.maxTokens,
       }),
+      signal: AbortSignal.timeout(this.timeoutSeconds * 1000),
+    }).catch((e: unknown) => {
+      // A bare "fetch failed" from an abort hides the one thing worth knowing.
+      const cause = (e as { cause?: { message?: string } })?.cause?.message;
+      const detail = cause ? ` (${cause})` : "";
+      throw new Error(
+        `request to ${this.baseUrl} failed after up to ${this.timeoutSeconds}s${detail}. ` +
+          `A reasoning model can need longer than Node's default 300s header timeout — raise timeoutSeconds.`,
+      );
     });
     if (!resp.ok) {
       const body = await resp.text();
       throw new Error(`OpenAI API error ${resp.status}: ${body}`);
     }
     const data = (await resp.json()) as ChatCompletion;
-    return data.choices[0]?.message?.content ?? "";
+    return extractContent(data, this.model, this.maxTokens);
   }
+}
+
+/**
+ * Pull the answer out of a completion.
+ *
+ * A reasoning model returns its thinking in `reasoning_content` / `reasoning`
+ * and the answer in `content`. When the budget runs out mid-thought, `content`
+ * arrives null and the response looks like an empty success — which would
+ * surface several stages later as "No JSON object found in view intake
+ * response", blaming the model's output format for what is really a token
+ * limit.
+ */
+function extractContent(data: ChatCompletion, model: string, maxTokens: number): string {
+  const message = data.choices?.[0]?.message;
+  const content = message?.content;
+  if (typeof content === "string" && content.trim().length > 0) {
+    return content;
+  }
+
+  const reasoning = message?.reasoning_content ?? message?.reasoning;
+  const finish = data.choices?.[0]?.finish_reason;
+  if (typeof reasoning === "string" && reasoning.trim().length > 0) {
+    throw new Error(
+      `${model} returned only reasoning and no answer (finish_reason: ${finish ?? "none"}). ` +
+        `Its thinking shares the ${maxTokens}-token budget, so raise maxTokens.`,
+    );
+  }
+  if (finish === "length") {
+    throw new Error(
+      `${model} hit its ${maxTokens}-token budget before producing an answer; raise maxTokens.`,
+    );
+  }
+  return "";
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +284,15 @@ interface ChatMessage {
 }
 
 interface ChatCompletion {
-  choices: Array<{ message: { content: string } }>;
+  choices: Array<{
+    finish_reason?: string;
+    message: {
+      content: string | null;
+      /** Some OpenAI-compatible reasoning models put their thinking here. */
+      reasoning?: string;
+      reasoning_content?: string;
+    };
+  }>;
 }
 
 interface AnthropicContent {
@@ -228,7 +321,9 @@ export function createLLMProvider(
 ): LLMProvider {
   switch (type) {
     case "openai":
-      return new OpenAIProvider(opts as { apiKey?: string; model?: string; baseUrl?: string });
+      // Also the path for any OpenAI-compatible gateway, including OpenCode Go
+      // — pass its `x-opencode-session` through `headers`.
+      return new OpenAIProvider(opts as OpenAIProviderOptions);
     case "anthropic":
       return new AnthropicProvider(opts as { apiKey?: string; model?: string; baseUrl?: string });
     case "mock":
