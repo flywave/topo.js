@@ -848,16 +848,27 @@ const MEASURED_CODES: ReadonlySet<string> = new Set([
  *
  * Returns null when nothing was measured, so "no measurement" can never be
  * mistaken for "measured and fine".
+ *
+ * Two measures, because which one is available depends on the drawing. Mask IoU
+ * is the stronger claim where there is a silhouette to make it against; where
+ * there is not — a densely annotated single part, an assembly-like sheet — the
+ * outline distance is the only shape measurement that exists, and without it the
+ * loop would have nothing to converge on for exactly the drawings the outline
+ * gate was written for. Its ratio is used rather than its raw pixels because the
+ * pixels mean different things on drawings of different density.
  */
 function silhouetteScore(review?: CadReviewOutcome): number | null {
   const views = review?.reprojection?.views;
-  if (!views || views.length === 0) return null;
-  const meanIou = views.reduce((sum, v) => sum + v.iou, 0) / views.length;
-  const dev = views.reduce(
-    (sum, v) => sum + (isFinite(v.deviation.modelToReference) ? v.deviation.modelToReference : 0),
-    0,
-  ) / views.length;
-  return meanIou;
+  if (views && views.length > 0) {
+    return views.reduce((sum, v) => sum + v.iou, 0) / views.length;
+  }
+  const edges = review?.edgeDistance?.filter((e) => e.compared && e.baselinePx > 0);
+  if (edges && edges.length > 0) {
+    // Negated: a smaller distance is a better match, and every caller assumes
+    // higher is better.
+    return -edges.reduce((sum, e) => sum + e.meanRatio, 0) / edges.length;
+  }
+  return null;
 }
 
 /**
@@ -891,7 +902,7 @@ function acceptRepair(
   if (wasScore !== null && nowScore !== null && nowScore > wasScore + 1e-4) {
     return {
       ok: true,
-      reason: `improved the silhouette IoU ${wasScore.toFixed(4)} -> ${nowScore.toFixed(4)}`,
+      reason: `improved the measured match ${wasScore.toFixed(4)} -> ${nowScore.toFixed(4)}`,
     };
   }
 
@@ -899,7 +910,7 @@ function acceptRepair(
     ok: false,
     reason:
       nowScore !== null && wasScore !== null && nowScore < wasScore - 1e-4
-        ? `made the silhouette worse (IoU ${wasScore.toFixed(4)} -> ${nowScore.toFixed(4)}) — keeping the previous tree`
+        ? `made the measured match worse (${wasScore.toFixed(4)} -> ${nowScore.toFixed(4)}) — keeping the previous tree`
         : `did not improve the tree (still ${afterErrors} blocking issues) — stopping rather than burning the remaining budget`,
   };
 }
@@ -919,6 +930,27 @@ function summarizeReview(review: CadReviewOutcome): unknown {
           })),
         }
       : undefined,
+    // Where the mask gate had no silhouette to compare against, this is the only
+    // shape measurement there is — and it is the one a repair has to move.
+    outline: review.edgeDistance
+      ?.filter((e) => e.compared)
+      .map((e) => ({
+        meanPx: Number(e.meanPx.toFixed(2)),
+        p90Px: Number(e.p90Px.toFixed(2)),
+        maxPx: Number(e.maxPx.toFixed(2)),
+        // What an arbitrary placement scores: the floor this drawing imposes.
+        chancePx: Number(e.baselinePx.toFixed(2)),
+        // 1 means no better than an arbitrary placement.
+        meanRatio: Number(e.meanRatio.toFixed(3)),
+        worst: e.worst
+          ? {
+              share: e.worst.share,
+              meanPx: Number(e.worst.meanPx.toFixed(2)),
+              atExtent: [Number(e.worst.ux.toFixed(3)), Number(e.worst.uy.toFixed(3))],
+            }
+          : undefined,
+        passed: e.passed,
+      })),
     sketches: review.solves
       ? Object.fromEntries(
           Object.entries(review.solves.reports).map(([id, r]) => [

@@ -160,6 +160,15 @@ export interface EdgeDistanceResult {
   meanRatio: number;
   /** Present when a placement search ran. */
   registration?: Registration;
+  /**
+   * Where the outline is furthest from the ink.
+   *
+   * A mean says a model is wrong; this says WHICH PART of it, which is the only
+   * form of the measurement a repair can act on. `ux`/`uy` are the centroid of
+   * the worst points as fractions of the model's own projected extent, so (0, 0)
+   * is its lower-left corner and (1, 1) its upper-right.
+   */
+  worst?: { share: number; meanPx: number; ux: number; uy: number };
   issues: ReviewIssue[];
   passed: boolean;
 }
@@ -366,11 +375,44 @@ export function measureEdgeDistance(
   const baseline = baselineCount > 0 ? baselineSum / baselineCount : 0;
 
   const distances = placed.map((p) => distanceAt(p.x, p.y));
-  distances.sort((a, b) => a - b);
-  const mean = distances.reduce((n, d) => n + d, 0) / distances.length;
-  const median = distances[Math.floor(distances.length / 2)];
-  const p90 = distances[Math.min(distances.length - 1, Math.floor(distances.length * 0.9))];
-  const max = distances[distances.length - 1];
+  const order = placed
+    .map((p, i) => ({ ...p, d: distances[i] }))
+    .sort((a, b) => a.d - b.d);
+  const sorted = order.map((o) => o.d);
+  const mean = sorted.reduce((n, d) => n + d, 0) / sorted.length;
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const p90 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9))];
+  const max = sorted[sorted.length - 1];
+
+  // Where the worst tenth of the outline is, as a fraction of the model's own
+  // projected extent. This is the part of the measurement a repair can act on:
+  // "one edge is 40px out" is a model-level fact, "the lower-left corner region
+  // is 40px out" is a tree-level one.
+  const tail = order.slice(Math.floor(order.length * 0.9));
+  let worst: EdgeDistanceResult["worst"];
+  if (tail.length > 0) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of placed) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const spanX = maxX - minX || 1;
+    const spanY = maxY - minY || 1;
+    const cx = tail.reduce((n, p) => n + p.x, 0) / tail.length;
+    const cy = tail.reduce((n, p) => n + p.y, 0) / tail.length;
+    worst = {
+      share: Number((tail.length / order.length).toFixed(4)),
+      meanPx: tail.reduce((n, p) => n + p.d, 0) / tail.length,
+      ux: (cx - minX) / spanX,
+      // Reported bottom-up, matching the drawing's own y: raster rows run down.
+      uy: 1 - (cy - minY) / spanY,
+    };
+  }
 
   // The diagonal, not the width: a part that is long and thin is judged against
   // its own scale rather than its aspect.
@@ -388,6 +430,9 @@ export function measureEdgeDistance(
   const overChance = baseline > 0 && mean > chanceBar;
 
   const issues: ReviewIssue[] = [];
+  const where = worst
+    ? ` The worst tenth of the outline is at (${worst.ux.toFixed(2)}, ${worst.uy.toFixed(2)}) of the model's own extent — 0,0 being its lower-left — averaging ${worst.meanPx.toFixed(1)}px from ink there.`
+    : "";
   if (overAbsolute || overChance) {
     const placement = registration
       ? ` The best placement a search over position and scale found still leaves ${(registration.movedFraction * 100).toFixed(0)}% of the frame between the model and the drawing.`
@@ -398,7 +443,7 @@ export function measureEdgeDistance(
     issues.push({
       severity: "error",
       code: "EDG_OUTLINE_MISMATCH",
-      message: `View "${kind}": the model's outline sits ${mean.toFixed(1)}px from the drawing's ink on average (${(meanFraction * 100).toFixed(2)}% of the frame, worst ${max.toFixed(1)}px) — the shape is not the shape on the drawing.${chance}${placement}`,
+      message: `View "${kind}": the model's outline sits ${mean.toFixed(1)}px from the drawing's ink on average (${(meanFraction * 100).toFixed(2)}% of the frame, worst ${max.toFixed(1)}px) — the shape is not the shape on the drawing.${where}${chance}${placement}`,
       suggestion:
         "Look at which part of the outline is furthest: a whole side being off means a missing or misplaced feature, a small region means one segment or dimension is wrong",
     });
@@ -406,7 +451,7 @@ export function measureEdgeDistance(
     issues.push({
       severity: "warning",
       code: "EDG_LOCAL_MISMATCH",
-      message: `View "${kind}": the model's outline mostly follows the drawing but its 90th percentile is ${p90.toFixed(1)}px (${(p90Fraction * 100).toFixed(2)}% of the frame) — part of the outline does not`,
+      message: `View "${kind}": the model's outline mostly follows the drawing but its 90th percentile is ${p90.toFixed(1)}px (${(p90Fraction * 100).toFixed(2)}% of the frame) — part of the outline does not.${where}`,
       suggestion: "A local disagreement is usually one segment in the wrong place rather than a missing feature",
     });
   }
@@ -432,6 +477,7 @@ export function measureEdgeDistance(
           searched: registration.searched,
         }
       : undefined,
+    worst,
     issues,
     passed: !issues.some((i) => i.severity === "error"),
   };

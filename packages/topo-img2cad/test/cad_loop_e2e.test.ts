@@ -468,6 +468,51 @@ describe("the closed loop: image → tree → code → measured verdict", () => 
       DEFAULT_EDGE_THRESHOLDS.maxMeanRatio,
     );
   }, 300_000);
+
+  it("closes the loop on an annotated drawing, where its only measurement is the outline gate", async () => {
+    // The mask gate has nothing to compare against here, so the repair loop's
+    // decision — keep this edit or not — rests entirely on the outline distance.
+    // Without it in the score the loop would have no measurement to converge on
+    // and would fall back to counting issues, which is the same silence in a
+    // different place.
+    const drawing = drawAnnotatedPlate({ name: "plate_annotated_loop", width: 100, height: 60 });
+
+    const llm = new MockProvider();
+    llm.setResponse("analyzeImage", viewSetFor(drawing));
+    llm.queueResponse("complete", PROFILE_TOP);
+    llm.queueResponse("complete", JSON.stringify(plateTree({ width: 50, height: 30, bore: 16 })));
+    llm.queueResponse("complete", JSON.stringify(plateTree({ width: 70, height: 42, bore: 21 })));
+    llm.queueResponse("complete", JSON.stringify(plateTree()));
+    llm.setResponse("complete", JSON.stringify(plateTree()));
+
+    const pipeline = new CadPipeline({ llm, tp, maxRefinements: 3 });
+    const result = await pipeline.run(drawing.path, "Mounting plate");
+
+    expect(result.review!.reprojection!.views.length).toBe(0);
+    // TWO rounds, and that is the assertion that matters. The first repair
+    // (50mm -> 70mm) leaves the same one blocking issue behind, so it can only
+    // have been kept on the measurement — the outline distance. Had the score
+    // been null for a drawing with no mask, that round would have been refused
+    // and the run would have stopped with the wrong part, one repair short.
+    expect(result.refinements).toBe(2);
+    expect(result.review!.passed).toBe(true);
+
+    const bbox = result.review!.geometry!.bbox!;
+    expect(bbox[3] - bbox[0]).toBeCloseTo(100, 1);
+
+    // The model was handed the measurement, not just a verdict: where the
+    // outline was worst is what makes the repair actionable.
+    const refinePrompt = llm
+      .getCalls()
+      .filter((c) => c.method === "complete")
+      .map((c) => String(c.args[0]))
+      .find((p) => p.includes("Repair this feature tree"));
+    expect(refinePrompt).toBeDefined();
+    expect(refinePrompt).toMatch(/"outline"/);
+    expect(refinePrompt).toMatch(/"chancePx"/);
+    expect(refinePrompt).toMatch(/"atExtent"/);
+    expect(refinePrompt).toMatch(/EDG_OUTLINE_MISMATCH/);
+  }, 300_000);
 });
 
 // ---------------------------------------------------------------------------

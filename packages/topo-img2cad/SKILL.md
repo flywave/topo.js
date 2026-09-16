@@ -152,6 +152,19 @@ worth recording:
 - **The loop's guard is "is there something a tree edit could fix", not "did a gate
   fail".** Asking the second question separately disabled the loop for exactly the
   cases worth repairing, since a warning-level mismatch does not fail a gate.
+- **What the loop converges on is whichever measurement exists.** Mask IoU where
+  there is a silhouette to make it against; the outline gate's chance ratio where
+  there is not. Without the second, a run against an annotated drawing would have no
+  measurement to improve — a repair that left the same one blocking issue behind
+  would be refused as "changed nothing" even when it halved the distance, and the
+  loop would stop with the wrong part one repair short. It is the ratio, not the raw
+  pixels, because pixels mean different things on drawings of different density.
+- **The measurement goes to the model, not just the verdict.** The repair prompt
+  carries the outline distance, the drawing's chance floor, and *where* on the model
+  the worst tenth of the outline is, as a fraction of the model's own extent — a mean
+  says a model is wrong, a location says which feature to change. The prompt also says
+  what not to do: the placement and the overall scale have already been searched, so
+  moving or uniformly resizing the part cannot repair an `EDG_OUTLINE_MISMATCH`.
 
 ### Stage A — View intake
 

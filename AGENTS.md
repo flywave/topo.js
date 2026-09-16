@@ -59,11 +59,11 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 
 ### topo-img2cad
 
-宿主包 `packages/topo-img2cad` (vitest 0.28, 22 文件 341 例, 约 10s): `pnpm --filter topo-img2cad test`。
+宿主包 `packages/topo-img2cad` (vitest 0.28, 22 文件 342 例, 约 10s): `pnpm --filter topo-img2cad test`。
 
 - `test/image.test.ts` — PNG/PNM 解码 (全色型/位深/滤镜) + 剪影提取; 含 `docs/media/img1.png` 真图逐像素对账 (口径已与 ImageMagick 交叉核对)
 - `test/reference.test.ts` — 图纸 → 参考剪影 (line art 走 region 模式, 内孔必须是孔; 填充件走 ink 模式) + 工件持久化往返
-- `test/cad_loop_e2e.test.ts` — **闭环总测**: 程序生成图纸 PNG → 真 WASM 建实体 → 与图纸剪影比 IoU (实测 0.966), 并验证错尺寸图纸必须失败、无比例尺时降级为形状比较; 含**标注密集图纸**一例 (尺寸层铺满整张图 ⇒ 无单一闭合区域 ⇒ `maskUsable: false`, 只有 L4b 在跑): 正确件通过、半尺寸件由 `EDG_OUTLINE_MISMATCH` 否掉
+- `test/cad_loop_e2e.test.ts` — **闭环总测**: 程序生成图纸 PNG → 真 WASM 建实体 → 与图纸剪影比 IoU (实测 0.966), 并验证错尺寸图纸必须失败、无比例尺时降级为形状比较; 含**标注密集图纸**两例 (尺寸层铺满整张图 ⇒ 无单一闭合区域 ⇒ `maskUsable: false`, 只有 L4b 在跑): ① 正确件通过、半尺寸件由 `EDG_OUTLINE_MISMATCH` 否掉; ② **修复环闭环** —— 50→70→100 三轮, 断言 `refinements === 2`: 第一轮(50→70)阻塞问题数不变, 只可能靠 L4b 的度量被采纳, 若该度量在有剪影缺失的图上为空则这一轮会被拒、环停在错件上; 同时断言交回模型的提示语里带 `outline`/`chancePx`/`atExtent`
 - `test/edge_distance.test.ts` — **L4b 轮廓-墨迹距离门** (`lib/validators/edge_distance.ts`): 正件 mean≈0 通过、放大/缩小件失败、标注线不干扰、无墨迹报 warning 而非放行、`EDG_BAD_VIEW` 不抛异常; 搜索: 比例尺估错 20% 仍须通过、错形状搜索也救不回来、搜索窗有上限 (每轴 ≤ 帧短边 25%)
 - 其余为既有单测 (`expr`/`profile`/`reconcile`/`projection`/`feature_tree`/`cad_pipeline`/`wasm_e2e`)
 - `test/mirror.test.ts` — `mirror` 带 `ofFeature` 时**必须镜像该特征的工具体**。此前发射器完全忽略 `ofFeature` 一律镜像整个 body, 实测把 120×80×10 的板镜像成 **20 厚、体积翻倍**且无人察觉 (剪影沿草图法线取, 对厚度天然失明; 单视图也没有第二个视图可对账)。**镜像可以链式复合** —— 绑定 `mirror(plane, base, copy=true)` 保留原体, 返回"工具 ∪ 其反射", 故对 YZ 再对 XY 两次即得四角孔 (实测体积与解析值一致)。**唯一被拒的情形**: 镜像面正是该特征自己的草图面 —— 反射与原体重合, 内核 fuse 两枚重合工具直接崩 "null function or function signature mismatch"**且**这本来就是无操作。真实那次正是踩这个: 板画在 XZ, 模型却用 XZ 去"沿高度镜像"(沿高度其实要 XY), 于是既无操作又崩。发射器沿 `ofFeature` 回溯到草图面来识别, 并拒绝之且给出替代做法
@@ -71,6 +71,7 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `lib/cad/jpeg.ts` + `test/jpeg.test.ts` — 手写基线 JPEG 解码 (SOF0/Huffman/4:4:4/4:2:2/4:2:0/4:1:1, 灰度与彩色), 仍无任何图像依赖; 渐进式 JPEG 按名拒绝。此前 JPEG 会静默降级**两件事**: 轮廓提取看不到图 (退化成读文字描述) 且 L4 整体跳过
 - `lib/cad/image.ts` 的阈值改为**按图自适应** (Otsu): 固定 128 是在赌图纸是纯黑白的, 而实测一张真实接触网图纸 89% 接近纯白、线条是中灰, 只有 1% 低于 128 —— 无闭合区域、无剪影、门控无从比对。另: 单件图纸的最大闭合区域占绝对多数 (实测板 83%), 装配图不然 (吊弦图 13%/64 个区域), 低于半数即不建参考并说明"这看起来是装配图"
 - **L4b 轮廓-墨迹距离门** (`lib/validators/edge_distance.ts`): L4 要一份"就是零件的闭合区域", 而标注密集的单件图纸没有 (实测全尺寸标注图 143 区域最大占 19%), 于是**最需要复核的图上形状门是哑的** —— 一次报 `PASSED` 的运行, 其重投影轮廓有一半离图纸任何墨迹 >30px。L4b 改为量**模型轮廓到图纸墨迹的距离**, 不需要闭合区域 (标注只会让它偏宽松, 不会让它无法计算)。四条使数字有意义: ① 比对在**图纸自己的像素栅格**上做 (把 1px 线升采样到更大网格会变成虚线, 正件会平白读出 2-3px); ② **两道闸都要过** —— 绝对项 (帧对角线占比) 问"轮廓在不在图上", 机会项 (相对"任意摆放"能拿到的距离) 问"是否显著优于瞎放"; 实测正件 0.003-0.13 vs 错件 0.30-0.69; ③ 机会项有 **1px 地板** (正件轮廓与画的线本来就差一个像素); ④ **摆放做搜索但窗宽限于帧短边 25%/每轴**, 比例尺 ±20% —— 全帧自由平移实测把"两个圆盘"挪到 94% 帧距的密集角落拿 3.9px 从而**不该过也过了**。`reference.ts` 在拒掉 mask 时仍产出 `maskUsable: false` 的墨迹参考 (墨迹=整个视图区域, 帧来自图纸标注的比例尺, 且注明"没有剪影可校核该估计"); 该视图跳过 mask 门但照跑 L4b, 落盘的 reference PNG 就是墨迹本身
+- **修复环收敛的度量要跟着"哪份度量存在"走**: 有剪影时用 mask IoU, 没有时用 L4b 的机会比值 (`silhouetteScore`)。少了后者, 标注类图纸上**修复环无度量可收敛** —— 一次把距离减半却仍留同一个阻塞问题的修复会被判成"什么都没改"而拒绝, 环就此停在错件上、少修一轮。用比值而非裸像素, 是因为像素在不同密度的图上含义不同。度量本身也随提示语交给模型: 除距离外还给"瞎放基线"与**最差十分位在模型自身范围里的位置** (`worst.atExtent`, 0,0 是左下), 并明确说明摆放与整体缩放**已被搜索过**, 故 `EDG_OUTLINE_MISMATCH` 不可能靠平移/整体缩放修掉
 - **第二个"造实体"特征 (pad/revolve/sweep/loft) 必须 union 而不是赋值**: `bodyLhs` 首义 `let body =`, 其后返回 `body` 直接赋值 —— 于是模型辛苦描出的第一段实体被第二段覆盖丢弃。实测某树先是一块 100×200×10 的吊弦轮廓 (体积 56000 / 26 面), 再是两个线盘, 成品只剩线盘 (用户原话 "只生成了两个圆盘")。现改为 `body = body.union(..., true, false, 0)` 并出 `DIN_MULTIPLE_BODIES` 警告 (本流水线只建一个零件, 多零件图纸的结果是并集而非装配)
 - **`industry` 行业提示语** (`CadPipelineConfig.industry` / CLI `--industry` `--industry-file`): 注入三个阶段的提示词, 用于**命名与建造顺序**; 提示词里明确写着它**不是证据** —— 尺寸形状仍须来自图纸, 否则提示语就变成编尺寸的许可证。实测同图: mimo 无提示语给出 3 特征粗树; deepseek-v4.1-flash + 吊弦提示语给出 25 实体轮廓、参数命名 clampHeight/heartHalfWidth/tubeRadius/wireHalfWidth、推出 1200mm 吊弦长度并派生其余尺寸; 提示语里"整幅外形轮廓该用 pad 而非 revolve"那句把它从错误构造上拉了回来
 - **`solve()` 抛异常不再毁掉整个模型**: 内核 NLopt 后端对某些约束集直接抛 ("Sketch.solve: nlopt failure", 实测于 1200mm 吊弦轮廓)。solve 只是交叉校验(不回写), 故发射时包 try/catch, 记为 `status:-1/cost:Infinity/note`, 由 L3 如实报告 —— 实体与 STEP/STL 都保住

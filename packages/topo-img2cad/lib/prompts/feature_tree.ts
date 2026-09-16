@@ -352,6 +352,7 @@ ${measurements ? `\nMEASUREMENTS:\n${JSON.stringify(measurements, null, 2)}` : "
 Guidance:
 - RPR_LOW_IOU with precision < recall: the model is missing material in that view — a feature is absent or a dimension is small.
 - RPR_LOW_IOU with recall < precision: the model has extra material — an unwanted feature or an oversized dimension.
+- EDG_OUTLINE_MISMATCH: the model's projected outline does not follow the drawing's ink. This is a SHAPE failure: the placement and the overall scale have already been searched, so moving the part or resizing it wholesale will not fix it. Change the FEATURE — a missing or extra one, a segment or a hole in the wrong place. Use "worst.atExtent" to see which part of the outline is furthest off: (0,0) is the model's lower-left, (1,1) its upper-right, and the problem is where those numbers point. A large area wrong means a feature is missing or wrongly placed; a small one means a single segment. "meanRatio" near 1 means the outline is no closer to the drawing than a random placement would be, so the tree is likely the wrong shape altogether rather than out by one dimension.
 - RPR_VIEW_MISMATCH: two views disagree, so a dimension in one sketch is wrong. Fix the one that contradicts the others.
 - SKT_HIGH_RESIDUAL: constraints contradict. Either a dimension disagrees with an inferred relation, or the sketch is over-constrained. Remove or correct the conflicting entry.
 - SKT_NO_DOF: constraint tags do not match entity tags.
