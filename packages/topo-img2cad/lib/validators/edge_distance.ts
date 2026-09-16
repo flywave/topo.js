@@ -23,6 +23,7 @@ import {
   distanceTransform,
   projectMesh,
   rasterizeMesh,
+  rasterizeMeshEdges,
   translateProjected,
   unionBounds,
   viewBasis,
@@ -149,6 +150,15 @@ export interface EdgeDistanceResult {
   outlinePixels: number;
   frameDiagonalPx: number;
   /**
+   * True when the outline came from the mesh's edges rather than its fill.
+   *
+   * The kernel sometimes tessellates a solid's side walls and none of its planar
+   * faces; the filled raster is then empty while the rims of those walls are still
+   * exactly the silhouette boundary. Recorded because the measure is then the
+   * boundary alone, without the holes the fill would have carried.
+   */
+  outlineFromEdges: boolean;
+  /**
    * What an arbitrary placement scores on this drawing, in the same pixels.
    *
    * The floor the drawing imposes: a sheet dense with annotation puts almost any
@@ -225,6 +235,7 @@ export function measureEdgeDistance(
     p90Fraction: 0,
     outlinePixels: 0,
     frameDiagonalPx: 0,
+    outlineFromEdges: false,
     baselinePx: 0,
     meanRatio: 0,
     issues: [],
@@ -281,6 +292,27 @@ export function measureEdgeDistance(
     flipY: true,
     bounds: frame,
   });
+  let outline = maskOutline(modelMask, opts.width, opts.height);
+  // When the fill is empty but the projection has extent, the kernel left the
+  // planar faces out of the tessellation and what remains of the mesh is its side
+  // walls — whose rims are the silhouette boundary. Taking those edges keeps the
+  // shape measurable instead of reporting a defect of the kernel as one of the
+  // model's. The fill is preferred whenever it exists, because it also carries the
+  // holes.
+  let outlineFromEdges = false;
+  if (outline.length === 0) {
+    const edgeMask = rasterizeMeshEdges(modelAtOrigin, {
+      width: opts.width,
+      height: opts.height,
+      flipY: true,
+      bounds: frame,
+    });
+    const edges = maskOutline(edgeMask, opts.width, opts.height);
+    if (edges.length > 0) {
+      outline = edges;
+      outlineFromEdges = true;
+    }
+  }
   let inkMask: Uint8Array;
   try {
     inkMask = resampleMaskIntoFrame(
@@ -320,18 +352,33 @@ export function measureEdgeDistance(
     };
   }
 
-  const outline = maskOutline(modelMask, opts.width, opts.height);
   if (outline.length === 0) {
+    // As in the mask gate: no projected extent is about the model, extent with an
+    // empty raster is about the kernel's tessellation, which is not evidence that
+    // the shape is wrong. Measured on a real run: a pig-shaped plate whose planar
+    // faces the kernel would not triangulate — every one of its 2422 triangles was
+    // a side wall — was reported as an error and failed a run whose solid was
+    // valid, whose solver had converged, and whose STEP was written.
+    const flat = modelBounds.maxX - modelBounds.minX <= 0 || modelBounds.maxY - modelBounds.minY <= 0;
     return {
       ...empty,
-      passed: false,
+      compared: false,
+      passed: !flat,
       issues: [
-        {
-          severity: "error",
-          code: "EDG_EMPTY_MODEL",
-          message: `View "${kind}": the projected model has no outline to measure`,
-          suggestion: "The shape may be degenerate, or the view direction does not face it",
-        },
+        flat
+          ? {
+              severity: "error",
+              code: "EDG_EMPTY_MODEL",
+              message: `View "${kind}": the projected model has no outline to measure`,
+              suggestion: "The shape may be degenerate, or the view direction does not face it",
+            }
+          : {
+              severity: "warning",
+              code: "EDG_UNTRIANGULATED",
+              message: `View "${kind}": the shape projects to ${(modelBounds.maxX - modelBounds.minX).toFixed(1)} x ${(modelBounds.maxY - modelBounds.minY).toFixed(1)} units but nothing was rasterized from it — the kernel's tessellation came back with no closed area, the same thing that makes an exported STL non-watertight. The outline was not measured here, because there was no outline to measure`,
+              suggestion:
+                "The model itself is untouched by this; the export's watertight report sees the same defect from the other side",
+            },
       ],
     };
   }
@@ -485,6 +532,7 @@ export function measureEdgeDistance(
     p90Fraction,
     outlinePixels: points.length,
     frameDiagonalPx: diagonal,
+    outlineFromEdges,
     baselinePx: baseline,
     meanRatio,
     registration: registration

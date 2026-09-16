@@ -345,6 +345,64 @@ export function rasterizeLoops(
   return mask;
 }
 
+/**
+ * Rasterize a projected mesh's triangle EDGES, one pixel wide.
+ *
+ * The silhouette of a solid whose planar faces the kernel refused to tessellate
+ * has no fill, but it is not invisible: what is left of such a mesh is its side
+ * walls, and the rims of those walls ARE the silhouette boundary. Measured on a
+ * real part — a pig-shaped plate, 31 faces, 2422 triangles, not one of them flat —
+ * this recovers the outline the fill cannot, so the shape can still be judged
+ * instead of being written off as unmeasurable.
+ */
+export function rasterizeMeshEdges(projected: ProjectedMesh, opts: RasterOptions): Uint8Array {
+  const { width, height, flipY = true } = opts;
+  const bounds = opts.bounds ?? projected.bounds;
+  const tf = makeTransform(bounds, width, height, flipY);
+  const mask = new Uint8Array(width * height);
+
+  for (const tri of projected.triangles) {
+    const pts = tri.map(tf);
+    for (let i = 0; i < 3; i++) {
+      drawLine(mask, width, height, pts[i], pts[(i + 1) % 3]);
+    }
+  }
+  return mask;
+}
+
+/** One-pixel line, Bresenham. */
+function drawLine(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  a: Pt,
+  b: Pt,
+): void {
+  let x0 = Math.round(a.x);
+  let y0 = Math.round(a.y);
+  const x1 = Math.round(b.x);
+  const y1 = Math.round(b.y);
+  const dx = Math.abs(x1 - x0);
+  const dy = -Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  // A guard, because a degenerate projection can put a point at Infinity.
+  for (let guard = 0; guard < 4 * (width + height); guard++) {
+    if (x0 >= 0 && y0 >= 0 && x0 < width && y0 < height) mask[y0 * width + x0] = 1;
+    if (x0 === x1 && y0 === y1) return;
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x0 += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Comparison
 // ---------------------------------------------------------------------------

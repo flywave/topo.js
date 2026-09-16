@@ -79,10 +79,13 @@ const llm = createLLMProvider("openai", {
 - **`maxTokens` is shared with the model's thinking.** An *always-thinking* model
   spends the budget on reasoning before it writes an answer, so a budget that is
   comfortable for a plain model can return `content: null` with the reasoning in a
-  separate field. That reads as an empty success, so the provider raises a
-  specific error naming the budget instead of letting it surface later as
-  *"No JSON object found in view intake response"* — which blames the model's
-  output format for what is really a token limit.
+  separate field. That reads as an empty success, so the provider detects it and
+  **retries once with twice the budget**, reporting the retry through `onLog` — the
+  wait doubles, so it is not silent. Measured: a live run with `deepseek-v4.1-flash`
+  at 32768 tokens spent all of it thinking about the feature tree and returned
+  nothing, killing a four-minute run at its last stage. If the retry also comes back
+  empty the error names the budget and says the thinking shares it. An answer that
+  was simply empty is *not* retried: that wants the prompt fixed, not more room.
 - **Thinking models are slow.** Measured against `mimo-v2.5`: minutes per call
   rather than seconds, and the pipeline makes one call per view plus one for the
   tree, so a full run is a background job rather than an interactive one. The CLI's

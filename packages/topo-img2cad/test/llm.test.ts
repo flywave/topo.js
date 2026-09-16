@@ -44,9 +44,53 @@ describe("OpenAI provider against a compatible gateway", () => {
     await expect(provider.complete("hi")).resolves.toBe("hello");
   });
 
-  it("names the token budget when a thinking model runs out mid-thought", async () => {
-    // Exactly what OpenCode Go's mimo-v2.5 returns with a small max_tokens.
-    stubFetch({
+  it("retries a thinking model that ran out mid-thought, with twice the budget", async () => {
+    // Exactly what OpenCode Go's mimo-v2.5 returns with a small max_tokens: the
+    // thinking ate the budget and the answer is absent. That is a budget that was
+    // read as a duration rather than a shape, so asking again with a bigger one is
+    // worth it — a real 4-minute run died at its last stage over this and lost
+    // everything the first three stages had produced.
+    let call = 0;
+    const bodies: Array<Record<string, unknown>> = [];
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      call++;
+      const body =
+        call === 1
+          ? {
+              choices: [{
+                finish_reason: "length",
+                message: { role: "assistant", content: null, reasoning: "Let me think about this..." },
+              }],
+            }
+          : completion({ content: '{"ok":true}' });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      };
+    }) as unknown as typeof fetch;
+
+    const notices: string[] = [];
+    const provider = new OpenAIProvider({
+      apiKey: "k",
+      baseUrl: "https://gw/v1",
+      model: "mimo-v2.5",
+      maxTokens: 32,
+      onLog: (m) => notices.push(m),
+    });
+
+    await expect(provider.complete("hi")).resolves.toBe('{"ok":true}');
+    expect(bodies.length).toBe(2);
+    expect(bodies[0].max_tokens).toBe(32);
+    expect(bodies[1].max_tokens).toBe(64);
+    // The wait is longer, so it is not silent.
+    expect(notices.join(" ")).toMatch(/retrying with 64 tokens/);
+  });
+
+  it("gives up after one retry, and says what the budget was", async () => {
+    const { calls } = stubFetch({
       choices: [{
         finish_reason: "length",
         message: { role: "assistant", content: null, reasoning: "Let me think about this..." },
@@ -60,22 +104,34 @@ describe("OpenAI provider against a compatible gateway", () => {
       maxTokens: 32,
     });
 
-    await expect(provider.complete("hi")).rejects.toThrow(/only reasoning and no answer/);
+    await expect(provider.complete("hi")).rejects.toThrow(/entire 64-token budget on reasoning/);
     await expect(provider.complete("hi")).rejects.toThrow(/raise maxTokens/);
+    expect(calls.length).toBe(4);
   });
 
   it("accepts reasoning_content as a thinking channel too", async () => {
     stubFetch({
       choices: [{ finish_reason: "length", message: { content: "", reasoning_content: "thinking" } }],
     });
-    const provider = new OpenAIProvider({ apiKey: "k", baseUrl: "https://gw/v1" });
-    await expect(provider.complete("hi")).rejects.toThrow(/only reasoning and no answer/);
+    const provider = new OpenAIProvider({ apiKey: "k", baseUrl: "https://gw/v1", maxTokens: 16 });
+    await expect(provider.complete("hi")).rejects.toThrow(/spent its entire 32-token budget/);
   });
 
   it("reports a plain truncation as a truncation", async () => {
     stubFetch({ choices: [{ finish_reason: "length", message: { content: "" } }] });
     const provider = new OpenAIProvider({ apiKey: "k", baseUrl: "https://gw/v1", maxTokens: 16 });
-    await expect(provider.complete("hi")).rejects.toThrow(/hit its 16-token budget/);
+    await expect(provider.complete("hi")).rejects.toThrow(/entire 32-token budget/);
+  });
+
+  it("does not retry an answer that was simply empty", async () => {
+    // "No answer" and "an empty answer" need different things from the caller:
+    // one wants a bigger budget, the other wants the prompt fixed. Retrying the
+    // second would spend a call to learn nothing.
+    const { calls } = stubFetch({ choices: [{ finish_reason: "stop", message: { content: "  " } }] });
+    const provider = new OpenAIProvider({ apiKey: "k", baseUrl: "https://gw/v1", maxTokens: 16 });
+
+    await expect(provider.complete("hi")).resolves.toBe("");
+    expect(calls.length).toBe(1);
   });
 
   it("sends the extra headers a gateway needs, and identifies itself", async () => {

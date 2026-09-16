@@ -98,6 +98,14 @@ export interface ViewReprojectionResult {
   /** Mean silhouette deviation in pixels, both directions. */
   deviation: { modelToReference: number; referenceToModel: number; max: number };
   modelBounds: Bounds2D;
+  /**
+   * The projected shape's own extent, before any comparison frame was applied.
+   *
+   * Needed to tell "this view does not face the shape" — which is about the model
+   * — from "the shape has extent but tessellated into nothing", which is about the
+   * kernel and is not evidence either way.
+   */
+  projectedExtent: { width: number; height: number };
   referencePixels: number;
   modelPixels: number;
   /**
@@ -288,6 +296,10 @@ export function compareProjection(
       max: dev.maxDeviation,
     },
     modelBounds,
+    projectedExtent: {
+      width: projected.bounds.maxX - projected.bounds.minX,
+      height: projected.bounds.maxY - projected.bounds.minY,
+    },
     referencePixels: cmp.referencePixels,
     modelPixels: cmp.modelPixels,
   };
@@ -318,12 +330,29 @@ export function evaluateReprojection(
       continue;
     }
     if (r.modelPixels === 0) {
-      issues.push({
-        severity: "error",
-        code: "RPR_EMPTY_MODEL",
-        message: `View "${r.view}": the projected model silhouette is empty`,
-        suggestion: "The shape may be degenerate, or the view direction does not face it",
-      });
+      // An empty raster means one of two very different things, and they need
+      // different answers. No projected extent at all is about the model: the view
+      // does not face it. Extent but nothing rasterized is about the KERNEL — it
+      // skipped the faces it could not triangulate, which is the same defect that
+      // makes the exported STL non-watertight, and a face the kernel will not
+      // tessellate is not evidence that the shape is wrong.
+      const flat = r.projectedExtent.width <= 0 || r.projectedExtent.height <= 0;
+      issues.push(
+        flat
+          ? {
+              severity: "error",
+              code: "RPR_EMPTY_MODEL",
+              message: `View "${r.view}": the projected model silhouette is empty`,
+              suggestion: "The shape may be degenerate, or the view direction does not face it",
+            }
+          : {
+              severity: "warning",
+              code: "RPR_UNTRIANGULATED",
+              message: `View "${r.view}": the shape projects to ${r.projectedExtent.width.toFixed(1)} x ${r.projectedExtent.height.toFixed(1)} units but nothing was rasterized from it — the kernel's tessellation came back with no closed area, the same thing that makes an exported STL non-watertight. The shape was not judged here, because there was nothing to judge`,
+              suggestion:
+                "The model itself is untouched by this; check the export's watertight report, which sees the same defect from the other side",
+            },
+      );
       continue;
     }
 

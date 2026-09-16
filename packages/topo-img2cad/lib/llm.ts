@@ -39,6 +39,8 @@ export interface OpenAIProviderOptions {
    * is the fix; the default leaves headroom above the runtime's.
    */
   timeoutSeconds?: number;
+  /** Called with retry notices, so a doubled budget is not silent. */
+  onLog?: (message: string) => void;
 }
 
 const DEFAULT_MAX_TOKENS = 4096;
@@ -52,6 +54,7 @@ export class OpenAIProvider implements LLMProvider {
   private maxTokens: number;
   private headers: Record<string, string>;
   private timeoutSeconds: number;
+  private log?: (message: string) => void;
 
   constructor(opts?: OpenAIProviderOptions) {
     this.apiKey = opts?.apiKey ?? process.env.OPENAI_API_KEY ?? "";
@@ -60,6 +63,7 @@ export class OpenAIProvider implements LLMProvider {
     this.maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS;
     this.headers = opts?.headers ?? {};
     this.timeoutSeconds = opts?.timeoutSeconds ?? DEFAULT_TIMEOUT_SECONDS;
+    this.log = opts?.onLog;
     if (!this.apiKey) {
       throw new Error("OpenAI API key required. Set OPENAI_API_KEY or pass apiKey.");
     }
@@ -90,6 +94,30 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   private async chat(messages: ChatMessage[]): Promise<string> {
+    // A reasoning model can spend the whole budget on its thinking and return no
+    // answer at all. That is not a bad request — it is a budget that was read as
+    // a duration rather than a shape — and the fix is a bigger one, so the call is
+    // worth retrying once rather than ending a four-minute run at its last stage.
+    let budget = this.maxTokens;
+    for (let attempt = 0; ; attempt++) {
+      const { content, retryable } = await this.chatOnce(messages, budget);
+      if (content !== null) return content;
+      if (!retryable || attempt >= 1) {
+        throw new Error(
+          `${this.model} spent its entire ${budget}-token budget on reasoning and produced no answer, twice. ` +
+            `Its thinking shares the budget with the answer — raise maxTokens well above what the answer needs, ` +
+            `or use a model that does not think.`,
+        );
+      }
+      budget *= 2;
+      this.log?.(`${this.model} ran out of budget while thinking; retrying with ${budget} tokens`);
+    }
+  }
+
+  private async chatOnce(
+    messages: ChatMessage[],
+    maxTokens: number,
+  ): Promise<{ content: string | null; retryable: boolean }> {
     const resp = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -104,7 +132,7 @@ export class OpenAIProvider implements LLMProvider {
         model: this.model,
         messages,
         temperature: 0.3,
-        max_tokens: this.maxTokens,
+        max_tokens: maxTokens,
       }),
       signal: AbortSignal.timeout(this.timeoutSeconds * 1000),
     }).catch((e: unknown) => {
@@ -121,7 +149,7 @@ export class OpenAIProvider implements LLMProvider {
       throw new Error(`OpenAI API error ${resp.status}: ${body}`);
     }
     const data = (await resp.json()) as ChatCompletion;
-    return extractContent(data, this.model, this.maxTokens);
+    return extractContent(data, this.model, maxTokens);
   }
 }
 
@@ -134,28 +162,30 @@ export class OpenAIProvider implements LLMProvider {
  * surface several stages later as "No JSON object found in view intake
  * response", blaming the model's output format for what is really a token
  * limit.
+ *
+ * `retryable` distinguishes that from an answer that was genuinely empty: the
+ * first is worth asking again with a bigger budget, the second is not.
  */
-function extractContent(data: ChatCompletion, model: string, maxTokens: number): string {
+function extractContent(
+  data: ChatCompletion,
+  model: string,
+  maxTokens: number,
+): { content: string | null; retryable: boolean } {
   const message = data.choices?.[0]?.message;
   const content = message?.content;
   if (typeof content === "string" && content.trim().length > 0) {
-    return content;
+    return { content, retryable: false };
   }
 
   const reasoning = message?.reasoning_content ?? message?.reasoning;
   const finish = data.choices?.[0]?.finish_reason;
   if (typeof reasoning === "string" && reasoning.trim().length > 0) {
-    throw new Error(
-      `${model} returned only reasoning and no answer (finish_reason: ${finish ?? "none"}). ` +
-        `Its thinking shares the ${maxTokens}-token budget, so raise maxTokens.`,
-    );
+    return { content: null, retryable: true };
   }
   if (finish === "length") {
-    throw new Error(
-      `${model} hit its ${maxTokens}-token budget before producing an answer; raise maxTokens.`,
-    );
+    return { content: null, retryable: true };
   }
-  return "";
+  return { content: "", retryable: false };
 }
 
 // ---------------------------------------------------------------------------
