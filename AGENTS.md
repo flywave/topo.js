@@ -59,7 +59,7 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 
 ### topo-img2cad
 
-宿主包 `packages/topo-img2cad` (vitest 0.28, 22 文件 342 例, 约 10s): `pnpm --filter topo-img2cad test`。
+宿主包 `packages/topo-img2cad` (vitest 0.28, 22 文件 345 例, 约 10s): `pnpm --filter topo-img2cad test`。
 
 - `test/image.test.ts` — PNG/PNM 解码 (全色型/位深/滤镜) + 剪影提取; 含 `docs/media/img1.png` 真图逐像素对账 (口径已与 ImageMagick 交叉核对)
 - `test/reference.test.ts` — 图纸 → 参考剪影 (line art 走 region 模式, 内孔必须是孔; 填充件走 ink 模式) + 工件持久化往返
@@ -82,6 +82,7 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `test/connectivity.test.ts` — 连通性只能表述一次且必须是绑定实现的那种: 模型写的 `COINCIDENT`(绑定语义是"两段重叠")与发射器自行推导的 join 会就同一对边各说一句互相矛盾的话, 实测残差 6986.67; 去掉模型那句后为 **0**。含把旧发射结果的残差直接对内核重放的对照
 - `test/reference.test.ts` 另含比例尺再对齐: 用真实那次运行的原始数字 (120mm/684px/597px 剪影) 断言框宽回到 120mm
 - `test/llm.test.ts` / `test/sketch_expressions.test.ts` / `test/view_plane.test.ts` / `test/multi_profile.test.ts` — 真实 LLM 联调催生的修复: 网关 `x-opencode-session` 头与 thinking 模型 token 预算、**sketch 几何里的表达式求值**(模型天然会写 `"end":["overallWidth",0]`)、视图→草图基准面映射 (front→XZ)、多轮廓 sketch (四孔一次成型的实测体积与解析值一致)
+- `test/llm.test.ts` 另含 **thinking 模型烧完预算后重试一次(预算翻倍)**: 实测 `deepseek-v4.1-flash` 32768 token 全花在思考上、`content` 为空, 把一次已跑了四分钟的运行杀死在最后一步 (特征树合成)。只在"只有思考没有答案 / `finish_reason=length`"时重试 —— 答案**本就是空串**属于提示语问题, 重试只会白花一次调用; 重试经 `onLog` 出声(等待翻倍不能静默), 两次都空则报出预算并说明思考与答案共用它
 - `test/export.test.ts` — STEP/STL 导出: 字节真落在宿主 FS、STEP 头/`DATA`/终止符、STL 二进制且 `84+50n` 对齐、deflection 真的改变网格密度; 并用**三角片有符号体积**反证 STL 闭合且外向 (体积与 BREP 对齐)
 - 改了 `lib/` 或 `cli/` 后若要跑 `topo-img2cad` 命令, 必须先 `pnpm --filter topo-img2cad build` (CLI 从 `dist/` 跑)
 
