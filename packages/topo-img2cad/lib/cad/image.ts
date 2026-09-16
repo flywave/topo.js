@@ -91,6 +91,16 @@ export interface Silhouette {
    * confident answer to a question nobody asked.
    */
   largestShare: number;
+  /**
+   * Share of the WHOLE raster the largest region covers.
+   *
+   * `largestShare` is a share of the enclosed area, and that is not the same
+   * question. On a real illustration the largest enclosed region was a character's
+   * eye: 79% of the enclosed area, and 1% of the sheet. Read as 79% it looked like
+   * a whole-part silhouette; the region has to be a substantial part of the drawing
+   * to be one.
+   */
+  largestAreaShare: number;
   notes: string[];
 }
 
@@ -621,13 +631,23 @@ export function cropRaster(raster: Raster, box: PixelBox): Raster {
   }
   const gray = new Uint8Array(w * h);
   const opaque = new Uint8Array(w * h);
+  // The colour layer comes with it. Dropping it here threw away the ONE piece of
+  // information that separates a drawing's dimension layer from its part, and it
+  // was dropped for every view — the reference builder always crops — so the
+  // exclusion written into `extractSilhouette` never saw a coloured pixel. Measured
+  // on a fully dimensioned drawing: 143 regions with the largest at 19% through
+  // this path, against 4 regions and 79% when the same raster is read directly.
+  const colorful = raster.colorful ? new Uint8Array(w * h) : undefined;
   for (let y = 0; y < h; y++) {
     const srcRow = (y0 + y) * raster.width + x0;
     const dstRow = y * w;
     gray.set(raster.gray.subarray(srcRow, srcRow + w), dstRow);
     opaque.set(raster.opaque.subarray(srcRow, srcRow + w), dstRow);
+    if (colorful) colorful.set(raster.colorful!.subarray(srcRow, srcRow + w), dstRow);
   }
-  return { width: w, height: h, gray, opaque };
+  return colorful
+    ? { width: w, height: h, gray, opaque, colorful }
+    : { width: w, height: h, gray, opaque };
 }
 
 // ---- Connected components (4-connectivity) ----
@@ -788,6 +808,7 @@ export function extractSilhouette(raster: Raster, opts?: SilhouetteOptions): Sil
     mode: chosenMode,
     components: result.components,
     largestShare: result.largestShare,
+    largestAreaShare: result.largestArea / (width * height),
     notes,
   };
 }
@@ -803,6 +824,16 @@ function shareOfLargest(counts: Map<number, number>, keep: number[]): number {
   return all === 0 ? 0 : largest / all;
 }
 
+/** The largest kept component's own area, in pixels. */
+function largestComponentArea(counts: Map<number, number>, keep: number[]): number {
+  let largest = 0;
+  for (const [label, count] of counts) {
+    if (!keep.includes(label)) continue;
+    if (count > largest) largest = count;
+  }
+  return largest;
+}
+
 function buildSilhouette(
   mode: "ink" | "region",
   ink: Uint8Array,
@@ -813,9 +844,10 @@ function buildSilhouette(
   threshold: number,
   alphaMin: number,
   minPixels: number,
-): { mask: Uint8Array; bbox: PixelBox; components: number; largestShare: number } {
+): { mask: Uint8Array; bbox: PixelBox; components: number; largestShare: number; largestArea: number } {
   const total = width * height;
   let largestShare = 0;
+  let largestArea = 0;
 
   if (mode === "ink") {
     // Component-label the ink mask directly
@@ -836,6 +868,8 @@ function buildSilhouette(
     const distinctLabels = [...kept];
     componentCount = distinctLabels.length;
     largestShare = shareOfLargest(counts, distinctLabels);
+  largestArea = largestComponentArea(counts, distinctLabels);
+    largestArea = largestComponentArea(counts, distinctLabels);
 
     // Find largest
     let bestLabel = 0;
@@ -847,7 +881,7 @@ function buildSilhouette(
 
     const mask = new Uint8Array(total);
     if (bestLabel === 0) {
-      return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0, largestShare: 0 };
+      return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0, largestShare: 0, largestArea: 0 };
     }
 
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -863,7 +897,7 @@ function buildSilhouette(
       }
     }
 
-    return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount, largestShare };
+    return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount, largestShare, largestArea };
   }
 
   // region mode: flood-fill from border non-ink pixels to find the "outside",
@@ -920,6 +954,7 @@ function buildSilhouette(
   const distinctLabels = [...kept];
   const componentCount = distinctLabels.length;
   largestShare = shareOfLargest(counts, distinctLabels);
+  largestArea = largestComponentArea(counts, distinctLabels);
 
   let bestLabel = 0;
   let bestCount = 0;
@@ -930,7 +965,7 @@ function buildSilhouette(
 
   const mask = new Uint8Array(total);
   if (bestLabel === 0) {
-    return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0, largestShare: 0 };
+    return { mask, bbox: { x0: 0, y0: 0, x1: -1, y1: -1 }, components: 0, largestShare: 0, largestArea: 0 };
   }
 
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -946,7 +981,7 @@ function buildSilhouette(
     }
   }
 
-  return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount, largestShare };
+  return { mask, bbox: { x0, y0, x1, y1 }, components: componentCount, largestShare, largestArea };
 }
 
 // ---- Crop silhouette ----

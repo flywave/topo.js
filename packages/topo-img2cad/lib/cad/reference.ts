@@ -212,14 +212,23 @@ function buildViewReference(
   // Measuring a model against the largest of those would answer a question nobody
   // asked and report the answer with full confidence.
   //
+  // Two bars, because the share of the ENCLOSED area answers a different question
+  // than "is this the part". Measured on a real illustration, the largest enclosed
+  // region was a character's eye: 79% of the enclosed area and 1% of the sheet.
+  // Read on the enclosed share alone it looked like a whole-part silhouette, and
+  // `maskUsable` went true — after which the gate would have graded the model
+  // against a drawing of an eye. The second bar is the region's own area against
+  // the sheet: a part drawn to scale on its sheet is a substantial part of it (a
+  // 100x60mm plate on a 240x160px drawing is 62%), while a detail is not (1%).
+  //
   // So the MASK is refused. The ink is not: a filled region needs the annotation
   // to be gone, but a distance does not, so the outline gate can still run on
   // what is drawn. That is the difference between a drawing this cannot grade and
   // a drawing nothing can grade.
-  const maskUsable = silhouette.largestShare >= 0.5;
+  const maskUsable = silhouette.largestShare >= 0.5 && silhouette.largestAreaShare >= 0.05;
   if (!maskUsable) {
     notes.push(
-      `view ${view.id}: this drawing has no single part silhouette — its largest enclosed region holds only ${(silhouette.largestShare * 100).toFixed(0)}% of the enclosed area across ${silhouette.components} regions, which is what an assembly or a schematic looks like. The mask gate cannot run against it; the outline gate still can, because a distance to the drawing's ink needs no closed region.`,
+      `view ${view.id}: this drawing has no single part silhouette — its largest enclosed region holds ${(silhouette.largestShare * 100).toFixed(0)}% of the enclosed area and covers ${(silhouette.largestAreaShare * 100).toFixed(1)}% of the sheet, across ${silhouette.components} regions, which is what an assembly, a schematic, or a detail on a larger sheet looks like. The mask gate cannot run against it; the outline gate still can, because a distance to the drawing's ink needs no closed region.`,
     );
   }
 

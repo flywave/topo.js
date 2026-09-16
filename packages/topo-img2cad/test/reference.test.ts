@@ -15,6 +15,7 @@ import {
   buildViewReferences,
   buildViewReferencesFromImage,
 } from "../lib/cad/reference.js";
+import { cropRaster } from "../lib/cad/image.js";
 import { decodeRaster, loadRaster, type Raster } from "../lib/cad/image.js";
 import { encodePngGray } from "../lib/cad/image_encode.js";
 import { saveArtifacts, loadTree, ARTIFACT_DIR } from "../lib/artifacts.js";
@@ -572,5 +573,58 @@ describe("artifacts", () => {
     const path = join(WORK, "bad.json");
     writeFileSync(path, JSON.stringify({ hello: "world" }));
     expect(() => loadTree(path)).toThrow(/not a feature tree/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe("the colour layer survives a crop", () => {
+  it("carries the decoder's colour flags through a view crop", () => {
+    // CAD sheets separate layers by colour, and `extractSilhouette` uses that to
+    // tell a drawing's dimension layer from its part. The crop dropped the flags on
+    // the floor — and the reference builder always crops — so the exclusion never
+    // saw a coloured pixel for any view of any drawing. Measured on a fully
+    // dimensioned illustration: 143 enclosed regions with the largest at 19% through
+    // this path, against 4 and 79% when the same raster is read directly.
+    const raster = lineArt(40, 40, () => {});
+    for (let y = 10; y < 30; y++) for (let x = 10; x < 30; x++) raster.gray[y * 40 + x] = 0;
+    const colourful = new Uint8Array(40 * 40);
+    for (let y = 10; y < 30; y++) for (let x = 10; x < 30; x++) colourful[y * 40 + x] = 1;
+
+    const cropped = cropRaster({ ...raster, colorful: colourful }, { x0: 5, y0: 5, x1: 34, y1: 34 });
+
+    expect(cropped.width).toBe(30);
+    expect(cropped.colorful).toBeDefined();
+    expect(cropped.colorful!.length).toBe(30 * 30);
+    // Crop (5,5) is source (10,10), inside the coloured block.
+    expect(cropped.colorful![5 * 30 + 5]).toBe(1);
+    // Crop (0,0) is source (5,5), outside it.
+    expect(cropped.colorful![0]).toBe(0);
+  });
+
+  it("leaves a raster without colour flags without them", () => {
+    const cropped = cropRaster(lineArt(40, 40, () => {}), { x0: 0, y0: 0, x1: 39, y1: 39 });
+    expect(cropped.colorful).toBeUndefined();
+  });
+});
+
+describe("refusing a region that is a detail rather than the part", () => {
+  it("will not read an eye as the whole part", () => {
+    // A real illustration: the largest enclosed region was a character's eye — 79%
+    // of the enclosed area and 1% of the sheet. On the enclosed share alone that
+    // looked like a whole-part silhouette, `maskUsable` went true, and the gate
+    // would then have graded the model against a drawing of an eye.
+    const r = lineArt(200, 200, () => {});
+    // One small closed circle in a corner, everything else left blank.
+    const circle = circleOutline(r, 40, 40, 12);
+    for (let y = 25; y <= 55; y++) for (let x = 25; x <= 55; x++) circle(x, y);
+
+    const built = buildViewReferences(viewSet(), { raster: r, width: 512, height: 512 });
+    const ref = built.references[0];
+
+    expect(ref.maskUsable).toBe(false);
+    // The enclosed share really is most of what is enclosed — the second bar is
+    // the only thing that catches this.
+    expect(built.notes.join(" ")).toMatch(/of the enclosed area and covers \d+\.\d% of the sheet/);
   });
 });
