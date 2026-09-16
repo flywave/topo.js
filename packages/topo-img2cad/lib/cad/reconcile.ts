@@ -323,15 +323,25 @@ export function reconcileSketch(
   sketch: SketchSpec,
   opts: ReconcileOptions = {},
 ): ReconcileResult {
-  const chain = chainEntities(sketch.entities);
-  if (chain) return reconcileChain(sketch, chain, opts.anchor);
+  // Arcs the tracer gave inconsistent data for are made consistent BEFORE the
+  // chain is walked, because the walk rebuilds every arc from its radius. See
+  // `consistentArcs`.
+  const repair = consistentArcs(sketch.entities);
+  const source = { ...sketch, entities: repair.entities };
+  const withRepairs = (result: ReconcileResult): ReconcileResult => ({
+    ...result,
+    report: { ...result.report, applied: [...repair.notes, ...result.report.applied] },
+  });
 
-  const components = findClosedComponents(sketch.entities);
+  const chain = chainEntities(source.entities);
+  if (chain) return withRepairs(reconcileChain(source, chain, opts.anchor));
+
+  const components = findClosedComponents(source.entities);
   if (!components) {
     return {
-      entities: sketch.entities,
+      entities: source.entities,
       report: {
-        applied: [],
+        applied: repair.notes,
         unhonoured: [{ constraint: "(sketch)", reason: "entities do not form a single closed chain" }],
         closureError: Infinity,
         structurePreserved: true,
@@ -340,7 +350,7 @@ export function reconcileSketch(
   }
 
   const entities: ProfileEntity[] = [];
-  const applied: string[] = [];
+  const applied: string[] = [...repair.notes];
   const unhonoured: ReconcileReport["unhonoured"] = [];
   let worstClosure = 0;
 
@@ -372,6 +382,71 @@ export function reconcileSketch(
       structurePreserved: entities.map((e) => e.tag).sort().join("|") === originalTags,
     },
   };
+}
+
+/**
+ * Make the tracer's arcs pass through the endpoints the tracer gave them.
+ *
+ * A traced arc arrives as three numbers that need not agree: a centre, a radius,
+ * and two endpoints. Measured on a real traced outline, the ENDPOINTS were exact —
+ * the gap from each entity's end to the next one's start was 0.0000 all the way
+ * round the loop — while 12 of 15 arcs had their endpoints 10-67% off their own
+ * declared circle. The model produced a point chain and padded each bulge with a
+ * plausible-looking centre and radius.
+ *
+ * Reconciliation rebuilds every arc from its radius, so an inconsistent one has its
+ * endpoint thrown away and its chord rewritten to whatever that radius implies.
+ * The errors then accumulate around the loop. Measured on that outline: the
+ * emitted geometry was 210 x 253 for a trace whose endpoints span 125 x 150 — the
+ * loop had grown 69% taller than it was drawn — and the growth was read as a
+ * scale error in the trace for two rounds of work.
+ *
+ * Nothing has to be sacrificed. With the endpoints fixed, the centre is free to
+ * slide along the chord's perpendicular bisector, and there is exactly one point
+ * on it at distance `r` from both ends — the declared centre is used only to pick
+ * which side. Every one of the real outline's 15 arcs had such a point. When the
+ * stated radius is too small for the chord, no circle of that radius exists and
+ * the arc is widened to a semicircle, which is reported rather than hidden.
+ */
+function consistentArcs(entities: ProfileEntity[]): { entities: ProfileEntity[]; notes: string[] } {
+  const notes: string[] = [];
+  let changed = false;
+
+  const out = entities.map((e) => {
+    if (e.type !== "arc" || !e.center || typeof e.radius !== "number" || !e.start || !e.end) return e;
+    const [sx, sy] = e.start;
+    const [tx, ty] = e.end;
+    const chord = Math.hypot(tx - sx, ty - sy);
+    if (!(chord > 1e-9) || !(e.radius > 1e-9)) return e;
+
+    const ds = Math.hypot(sx - e.center[0], sy - e.center[1]);
+    const de = Math.hypot(tx - e.center[0], ty - e.center[1]);
+    const worst = Math.max(Math.abs(ds - e.radius), Math.abs(de - e.radius)) / e.radius;
+    if (worst <= 1e-3) return e;
+
+    const half = chord / 2;
+    const radius = Math.max(e.radius, half);
+    const offset = Math.sqrt(Math.max(0, radius * radius - half * half));
+    const mx = (sx + tx) / 2;
+    const my = (sy + ty) / 2;
+    // Unit normal to the chord; the declared centre says which side to sit on.
+    const nx = -(ty - sy) / chord;
+    const ny = (tx - sx) / chord;
+    const side = (e.center[0] - mx) * nx + (e.center[1] - my) * ny >= 0 ? 1 : -1;
+    const center: [number, number] = [mx + nx * offset * side, my + ny * offset * side];
+
+    changed = true;
+    notes.push(
+      `arc ${e.tag}: its endpoints were ${((worst) * 100).toFixed(0)}% off the circle it declared ` +
+        `(r=${e.radius}, |start-centre|=${ds.toFixed(2)}, |end-centre|=${de.toFixed(2)}) — the endpoints are kept ` +
+        `and the centre moved onto their bisector, which is the one place a circle of radius ` +
+        `${radius.toFixed(2)} passes through both` +
+        (radius > e.radius ? " (the stated radius was smaller than the chord needs, so the arc was widened to a semicircle)" : ""),
+    );
+    return { ...e, center, radius };
+  });
+
+  return { entities: changed ? out : entities, notes };
 }
 
 function reconcileChain(
