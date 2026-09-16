@@ -172,3 +172,75 @@ describe("sketch reconciliation", () => {
     expect(close(r.entities[0])).toBe("0,0");
   });
 });
+
+// ---------------------------------------------------------------------------
+
+describe("reconciliation reproduces the traced geometry", () => {
+  /**
+   * A rectangle walked counter-clockwise, dimensioned as if each edge points the
+   * positive way along its axis — which is how a model writes "horizontal" and
+   * "vertical" for a loop it drew the other way round.
+   */
+  function ccwRect(w: number, h: number): SketchSpec {
+    return sketch(
+      [
+        { tag: "e1", type: "line", start: [0, 0], end: [0, h] },
+        { tag: "e2", type: "line", start: [0, h], end: [w, h] },
+        { tag: "e3", type: "line", start: [w, h], end: [w, 0] },
+        { tag: "e4", type: "line", start: [w, 0], end: [0, 0] },
+      ],
+      [
+        { kind: "ORIENTATION", tags: ["e1"], value: [0, 1] },
+        { kind: "ORIENTATION", tags: ["e2"], value: [1, 0] },
+        { kind: "ORIENTATION", tags: ["e3"], value: [0, 1] },
+        { kind: "ORIENTATION", tags: ["e4"], value: [1, 0] },
+      ],
+    );
+  }
+
+  it("keeps the traced shape when a declared direction names the opposite way", () => {
+    // A direction is an AXIS, not a sense: e1 runs down for this loop, and its
+    // declared [0,1] must not turn it around. Taking it as a sense flipped six
+    // edges of a real traced outline and inflated the loop by 69% — 210 x 253 for
+    // a trace 125 x 150 — with every dimension and every gate agreeing it was fine.
+    const result = reconcileSketch(ccwRect(40, 30));
+
+    expect(result.report.closureError).toBeLessThan(1e-6);
+    const xs = result.entities.flatMap((e) => [e.start![0], e.end![0]]);
+    const ys = result.entities.flatMap((e) => [e.start![1], e.end![1]]);
+    // The shape is the traced one, up to where the walk anchored it.
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(40, 6);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(30, 6);
+  });
+
+  it("leaves every entity the same shape it was given", () => {
+    // Rigidity is the property that makes the emitted geometry the traced one.
+    const result = reconcileSketch(ccwRect(40, 30));
+    const authored = ccwRect(40, 30).entities;
+    for (const e of result.entities) {
+      const a = authored.find((x) => x.tag === e.tag)!;
+      expect(Math.hypot(e.end![0] - e.start![0], e.end![1] - e.start![1])).toBeCloseTo(
+        Math.hypot(a.end![0] - a.start![0], a.end![1] - a.start![1]),
+        6,
+      );
+    }
+  });
+
+  it("makes an arc pass through the endpoints it was given", () => {
+    // A traced arc arrives as a centre, a radius and two endpoints that need not
+    // agree — 12 of 15 on a real outline had their endpoints 10-67% off their own
+    // circle. The endpoints are the data that chains, so they are what is kept.
+    const result = reconcileSketch(
+      sketch([{ tag: "a1", type: "arc", center: [0, 0], radius: 10, start: [10, 0], end: [0, 6] }]),
+    );
+
+    const arc = result.entities[0];
+    const { center, radius } = arc;
+    expect(Math.hypot(arc.start![0] - center![0], arc.start![1] - center![1])).toBeCloseTo(radius!, 6);
+    expect(Math.hypot(arc.end![0] - center![0], arc.end![1] - center![1])).toBeCloseTo(radius!, 6);
+    // ...and the radius it was given is the one it keeps, so the parameter that
+    // drives it still drives something.
+    expect(radius).toBe(10);
+    expect(result.report.applied.join(" ")).toMatch(/arc a1/);
+  });
+});

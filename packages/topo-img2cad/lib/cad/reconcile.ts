@@ -247,7 +247,18 @@ function anchorEntity(
 ): ProfileEntity {
   if (e.type === "line") {
     const authoredDir = unit(sub(e.end!, e.start!));
-    const dir = dims.direction ?? authoredDir;
+    // A declared direction is an AXIS, not a sense: "horizontal" says the edge runs
+    // along x, not which way along it, and the same vector names both traversals.
+    // Taking it as a sense flips every edge the trace walks the other way, and the
+    // chain then carries the flip: measured on a real traced outline, six edges
+    // were emitted backwards — one authored at (-19.5, 0) came out at (+19.5, 0) —
+    // which put 272 units of error into a loop whose own extent is 125 x 150, and
+    // the last edge absorbed the remainder. The outline was emitted 69% too big
+    // with every dimension and every gate agreeing it was fine.
+    let dir = dims.direction ?? authoredDir;
+    if (dims.direction && dir[0] * authoredDir[0] + dir[1] * authoredDir[1] < 0) {
+      dir = [-dir[0], -dir[1]];
+    }
     const length = dims.length ?? len(sub(e.end!, e.start!));
     return { ...e, start: entry, end: add(entry, scale(dir, length)) };
   }
@@ -407,6 +418,11 @@ export function reconcileSketch(
  * which side. Every one of the real outline's 15 arcs had such a point. When the
  * stated radius is too small for the chord, no circle of that radius exists and
  * the arc is widened to a semicircle, which is reported rather than hidden.
+ *
+ * This fixed 51 of the 103 units of excess height: 253 down to 202, against a trace
+ * 150 tall. The rest was a second, independent mechanism — the sense of a declared
+ * direction, see `anchorEntity` — and only with both fixed is the emitted outline
+ * the traced one, at 125 x 150.
  */
 function consistentArcs(entities: ProfileEntity[]): { entities: ProfileEntity[]; notes: string[] } {
   const notes: string[] = [];
@@ -435,15 +451,36 @@ function consistentArcs(entities: ProfileEntity[]): { entities: ProfileEntity[];
     const side = (e.center[0] - mx) * nx + (e.center[1] - my) * ny >= 0 ? 1 : -1;
     const center: [number, number] = [mx + nx * offset * side, my + ny * offset * side];
 
+    // Which of the two arcs between these endpoints? The centre's side settles
+    // where the circle is, but each pair of points on a circle is joined by a
+    // minor arc and a major one, and the sweep is signed by `clockwise` — so the
+    // same endpoints come out as 92° or as 268°. Measured: three consecutive arcs
+    // at the top of the real outline were being emitted as 268°, 270° and 292°
+    // for chords subtending 92°, 90° and 68°, which balloons the loop exactly
+    // there. With the declared centre already discarded as unreliable, its implied
+    // sweep is not evidence either, so the minor arc is taken — it is the one that
+    // adds no bulge, and an arc that genuinely sweeps past half a turn would have
+    // had endpoints that agree with its radius, and so would never reach here.
+    const ccw = (() => {
+      const a1 = Math.atan2(sy - center[1], sx - center[0]);
+      const a2 = Math.atan2(ty - center[1], tx - center[0]);
+      let d = a2 - a1;
+      while (d < 0) d += 2 * Math.PI;
+      return d;
+    })();
+    const clockwise = ccw > Math.PI;
+    const sweepNote = clockwise === e.clockwise ? "" : "; it was also being drawn the long way round, so its direction was flipped";
+
     changed = true;
     notes.push(
       `arc ${e.tag}: its endpoints were ${((worst) * 100).toFixed(0)}% off the circle it declared ` +
         `(r=${e.radius}, |start-centre|=${ds.toFixed(2)}, |end-centre|=${de.toFixed(2)}) — the endpoints are kept ` +
         `and the centre moved onto their bisector, which is the one place a circle of radius ` +
         `${radius.toFixed(2)} passes through both` +
-        (radius > e.radius ? " (the stated radius was smaller than the chord needs, so the arc was widened to a semicircle)" : ""),
+        (radius > e.radius ? " (the stated radius was smaller than the chord needs, so the arc was widened to a semicircle)" : "") +
+        sweepNote,
     );
-    return { ...e, center, radius };
+    return { ...e, center, radius, clockwise };
   });
 
   return { entities: changed ? out : entities, notes };

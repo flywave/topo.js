@@ -188,11 +188,20 @@ on by default in the CLI). Without that the model reads loops out of its own pro
 description of the image, which is a paraphrase being measured against the drawing.
 
 The prompt states the drawing's millimetres-per-pixel, but nothing in the answer
-enforces it: the coordinates come back in units of the model's own choosing.
-Measured on a real annotated drawing, the profile was **25% oversized** — 210 x 186
-units for a part the sheet dimensions as 150 tall — and because the geometry
-contradicted it, the very dimension that said so was *dropped* by the constraint
-merger rather than applied, leaving the parameter driving nothing.
+enforces it: the coordinates come back in units of the model's own choosing. When a
+trace really is in the wrong units, nothing says so, and because the geometry then
+contradicts it, the very dimension that measures it is *dropped* by the constraint
+merger rather than applied — leaving the parameter driving nothing. That is the case
+this stage exists for.
+
+It is worth knowing what it is NOT for, because a live diagnosis got this wrong for
+two rounds. On a real annotated drawing the fit computed 0.798 and the trace looked
+25% oversized. The actual cause was that reconciliation was inflating the traced
+outline by 69% on its way to code — see the notes on `consistentArcs` and on the
+sense of a declared direction in `lib/cad/reconcile.ts`. With those fixed the same
+trace measures 150 against the stated 150 and **the fit does nothing at all**, which
+is the correct outcome. A real scale error and a geometry defect look identical from
+here; only finding out *why* the geometry disagrees tells them apart.
 
 So `lib/cad/scale_fit.ts` fits the traced size to the dimensions the drawing states,
 before any geometry is emitted. It is narrow on purpose:
