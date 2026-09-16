@@ -71,6 +71,20 @@ export function lintFeatureTree(tree: FeatureTree): FeatureTreeLint {
     });
   }
 
+  // --- how many bodies does this tree describe? -------------------------
+  const bodyCreators = features.filter((f) => BASE_OPS.has(f.op.op));
+  if (bodyCreators.length > 1) {
+    issues.push({
+      severity: "warning",
+      code: "DIN_MULTIPLE_BODIES",
+      message: `The tree creates ${bodyCreators.length} bodies (${bodyCreators
+        .map((f) => f.id)
+        .join(", ")}) — this pipeline models one part, so they are unioned into a single solid`,
+      suggestion:
+        "A drawing showing several parts is an assembly; model one part per run, or expect the result to be their union rather than a kept-apart assembly",
+    });
+  }
+
   // --- feature-level references ----------------------------------------
   for (const f of features) {
     const op = f.op;

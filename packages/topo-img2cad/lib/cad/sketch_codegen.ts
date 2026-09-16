@@ -370,10 +370,32 @@ const EMITTABLE_CONSTRAINT_KINDS: ReadonlySet<string> = new Set([
  * The rest — PARALLEL, PERPENDICULAR, TANGENT, SYMMETRIC — are inter-entity and
  * have no confident mapping, so they are still refused rather than guessed at.
  */
-const TRANSLATED_RELATIONS: Record<string, readonly [number, number]> = {
-  HORIZONTAL: [1, 0],
-  VERTICAL: [0, 1],
+const TRANSLATED_RELATIONS: Record<string, "x" | "y"> = {
+  HORIZONTAL: "x",
+  VERTICAL: "y",
 };
+
+/**
+ * The axis-aligned direction to pin a line to, in the sign it is already drawn.
+ *
+ * `ORIENTATION [1, 0]` is a SIGNED direction, while "horizontal" means parallel to
+ * the axis — either way. Asserting `[1, 0]` on an edge drawn right-to-left states
+ * the opposite of what is there: a live profile had three such edges in a closed
+ * chain, the solver had to flip them, the joins broke, and it wandered to
+ * coordinates like 13380 while reporting a residual of 4.9. Taking the sign from
+ * the authored geometry keeps the intent ("this line is axis-aligned") and leaves
+ * the coordinates satisfying it, so the solver has nothing to move.
+ */
+function signedAxis(
+  entity: ProfileEntity | undefined,
+  axis: "x" | "y",
+): [number, number] | null {
+  if (!entity || entity.type !== "line" || !entity.start || !entity.end) return null;
+  const dx = entity.end[0] - entity.start[0];
+  const dy = entity.end[1] - entity.start[1];
+  if (axis === "x") return dx >= 0 ? [1, 0] : [-1, 0];
+  return dy >= 0 ? [0, 1] : [0, -1];
+}
 
 export interface DroppedConstraint {
   kind: SketchConstraintKind;
@@ -423,12 +445,26 @@ export function mergeConstraintsVerbose(sketch: SketchSpec): MergeConstraintsRes
         });
         continue;
       }
+      let signed = 0;
       for (const tag of lines) {
+        const value = signedAxis(
+          sketch.entities.find((e) => e.tag === tag),
+          translation,
+        );
+        if (!value) continue;
         constraints.push({
           kind: "ORIENTATION",
           tags: [tag],
-          value: [translation[0], translation[1]],
-          note: `${c.kind} expressed as a direction`,
+          value,
+          note: `${c.kind} expressed as the axis direction it is drawn in`,
+        });
+        signed++;
+      }
+      if (signed === 0) {
+        dropped.push({
+          kind: c.kind,
+          tags: c.tags,
+          reason: `${c.kind} could not be read off any of these lines`,
         });
       }
       continue;

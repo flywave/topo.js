@@ -319,6 +319,24 @@ interface EmitCtx {
  * LHS for a body assignment. The first body-producing feature declares it; every
  * later one reassigns the same variable.
  */
+/**
+ * Assign the body when nothing has made one yet, and ADD to it when something has.
+ *
+ * A second extrusion adds material — that is what extruding into an existing body
+ * means. Assigning instead silently discards the first body: a live run's tree had
+ * a 100x200x10 dropper profile (volume 56000) followed by two wire discs, and the
+ * finished model was the two discs, because the second pad overwrote the first. The
+ * user reasonably reported "only two discs were generated".
+ */
+function addBodyLhs(ctx: EmitCtx, expr: string, featureId: string, warnings: string[]): string {
+  if (!ctx.bodyDeclared) return `${bodyLhs(ctx)} = ${expr};`;
+  ctx.methodsUsed.add("union");
+  warnings.push(
+    `feature ${featureId}: this is a second body-creating feature, so it is unioned into the body rather than replacing it (the tree describes ${"more than one body"})`,
+  );
+  return `body = body.union(${expr}, true, false, 0);`;
+}
+
 function bodyLhs(ctx: EmitCtx): string {
   if (ctx.bodyDeclared) return "body";
   ctx.bodyDeclared = true;
@@ -428,7 +446,7 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
           `feature ${feature.id}: symmetric pad emitted as extrude + translate because extrude(both=true) is a known go-topo bug`,
         );
       }
-      code.push(`${bodyLhs(ctx)} = ${expr};`);
+      code.push(addBodyLhs(ctx, expr, feature.id, warnings));
       return { code, warnings };
     }
 
@@ -476,7 +494,7 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
       const placed = placement
         ? `${wp}.revolve(${num(angle)}, ${axisLiteral(op.axis)}, true, true).translate(gv(${num(placement[0])}, ${num(placement[1])}, ${num(placement[2])}))`
         : `${wp}.revolve(${num(angle)}, ${axisLiteral(op.axis)}, true, true)`;
-      code.push(`${bodyLhs(ctx)} = ${placed};`);
+      code.push(addBodyLhs(ctx, placed, feature.id, warnings));
       return { code, warnings };
     }
 
@@ -491,7 +509,7 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
         `feature ${feature.id}: sweep is emitted against the raw Workplane.sweep(path, multisection, transition, frenet, rotate, parallel) binding, which is not covered by the CQ shim — verify the argument order against your build`,
       );
       code.push(
-        `${bodyLhs(ctx)} = ${wp}.sweep(${pathWp}, false, tp.TransitionMode.ROUND, ${frenet}, false, false);`,
+        addBodyLhs(ctx, `${wp}.sweep(${pathWp}, false, tp.TransitionMode.ROUND, ${frenet}, false, false)`, feature.id, warnings),
       );
       return { code, warnings };
     }
@@ -514,7 +532,7 @@ function emitFeature(feature: Feature, ctx: EmitCtx): FeatureEmission {
       for (let i = 1; i < wps.length; i++) {
         code.push(`loftStack = loftStack.union(${wps[i]}, false, false, 0);`);
       }
-      code.push(`${bodyLhs(ctx)} = loftStack.loft(${op.ruled ? "true" : "false"}, true, true);`);
+      code.push(addBodyLhs(ctx, `loftStack.loft(${op.ruled ? "true" : "false"}, true, true)`, feature.id, warnings));
       return { code, warnings };
     }
 

@@ -309,11 +309,19 @@ So the emitter maps what it can and refuses what it cannot, by name:
 
 | Written | Emitted | Why |
 |---|---|---|
-| `HORIZONTAL` (per line) | `ORIENTATION [1, 0]` | exactly the same statement, and reconciliation applies it |
-| `VERTICAL` (per line) | `ORIENTATION [0, 1]` | idem |
+| `HORIZONTAL` (per line) | `ORIENTATION [±1, 0]` | same statement, AND the sign comes from how the line is drawn |
+| `VERTICAL` (per line) | `ORIENTATION [0, ±1]` | idem |
 | `JOIN` | `DISTANCE [t1, t2, 0]` | zero distance between entity parameters is what joining is |
 | `COINCIDENT` | *dropped* | the binding's meaning is "these overlap"; connectivity is derived instead |
 | `PARALLEL`, `PERPENDICULAR`, `TANGENT`, `SYMMETRIC` | *dropped, reported* | inter-entity with no confident mapping — a guess would be silent |
+
+**The sign matters, and getting it wrong is not merely imprecise.** `ORIENTATION` is a
+*signed* direction while "horizontal" means parallel to the axis either way. Asserting
+`[1, 0]` on an edge drawn right-to-left states the opposite of what is there: a live
+profile had three such edges in one closed chain, so the solver had to flip them, the
+joins broke, and it wandered to coordinates like 13380 while reporting a residual of
+**4.9 instead of 0**. Taking the sign from the authored geometry keeps the intent and
+leaves the coordinates already satisfying it, so the solver has nothing to move.
 
 The same rule covers the other two ways a model's intent outruns the binding:
 a **fillet selector** must be a selector (`|Z`, `#Z`, `>Z`), not a sentence, or the
@@ -349,6 +357,17 @@ Resolution is iterative, so forward references work. Cycles, unknown names, and
 division by zero are reported rather than silently producing NaN. Expressions are
 parsed by a small recursive-descent evaluator — **never** `eval`, so a spec from a
 model can never execute code.
+
+### More than one base feature
+
+A second `pad` / `revolve` / `sweep` / `loft` **adds** to the body — `body = body.union(…)`.
+It used to assign over it, silently discarding everything built so far: a live run's tree
+traced a 100×200×10 catenary-dropper profile (volume 56000, 26 faces) and then two wire
+discs, and the finished model was the two discs. The user reported "only two discs were
+generated", which was exactly right.
+
+The tree is then reported as `DIN_MULTIPLE_BODIES`: this pipeline models one part, so a
+drawing of several parts comes out as their union, not as an assembly.
 
 ### `mirror` with a named source
 
