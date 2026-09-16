@@ -695,6 +695,7 @@ export class CadPipeline {
       "DIN_NO_SELECTOR",
       "DIN_NON_POSITIVE_DIMENSION",
       "DIN_INERT_PARAMETER",
+      "DIN_ARC_INCONSISTENT",
       "RPR_LOW_IOU",
       "RPR_DEVIATION",
       "EDG_OUTLINE_MISMATCH",
@@ -852,6 +853,9 @@ function countErrors(issues?: ReviewIssue[]): number {
 
 /** Verdicts that came from measuring the built body, rather than from the tree's shape. */
 const MEASURED_CODES: ReadonlySet<string> = new Set([
+  // A warning-level verdict from a check that MEASURED something is worth a repair
+  // round; see `isWorthRefining`.
+  "DIN_ARC_INCONSISTENT",
   "RPR_LOW_IOU",
   "RPR_DEVIATION",
   "RPR_VIEW_MISMATCH",

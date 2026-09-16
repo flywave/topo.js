@@ -237,6 +237,15 @@ the traced body is what survived, with the refusal reported.
 
 Output: `Profile2D` per view.
 
+A traced arc arrives as a centre, a radius and two endpoints, and nothing makes those
+four numbers agree. Measured on a real outline: **12 of 15 arcs had their endpoints
+10-67% off their own declared circle**, while the endpoint chain closed to 0.0000 —
+the tracer produced a point chain and padded the bulges with plausible-looking centres
+and radii. Reconciliation repairs that on the way to code (the endpoints are kept, the
+centre moves), but a repair is a guess about geometry, so `DIN_ARC_INCONSISTENT`
+reports the defect itself, as a warning the repair loop acts on. See
+`DIN_ARC_INCONSISTENT` in `lib/validators/design_intent.ts`.
+
 ### Stage C — Feature tree
 
 An ordered feature history plus its driving dimensions.
@@ -252,7 +261,8 @@ Deterministic emission. No AI involved: a valid tree always produces the same co
 
 | Gate | Catches |
 |---|---|
-| L0 syntax | malformed emission |
+| L0 tree lint | a defect visible in the tree itself, without emitting or building |
+| L1 syntax | malformed emission |
 | L1 execution | a feature that throws |
 | L2 geometry | null / non-solid / degenerate result |
 | L3 solver residual | constraints not actually satisfied |

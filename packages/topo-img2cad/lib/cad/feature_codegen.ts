@@ -209,6 +209,10 @@ export function emitFeatureTreeCode(
           warnings.push(`sketch ${id}: constraint ${u.constraint} was not applied — ${u.reason}`);
         }
       }
+      // Geometry the walk had to change to keep the loop usable. These are
+      // guesses about shape rather than dimensions being honoured, so they are
+      // reported: they sat in `applied` and reached nobody.
+      for (const r of rec.repaired) warnings.push(`sketch ${id}: ${r}`);
       if (!rec.structurePreserved) {
         warnings.push(`sketch ${id}: reconciliation changed the entity set, which should not happen`);
       }

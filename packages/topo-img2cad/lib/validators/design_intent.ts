@@ -14,7 +14,7 @@
  */
 
 import type { ReviewIssue } from "../types.js";
-import type { FeatureTree } from "../cad/model.js";
+import type { FeatureTree, SketchSpec } from "../cad/model.js";
 import { activeFeatures, referencedParameters } from "../cad/model.js";
 import { resolveParameters, type ResolvedParameters } from "../cad/expr.js";
 
@@ -197,6 +197,44 @@ export function lintFeatureTree(tree: FeatureTree): FeatureTreeLint {
     }
     if (p.min !== undefined || p.max !== undefined) {
       // Range checks need a resolved value, done below.
+    }
+  }
+
+  // --- arcs that cannot be the arc they claim to be ---------------------
+  //
+  // An arc arrives as a centre, a radius and two endpoints, and nothing makes the
+  // tracer keep those four numbers consistent. Measured on a real traced outline:
+  // 12 of 15 arcs had their endpoints 10-67% off their own declared circle, while
+  // the endpoint chain closed to 0.0000. The tracer produced a point chain and
+  // padded the bulges with plausible-looking centres and radii.
+  //
+  // Reconciliation repairs that on the way to code — the endpoints are kept and
+  // the centre moves — but a repair is a guess about geometry, and doing it
+  // silently means the tracer is never told. This is the tree defect itself, and
+  // it is checkable without emitting or building anything.
+  for (const [id, spec] of Object.entries(tree.sketches)) {
+    const sketch = spec as SketchSpec;
+    for (const e of sketch.entities ?? []) {
+      if (e.type !== "arc") continue;
+      if (!e.center || typeof e.radius !== "number" || !(e.radius > 0)) continue;
+      if (!e.start || !e.end) continue;
+
+      const ds = Math.hypot(e.start[0] - e.center[0], e.start[1] - e.center[1]);
+      const de = Math.hypot(e.end[0] - e.center[0], e.end[1] - e.center[1]);
+      const worst = Math.max(Math.abs(ds - e.radius), Math.abs(de - e.radius)) / e.radius;
+      if (worst <= 0.01) continue;
+
+      issues.push({
+        severity: "warning",
+        code: "DIN_ARC_INCONSISTENT",
+        message:
+          `Sketch "${id}", arc ${e.tag}: its endpoints are not on the circle it declares — ` +
+          `the radius is ${e.radius} but |start-centre| is ${ds.toFixed(2)} and |end-centre| is ${de.toFixed(2)} ` +
+          `(${(worst * 100).toFixed(0)}% out). The endpoints are the coordinates that chain, so the centre and radius ` +
+          `as given cannot both be what was traced`,
+        suggestion:
+          "Re-emit this arc so its centre and radius pass through both endpoints, or drop the centre and radius and let the endpoints and the neighbouring edges define the curve",
+      });
     }
   }
 

@@ -33,6 +33,15 @@ import { chainEntities, findClosedComponents } from "./chain.js";
 export interface ReconcileReport {
   /** Constraints that were applied to the coordinates. */
   applied: string[];
+  /**
+   * Geometry the walk had to CHANGE to keep the loop usable, and why.
+   *
+   * Separate from `applied`, which records dimensions being honoured and is
+   * routine: this is the walk guessing — moving an arc's centre, snapping a
+   * closing edge — and a guess about geometry is exactly what a reader and the
+   * repair loop need to see. These sat in `applied` and were reported nowhere.
+   */
+  repaired: string[];
   /** Constraints that could not be applied, with the reason. */
   unhonoured: Array<{ constraint: string; reason: string }>;
   /**
@@ -341,7 +350,7 @@ export function reconcileSketch(
   const source = { ...sketch, entities: repair.entities };
   const withRepairs = (result: ReconcileResult): ReconcileResult => ({
     ...result,
-    report: { ...result.report, applied: [...repair.notes, ...result.report.applied] },
+    report: { ...result.report, repaired: [...repair.notes, ...result.report.repaired] },
   });
 
   const chain = chainEntities(source.entities);
@@ -352,7 +361,8 @@ export function reconcileSketch(
     return {
       entities: source.entities,
       report: {
-        applied: repair.notes,
+        applied: [],
+        repaired: repair.notes,
         unhonoured: [{ constraint: "(sketch)", reason: "entities do not form a single closed chain" }],
         closureError: Infinity,
         structurePreserved: true,
@@ -361,7 +371,8 @@ export function reconcileSketch(
   }
 
   const entities: ProfileEntity[] = [];
-  const applied: string[] = [...repair.notes];
+  const applied: string[] = [];
+  const repaired: string[] = [...repair.notes];
   const unhonoured: ReconcileReport["unhonoured"] = [];
   let worstClosure = 0;
 
@@ -377,6 +388,7 @@ export function reconcileSketch(
     const done = reconcileChain({ ...sketch, entities: component }, inner);
     entities.push(...done.entities);
     applied.push(...done.report.applied);
+    repaired.push(...done.report.repaired);
     unhonoured.push(...done.report.unhonoured);
     worstClosure = Math.max(worstClosure, done.report.closureError);
   }
@@ -386,6 +398,7 @@ export function reconcileSketch(
     entities,
     report: {
       applied,
+      repaired,
       unhonoured,
       closureError: worstClosure,
       // Components are regrouped rather than reordered within themselves, so the
@@ -492,6 +505,7 @@ function reconcileChain(
   anchor?: Vec,
 ): ReconcileResult {
   const applied: string[] = [];
+  const repaired: string[] = [];
   const unhonoured: ReconcileReport["unhonoured"] = [];
 
   // Dimensions keyed by tag, honouring the chain's traversal direction: the
@@ -547,7 +561,7 @@ function reconcileChain(
     lastExit = exitPoint(snapped) ?? lastExit;
     closureError = len(sub(lastExit, firstEntry));
     if (closureError < before) {
-      applied.push(
+      repaired.push(
         `closing snap on ${last.tag} (undimensioned, so it closes the loop: ${before.toFixed(4)} -> ${closureError.toFixed(4)})`,
       );
     } else {
@@ -573,7 +587,7 @@ function reconcileChain(
     const gap = from && to ? Math.hypot(from[0] - to[0], from[1] - to[1]) : 0;
     if (from && to && gap > 1e-9) {
       out.push({ tag: "__closing", type: "line", start: from, end: to });
-      applied.push(
+      repaired.push(
         `closing edge added over ${closureError.toFixed(4)} (${((closureError / (extent || 1)) * 100).toFixed(2)}% of the profile, which is drawing rounding rather than a contradiction)`,
       );
       closureError = 0;
@@ -585,6 +599,7 @@ function reconcileChain(
     entities: out,
     report: {
       applied,
+      repaired,
       unhonoured,
       closureError,
       structurePreserved,

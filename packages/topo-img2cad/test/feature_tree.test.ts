@@ -508,6 +508,51 @@ describe("feature tree lint", () => {
     expect(issues.some((i) => i.code === "DIN_ORPHAN_PARAMETER" && i.message.includes("decorative"))).toBe(true);
   });
 
+  it("flags an arc whose endpoints are not on the circle it declares", () => {
+    // Measured on a real traced outline: 12 of 15 arcs, endpoints 10-67% off
+    // their own circle, while the endpoint chain closed to 0.0000. The tracer
+    // produced a point chain and padded the bulges with plausible centres and
+    // radii. Reconciliation repairs that on the way to code, but the repair is a
+    // guess about geometry — the tracer has to be told, or it is never fixed.
+    const t = plateTree({
+      sketches: {
+        ...plateTree().sketches,
+        s_arcs: {
+          id: "s_arcs",
+          plane: { kind: "XY", origin: [0, 0, 0] },
+          // r=10, but the start is 5 away from the centre.
+          entities: [{ tag: "a1", type: "arc", center: [0, 0], radius: 10, start: [5, 0], end: [0, 10] }],
+          constraints: [],
+        },
+      },
+    });
+
+    const issues = lintFeatureTree(t).issues;
+    const arc = issues.find((i) => i.code === "DIN_ARC_INCONSISTENT");
+    expect(arc).toBeDefined();
+    expect(arc!.message).toMatch(/radius is 10/);
+    expect(arc!.message).toMatch(/\|start-centre\| is 5\.00/);
+    // A warning: the geometry is still built, and the repair loop acts on it.
+    expect(arc!.severity).toBe("warning");
+    expect(lintFeatureTree(t).passed).toBe(true);
+  });
+
+  it("says nothing about an arc whose endpoints are on its circle", () => {
+    const t = plateTree({
+      sketches: {
+        ...plateTree().sketches,
+        s_arcs: {
+          id: "s_arcs",
+          plane: { kind: "XY", origin: [0, 0, 0] },
+          entities: [{ tag: "a1", type: "arc", center: [0, 0], radius: 10, start: [10, 0], end: [0, 10] }],
+          constraints: [],
+        },
+      },
+    });
+
+    expect(codes(t)).not.toContain("DIN_ARC_INCONSISTENT");
+  });
+
   it("flags a duplicate feature id", () => {
     const t = plateTree({
       features: [plateTree().features[0], { ...plateTree().features[0] }],

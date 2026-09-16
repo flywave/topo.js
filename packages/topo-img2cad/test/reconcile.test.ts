@@ -81,7 +81,9 @@ describe("sketch reconciliation", () => {
       ]),
     );
     expect(r.report.closureError).toBeCloseTo(0, 9);
-    expect(r.report.applied.some((a) => a.includes("closing snap"))).toBe(true);
+    // A geometry repair, not a dimension being honoured — reported separately so
+    // a reader sees the walk guessing.
+    expect(r.report.repaired.some((a) => a.includes("closing snap"))).toBe(true);
   });
 
   it("does not snap an edge that was dimensioned", () => {
@@ -241,6 +243,6 @@ describe("reconciliation reproduces the traced geometry", () => {
     // ...and the radius it was given is the one it keeps, so the parameter that
     // drives it still drives something.
     expect(radius).toBe(10);
-    expect(result.report.applied.join(" ")).toMatch(/arc a1/);
+    expect(result.report.repaired.join(" ")).toMatch(/arc a1/);
   });
 });
