@@ -424,6 +424,34 @@ describe("a drawing too busy for closeness to mean anything", () => {
     expect(result.passed).toBe(true);
   });
 
+  it("measures the floor against the drawing, not against the model's own frame", () => {
+    // The chance floor is a property of the DRAWING, so it is sampled over the
+    // drawing's own box. Sampling it over the comparison frame — the union of the
+    // two extents — hands the model a say in its own bar: a model that overhangs
+    // the drawing widens the frame, and the wider frame changes both how much
+    // empty space goes into the sample and how many pixels a millimetre is worth.
+    // Two models that both fit are measured against the same drawing box, so they
+    // get the same floor; an oversized one does not get a kinder one.
+    const opts = {
+      view: "front" as const,
+      ink: rectInk(200, 200),
+      inkWidth: 200,
+      inkHeight: 200,
+      referenceBounds: FRAME,
+      width: 512,
+      height: 512,
+    };
+
+    const right = measureEdgeDistance(box(100, 100, 100), opts);
+    const slightlySmall = measureEdgeDistance(box(90, 90, 90), opts);
+
+    expect(right.baselinePx).toBeGreaterThan(0);
+    expect(slightlySmall.baselinePx).toBeCloseTo(right.baselinePx, 6);
+
+    const twice = measureEdgeDistance(box(200, 200, 200), opts);
+    expect(twice.passed).toBe(false);
+  });
+
   it("does not let a search reach ink the model has no business being on", () => {
     // The search window is bounded on purpose. Searching the whole sheet would
     // find SOMETHING dense to sit on every time: measured on a real annotated

@@ -361,18 +361,37 @@ export function measureEdgeDistance(
   // there the absolute distance stops meaning "this matches" — it only means
   // "there is a lot of ink here". Measuring the model against that floor is what
   // keeps the gate from passing a bad model on a busy sheet.
-  let baselineSum = 0;
-  let baselineCount = 0;
-  {
-    const stride = Math.max(1, Math.round(Math.sqrt((opts.width * opts.height) / 2000)));
-    for (let y = 0; y < opts.height; y += stride) {
-      for (let x = 0; x < opts.width; x += stride) {
-        baselineSum += distanceAt(x + 0.5, y + 0.5);
-        baselineCount++;
+  //
+  // Sampled over the DRAWING's own box, not the comparison frame. The latter is
+  // the union of the two extents, which gives the model a say in its own bar: a
+  // model that overhangs the drawing widens the frame, and a wider frame changes
+  // both how much empty space enters the sample and how many pixels a millimetre
+  // is worth. The floor is a property of the drawing.
+  const baseline = (() => {
+    const sx = frame.maxX - frame.minX || 1;
+    const sy = frame.maxY - frame.minY || 1;
+    const toPx = (v: number, min: number, span: number, size: number) =>
+      Math.max(0, Math.min(size - 1, ((v - min) / span) * (size - 1)));
+    // Raster row 0 is the frame's maxY, so the drawing's box flips on the way in.
+    const x0 = Math.round(toPx(referenceBounds.minX, frame.minX, sx, opts.width));
+    const x1 = Math.round(toPx(referenceBounds.maxX, frame.minX, sx, opts.width));
+    const y0 = opts.height - 1 - Math.round(toPx(referenceBounds.maxY, frame.minY, sy, opts.height));
+    const y1 = opts.height - 1 - Math.round(toPx(referenceBounds.minY, frame.minY, sy, opts.height));
+
+    const stride = Math.max(
+      1,
+      Math.round(Math.sqrt(((x1 - x0 + 1) * (y1 - y0 + 1)) / 2000)),
+    );
+    let sum = 0;
+    let count = 0;
+    for (let y = y0; y <= y1; y += stride) {
+      for (let x = x0; x <= x1; x += stride) {
+        sum += distanceAt(x + 0.5, y + 0.5);
+        count++;
       }
     }
-  }
-  const baseline = baselineCount > 0 ? baselineSum / baselineCount : 0;
+    return count > 0 ? sum / count : 0;
+  })();
 
   const distances = placed.map((p) => distanceAt(p.x, p.y));
   const order = placed
