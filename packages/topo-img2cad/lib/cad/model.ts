@@ -231,6 +231,8 @@ export interface SketchSolveReport {
   dofCount: number;
   /** Untagged/underconstrained entities — design intent is not fully captured. */
   underconstrained: boolean;
+  /** What the kernel said when it threw instead of returning a status. */
+  note?: string;
 }
 
 // ---------------------------------------------------------------------------

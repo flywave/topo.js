@@ -10,7 +10,11 @@
 
 import { describe, expect, it } from "vitest";
 import { sketchPlaneForView, viewBasis, planeTo3D } from "../lib/index.js";
-import { buildFeatureTreePrompt } from "../lib/prompts/feature_tree.js";
+import {
+  buildFeatureTreePrompt,
+  buildProfileExtractionPrompt,
+  buildViewIntakePrompt,
+} from "../lib/prompts/feature_tree.js";
 
 describe("view to sketch plane", () => {
   it("maps each orthographic view to the plane its frame is measured in", () => {
@@ -104,3 +108,38 @@ function isParallel(a: number[], b: number[]): boolean {
   const cross = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   return cross.every((c) => Math.abs(c) < 1e-9);
 }
+
+/**
+ * The industry hint steers vocabulary and construction order. It must never be
+ * read as evidence — a hint that can supply sizes is a hint that invents them,
+ * which is the failure the whole pipeline is built to avoid.
+ */
+describe("industry context", () => {
+  const HINT = "铁路接触网整体吊弦: 承力索 / 卡子 / 心形护体 / 压管 / 吊弦绞线 / 接触线";
+
+  it("reaches all three prompts, fenced off from the drawing", () => {
+    const views = {
+      drawingKind: "engineering_drawing",
+      views: [{ id: "v_front", kind: "front", projectionPlane: "XY" }],
+      units: { length: "mm", toMillimeter: 1 },
+      undetermined: [],
+    };
+
+    const intake = buildViewIntakePrompt({ objectName: "dropper", industry: HINT });
+    const profile = buildProfileExtractionPrompt({ id: "v_front", kind: "front" }, {}, HINT);
+    const tree = buildFeatureTreePrompt({ objectName: "dropper", views, industry: HINT });
+
+    for (const prompt of [intake, profile, tree]) {
+      expect(prompt).toContain("INDUSTRY CONTEXT");
+      expect(prompt).toContain("心形护体");
+      // The fence: the hint is not allowed to supply dimensions.
+      expect(prompt).toMatch(/NOT evidence/);
+      expect(prompt).toMatch(/still has to come from the drawing/);
+    }
+  });
+
+  it("adds nothing when there is no hint", () => {
+    const prompt = buildFeatureTreePrompt({ objectName: "plate", views: { views: [] } });
+    expect(prompt).not.toContain("INDUSTRY CONTEXT");
+  });
+});

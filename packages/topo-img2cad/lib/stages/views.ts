@@ -46,7 +46,7 @@ export interface ViewIntakeResult {
 export async function runViewIntake(
   imagePath: string,
   llm: LLMProvider,
-  opts?: { profile?: string; context?: string },
+  opts?: { profile?: string; context?: string; industry?: string },
 ): Promise<ViewIntakeResult> {
   const imageBase64 = readFileSync(imagePath).toString("base64");
   const prompt = buildViewIntakePrompt(opts);

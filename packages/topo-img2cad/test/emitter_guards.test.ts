@@ -261,3 +261,20 @@ describe("a second body-creating feature", () => {
     expect(issue!.suggestion).toMatch(/is an assembly/);
   });
 });
+
+describe("a solver that throws", () => {
+  it("is recorded, not fatal — the body does not depend on it", () => {
+    // The kernel's NLopt backend fails outright on some constraint sets
+    // ("Sketch.solve: nlopt failure", measured on a real catenary profile). The
+    // whole model was lost to it. `solve()` is a cross-check that does not write
+    // back, so it must not be able to take the body down with it.
+    const tree = treeWith([
+      { id: "f", name: "Pad", op: { op: "pad", sketchId: "s_block", distance: "t" } },
+    ]);
+    const built = runBuildFromTree(tree);
+
+    expect(built.code.source).toMatch(/try \{\s*\n\s*sk_s_block\.solve\(\);/);
+    expect(built.code.source).toMatch(/catch \(e\) \{/);
+    expect(built.code.source).toMatch(/status: -1, cost: Infinity, note:/);
+  });
+});

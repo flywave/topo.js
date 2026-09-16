@@ -40,6 +40,21 @@ const result = await pipeline.run("./drawing.png", "Mounting plate");
 console.log(result.review?.passed, result.review?.reprojection?.views);
 ```
 
+### Industry hints
+
+`industry` carries the vocabulary and typical construction for a domain — railway
+overhead line, say — and is fed to all three stages. It is fenced off from the drawing
+on purpose: the prompt tells the model to use it for **naming and construction order**
+and states that it is *not evidence*, so every dimension and shape still has to come
+from the drawing. A hint allowed to supply sizes is a hint that invents them.
+
+It earns its keep. On the same catenary drawing, `mimo-v2.5` without a hint traced a
+coarse 3-feature tree; `deepseek-v4.1-flash` with a dropper hint produced a 25-entity
+profile, named its parameters `clampHeight` / `heartHalfWidth` / `tubeRadius` /
+`wireHalfWidth`, inferred a realistic 1200mm dropper length, and derived the rest
+(`shoulderY`, `tubeTopY`, `wireTopY`) from those — and the hint's note about which
+construction fits a full-outline drawing is what kept it off `revolve`.
+
 ### Pointing it at a gateway or a reasoning model
 
 Anything OpenAI-compatible works through the `openai` provider; two settings
@@ -398,6 +413,16 @@ four-hole pattern. The prompt now states the convention in the same words.
 
 The same-plane check needs the mirrored feature's own plane, so it follows `ofFeature`
 back through any intervening mirrors to whatever carries the sketch.
+
+### When the solver throws
+
+`Sketch.solve()` is a cross-check: reconciliation already placed the geometry and
+`solve()` does not write back. It is also the one call in the emitted code that can
+throw — the kernel's NLopt backend fails outright on some constraint sets
+(*"Sketch.solve: nlopt failure"*, on a real 1200mm catenary profile). Letting that
+escape cost the entire model, twice. It is now wrapped, recorded as
+`{ status: -1, cost: Infinity, note }`, and L3 reports it as the failed verification it
+is — so the body, the STEP and the STL all survive a solver that could not converge.
 
 `CadPipeline.verifyAssociativity` rebuilds with each parameter perturbed and confirms
 the geometry moves. Two things had to be right for that verdict to be trustworthy,

@@ -9,6 +9,26 @@
 
 import { sketchPlaneForView } from "../cad/project.js";
 
+/**
+ * Domain vocabulary and typical construction, offered as guidance.
+ *
+ * It is deliberately fenced off from the drawing: an industry hint tells the model
+ * what the parts are usually CALLED and how they are usually BUILT, which is real
+ * help for naming and for choosing a construction order. It is not evidence of any
+ * dimension. Without that line the hint becomes a licence to invent the sizes the
+ * drawing does not state, which is the one failure this pipeline exists to avoid.
+ */
+function industryBlock(industry?: string): string {
+  if (!industry || industry.trim() === "") return "";
+  return `
+INDUSTRY CONTEXT — vocabulary and typical construction for this domain. Use it to
+name things and to choose a sensible construction order. It is NOT evidence: every
+dimension, shape and count still has to come from the drawing, and anything the
+drawing does not show belongs in "undetermined".
+${industry.trim()}
+`;
+}
+
 // ---------------------------------------------------------------------------
 // Stage A: view intake
 // ---------------------------------------------------------------------------
@@ -21,11 +41,16 @@ Report what the image genre actually supports. Do not invent orthographic views 
 
 Output strictly valid JSON.`;
 
-export function buildViewIntakePrompt(opts?: { profile?: string; context?: string }): string {
+export function buildViewIntakePrompt(opts?: {
+  profile?: string;
+  context?: string;
+  industry?: string;
+}): string {
   return `Classify how this object is depicted and identify the views present.
 
 ${opts?.profile ? `Domain: ${opts.profile}.` : ""}
 ${opts?.context ? `Context: ${opts.context}` : ""}
+${industryBlock(opts?.industry)}
 
 Return JSON:
 {
@@ -74,6 +99,7 @@ Output strictly valid JSON.`;
 export function buildProfileExtractionPrompt(
   view: { id: string; kind: string },
   scaleInfo: { mmPerPixel?: number; note?: string },
+  industry?: string,
 ): string {
   return `Extract the closed profile geometry from the "${view.kind}" view (id "${view.id}").
 
@@ -83,7 +109,7 @@ Scale: ${
       : "no reliable scale — use a sensible engineering size and state your assumption."
   }
 ${scaleInfo.note ? `Note: ${scaleInfo.note}` : ""}
-
+${industryBlock(industry)}
 Return JSON:
 {
   "viewId": "${view.id}",
@@ -202,6 +228,7 @@ export function buildFeatureTreePrompt(input: {
   profiles?: unknown[];
   units?: string;
   context?: string;
+  industry?: string;
 }): string {
   return `Author the feature tree for "${input.objectName}".
 ${input.description ? `\nWhat it is: ${input.description}` : ""}
@@ -213,6 +240,7 @@ ${input.profiles?.length ? `\nEXTRACTED PROFILES:\n${JSON.stringify(input.profil
 Units: ${input.units ?? "mm"}.
 ${input.context ? `Context: ${input.context}` : ""}
 ${planeGuidance(input.views)}
+${industryBlock(input.industry)}
 Return JSON:
 {
   "name": "part_name",

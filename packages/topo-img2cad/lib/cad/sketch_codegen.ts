@@ -768,11 +768,27 @@ export function emitProfileGeometry(
     }
 
     // --- solve, report, assemble -----------------------------------------
-    code.push(`${I}${skVar}.solve();`);
-    if (opts.reportMapVar !== null) {
-      const map = opts.reportMapVar ?? "__solveReports";
-      code.push(`${I}${map}[${JSON.stringify(sketch.id)}] = ${skVar}.solve_status();`);
+    // The solver is a CROSS-CHECK: reconciliation already placed the geometry and
+    // `solve()` does not write back, so a solve that throws says nothing about the
+    // body. It is also the one call here that can throw — the kernel's NLopt
+    // backend fails outright on some constraint sets ("Sketch.solve: nlopt
+    // failure", measured), and letting that escape lost the whole model. It is
+    // recorded instead, and L3 reports it as the failed verification it is.
+    const map = opts.reportMapVar ?? "__solveReports";
+    const reportLine =
+      opts.reportMapVar === null
+        ? ""
+        : `${I}${map}[${JSON.stringify(sketch.id)}] = ${skVar}.solve_status();`;
+    code.push(`${I}try {`);
+    code.push(`${I}${I}${skVar}.solve();`);
+    if (reportLine) code.push(`${I}${I}${reportLine.trim()}`);
+    code.push(`${I}} catch (e) {`);
+    if (reportLine) {
+      code.push(
+        `${I}${I}${map}[${JSON.stringify(sketch.id)}] = { status: -1, cost: Infinity, note: String((e && e.message) || e) };`,
+      );
     }
+    code.push(`${I}}`);
     // Without assemble the sketch holds loose edges and extrude finds no wires.
     code.push(`${I}${skVar}.assemble(tp.SketchMode.ADD, undefined);`);
     code.push(`${I}const ${opts.wpVar} = ${skVar}.finalize();`);
@@ -857,7 +873,7 @@ export function emitProfileGeometry(
         code.push(`${I}${emitConstraint(compSkVar, c)}`);
       }
 
-      code.push(`${I}${compSkVar}.solve();`);
+      code.push(`${I}try { ${compSkVar}.solve(); } catch { /* cross-check only */ }`);
       code.push(`${I}${compSkVar}.assemble(tp.SketchMode.ADD, undefined);`);
       code.push(`${I}const ${compWpVar} = ${compSkVar}.finalize();`);
       wpVars.push(compWpVar);
@@ -940,8 +956,26 @@ export function validateRevolveProfile(
   const onAxis = sides.some((s) => Math.abs(s) <= 1e-6);
 
   if (hasPositive && hasNegative) {
+    // Two very different mistakes look the same from "it crosses the axis": a
+    // profile merely offset across the line, and the FULL symmetric outline of the
+    // part, which is what a drawing of a whole assembly gives you. The second is
+    // what a model reaching for revolve actually produces, and saying so is the
+    // difference between "move it" and "you have twice the profile".
+    const positives = sides.filter((v) => v > 1e-6);
+    const negatives = sides.filter((v) => v < -1e-6);
+    const reach = (values: number[]) =>
+      Math.max(...values.map(Math.abs));
+    const balanced =
+      positives.length === negatives.length &&
+      Math.abs(reach(positives) - reach(negatives)) <= Math.max(1e-6, reach(positives) * 0.02);
+
     problems.push(
-      "revolve profile crosses the axis — go-topo silently produces an empty shape for this; offset the profile to one side",
+      balanced
+        ? `revolve profile is the part's FULL symmetric outline (it reaches ${reach(positives).toFixed(1)} either side of the axis, ${positives.length} points each way) — a revolve takes the half on ONE side, so this describes the part twice and go-topo returns an empty shape for it`
+        : `revolve profile crosses the axis — go-topo silently produces an empty shape for this; offset the profile to one side`,
+    );
+    problems.push(
+      "drawings of a whole part give the full outline, so extrude it (pad) instead of revolving it; revolve only fits a half-section drawn from the axis outward",
     );
   }
   if (!onAxis && !hasPositive && !hasNegative) {

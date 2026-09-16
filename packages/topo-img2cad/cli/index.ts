@@ -34,6 +34,7 @@ interface CLIArgs {
   imagePath?: string;
   treePath?: string;
   objectName?: string;
+  industry?: string;
   workDir?: string;
   outDir?: string;
   llmType: LLMProviderType;
@@ -60,6 +61,8 @@ Usage:
 
 Options:
   --object <name>      What the part is; steers the feature tree
+  --industry <text>    Domain vocabulary / typical construction for this industry
+  --industry-file <f>  Same, read from a file
   --tree <path>        Rebuild from a saved feature tree instead of calling a model
   --out, -o <dir>      Where to write the artifacts (default: next to the image)
   --llm <type>         openai | anthropic | mock (default: openai)
@@ -126,6 +129,14 @@ function parseArgs(argv: string[]): CLIArgs {
         break;
       case "--object":
         args.objectName = value(i, arg);
+        i++;
+        break;
+      case "--industry":
+        args.industry = value(i, arg);
+        i++;
+        break;
+      case "--industry-file":
+        args.industry = readFileSync(resolve(value(i, arg)), "utf-8").trim();
         i++;
         break;
       case "--tree":
@@ -450,6 +461,7 @@ async function runFromImage(args: CLIArgs): Promise<number> {
     CQWorkplane,
     workDir: outDir,
     silhouetteMode: args.silhouetteMode,
+    industry: args.industry,
     visionProfiles: !args.noVision,
     checkAssociativity: !args.noAssociativity,
     exportFormats: args.exportFormats,

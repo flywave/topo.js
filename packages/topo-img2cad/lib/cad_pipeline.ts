@@ -88,6 +88,15 @@ export interface CadPipelineConfig {
   thresholds?: ReprojectionThresholds;
   /** How many times the feature tree may be repaired. */
   maxRefinements?: number;
+  /**
+   * Domain vocabulary and typical construction for this industry, e.g. railway
+   * overhead line equipment. Fed to every stage.
+   *
+   * It steers NAMING and CONSTRUCTION ORDER, and the prompt says explicitly that
+   * it is not evidence — dimensions must still come from the drawing. A hint that
+   * is allowed to supply sizes is a hint that invents them.
+   */
+  industry?: string;
   /** View kinds to extract profiles for. `photo`/`iso` are not orthographic. */
   profileViewKinds?: string[];
   /**
@@ -179,6 +188,7 @@ export class CadPipeline {
     this.log("stage A: view intake");
     const intake = await runViewIntake(imagePath, this.config.llm, {
       context: objectName,
+      industry: this.config.industry,
     });
     this.warnings.push(...intake.warnings);
     let viewSet = intake.viewSet;
@@ -193,6 +203,7 @@ export class CadPipeline {
       try {
         const result = await runProfileExtraction(view, viewSet, this.config.llm, {
           imagePath: this.config.visionProfiles ? imagePath : undefined,
+          industry: this.config.industry,
         });
         profiles.push(result.profile);
         this.warnings.push(...result.warnings);
@@ -216,6 +227,7 @@ export class CadPipeline {
         views: viewSet,
         profiles,
         context: buildContext(viewSet),
+        industry: this.config.industry,
       },
       this.config.llm,
     );

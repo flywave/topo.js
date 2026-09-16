@@ -46,13 +46,13 @@ export async function runProfileExtraction(
   view: ViewSpec,
   viewSet: ViewSet,
   llm: LLMProvider,
-  opts?: { imagePath?: string },
+  opts?: { imagePath?: string; industry?: string },
 ): Promise<ProfileExtractionResult> {
   const scaleInfo = viewSet.scale
     ? { mmPerPixel: viewSet.scale.mmPerPixel, note: `${viewSet.scale.kind} scale` }
     : { note: "no scale evidence available" };
 
-  const prompt = buildProfileExtractionPrompt(view, scaleInfo);
+  const prompt = buildProfileExtractionPrompt(view, scaleInfo, opts?.industry);
   const answer = await completeWithView(llm, view, prompt, opts?.imagePath);
   const parsed = parseJsonResponse(answer.raw, "profile extraction");
 
@@ -138,6 +138,7 @@ export async function runFeatureTree(
     views: ViewSet;
     profiles?: Profile2D[];
     context?: string;
+    industry?: string;
   },
   llm: LLMProvider,
 ): Promise<FeatureTreeResult> {
@@ -148,6 +149,7 @@ export async function runFeatureTree(
     profiles: input.profiles,
     units: input.views.units.length,
     context: input.context,
+    industry: input.industry,
   });
 
   const raw = await llm.complete(prompt, FEATURE_TREE_SYSTEM);

@@ -17,6 +17,8 @@ import type { SketchSolveReport } from "../cad/model.js";
 
 /** What `Sketch.solve_status()` returns, loosely typed because it is a Record. */
 export interface RawSolveStatus {
+  /** Set when the kernel threw instead of returning a status. */
+  note?: unknown;
   status?: unknown;
   cost?: unknown;
   x?: unknown;
@@ -46,6 +48,7 @@ export function normalizeSolveStatus(raw: RawSolveStatus): SketchSolveReport {
   return {
     status: isFinite(status) ? status : -1,
     cost: isFinite(cost) ? cost : Infinity,
+    note: typeof raw.note === "string" ? raw.note : undefined,
     converged: SUCCESS_CODES.has(status) && isFinite(cost) && cost <= 1e-3,
     dofCount: dof,
     // A sketch with no constrained entities has nothing to solve, so a zero DOF
@@ -89,12 +92,16 @@ export function evaluateSketchSolves(
     reports[id] = report;
 
     if (!SUCCESS_CODES.has(report.status)) {
+      const threw = typeof report.note === "string" && report.note !== "";
       issues.push({
         severity: "error",
         code: "SKT_SOLVER_FAILED",
-        message: `Sketch "${id}": solver returned status ${report.status} (not a success code)`,
-        suggestion:
-          "The constraints are contradictory or the initial geometry is too far from a solution; relax or remove a conflicting constraint",
+        message: threw
+          ? `Sketch "${id}": the kernel's solver threw instead of returning a status — ${report.note}`
+          : `Sketch "${id}": solver returned status ${report.status} (not a success code)`,
+        suggestion: threw
+          ? "The solver is only a cross-check — the geometry comes from the reconciled coordinates and is unaffected — but the constraints could not be verified. Fewer or simpler constraints usually get it to converge"
+          : "The constraints are contradictory or the initial geometry is too far from a solution; relax or remove a conflicting constraint",
       });
       continue;
     }
