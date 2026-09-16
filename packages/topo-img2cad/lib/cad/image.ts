@@ -73,6 +73,15 @@ export interface Silhouette {
   mode: "ink" | "region";
   components: number;
   /**
+   * The raw dark mask, components and all — outline AND annotation.
+   *
+   * The selected component is the part; this is everything drawn. The line gate
+   * measures against this rather than against the part, because annotation does
+   * not need to be removed for a distance to be meaningful, only for a region to
+   * be closed.
+   */
+  ink: Uint8Array;
+  /**
    * Share of all component area held by the selected one.
    *
    * One part has one silhouette, so its region dominates the drawing. An assembly
@@ -772,6 +781,7 @@ export function extractSilhouette(raster: Raster, opts?: SilhouetteOptions): Sil
 
   return {
     mask: result.mask,
+    ink,
     width,
     height,
     bbox: result.bbox,

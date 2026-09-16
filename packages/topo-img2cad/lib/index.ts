@@ -289,6 +289,20 @@ export type {
   AssociativityReport,
 } from "./validators/design_intent.js";
 
+export {
+  measureEdgeDistance,
+  maskOutline,
+  DEFAULT_EDGE_THRESHOLDS,
+  DEFAULT_SEARCH,
+} from "./validators/edge_distance.js";
+export type {
+  EdgeDistanceOptions,
+  EdgeDistanceResult,
+  EdgeDistanceThresholds,
+  Registration,
+  SearchOptions,
+} from "./validators/edge_distance.js";
+
 export { validateGeometry, quickShapeCheck } from "./validators/geometric.js";
 export { validateCodeSyntax, quickSyntaxCheck } from "./validators/code_syntax.js";
 export { analyzeCoverage, checkPrimitiveCoverage } from "./validators/primitive_coverage.js";

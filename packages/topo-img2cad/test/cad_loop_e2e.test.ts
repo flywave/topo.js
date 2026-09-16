@@ -14,6 +14,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { getTopo, installGlobals } from "./helpers/topo.js";
 import { CadPipeline } from "../lib/cad_pipeline.js";
+import { DEFAULT_EDGE_THRESHOLDS } from "../lib/validators/edge_distance.js";
 import { MockProvider } from "../lib/llm.js";
 import { encodePngGray } from "../lib/cad/image_encode.js";
 import { decodeRaster, type Raster } from "../lib/cad/image.js";
@@ -72,6 +73,24 @@ function drawPlate(opts: {
   const gray = new Uint8Array(pxW * pxH).fill(255);
   const opaque = new Uint8Array(pxW * pxH).fill(1);
 
+  drawPlateInto(gray, pxW, pxH, opts.width, opts.height, opts.boreDiameter);
+
+  const raster: Raster = { width: pxW, height: pxH, gray, opaque };
+  const path = join(WORK, `${opts.name}.png`);
+  writeFileSync(path, encodePngGray(raster));
+
+  return { path, width: pxW, height: pxH, modelWidth: opts.width, modelHeight: opts.height };
+}
+
+/** The plate's outline plus its bore, drawn in black into an existing field. */
+function drawPlateInto(
+  gray: Uint8Array,
+  pxW: number,
+  pxH: number,
+  width: number,
+  height: number,
+  boreDiameter?: number,
+): void {
   const set = (x: number, y: number): void => {
     if (x < 0 || y < 0 || x >= pxW || y >= pxH) return;
     gray[y * pxW + x] = 0;
@@ -85,16 +104,16 @@ function drawPlate(opts: {
 
   const left = MARGIN;
   const top = MARGIN;
-  const right = MARGIN + Math.round(opts.width * SCALE);
-  const bottom = MARGIN + Math.round(opts.height * SCALE);
+  const right = MARGIN + Math.round(width * SCALE);
+  const bottom = MARGIN + Math.round(height * SCALE);
 
   hLine(left, right, top);
   hLine(left, right, bottom);
   vLine(left, top, bottom);
   vLine(right, top, bottom);
 
-  if (opts.boreDiameter) {
-    const r = (opts.boreDiameter / 2) * SCALE;
+  if (boreDiameter) {
+    const r = (boreDiameter / 2) * SCALE;
     const cx = (left + right) / 2;
     const cy = (top + bottom) / 2;
     for (let a = 0; a < 360; a += 0.5) {
@@ -102,6 +121,32 @@ function drawPlate(opts: {
       set(Math.round(cx + r * Math.cos(rad)), Math.round(cy + r * Math.sin(rad)));
     }
   }
+}
+
+/**
+ * The same plate, on a fully dimensioned sheet.
+ *
+ * A drawing with its dimensions on it has no single enclosed region that is the
+ * part — the annotation chops the paper into fragments — so the silhouette gate
+ * has nothing to measure. That is the live case this exists for: a drawing of ONE
+ * part, densely annotated, that used to be refused outright.
+ */
+function drawAnnotatedPlate(opts: { name: string; width: number; height: number; pitch?: number }): Drawing {
+  const pitch = opts.pitch ?? 32;
+  const pxW = Math.round(opts.width * SCALE) + MARGIN * 2;
+  const pxH = Math.round(opts.height * SCALE) + MARGIN * 2;
+  const gray = new Uint8Array(pxW * pxH).fill(255);
+  const opaque = new Uint8Array(pxW * pxH).fill(1);
+
+  // The dimension layer: extension lines at a regular pitch over the whole sheet.
+  for (let y = 0; y < pxH; y++) {
+    for (let x = 0; x < pxW; x++) {
+      if ((x + 3) % pitch === 0 || (y + 3) % pitch === 0) gray[y * pxW + x] = 90;
+    }
+  }
+
+  // The part's own outline, drawn over the top of it in solid black.
+  drawPlateInto(gray, pxW, pxH, opts.width, opts.height, 30);
 
   const raster: Raster = { width: pxW, height: pxH, gray, opaque };
   const path = join(WORK, `${opts.name}.png`);
@@ -155,7 +200,11 @@ const PROFILE_TOP = JSON.stringify({
 });
 
 /** 100 x 60 x 10 plate with a 30mm through bore — what the drawing shows. */
-function plateTree(): FeatureTree {
+function plateTree(dims: { width?: number; height?: number; bore?: number } = {}): FeatureTree {
+  const width = dims.width ?? 100;
+  const height = dims.height ?? 60;
+  const bore = dims.bore ?? 30;
+  const hole = { x: width / 2, y: height / 2 };
   return {
     name: "mounting_plate",
     units: { length: "mm", toMillimeter: 1 },
@@ -165,27 +214,27 @@ function plateTree(): FeatureTree {
         id: "s_base",
         plane: { kind: "XY", origin: [0, 0, 0] },
         entities: [
-          { tag: "e1", type: "line", start: [0, 0], end: [100, 0] },
-          { tag: "e2", type: "line", start: [100, 0], end: [100, 60] },
-          { tag: "e3", type: "line", start: [100, 60], end: [0, 60] },
-          { tag: "e4", type: "line", start: [0, 60], end: [0, 0] },
+          { tag: "e1", type: "line", start: [0, 0], end: [width, 0] },
+          { tag: "e2", type: "line", start: [width, 0], end: [width, height] },
+          { tag: "e3", type: "line", start: [width, height], end: [0, height] },
+          { tag: "e4", type: "line", start: [0, height], end: [0, 0] },
         ],
         constraints: [
-          { kind: "LENGTH", tags: ["e1"], value: 100 },
+          { kind: "LENGTH", tags: ["e1"], value: width },
           { kind: "ORIENTATION", tags: ["e1"], value: [1, 0] },
-          { kind: "LENGTH", tags: ["e2"], value: 60 },
+          { kind: "LENGTH", tags: ["e2"], value: height },
           { kind: "ORIENTATION", tags: ["e2"], value: [0, 1] },
-          { kind: "LENGTH", tags: ["e3"], value: 100 },
+          { kind: "LENGTH", tags: ["e3"], value: width },
           { kind: "ORIENTATION", tags: ["e3"], value: [-1, 0] },
-          { kind: "LENGTH", tags: ["e4"], value: 60 },
+          { kind: "LENGTH", tags: ["e4"], value: height },
           { kind: "ORIENTATION", tags: ["e4"], value: [0, -1] },
         ],
       },
       s_bore: {
         id: "s_bore",
         plane: { kind: "XY", origin: [0, 0, 0] },
-        entities: [{ tag: "c1", type: "circle", center: [50, 30], radius: 15 }],
-        constraints: [{ kind: "RADIUS", tags: ["c1"], value: 15 }],
+        entities: [{ tag: "c1", type: "circle", center: [hole.x, hole.y], radius: bore / 2 }],
+        constraints: [{ kind: "RADIUS", tags: ["c1"], value: bore / 2 }],
       },
     },
     features: [
@@ -356,6 +405,69 @@ describe("the closed loop: image → tree → code → measured verdict", () => 
     expect(top.iou).toBeGreaterThan(0.9);
     expect(result.warnings.join(" ")).toMatch(/fitted to the model/);
   }, 180_000);
+
+  it("grades shape on an annotated drawing, where no silhouette can be read", async () => {
+    // The live failure this exists for: a drawing of ONE part, fully dimensioned.
+    // Annotation chops the paper into fragments, so there is no single enclosed
+    // region that is the part — the silhouette gate has nothing to measure, and
+    // the outline gate used to be refused along with it. A run against a drawing
+    // like this reported PASSED with half its outline more than thirty pixels
+    // from anything the drawing had drawn.
+    const drawing = drawAnnotatedPlate({ name: "plate_annotated", width: 100, height: 60 });
+
+    const good = new CadPipeline({
+      llm: (() => {
+        const llm = scriptedLLM(JSON.stringify(plateTree()));
+        llm.setResponse("analyzeImage", viewSetFor(drawing));
+        return llm;
+      })(),
+      tp,
+      maxRefinements: 0,
+    });
+    const goodRun = await good.run(drawing.path, "Mounting plate");
+
+    // The drawing is one part, densely annotated, and it says so rather than
+    // claiming it could not read the sheet at all.
+    expect(goodRun.warnings.join(" ")).toMatch(/no single part silhouette/);
+    const edges = goodRun.review!.edgeDistance;
+    expect(edges).toBeDefined();
+    expect(edges!.length).toBe(1);
+    expect(edges![0].compared).toBe(true);
+    // The placement is searched, because there is no silhouette to check the
+    // drawing's own scale estimate against.
+    expect(edges![0].registration).toBeDefined();
+    expect(edges![0].meanFraction).toBeLessThan(0.015);
+    // It clears the chance bar, which is what a dense sheet demands.
+    expect(edges![0].meanPx).toBeLessThan(
+      Math.max(
+        DEFAULT_EDGE_THRESHOLDS.maxMeanRatio * edges![0].baselinePx,
+        DEFAULT_EDGE_THRESHOLDS.matchFloorPx,
+      ),
+    );
+    expect(goodRun.review!.passed).toBe(true);
+
+    // The mask gate sat this one out, and said so rather than reporting a
+    // comparison it never made.
+    expect(goodRun.review!.reprojection!.views.length).toBe(0);
+
+    // Now the part the drawing does NOT show: the same plate at half size.
+    const bad = new CadPipeline({
+      llm: (() => {
+        const llm = scriptedLLM(JSON.stringify(plateTree({ width: 50, height: 30, bore: 16 })));
+        llm.setResponse("analyzeImage", viewSetFor(drawing));
+        return llm;
+      })(),
+      tp,
+      maxRefinements: 0,
+    });
+    const badRun = await bad.run(drawing.path, "Mounting plate");
+
+    expect(badRun.review!.passed).toBe(false);
+    expect(badRun.review!.issues.some((i) => i.code === "EDG_OUTLINE_MISMATCH")).toBe(true);
+    expect(badRun.review!.edgeDistance![0].meanRatio).toBeGreaterThan(
+      DEFAULT_EDGE_THRESHOLDS.maxMeanRatio,
+    );
+  }, 300_000);
 });
 
 // ---------------------------------------------------------------------------

@@ -65,8 +65,14 @@ export function saveArtifacts(opts: SaveArtifactOptions): ArtifactPaths {
     const refDir = join(dir, "reference");
     mkdirSync(refDir, { recursive: true });
     for (const ref of opts.references) {
+      // A drawing with no usable silhouette has no mask to write; its ink is the
+      // evidence and it is written instead, so the gate's input can be looked at.
+      const raster =
+        ref.maskWidth > 0 && ref.maskHeight > 0
+          ? maskToRaster(ref.mask, ref.maskWidth, ref.maskHeight)
+          : maskToRaster(ref.ink, ref.inkWidth, ref.inkHeight);
       const pngPath = join(refDir, `${ref.viewId}.png`);
-      writeFileSync(pngPath, encodePngGray(maskToRaster(ref.mask, ref.maskWidth, ref.maskHeight)));
+      writeFileSync(pngPath, encodePngGray(raster));
       paths.reference.push(pngPath);
     }
   }
@@ -115,6 +121,26 @@ function summarize(review: CadReviewOutcome): unknown {
           })),
         }
       : undefined,
+    edgeDistance: review.edgeDistance?.map((e) => ({
+      compared: e.compared,
+      passed: e.passed,
+      meanPx: round(e.meanPx),
+      medianPx: round(e.medianPx),
+      p90Px: round(e.p90Px),
+      maxPx: round(e.maxPx),
+      meanFraction: round(e.meanFraction),
+      meanRatio: round(e.meanRatio),
+      baselinePx: round(e.baselinePx),
+      outlinePixels: e.outlinePixels,
+      registration: e.registration
+        ? {
+            scale: round(e.registration.scale),
+            shiftXPx: round(e.registration.shiftXPx),
+            shiftYPx: round(e.registration.shiftYPx),
+            movedFraction: round(e.registration.movedFraction),
+          }
+        : undefined,
+    })),
     skippedFeatures: review.skippedFeatures,
     issues: review.issues,
   };

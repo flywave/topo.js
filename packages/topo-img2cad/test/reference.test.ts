@@ -399,6 +399,115 @@ describe("reference silhouettes from a drawing", () => {
       Array.from(drawing.gray.slice(0, 64)),
     );
   });
+
+  it("carries the drawing's ink alongside the mask, with a margin", () => {
+    // The mask is the part's INTERIOR; its outline strokes lie just outside it.
+    // Cutting the ink to the mask's own box would throw away the very line the
+    // outline gate measures against.
+    const built = buildViewReferences(viewSet(), { raster: plateDrawing(), width: 512, height: 512 });
+    const ref = built.references[0];
+
+    expect(ref.inkWidth).toBe(ref.maskWidth + 8);
+    expect(ref.inkHeight).toBe(ref.maskHeight + 8);
+    expect(ref.ink.length).toBe(ref.inkWidth * ref.inkHeight);
+
+    // The plate's outline is ink; so the crop is not blank.
+    expect(ref.ink.reduce((n, v) => n + (v ? 1 : 0), 0)).toBeGreaterThan(50);
+
+    // The mask's interior is material, not ink — ink is everything drawn.
+    const centreX = Math.floor(ref.maskWidth / 2);
+    const centreY = Math.floor(ref.maskHeight / 2);
+    expect(ref.ink[(centreY + 4) * ref.inkWidth + centreX + 4]).toBe(0);
+  });
+
+  it("keeps the ink frame aligned with the mask it was cut from", () => {
+    const built = buildViewReferences(
+      viewSet({ scale: { kind: "dimension_callout", realLength: 100, imageLength: 200, mmPerPixel: 0.5 } }),
+      { raster: plateDrawing(), width: 512, height: 512 },
+    );
+    const ref = built.references[0];
+    const mpp = 0.5;
+    const margin = 4 * mpp;
+
+    // Mask pixel (4,4) is ink pixel (0,0), so the ink's frame starts one margin
+    // before the mask's in model coordinates.
+    expect(ref.inkBounds).toBeDefined();
+    expect(ref.inkBounds!.minX).toBeCloseTo(ref.referenceBounds!.minX - margin, 6);
+    expect(ref.inkBounds!.minY).toBeCloseTo(ref.referenceBounds!.minY - margin, 6);
+    expect(ref.inkBounds!.maxX).toBeCloseTo(ref.referenceBounds!.maxX + margin, 6);
+    expect(ref.inkBounds!.maxY).toBeCloseTo(ref.referenceBounds!.maxY + margin, 6);
+  });
+
+  it("reads a part that touches the edge of its panel without wrapping the ink", () => {
+    // The crop is expanded by a margin, so it runs off the source. Reading past
+    // the end must give background, not pixels from the far side of the image.
+    const r = lineArt(120, 120, () => {});
+    const rect = rectOutline(r, 0, 0, 119, 119);
+    for (let y = 0; y < r.height; y++) for (let x = 0; x < r.width; x++) rect(x, y);
+
+    const built = buildViewReferences(viewSet(), { raster: r, width: 512, height: 512 });
+    expect(built.references.length).toBe(1);
+    const ref = built.references[0];
+
+    expect(ref.inkWidth).toBe(ref.maskWidth + 8);
+    // The border of the expanded crop is outside the drawing — entirely blank.
+    for (let x = 0; x < ref.inkWidth; x++) {
+      expect(ref.ink[x]).toBe(0);
+      expect(ref.ink[(ref.inkHeight - 1) * ref.inkWidth + x]).toBe(0);
+    }
+  });
+
+  it("refuses the mask but keeps the ink on a drawing of many parts", () => {
+    // An assembly: nine small boxes, no single region that is the part. The mask
+    // gate has nothing to measure here, and used to take the outline gate with
+    // it — which is the one shape check that does not need a closed region.
+    const r = lineArt(200, 200, () => {});
+    for (let i = 0; i < 9; i++) {
+      const cx = 40 + (i % 3) * 60;
+      const cy = 40 + Math.floor(i / 3) * 60;
+      const box = rectOutline(r, cx - 20, cy - 20, cx + 20, cy + 20);
+      for (let y = cy - 22; y <= cy + 22; y++) for (let x = cx - 22; x <= cx + 22; x++) box(x, y);
+    }
+
+    const built = buildViewReferences(viewSet(), { raster: r, width: 512, height: 512 });
+    expect(built.references.length).toBe(1);
+    const ref = built.references[0];
+
+    expect(ref.maskUsable).toBe(false);
+    expect(ref.maskWidth).toBe(0);
+    expect(built.notes.join(" ")).toMatch(/no single part silhouette/);
+
+    // The ink is the view's whole region, so the gate still has something to
+    // measure an outline against.
+    expect(ref.inkWidth).toBe(r.width);
+    expect(ref.inkHeight).toBe(r.height);
+    expect(ref.ink.reduce((n, v) => n + (v ? 1 : 0), 0)).toBeGreaterThan(200);
+  });
+
+  it("places the whole-region ink from the stated scale when there is no mask", () => {
+    const r = lineArt(200, 200, () => {});
+    for (let i = 0; i < 4; i++) {
+      const cx = 60 + (i % 2) * 80;
+      const cy = 60 + Math.floor(i / 2) * 80;
+      const box = rectOutline(r, cx - 25, cy - 25, cx + 25, cy + 25);
+      for (let y = cy - 27; y <= cy + 27; y++) for (let x = cx - 27; x <= cx + 27; x++) box(x, y);
+    }
+
+    const built = buildViewReferences(
+      viewSet({ scale: { kind: "dimension_callout", realLength: 100, imageLength: 200, mmPerPixel: 0.5 } }),
+      { raster: r, width: 512, height: 512 },
+    );
+    const ref = built.references[0];
+
+    expect(ref.maskUsable).toBe(false);
+    // 200px of drawing at 0.5 mm/px is a 100mm frame, and the ink IS that frame.
+    expect(ref.inkBounds!.minX).toBeCloseTo(0, 6);
+    expect(ref.inkBounds!.minY).toBeCloseTo(0, 6);
+    expect(ref.inkBounds!.maxX).toBeCloseTo(100, 6);
+    expect(ref.inkBounds!.maxY).toBeCloseTo(100, 6);
+    expect(ref.referenceBounds).toBeUndefined();
+    expect(built.notes.join(" ")).toMatch(/no silhouette to check that estimate against/);
+  });
 });
 
 // ---------------------------------------------------------------------------

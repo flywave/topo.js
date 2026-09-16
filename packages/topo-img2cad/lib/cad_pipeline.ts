@@ -35,6 +35,12 @@ import {
   type ReprojectionReport,
   type ReprojectionThresholds,
 } from "./validators/reprojection.js";
+import {
+  measureEdgeDistance,
+  DEFAULT_EDGE_THRESHOLDS,
+  type EdgeDistanceResult,
+  type EdgeDistanceThresholds,
+} from "./validators/edge_distance.js";
 import { validateGeometry } from "./validators/geometric.js";
 import { quickSyntaxCheck } from "./validators/code_syntax.js";
 import { executeInSandbox } from "./stages/review.js";
@@ -86,6 +92,8 @@ export interface CadPipelineConfig {
    */
   checkAssociativity?: boolean;
   thresholds?: ReprojectionThresholds;
+  /** Thresholds for the outline-distance gate. */
+  edgeThresholds?: EdgeDistanceThresholds;
   /** How many times the feature tree may be repaired. */
   maxRefinements?: number;
   /**
@@ -127,6 +135,13 @@ export interface CadReviewOutcome {
   geometry?: GeometryReport;
   solves?: SketchSolveOutcome;
   reprojection?: ReprojectionReport;
+  /**
+   * How far the model's projected outline sits from the drawing's ink.
+   *
+   * The gate that still works when no reference silhouette can be extracted —
+   * see `lib/validators/edge_distance.ts`.
+   */
+  edgeDistance?: EdgeDistanceResult[];
   /** Feature ids the emitter could not express. */
   skippedFeatures: Array<{ id: string; reason: string }>;
 }
@@ -163,6 +178,10 @@ export class CadPipeline {
   private imageReferences: ViewReference[] = [];
   /** Body the last review executed, kept so it can be exported without a rebuild. */
   private reviewedShape: unknown = null;
+  /** Outline-distance results for the current review. */
+  private edgeDistances: EdgeDistanceResult[] = [];
+  /** Re-projection result for the current review, for the final return. */
+  private lastReprojection: ReprojectionReport | undefined;
 
   constructor(config: CadPipelineConfig) {
     this.config = config;
@@ -252,6 +271,8 @@ export class CadPipeline {
     }
 
     let build = runBuildFromTree(tree);
+    this.edgeDistances = [];
+    this.lastReprojection = undefined;
     let review = this.config.tp ? this.review(tree, build) : undefined;
     let refinements = 0;
 
@@ -468,6 +489,7 @@ export class CadPipeline {
 
       // L3 — re-projection against the reference silhouettes.
       const reprojection = this.reproject(tree, sandbox.shape);
+      this.lastReprojection = reprojection;
       if (reprojection) {
         issues.push(...reprojection.issues);
         return {
@@ -476,6 +498,7 @@ export class CadPipeline {
           geometry,
           solves,
           reprojection,
+          edgeDistance: this.edgeDistances.length > 0 ? [...this.edgeDistances] : undefined,
           skippedFeatures,
         };
       }
@@ -493,6 +516,8 @@ export class CadPipeline {
       issues,
       geometry,
       solves,
+      reprojection: this.lastReprojection,
+      edgeDistance: this.edgeDistances.length > 0 ? [...this.edgeDistances] : undefined,
       skippedFeatures,
     };
   }
@@ -500,9 +525,11 @@ export class CadPipeline {
   private reproject(tree: FeatureTree, shape: unknown): ReprojectionReport | undefined {
     const refs = this.config.references;
     const imageRefs = this.imageReferences;
+    this.edgeDistances = [];
     if (imageRefs.length === 0 && (!refs || Object.keys(refs).length === 0)) return undefined;
 
     const thresholds = this.config.thresholds ?? DEFAULT_THRESHOLDS;
+    const edgeThresholds = this.config.edgeThresholds ?? DEFAULT_EDGE_THRESHOLDS;
     const rasterSize = this.config.rasterSize ?? 512;
     const issues: ReviewIssue[] = [];
     const results = [];
@@ -515,6 +542,42 @@ export class CadPipeline {
 
       const imageRef = imageRefs.find((r) => r.viewId === view.id);
       const along = projectionKeyFor(view);
+
+      // The outline gate runs on every image reference, mask or no mask. It is
+      // the only shape check that survives a drawing whose annotation cannot be
+      // separated from the part, and it can only be skipped when there is no ink.
+      if (imageRef) {
+        const edge = measureEdgeDistance(shape, {
+          view: along,
+          ink: imageRef.ink,
+          inkWidth: imageRef.inkWidth,
+          inkHeight: imageRef.inkHeight,
+          referenceBounds: imageRef.inkBounds,
+          // The comparison runs on the DRAWING's own pixel grid rather than the
+          // model's raster size. Upsampling a 1px stroke into a larger grid turns
+          // it into a dashed line, and the model's crisp outline then reads as
+          // 2-3px from ink no matter how right it is — a residual of the
+          // resampling, spent against the threshold as if it were shape error.
+          width: imageRef.inkWidth,
+          height: imageRef.inkHeight,
+          thresholds: edgeThresholds,
+          // With no silhouette the frame's scale is the model's own pixel
+          // estimate, unchecked. Searching a window around it keeps a 14% scale
+          // error from reading as a 14% wrong part.
+          search: imageRef.maskUsable ? undefined : {},
+        });
+        this.log(
+          `outline gate ${view.id}: mean ${edge.meanPx.toFixed(2)}px (${(edge.meanFraction * 100).toFixed(2)}%)` +
+            (edge.registration
+              ? `, best placement scale ${edge.registration.scale.toFixed(3)} after ${edge.registration.searched} searches`
+              : ""),
+        );
+        issues.push(...edge.issues);
+        this.edgeDistances.push(edge);
+      }
+
+      if (imageRef && !imageRef.maskUsable) continue;
+
       const report = imageRef
         ? reprojectAgainstRaster(shape, {
             view: along,
@@ -529,6 +592,7 @@ export class CadPipeline {
         : this.reprojectAgainstSupplied(shape, along, refs?.[view.id], rasterSize, thresholds);
 
       if (!report) continue;
+
       for (const issue of report.issues) {
         // A size mismatch against a model-placed frame is not evidence that the
         // dimensions are wrong, and the repair loop must not be told that it is.
@@ -563,13 +627,14 @@ export class CadPipeline {
       }
     }
 
-    return {
+    const outcome: ReprojectionReport = {
       compared: results.length > 0,
       views: results,
       consistency,
       issues,
       passed: !issues.some((i) => i.severity === "error"),
     };
+    return outcome;
   }
 
   /** A caller-supplied reference in model coordinates, if there is one. */
@@ -614,6 +679,8 @@ export class CadPipeline {
       "DIN_INERT_PARAMETER",
       "RPR_LOW_IOU",
       "RPR_DEVIATION",
+      "EDG_OUTLINE_MISMATCH",
+      "EDG_LOCAL_MISMATCH",
       "RPR_VIEW_MISMATCH",
       "RPR_EMPTY_MODEL",
       "SKT_HIGH_RESIDUAL",

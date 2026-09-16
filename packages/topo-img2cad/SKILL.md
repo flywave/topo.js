@@ -193,6 +193,7 @@ Deterministic emission. No AI involved: a valid tree always produces the same co
 | L2 geometry | null / non-solid / degenerate result |
 | L3 solver residual | constraints not actually satisfied |
 | L4 silhouette re-projection | valid solid, **wrong shape** |
+| L4b outline-to-ink distance | valid solid, **wrong shape**, when the drawing has no silhouette to give |
 | L5 view consistency | adjacent orthographic views disagreeing on a shared dimension |
 | L6 associativity | a "parametric" model whose parameters drive nothing |
 
@@ -225,6 +226,56 @@ the model is registered to the frame's min corner. Normalizing each to its own b
 box independently would make every pair of silhouettes agree, which is the exact
 failure this gate exists to catch.
 
+
+## L4b — the outline gate, for drawings that have no silhouette
+
+L4 needs a reference *silhouette*: one closed region that is the part. A densely
+annotated drawing does not have one — a fully dimensioned single part measured 143
+enclosed regions with the largest holding 19% of the area — and a drawing of an
+assembly does not either. On exactly those drawings the shape check went silent, and
+a run came back `PASSED` with half its outline more than thirty pixels from anything
+the sheet had drawn.
+
+`lib/validators/edge_distance.ts` measures the same thing without needing a region.
+It takes the OUTLINE of the model's re-projection and asks how far it is from the
+drawing's **ink** — every dark stroke, annotation included. Annotation does not break
+it: a dimension line near the part makes the measure slightly lenient, where a missing
+region made it impossible.
+
+Four things make the number mean something:
+
+- **The comparison runs on the drawing's own pixel grid**, not the model's raster
+  size. Upsampling a one-pixel stroke into a larger grid turns it into a dashed line,
+  and a correct model then reads as 2-3px away no matter how right it is.
+- **Two bars, and both must be met.** The absolute one (`maxMeanFraction`, as a
+  fraction of the frame diagonal) asks "is the outline on the drawing". The chance
+  one (`maxMeanRatio` × the distance an *arbitrary* placement scores) asks "is it much
+  closer to the ink than a placement that knew nothing would be". The second exists
+  because the first is close to free on a busy sheet: measured on a real annotated
+  drawing a wrong model scored 19.5px against a 28.5px floor. Measured separation:
+  correct part 0.003-0.13, traced disc where the drawing had a part 0.30-0.69.
+- **The chance bar has a one-pixel floor** (`matchFloorPx`). A correct model's outline
+  is a pixel from the drawn one by rasterization alone — both are one pixel wide — and
+  on a dense sheet that pixel is a large share of the bar. The floor is as small as it
+  can be: every pixel of it is a placement any model can aim for.
+- **Placement is searched, but only within a quarter of the frame**, and scale only
+  within ±20%. The model's coordinates come from the profile read off this drawing, so
+  its placement is known to within the sheet's margin — but only to within that, and
+  the margin is not recorded anywhere. Searching the whole sheet was measured to move
+  a two-disc model 94% of the frame onto a dense corner and score it 3.9px, passing
+  something nothing should pass. Where the search ran, `registration.scale` and
+  `registration.movedFraction` are in the result and in `review.json`.
+
+`reference.ts` builds the line reference when it refuses the mask: `maskUsable: false`,
+the ink is the view's whole region, and the frame comes from the drawing's stated
+scale with no silhouette to check it against (the note says so). The mask gate is
+skipped for that view; the outline gate is not. The reference PNG written to
+`.topo-img2cad/reference/` is the ink in that case, so the gate's input can be looked at.
+
+**What it does not do.** It cannot see a feature the drawing does not dimension, it is
+blind to size when the drawing carries no scale, and it cannot tell a part from a
+correctly-shaped hole in one. It is a shape check that survives annotation, not a
+replacement for L4 where L4 can run.
 
 ## Verified API Constraints
 
@@ -486,8 +537,8 @@ With a `workDir` set, `lib/artifacts.ts` writes:
 |---|---|
 | `.topo-img2cad/tree.json` | the design; edit a dimension here and rebuild with `--tree` |
 | `.topo-img2cad/model.ts` | the emitted code, for reading and for use |
-| `.topo-img2cad/review.json` | every measured verdict, including IoU per view |
-| `.topo-img2cad/reference/<view>.png` | the silhouette the model was judged against |
+| `.topo-img2cad/review.json` | every measured verdict, including IoU per view and the outline gate's distance, chance floor and placement |
+| `.topo-img2cad/reference/<view>.png` | the silhouette the model was judged against — or the drawing's ink, when there was no silhouette |
 
 The reference PNGs matter more than they look: L4 is the one verdict a reader cannot
 check by reading the code, so when it fails, seeing the exact pixels the model was
@@ -604,12 +655,13 @@ valid solids — see the table above for the ones that are.
   pixels fell below 128: nothing closed, no region was found, and the gate had
   nothing to compare against. Adaptive thresholds land on the same value for
   genuine black-on-white art.
-- **A drawing with no single part has no silhouette to give.** One part's region
-  dominates its drawing's enclosed area (83% for a real plate); a catenary
-  illustration's largest region held 13% across 64 regions, because it is nine
-  components plus annotation boxes. Below half, no reference is built and the run
-  says the drawing looks like an assembly. Measuring a model against the largest
-  of those regions would answer a question nobody asked, confidently.
+- **A drawing with no single part has no silhouette to give — and that is now only
+  the mask gate's problem.** One part's region dominates its drawing's enclosed area
+  (83% for a real plate); a catenary illustration's largest region held 13% across 64
+  regions, because it is nine components plus annotation boxes. Below half, no MASK
+  reference is built and the run says the drawing looks like an assembly. The ink is
+  still there, so the outline gate runs — see "L4b" above. Measuring a model against
+  the largest of those regions would answer a question nobody asked, confidently.
 - **STL export is binary only.** The binding hardcodes it; there is no ASCII switch,
   and post-processing an STL to change that is out of scope here.
 - **A written STL is checked against the solid it came from.** A structurally valid

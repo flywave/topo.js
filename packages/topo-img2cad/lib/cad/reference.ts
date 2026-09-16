@@ -40,10 +40,18 @@ export const ORTHOGRAPHIC_VIEW_KINDS: ReadonlySet<string> = new Set([
 export interface ViewReference {
   viewId: string;
   viewKind: ViewKind;
-  /** The part's silhouette, cropped to its own bounding box. */
+  /** The part's silhouette, cropped to its own bounding box. Empty when unusable. */
   mask: Uint8Array;
   maskWidth: number;
   maskHeight: number;
+  /**
+   * Whether this drawing gave a silhouette the mask gate can compare against.
+   *
+   * A drawing of one part yields one region that is the part. A densely
+   * annotated or multi-part drawing does not, and the mask gate has nothing to
+   * measure. The outline gate runs either way — see `lib/validators/edge_distance.ts`.
+   */
+  maskUsable: boolean;
   /**
    * Model-coordinate frame the mask covers, when the drawing carried scale
    * evidence. Absent means the mask will be fitted to the model instead.
@@ -64,6 +72,24 @@ export interface ViewReference {
    * mismatch as likely to be a misread scale as a wrong dimension.
    */
   scaleUnverified: boolean;
+  /**
+   * The drawing's ink — outline and annotation — cut to the same box as the mask.
+   *
+   * Same frame, so the line gate can measure the model's outline against it
+   * without any registration of its own.
+   */
+  ink: Uint8Array;
+  inkWidth: number;
+  inkHeight: number;
+  /**
+   * Model frame the ink covers.
+   *
+   * The ink is cut with a MARGIN, because the silhouette's own box is the part's
+   * INTERIOR — its outline strokes lie just outside it, and cutting to the box
+   * would throw away the very line the gate measures against. Absent when there
+   * is no scale evidence, in which case the ink is fitted to the model instead.
+   */
+  inkBounds?: Bounds2D;
   /** Which mode actually discriminated part from paper. */
   silhouetteMode: "ink" | "region";
   notes: string[];
@@ -185,20 +211,58 @@ function buildViewReference(
   // 12.9% of it, because the drawing is nine components plus annotation boxes.
   // Measuring a model against the largest of those would answer a question nobody
   // asked and report the answer with full confidence.
-  if (silhouette.largestShare < 0.5) {
-    return {
-      notes: [
-        `view ${view.id}: this drawing has no single part silhouette — its largest enclosed region holds only ${(silhouette.largestShare * 100).toFixed(0)}% of the enclosed area across ${silhouette.components} regions, which is what an assembly or a schematic looks like. No reference was built for it; a whole-part silhouette has to come from a drawing of one part.`,
-      ],
-    };
+  //
+  // So the MASK is refused. The ink is not: a filled region needs the annotation
+  // to be gone, but a distance does not, so the outline gate can still run on
+  // what is drawn. That is the difference between a drawing this cannot grade and
+  // a drawing nothing can grade.
+  const maskUsable = silhouette.largestShare >= 0.5;
+  if (!maskUsable) {
+    notes.push(
+      `view ${view.id}: this drawing has no single part silhouette — its largest enclosed region holds only ${(silhouette.largestShare * 100).toFixed(0)}% of the enclosed area across ${silhouette.components} regions, which is what an assembly or a schematic looks like. The mask gate cannot run against it; the outline gate still can, because a distance to the drawing's ink needs no closed region.`,
+    );
   }
 
-  const local = cropSilhouetteToBBox(silhouette);
+  const local = maskUsable
+    ? cropSilhouetteToBBox(silhouette)
+    : { mask: new Uint8Array(0), width: 0, height: 0 };
   const mask = local.mask;
   const maskWidth = local.width;
   const maskHeight = local.height;
 
-  const coverage = local.mask.reduce((n, v) => n + (v ? 1 : 0), 0) / (maskWidth * maskHeight);
+  // The ink comes with a margin, so the part's own outline is inside the crop
+  // rather than exactly on its edge. With no mask to cut to, the ink is the
+  // view's whole region and the frame has to come from the stated scale instead.
+  const margin = 4;
+  const inkBox = maskUsable
+    ? {
+        x0: silhouette.bbox.x0 - margin,
+        y0: silhouette.bbox.y0 - margin,
+        x1: silhouette.bbox.x1 + margin,
+        y1: silhouette.bbox.y1 + margin,
+      }
+    : { x0: 0, y0: 0, x1: cropped.width - 1, y1: cropped.height - 1 };
+  const inkWidth = maskUsable ? maskWidth + margin * 2 : cropped.width;
+  const inkHeight = maskUsable ? maskHeight + margin * 2 : cropped.height;
+  const ink = cropMask(
+    silhouette.ink,
+    silhouette.width,
+    silhouette.height,
+    inkBox,
+    inkWidth,
+    inkHeight,
+  );
+  if (ink.every((v) => !v)) {
+    return {
+      notes: [
+        `view ${view.id}: the drawing has no ink to measure an outline against (${silhouette.notes.join("; ") || "nothing was drawn"})`,
+      ],
+    };
+  }
+
+  const coverage = maskUsable
+    ? local.mask.reduce((n, v) => n + (v ? 1 : 0), 0) / (maskWidth * maskHeight)
+    : 0;
   if (coverage > 0.98) {
     notes.push(
       `view ${view.id}: the silhouette fills its bounding box entirely, which is what a solid rectangle looks like — check the image background is distinguishable from the part`,
@@ -206,19 +270,38 @@ function buildViewReference(
   }
   notes.push(...silhouette.notes);
 
-  const scale = realignScale(viewSet, maskWidth, maskHeight, notes);
+  // With a silhouette, the drawing's own extent re-places the scale and the
+  // model's pixel estimate only has to say which axis the dimension lies on.
+  // Without one there is nothing to realign against, so the estimate stands as
+  // it is — and says so.
+  const scale = maskUsable
+    ? realignScale(viewSet, maskWidth, maskHeight, notes)
+    : { mmPerPixel: viewSet.scale?.mmPerPixel, verified: false };
   const mmPerPixel = scale.mmPerPixel;
+  const frameWidthPx = maskUsable ? maskWidth : cropped.width;
+  const frameHeightPx = maskUsable ? maskHeight : cropped.height;
   let referenceBounds: Bounds2D | undefined;
+  let inkBounds: Bounds2D | undefined;
   if (mmPerPixel && isFinite(mmPerPixel) && mmPerPixel > 0) {
-    referenceBounds = {
-      minX: 0,
-      minY: 0,
-      maxX: maskWidth * mmPerPixel,
-      maxY: maskHeight * mmPerPixel,
+    // The ink's box is the region's, and in model coordinates that is one
+    // margin's worth of millimetres on every side when the crop was cut with one.
+    const pad = maskUsable ? margin * mmPerPixel : 0;
+    inkBounds = {
+      minX: -pad,
+      minY: -pad,
+      maxX: frameWidthPx * mmPerPixel + pad,
+      maxY: frameHeightPx * mmPerPixel + pad,
     };
-    notes.push(
-      `view ${view.id}: the mask covers ${referenceBounds.maxX.toFixed(1)} x ${referenceBounds.maxY.toFixed(1)} mm, placed from the model's own pixel estimate (${mmPerPixel.toFixed(4)} mm/px) — the drawing states the real length but not how many pixels it spans, and that estimate is the softest number in this run`,
-    );
+    if (maskUsable) {
+      referenceBounds = { minX: 0, minY: 0, maxX: maskWidth * mmPerPixel, maxY: maskHeight * mmPerPixel };
+      notes.push(
+        `view ${view.id}: the mask covers ${referenceBounds.maxX.toFixed(1)} x ${referenceBounds.maxY.toFixed(1)} mm, placed from the model's own pixel estimate (${mmPerPixel.toFixed(4)} mm/px) — the drawing states the real length but not how many pixels it spans, and that estimate is the softest number in this run`,
+      );
+    } else {
+      notes.push(
+        `view ${view.id}: the outline gate's frame covers ${(frameWidthPx * mmPerPixel).toFixed(1)} x ${(frameHeightPx * mmPerPixel).toFixed(1)} mm, placed from the model's own pixel estimate (${mmPerPixel.toFixed(4)} mm/px) with no silhouette to check that estimate against — so the gate searches a placement window and a wrong estimate does not read as a wrong part`,
+      );
+    }
   } else {
     notes.push(
       `view ${view.id}: no scale evidence, so the reference is fitted to the model — shape is checked, size is not`,
@@ -232,6 +315,11 @@ function buildViewReference(
       mask,
       maskWidth,
       maskHeight,
+      maskUsable,
+      ink,
+      inkWidth,
+      inkHeight,
+      inkBounds,
       referenceBounds,
       scaleUnverified: referenceBounds !== undefined && !scale.verified,
       silhouetteMode: silhouette.mode,
@@ -319,6 +407,34 @@ function realignScale(
     `scale realigned: the drawing's "${scale.label ?? scale.realLength}" was read as spanning ${scale.imageLength}px, but this silhouette's ${useWidth ? "width" : "height"} is ${extent}px — placing the mask at ${measured.toFixed(4)} mm/px rather than ${declared.toFixed(4)}`,
   );
   return { mmPerPixel: measured, verified: true };
+}
+
+/**
+ * Cut a full-frame mask down to an existing bounding box.
+ *
+ * The box is expanded by a margin and so routinely runs off the source — a part
+ * touching the edge of its panel is the normal case, not the exception. Pixels
+ * outside the source read as background rather than wrapping around to the far
+ * side of the image, which is what a naive `subarray` would do.
+ */
+function cropMask(
+  mask: Uint8Array,
+  sourceWidth: number,
+  sourceHeight: number,
+  box: { x0: number; y0: number; x1: number; y1: number },
+  width: number,
+  height: number,
+): Uint8Array {
+  const out = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const sy = box.y0 + y;
+    if (sy < 0 || sy >= sourceHeight) continue;
+    for (let x = 0; x < width; x++) {
+      const sx = box.x0 + x;
+      if (sx >= 0 && sx < sourceWidth && mask[sy * sourceWidth + sx]) out[y * width + x] = 1;
+    }
+  }
+  return out;
 }
 
 /**
