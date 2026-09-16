@@ -306,6 +306,18 @@ export type {
   SearchOptions,
 } from "./validators/edge_distance.js";
 
+export {
+  measureProfileToInk,
+  profilePoints,
+  DEFAULT_PROFILE_TO_INK_THRESHOLDS,
+} from "./validators/profile_to_ink.js";
+export type {
+  ProfileToInkOptions,
+  ProfileToInkResult,
+  ProfileToInkThresholds,
+  EntityDistance,
+} from "./validators/profile_to_ink.js";
+
 export { validateGeometry, quickShapeCheck } from "./validators/geometric.js";
 export { validateCodeSyntax, quickSyntaxCheck } from "./validators/code_syntax.js";
 export { analyzeCoverage, checkPrimitiveCoverage } from "./validators/primitive_coverage.js";

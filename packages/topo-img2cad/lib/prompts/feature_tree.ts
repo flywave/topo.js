@@ -227,6 +227,45 @@ ${rows.join("\n")}
 Use the matching plane for the profile's base sketch. Do not default to XY.`;
 }
 
+/**
+ * What the traced profiles were measured to be worth, entity by entity.
+ *
+ * Stated as measurements against the drawing, not as advice: the numbers are what
+ * a reader would check, and the prompt is not the place to invent an opinion.
+ */
+function profileCheckBlock(
+  checks: Array<{
+    viewId: string;
+    meanPx: number;
+    meanRatio: number;
+    registration: string;
+    entities: Array<{ tag: string; type: string; meanPx: number; description: string }>;
+  }> | undefined,
+): string {
+  if (!checks || checks.length === 0) return "";
+  const lines: string[] = [];
+  for (const c of checks) {
+    lines.push(
+      `  view ${c.viewId}: the traced profile averages ${c.meanPx.toFixed(1)}px from the drawing's ink ` +
+        `(${c.registration === "absolute" ? "size and shape both checked" : "shape only — the drawing carries no scale"}), ` +
+        `which is ${c.meanRatio.toFixed(2)} of what an arbitrary placement of it would score. 1.00 means no better than random.`,
+    );
+    const worst = c.entities.slice(0, 6);
+    if (worst.length > 0) {
+      lines.push(
+        `    furthest from any ink: ${worst.map((e) => `${e.tag} ${e.type} ${e.meanPx.toFixed(0)}px (${e.description})`).join("; ")}`,
+      );
+    }
+  }
+  return (
+    `\nMEASURED AGAINST THE DRAWING (the profile above was compared to the drawing's own ink; ` +
+    `these are its distances, and the named entities are the ones that do not follow it):\n` +
+    lines.join("\n") +
+    `\n  Where an entity is named above, its traced coordinates are the thing to distrust. ` +
+    `Re-aim it at the ink rather than repeating it, and keep the topology — the loop and the order are right.\n`
+  );
+}
+
 export function buildFeatureTreePrompt(input: {
   objectName: string;
   description?: string;
@@ -235,6 +274,21 @@ export function buildFeatureTreePrompt(input: {
   units?: string;
   context?: string;
   industry?: string;
+  /**
+   * How far each traced entity sits from the drawing's ink, worst first.
+   *
+   * The profiles above are what was traced; this is what was MEASURED about them
+   * against the drawing itself. A model that is told "e27 sits 111px from any ink,
+   * a26 sits 94px" can re-aim those two entities, where being told the profile is
+   * merely on file leaves it copying a coordinate it has no reason to distrust.
+   */
+  profileChecks?: Array<{
+    viewId: string;
+    meanPx: number;
+    meanRatio: number;
+    registration: string;
+    entities: Array<{ tag: string; type: string; meanPx: number; description: string }>;
+  }>;
 }): string {
   return `Author the feature tree for "${input.objectName}".
 ${input.description ? `\nWhat it is: ${input.description}` : ""}
@@ -242,6 +296,7 @@ ${input.description ? `\nWhat it is: ${input.description}` : ""}
 VIEWS:
 ${JSON.stringify(input.views, null, 2)}
 ${input.profiles?.length ? `\nEXTRACTED PROFILES:\n${JSON.stringify(input.profiles, null, 2)}` : ""}
+${profileCheckBlock(input.profileChecks)}
 
 Units: ${input.units ?? "mm"}.
 ${input.context ? `Context: ${input.context}` : ""}

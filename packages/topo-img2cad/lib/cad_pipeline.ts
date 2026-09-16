@@ -36,6 +36,10 @@ import {
   type ReprojectionThresholds,
 } from "./validators/reprojection.js";
 import {
+  measureProfileToInk,
+  type ProfileToInkResult,
+} from "./validators/profile_to_ink.js";
+import {
   measureEdgeDistance,
   DEFAULT_EDGE_THRESHOLDS,
   type EdgeDistanceResult,
@@ -180,6 +184,8 @@ export class CadPipeline {
   private reviewedShape: unknown = null;
   /** Outline-distance results for the current review. */
   private edgeDistances: EdgeDistanceResult[] = [];
+  /** How well each traced profile follows the drawing's ink, per entity. */
+  private profileChecks: ProfileToInkResult[] = [];
   /** Re-projection result for the current review, for the final return. */
   private lastReprojection: ReprojectionReport | undefined;
 
@@ -200,6 +206,7 @@ export class CadPipeline {
   async run(imagePath: string, objectName?: string): Promise<CadRunResult> {
     this.warnings = [];
     this.imageReferences = [];
+    this.profileChecks = [];
     this.reviewedShape = null;
     const maxRefinements = this.config.maxRefinements ?? 3;
 
@@ -211,6 +218,22 @@ export class CadPipeline {
     });
     this.warnings.push(...intake.warnings);
     let viewSet = intake.viewSet;
+
+    // The reference is read off the drawing ONCE, before anything is built: the
+    // drawing does not change when the tree does, and re-deriving it per round
+    // would only risk measuring against a different silhouette each time. It is
+    // built here rather than at review time because the traced profile is checked
+    // against the same ink, one stage before any tree exists.
+    if (this.config.tp && !this.config.references) {
+      const built = buildViewReferencesFromImage(imagePath, viewSet, {
+        silhouetteMode: this.config.silhouetteMode,
+        width: this.config.rasterSize ?? 512,
+        height: this.config.rasterSize ?? 512,
+      });
+      this.imageReferences = built.references;
+      this.warnings.push(...built.notes);
+      this.log(`reference silhouettes: ${built.references.length} view(s)`);
+    }
 
     // ---- B. profile extraction -----------------------------------------
     const wantedKinds = new Set(this.config.profileViewKinds ?? ORTHOGRAPHIC_KINDS);
@@ -226,6 +249,18 @@ export class CadPipeline {
         });
         profiles.push(result.profile);
         this.warnings.push(...result.warnings);
+
+        // The profile is measured against the drawing's ink HERE, one stage before
+        // any tree exists, because this is the only point where the defect is
+        // still cheap: the outline gate would find the same thing at the end of a
+        // four-minute run, after a tree, an emission and a kernel build, and would
+        // be able to say only that the shape is wrong — the mesh carries no tags.
+        // The profile does, so this names the entities and the prompt can act.
+        const check = this.checkProfileAgainstInk(result.profile, view);
+        if (check) {
+          this.profileChecks.push(check);
+          for (const issue of check.issues) this.warnings.push(issue.message);
+        }
       } catch (e) {
         this.warnings.push(
           `view ${view.id}: profile extraction failed — ${e instanceof Error ? e.message : String(e)}`,
@@ -247,6 +282,21 @@ export class CadPipeline {
         profiles,
         context: buildContext(viewSet),
         industry: this.config.industry,
+        // Measured, not advised: the tree stage is told which traced entities do
+        // not follow the drawing, so it can re-aim them instead of copying a
+        // coordinate it has no reason to distrust.
+        profileChecks: this.profileChecks.map((c) => ({
+          viewId: c.viewId ?? "(view)",
+          meanPx: c.meanPx,
+          meanRatio: c.meanRatio,
+          registration: c.registration,
+          entities: c.entities.slice(0, 6).map((e) => ({
+            tag: e.tag,
+            type: e.type,
+            meanPx: e.meanPx,
+            description: e.description,
+          })),
+        })),
       },
       this.config.llm,
     );
@@ -256,20 +306,6 @@ export class CadPipeline {
     this.warnings.push(...authored.warnings);
 
     // ---- D. build + measured review, with tree-level refinement --------
-    // The reference is read off the drawing once, before any refinement: the
-    // drawing does not change when the tree does, and re-deriving it per round
-    // would only risk measuring against a different silhouette each time.
-    if (this.config.tp && !this.config.references) {
-      const built = buildViewReferencesFromImage(imagePath, viewSet, {
-        silhouetteMode: this.config.silhouetteMode,
-        width: this.config.rasterSize ?? 512,
-        height: this.config.rasterSize ?? 512,
-      });
-      this.imageReferences = built.references;
-      this.warnings.push(...built.notes);
-      this.log(`reference silhouettes: ${built.references.length} view(s)`);
-    }
-
     let build = runBuildFromTree(tree);
     this.edgeDistances = [];
     this.lastReprojection = undefined;
@@ -718,6 +754,31 @@ export class CadPipeline {
       if (MEASURED_CODES.has(code)) return true;
       return i.severity === "error";
     });
+  }
+
+  /**
+   * Measure a traced profile against the drawing's ink, when there is ink for it.
+   *
+   * Returns undefined rather than an empty verdict when there is no reference for
+   * the view: "cannot check this" must not be recorded as "checked and fine".
+   */
+  private checkProfileAgainstInk(
+    profile: Profile2D,
+    view: ViewSpec,
+  ): ProfileToInkResult | undefined {
+    const ref = this.imageReferences.find((r) => r.viewId === view.id);
+    if (!ref) return undefined;
+    const check = measureProfileToInk(profile, {
+      ink: ref.ink,
+      inkWidth: ref.inkWidth,
+      inkHeight: ref.inkHeight,
+      inkBounds: ref.inkBounds,
+    });
+    this.log(
+      `profile check ${view.id}: mean ${check.meanPx.toFixed(1)}px (${(check.meanFraction * 100).toFixed(2)}%), ` +
+        `${check.meanRatio.toFixed(2)} of chance`,
+    );
+    return check;
   }
 
   private async refineTree(

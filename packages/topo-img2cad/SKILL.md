@@ -237,6 +237,27 @@ the traced body is what survived, with the refusal reported.
 
 Output: `Profile2D` per view.
 
+**It is then measured against the drawing's ink, before any tree exists**
+(`lib/validators/profile_to_ink.ts`). The outline gate measures the built body and
+that is the verdict that counts, but it arrives at the end of a four-minute run and
+can say only that the shape is wrong — the mesh carries no tags and the profile does.
+This is the same two-bar measurement on the profile itself, needing no kernel, so it
+produces a list of named suspects. Measured on a real drawing:
+
+```
+view v_front: the traced profile averages 19.4px from the drawing's ink
+  (0.68 of what an arbitrary placement of it would score)
+  furthest from any ink: e27 line 111px; a26 arc 94px; e17 line 40px; e22 line 40px
+```
+
+That list goes into the tree-building prompt, so the stage that authors the
+coordinates is told which traced entities do not follow the drawing. It is a
+**measurement, not a verdict**: it is reported as a warning and does not fail the
+run, because a tree may legitimately depart from the profile it was handed — a model
+that reads "the legs are 6 wide" off the sheet is right even where the tracer drew
+them 12 — and the verdict on the artifact stays with the gate that can see the
+artifact.
+
 A traced arc arrives as a centre, a radius and two endpoints, and nothing makes those
 four numbers agree. Measured on a real outline: **12 of 15 arcs had their endpoints
 10-67% off their own declared circle**, while the endpoint chain closed to 0.0000 —

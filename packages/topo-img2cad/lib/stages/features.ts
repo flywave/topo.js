@@ -139,6 +139,13 @@ export async function runFeatureTree(
     profiles?: Profile2D[];
     context?: string;
     industry?: string;
+    profileChecks?: Array<{
+      viewId: string;
+      meanPx: number;
+      meanRatio: number;
+      registration: string;
+      entities: Array<{ tag: string; type: string; meanPx: number; description: string }>;
+    }>;
   },
   llm: LLMProvider,
 ): Promise<FeatureTreeResult> {
@@ -150,6 +157,7 @@ export async function runFeatureTree(
     units: input.views.units.length,
     context: input.context,
     industry: input.industry,
+    profileChecks: input.profileChecks,
   });
 
   const raw = await llm.complete(prompt, FEATURE_TREE_SYSTEM);

@@ -31,6 +31,14 @@ import {
   type ViewBasis,
 } from "../cad/project.js";
 import { getMeshData } from "./reprojection.js";
+import {
+  DEFAULT_SEARCH,
+  placePoint,
+  sampleDistance,
+  searchPlacement,
+  type Registration,
+  type SearchOptions,
+} from "../cad/chamfer.js";
 
 export interface EdgeDistanceThresholds {
   /**
@@ -104,39 +112,8 @@ export interface EdgeDistanceOptions {
   search?: SearchOptions;
 }
 
-export interface SearchOptions {
-  /** Largest translation to try, as a fraction of the frame's shorter side. */
-  maxShiftFraction?: number;
-  /** Scale factors to try on either side of the frame's, e.g. 1.2 = 0.83x..1.2x. */
-  scaleRange?: number;
-}
-
-export const DEFAULT_SEARCH: Required<SearchOptions> = {
-  // A quarter of the frame. The model's coordinates come from the profile read
-  // off THIS drawing, so its placement is known to within the sheet's margin —
-  // but only to within that margin, and the margin is not recorded anywhere.
-  // Past it the search stops checking the model's shape and starts choosing the
-  // drawing's location for it: measured, a free translation over the whole sheet
-  // moved a two-disc model 94% of the frame onto a dense corner and scored it
-  // 3.9px, passing something nothing should pass.
-  maxShiftFraction: 0.25,
-  // Narrow, because size IS shape: 20% of slack is what the drawing's own
-  // pixel-per-millimetre estimate has been measured wrong by.
-  scaleRange: 1.2,
-};
-
-/** Where the gate found the model, relative to the frame it was given. */
-export interface Registration {
-  scale: number;
-  shiftXPx: number;
-  shiftYPx: number;
-  /**
-   * How far the search had to move the model, as a fraction of the frame's
-   * shorter side. A large value means the frame was wrong, not the part.
-   */
-  movedFraction: number;
-  searched: number;
-}
+export type { Registration, SearchOptions } from "../cad/chamfer.js";
+export { DEFAULT_SEARCH } from "../cad/chamfer.js";
 
 export interface EdgeDistanceResult {
   compared: boolean;
@@ -391,14 +368,9 @@ export function measureEdgeDistance(
 
   const search = opts.search ? { ...DEFAULT_SEARCH, ...opts.search } : undefined;
   const registration = search
-    ? registerToInk(points, dt, opts.width, opts.height, search)
+    ? searchPlacement(points, dt, opts.width, opts.height, search)
     : undefined;
-  const placed = registration
-    ? points.map((p) => ({
-        x: registration.cx + (p.x - registration.cx) * registration.scale + registration.shiftXPx,
-        y: registration.cy + (p.y - registration.cy) * registration.scale + registration.shiftYPx,
-      }))
-    : points;
+  const placed = registration ? points.map((p) => placePoint(p, registration)) : points;
 
   const distanceAt = (x: number, y: number) => sampleDistance(dt, opts.width, opts.height, x, y);
 
@@ -550,164 +522,3 @@ export function measureEdgeDistance(
   };
 }
 
-/** Nearest-ink distance at a sub-pixel point, bilinearly interpolated. */
-function sampleDistance(
-  dt: Float64Array | Float32Array | number[],
-  width: number,
-  height: number,
-  x: number,
-  y: number,
-): number {
-  if (x < 0 || y < 0 || x > width - 1 || y > height - 1) {
-    // Outside the frame there is no ink and no distance; the corner is the
-    // nearest thing the frame can say, and it is already far.
-    const cx = Math.min(width - 1, Math.max(0, x));
-    const cy = Math.min(height - 1, Math.max(0, y));
-    return Math.hypot(x - cx, y - cy) + dt[Math.round(cy) * width + Math.round(cx)];
-  }
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const x1 = Math.min(width - 1, x0 + 1);
-  const y1 = Math.min(height - 1, y0 + 1);
-  const fx = x - x0;
-  const fy = y - y0;
-  const a = dt[y0 * width + x0];
-  const b = dt[y0 * width + x1];
-  const c = dt[y1 * width + x0];
-  const d = dt[y1 * width + x1];
-  return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
-}
-
-interface RegistrationInternal {
-  scale: number;
-  cx: number;
-  cy: number;
-  shiftXPx: number;
-  shiftYPx: number;
-  movedFraction: number;
-  searched: number;
-}
-
-/**
- * Coarse-to-fine search for the placement that puts the outline on the ink.
- *
- * Scale is searched in log steps about the outline's own centroid, which leaves
- * the shape in place and grows it; translation is searched in frame pixels. The
- * distance field is computed once, so every candidate is a cheap table lookup.
- *
- * Translation is searched over the whole frame where the caller asks for it, and
- * that is not a loophole: nothing in a CAD model says where on the sheet the part
- * sits, so position is not evidence about shape either way. Size is, which is why
- * the scale window stays narrow.
- */
-function registerToInk(
-  points: Array<{ x: number; y: number }>,
-  dt: Float64Array | Float32Array | number[],
-  width: number,
-  height: number,
-  search: Required<SearchOptions>,
-): RegistrationInternal {
-  let cx = 0;
-  let cy = 0;
-  for (const p of points) {
-    cx += p.x;
-    cy += p.y;
-  }
-  cx /= points.length;
-  cy /= points.length;
-
-  const shortSide = Math.min(width, height);
-  const maxShift = search.maxShiftFraction * shortSide;
-  const minScale = 1 / search.scaleRange;
-  const maxScale = search.scaleRange;
-
-  const score = (scale: number, dx: number, dy: number): number => {
-    let total = 0;
-    for (const p of points) {
-      total += sampleDistance(
-        dt,
-        width,
-        height,
-        cx + (p.x - cx) * scale + dx,
-        cy + (p.y - cy) * scale + dy,
-      );
-    }
-    return total / points.length;
-  };
-
-  const tested = { n: 0 };
-  let best = { scale: 1, dx: 0, dy: 0, mean: score(1, 0, 0) };
-  tested.n++;
-
-  const clamp = (v: number) => Math.max(-maxShift, Math.min(maxShift, v));
-
-  // Coarse: a grid over the window, at a handful of scales.
-  const coarseScaleSteps = 7;
-  const coarseShiftSteps = 21;
-  const shiftStep = (maxShift * 2) / (coarseShiftSteps - 1);
-  for (let si = 0; si < coarseScaleSteps; si++) {
-    const t = si / (coarseScaleSteps - 1);
-    const scale = minScale * Math.pow(maxScale / minScale, t);
-    for (let xi = 0; xi < coarseShiftSteps; xi++) {
-      for (let yi = 0; yi < coarseShiftSteps; yi++) {
-        const dx = clamp(-maxShift + xi * shiftStep);
-        const dy = clamp(-maxShift + yi * shiftStep);
-        if (si === 0 && xi === 0 && yi === 0) continue;
-        const mean = score(scale, dx, dy);
-        tested.n++;
-        if (mean < best.mean) best = { scale, dx, dy, mean };
-      }
-    }
-  }
-
-  // Fine: from the winner, halve the step until it is sub-pixel. A grid alone
-  // leaves the best placement up to half a step from the truth, and that residue
-  // is spent against the threshold — a correct part would eat into its own
-  // budget for being found a few pixels off.
-  const fineScaleSteps = 13;
-  for (let si = 0; si < fineScaleSteps; si++) {
-    const t = si / (fineScaleSteps - 1);
-    const scale = minScale * Math.pow(maxScale / minScale, t);
-    // Start each scale from where the grid pointed, so the walk is short.
-    let dx = clamp(best.dx);
-    let dy = clamp(best.dy);
-    let here = score(scale, dx, dy);
-    tested.n++;
-    let step = shiftStep;
-    while (step >= 0.5) {
-      let moved = false;
-      let bx = dx;
-      let by = dy;
-      for (let xi = -1; xi <= 1; xi++) {
-        for (let yi = -1; yi <= 1; yi++) {
-          if (xi === 0 && yi === 0) continue;
-          const nx = clamp(dx + xi * step);
-          const ny = clamp(dy + yi * step);
-          if (nx === dx && ny === dy) continue;
-          const mean = score(scale, nx, ny);
-          tested.n++;
-          if (mean < here) {
-            here = mean;
-            bx = nx;
-            by = ny;
-            moved = true;
-          }
-        }
-      }
-      if (!moved) step /= 2;
-      dx = bx;
-      dy = by;
-    }
-    if (here < best.mean) best = { scale, dx, dy, mean: here };
-  }
-
-  return {
-    scale: best.scale,
-    cx,
-    cy,
-    shiftXPx: best.dx,
-    shiftYPx: best.dy,
-    movedFraction: Math.hypot(best.dx, best.dy) / shortSide,
-    searched: tested.n,
-  };
-}
