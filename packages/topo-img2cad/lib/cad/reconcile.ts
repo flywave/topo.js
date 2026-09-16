@@ -444,14 +444,54 @@ function reconcileChain(
     }
   }
 
+  // Closing the loop for anything else. A profile that misses by a fraction of a
+  // percent is a drawing rounding away, not a contradiction — and a drafter closes
+  // it. The snap above only reaches an undimensioned LINE; a live drawing closed
+  // to 0.455mm on a 160mm profile through an arc that carried a radius, and the
+  // whole model was refused over that. A short closing edge is added instead, and
+  // reported, because the alternative is refusing a part that is right to three
+  // digits.
+  let structurePreserved =
+    out.length === chain.length && out.every((e, i) => e.tag === chain[i].entity.tag);
+  const extent = profileExtent(out);
+  const tolerable = Math.max(1e-6, extent * 0.01);
+  if (closureError > 1e-9 && closureError <= tolerable && out.length > 0) {
+    const from = exitPoint(out[out.length - 1]);
+    const to = entryPoint(out[0]);
+    const gap = from && to ? Math.hypot(from[0] - to[0], from[1] - to[1]) : 0;
+    if (from && to && gap > 1e-9) {
+      out.push({ tag: "__closing", type: "line", start: from, end: to });
+      applied.push(
+        `closing edge added over ${closureError.toFixed(4)} (${((closureError / (extent || 1)) * 100).toFixed(2)}% of the profile, which is drawing rounding rather than a contradiction)`,
+      );
+      closureError = 0;
+      structurePreserved = false;
+    }
+  }
+
   return {
     entities: out,
     report: {
       applied,
       unhonoured,
       closureError,
-      structurePreserved:
-        out.length === chain.length && out.every((e, i) => e.tag === chain[i].entity.tag),
+      structurePreserved,
     },
   };
+}
+
+/** The profile's diagonal, for judging whether a gap is small. */
+function profileExtent(entities: ProfileEntity[]): number {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const e of entities) {
+    for (const p of [e.start, e.end, e.center]) {
+      if (Array.isArray(p)) {
+        xs.push(p[0]);
+        ys.push(p[1]);
+      }
+    }
+  }
+  if (xs.length === 0) return 0;
+  return Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
 }
