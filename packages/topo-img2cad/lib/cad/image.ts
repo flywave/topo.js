@@ -30,9 +30,24 @@ export interface Raster {
   gray: Uint8Array;
   /** 1 where the source pixel is opaque, else 0. */
   opaque: Uint8Array;
+  /**
+   * 1 where the source pixel is strongly coloured, when the decoder knows.
+   *
+   * CAD drawings routinely separate layers by colour — black for the part outline,
+   * blue for dimensions and leaders. Read as luminance alone those are both "dark",
+   * so the annotation is mistaken for part material and its many lines chop the
+   * part's interior into pieces: a fully dimensioned drawing of a single character
+   * came out as 143 regions with the largest holding 19% of the area, and no
+   * silhouette could be built from it at all. Colour is the layer information, so
+   * the decoders keep it.
+   */
+  colorful?: Uint8Array;
 }
 
 export type RasterFormat = "png" | "pnm" | "jpeg";
+
+/** How far the extreme channels must differ before a pixel counts as coloured. */
+export const COLORFUL_SPREAD = 40;
 
 export interface DecodeOptions {
   /** Alpha at or above this counts as opaque. Default 128. */
@@ -668,17 +683,55 @@ export function extractSilhouette(raster: Raster, opts?: SilhouetteOptions): Sil
   const total = width * height;
   const notes: string[] = [];
 
-  // Build ink mask: opaque AND dark
+  // Build ink mask: opaque, dark, and — when the decoder kept colour — not
+  // annotation. A drawing that marks its dimensions in blue and its part outline
+  // in black reads as "all dark" in luminance, and then the annotation chops the
+  // part's interior into pieces.
   const ink = new Uint8Array(total);
   let inkCount = 0;
+  let colorfulSkipped = 0;
   for (let i = 0; i < total; i++) {
     // `<=`, matching Otsu's own convention: its class B is the values up to and
     // including the threshold. A crisp black-on-white drawing is exactly bimodal,
     // so Otsu legitimately returns 0 there — and `< 0` would call nothing ink.
-    if (opaque[i] && gray[i] <= threshold) {
-      ink[i] = 1;
-      inkCount++;
+    if (!opaque[i] || gray[i] > threshold) continue;
+    if (raster.colorful && raster.colorful[i]) {
+      colorfulSkipped++;
+      continue;
     }
+    ink[i] = 1;
+    inkCount++;
+  }
+  // Where a dimension leader crosses the part outline, the outline's pixels are
+  // painted over and the fill then leaks out of the part. A coloured pixel with
+  // part-ink on opposite sides is part of a line running through it, so it is
+  // restored; a coloured pixel in open space has none and stays annotation.
+  if (raster.colorful && colorfulSkipped > 0) {
+    for (let pass = 0; pass < 2; pass++) {
+      let bridged = 0;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = y * width + x;
+          if (ink[i] || !raster.colorful[i]) continue;
+          const left = x > 0 && ink[i - 1];
+          const right = x < width - 1 && ink[i + 1];
+          const up = y > 0 && ink[i - width];
+          const down = y < height - 1 && ink[i + width];
+          if ((left && right) || (up && down)) {
+            ink[i] = 1;
+            bridged++;
+          }
+        }
+      }
+      if (bridged === 0) break;
+    }
+  }
+
+  if (colorfulSkipped > 0) {
+    const share = colorfulSkipped / total;
+    notes.push(
+      `${(share * 100).toFixed(1)}% of the drawing is coloured and was treated as annotation rather than part — drawings usually separate their dimension layer from the part that way`,
+    );
   }
 
   let chosenMode: "ink" | "region";

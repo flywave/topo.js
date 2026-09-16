@@ -42,10 +42,10 @@ describe("JPEG decoder — dimensions", () => {
     expect(r.height).toBe(16);
   });
 
-  it("R-C.jpeg is 829×916", () => {
-    const r = decodeJpeg(loadFixture("R-C.jpeg"));
-    expect(r.width).toBe(829);
-    expect(r.height).toBe(916);
+  it("peiqi.jpeg is 1080x1307", () => {
+    const r = decodeJpeg(loadFixture("peiqi.jpeg"));
+    expect(r.width).toBe(1080);
+    expect(r.height).toBe(1307);
   });
 });
 
@@ -110,29 +110,39 @@ describe("JPEG decoder — solid color (jpeg-solid.jpg)", () => {
   });
 });
 
-describe("JPEG decoder — grayscale (R-C.jpeg)", () => {
-  it("pixel (0,0) = gray 0", () => {
-    const r = decodeJpeg(loadFixture("R-C.jpeg"));
-    expect(grayAt(r, 0, 0)).toBe(0);
+describe("JPEG decoder — real colour drawing (peiqi.jpeg)", () => {
+  // Ground truth from ImageMagick. This file replaced the grayscale scan that
+  // used to live here, so it also exercises the COLOUR path on a real drawing:
+  // a CAD sheet whose dimension layer is drawn in blue over a black outline.
+  const r = decodeJpeg(loadFixture("peiqi.jpeg"));
+
+  it("decodes 1080x1307", () => {
+    expect(r.width).toBe(1080);
+    expect(r.height).toBe(1307);
   });
 
-  it("pixel (414,458) ≈ gray 252", () => {
-    const r = decodeJpeg(loadFixture("R-C.jpeg"));
-    const g = grayAt(r, 414, 458);
-    expect(g).toBeGreaterThanOrEqual(249);
-    expect(g).toBeLessThanOrEqual(255);
+  it("reads the black page border", () => {
+    // ImageMagick: (2,2,2) -> gray 2
+    expect(Math.abs(grayAt(r, 0, 0) - 2)).toBeLessThanOrEqual(3);
   });
 
-  it("pixel (200,300) ≈ gray 169", () => {
-    const r = decodeJpeg(loadFixture("R-C.jpeg"));
-    const g = grayAt(r, 200, 300);
-    expect(g).toBeGreaterThanOrEqual(166);
-    expect(g).toBeLessThanOrEqual(172);
+  it("reads open paper", () => {
+    // ImageMagick: (540,653) = (255,254,252) -> gray 254
+    expect(Math.abs(grayAt(r, 540, 653) - 254)).toBeLessThanOrEqual(3);
+    // ImageMagick: (1079,1306) = (254,253,251) -> gray 253
+    expect(Math.abs(grayAt(r, 1079, 1306) - 253)).toBeLessThanOrEqual(3);
   });
 
-  it("pixel (828,915) = gray 255", () => {
-    const r = decodeJpeg(loadFixture("R-C.jpeg"));
-    expect(grayAt(r, 828, 915)).toBe(255);
+  it("keeps colour, because it is what separates annotation from the part", () => {
+    // ImageMagick: (580,45) = (61,61,131) -> gray 69, and strongly blue: the
+    // spread is 70. Read as luminance alone this is just another dark pixel, and
+    // the annotation then chops the part's interior into unmeasurable pieces.
+    const g = grayAt(r, 580, 45);
+    expect(Math.abs(g - 69)).toBeLessThanOrEqual(3);
+    expect(r.colorful?.[45 * 1080 + 580]).toBe(1);
+
+    // The black border is not coloured, so it stays part ink.
+    expect(r.colorful?.[0]).toBe(0);
   });
 });
 

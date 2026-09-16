@@ -10,7 +10,7 @@
  * silhouette extraction where ±1px is invisible).
  */
 
-import type { Raster } from "./image.js";
+import { COLORFUL_SPREAD, type Raster } from "./image.js";
 
 const GRAY_LUMA = [0.299, 0.587, 0.114];
 
@@ -228,11 +228,15 @@ class JpegReader {
     }
 
     const gray = new Uint8Array(W * H), opaque = new Uint8Array(W * H).fill(1);
+    const colorful = new Uint8Array(W * H);
     for (let i = 0; i < W * H; i++) {
       const o = i * 3;
-      gray[i] = Math.round(GRAY_LUMA[0] * rgb[o] + GRAY_LUMA[1] * rgb[o + 1] + GRAY_LUMA[2] * rgb[o + 2]);
+      const r = rgb[o], g = rgb[o + 1], b = rgb[o + 2];
+      gray[i] = Math.round(GRAY_LUMA[0] * r + GRAY_LUMA[1] * g + GRAY_LUMA[2] * b);
+      const spread = Math.max(r, g, b) - Math.min(r, g, b);
+      if (spread >= COLORFUL_SPREAD) colorful[i] = 1;
     }
-    this.result = { width: W, height: H, gray, opaque };
+    this.result = { width: W, height: H, gray, opaque, colorful };
   }
 }
 

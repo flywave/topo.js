@@ -312,7 +312,36 @@ export class CadPipeline {
 
     this.log(`done: ${build.code.source.split("\n").length} lines, ${refinements} refinement(s)`);
 
-    // ---- E. associativity ------------------------------------------------
+    // ---- E. deliverables ------------------------------------------------
+    // Written BEFORE the associativity probes, and deliberately so. Those probes
+    // rebuild the model with each parameter perturbed, and a perturbed build that
+    // fails can kill the kernel outright: after one such run, every later call
+    // returns "Aborted()" and the export — the actual deliverable — was lost.
+    // Measured, twice. The export is the product; a later diagnostic must not be
+    // able to take it away.
+    let exports: ExportResult | undefined;
+    const formats = this.config.exportFormats ?? ["step", "stl"];
+    if (this.config.tp && this.config.workDir && formats.length > 0) {
+      if (this.reviewedShape == null) {
+        this.warnings.push(
+          "no body was built, so no STEP or STL was written",
+        );
+      } else {
+        this.log(`exporting: ${formats.join(", ")}`);
+        exports = exportShape(this.config.tp, this.reviewedShape, {
+          outDir: this.config.workDir,
+          basename: tree.name,
+          formats,
+          stlDeflection: this.config.stlDeflection,
+        });
+        this.warnings.push(...exports.notes);
+        for (const failure of exports.failures) {
+          this.warnings.push(`export ${failure.format.toUpperCase()} failed: ${failure.reason}`);
+        }
+      }
+    }
+
+    // ---- F. associativity ------------------------------------------------
     // A model that builds but whose parameters drive nothing is not parametric,
     // and no geometric gate can see that. Proving it costs one rebuild per
     // parameter, so it runs last, when the tree is the one being returned — and
@@ -350,29 +379,6 @@ export class CadPipeline {
         this.warnings.push(
           `could not write artifacts to ${this.config.workDir}: ${e instanceof Error ? e.message : String(e)}`,
         );
-      }
-    }
-
-    // ---- F. deliverables ------------------------------------------------
-    let exports: ExportResult | undefined;
-    const formats = this.config.exportFormats ?? ["step", "stl"];
-    if (this.config.tp && this.config.workDir && formats.length > 0) {
-      if (this.reviewedShape == null) {
-        this.warnings.push(
-          "no body was built, so no STEP or STL was written",
-        );
-      } else {
-        this.log(`exporting: ${formats.join(", ")}`);
-        exports = exportShape(this.config.tp, this.reviewedShape, {
-          outDir: this.config.workDir,
-          basename: tree.name,
-          formats,
-          stlDeflection: this.config.stlDeflection,
-        });
-        this.warnings.push(...exports.notes);
-        for (const failure of exports.failures) {
-          this.warnings.push(`export ${failure.format.toUpperCase()} failed: ${failure.reason}`);
-        }
       }
     }
 

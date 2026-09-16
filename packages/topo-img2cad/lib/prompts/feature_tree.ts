@@ -94,6 +94,12 @@ Report geometry in model millimetres using the supplied scale. Report the GEOMET
 
 Prefer a small number of well-constrained entities over many sloppy ones. A rectangle is four lines and four relations, not forty segments.
 
+That is advice about a MACHINED OUTLINE, and it stops being true the moment the outline
+is free-form. A shape made of curves needs as many segments as the curve has: a character
+silhouette, a cam, a cover plate with a swept edge, an organic profile — approximating any
+of those with a few large arcs is not a simpler drawing of the part, it is a drawing of a
+different part. Match the outline you see. Where the two rules conflict, the shape wins.
+
 Output strictly valid JSON.`;
 
 export function buildProfileExtractionPrompt(

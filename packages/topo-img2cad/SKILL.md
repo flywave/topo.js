@@ -384,6 +384,23 @@ generated", which was exactly right.
 The tree is then reported as `DIN_MULTIPLE_BODIES`: this pipeline models one part, so a
 drawing of several parts comes out as their union, not as an assembly.
 
+### Two steps that can kill the kernel
+
+**Export runs before the associativity probes.** Those probes rebuild the model with
+each parameter perturbed, and a perturbed build that fails can kill the kernel
+outright — after one such run every later call returned `Aborted()` and the export,
+the actual deliverable, was lost. Measured, twice. The export is the product; a later
+diagnostic must not be able to take it away.
+
+**The kernel cannot always triangulate its own faces.** On two different extrusions
+the two LARGEST faces — the caps — came back with zero triangles, while `mesh()`
+still listed their vertices. The STL writer says so in a line nobody reads
+("N faces have been skipped due to null triangulation") and hands over a file missing
+its caps: measured at 0.10 of the solid's surface area and 0.67 of its volume, on a
+shape whose STEP was exact. `exportShape` now measures that and says it in words.
+Neither deflection nor a different mesh angle changes it (identical at 0.1 / 0.01 /
+0.001), so it is the geometry, not the tolerance.
+
 ### `mirror` with a named source
 
 `{"op":"mirror","plane":{...},"ofFeature":"f_hole"}` reflects **that feature's tool** and
@@ -567,6 +584,16 @@ valid solids — see the table above for the ones that are.
 - Absolute size needs scale evidence. Without it, dimensions are relative and the
   pipeline says so — and L4 degrades from a size check to a shape check, which it
   reports rather than hides.
+- **A drawing's colour is layer information, and is kept.** CAD sheets routinely draw
+  the part outline in black and the dimension layer in blue. Read as luminance alone
+  both are "dark", so the annotation counts as part material and its many lines chop
+  the part's interior into pieces: a fully dimensioned drawing of a single character
+  came out as 143 regions with the largest holding 19% of the area, and no silhouette
+  could be built at all. Excluding coloured pixels took that to 4 regions and 79% —
+  but does not finish the job, because annotation TEXT and centre lines are drawn
+  dark too, and where a leader crosses the outline the exclusion opens the outline
+  and the fill leaks. `Raster.colorful` carries the information; separating a densely
+  annotated sheet's layers properly needs more than a colour test, and is not done.
 - **PNG, JPEG and PNM are readable; PNG must be non-interlaced** (Adam7 is
   rejected with a message saying so), and JPEG must be baseline sequential. A
   progressive JPEG is refused by name rather than mis-decoded. The decoder is

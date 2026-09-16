@@ -13,6 +13,7 @@ import { runBuildFromTree } from "../lib/stages/features.js";
 import { mergeConstraintsVerbose } from "../lib/cad/sketch_codegen.js";
 import { lintFeatureTree } from "../lib/validators/design_intent.js";
 import { parseJsonResponse } from "../lib/prompts/feature_tree.js";
+import { readFileSync } from "node:fs";
 import { executeInSandbox } from "../lib/stages/review.js";
 import { validateGeometry } from "../lib/validators/geometric.js";
 import { getTopo, installGlobals } from "./helpers/topo.js";
@@ -294,5 +295,23 @@ describe("a response that ran out of room", () => {
     expect(() => parseJsonResponse("I could not repair this tree.", "feature tree")).toThrow(
       /No JSON object found/,
     );
+  });
+});
+
+describe("the order of the last two steps", () => {
+  it("writes the deliverables before the associativity probes", async () => {
+    // Those probes rebuild with each parameter perturbed, and a perturbed build
+    // that fails can kill the kernel outright — after one such run every later
+    // call returned "Aborted()" and the export, the actual product, was lost.
+    // Measured. The source order is the guarantee, so assert it here.
+    const source = readFileSync(
+      new URL("../lib/cad_pipeline.ts", import.meta.url),
+      "utf-8",
+    );
+    const exportAt = source.indexOf("E. deliverables");
+    const probesAt = source.indexOf("F. associativity");
+    expect(exportAt).toBeGreaterThan(-1);
+    expect(probesAt).toBeGreaterThan(-1);
+    expect(exportAt).toBeLessThan(probesAt);
   });
 });
