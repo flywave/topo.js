@@ -510,6 +510,8 @@ export function measureEdgeDistance(
     registration: registration
       ? {
           scale: registration.scale,
+          cx: registration.cx,
+          cy: registration.cy,
           shiftXPx: registration.shiftXPx,
           shiftYPx: registration.shiftYPx,
           movedFraction: registration.movedFraction,

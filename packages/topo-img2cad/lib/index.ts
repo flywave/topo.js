@@ -309,6 +309,7 @@ export type {
 export {
   measureProfileToInk,
   profilePoints,
+  inkFrame,
   DEFAULT_PROFILE_TO_INK_THRESHOLDS,
 } from "./validators/profile_to_ink.js";
 export type {
@@ -316,6 +317,7 @@ export type {
   ProfileToInkResult,
   ProfileToInkThresholds,
   EntityDistance,
+  InkFrame,
 } from "./validators/profile_to_ink.js";
 
 export { validateGeometry, quickShapeCheck } from "./validators/geometric.js";

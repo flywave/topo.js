@@ -33,6 +33,16 @@ export const DEFAULT_SEARCH: Required<SearchOptions> = {
 /** Where a placement was found, relative to the frame it was given. */
 export interface Registration {
   scale: number;
+  /**
+   * The point the scale is applied about, in frame pixels.
+   *
+   * Carried so the placement is something a caller can APPLY, not merely read:
+   * the relaxation moves a profile's vertices in the space the measurement placed
+   * it in, and it has to reproduce that placement exactly or it would be
+   * optimizing a different function than the one being reported.
+   */
+  cx: number;
+  cy: number;
   shiftXPx: number;
   shiftYPx: number;
   /**

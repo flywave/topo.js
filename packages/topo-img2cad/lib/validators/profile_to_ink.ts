@@ -171,29 +171,8 @@ export function measureProfileToInk(
   // raster holds both, exactly as the outline gate arranges it — and when the
   // drawing carries no scale there is no shared frame to hold, so the profile's
   // own box is fitted into the ink's uniformly and only shape is left to check.
-  const source =
-    opts.inkBounds ??
-    (() => {
-      const b = boundsOf(real);
-      if (!b) return { minX: 0, minY: 0, maxX: W, maxY: H };
-      // A square box around the profile, so fitting it into the ink's box keeps
-      // the profile's aspect — a non-uniform fit would make every profile agree.
-      const side = Math.max(b.width, b.height) || 1;
-      const cx = (b.minX + b.maxX) / 2;
-      const cy = (b.minY + b.maxY) / 2;
-      return { minX: cx - side / 2, minY: cy - side / 2, maxX: cx + side / 2, maxY: cy + side / 2 };
-    })();
-  const sourceWidth = source.maxX - source.minX || 1;
-  const sourceHeight = source.maxY - source.minY || 1;
-  // The ink's own box, in the frame's units, is where the profile is fitted to.
-  const targetWidth = opts.inkBounds ? sourceWidth : (sourceWidth * Math.min(W, H)) / Math.max(W, H);
-
-  const toPx = (mm: [number, number]): { x: number; y: number } => {
-    const u = (mm[0] - source.minX) / targetWidth;
-    // Raster row 0 is the frame's maxY, matching `rasterizeMesh`'s flipY.
-    const v = (mm[1] - source.minY) / (opts.inkBounds ? sourceHeight : targetWidth);
-    return { x: u * (W - 1), y: (1 - v) * (H - 1) };
-  };
+  const frame = inkFrame({ opts, entities: real, width: W, height: H });
+  const toPx = frame.toPx;
 
   const perEntity = real.map((e) => ({
     entity: e,
@@ -317,6 +296,8 @@ export function measureProfileToInk(
     placement: registration
       ? {
           scale: registration.scale,
+          cx: registration.cx,
+          cy: registration.cy,
           shiftXPx: registration.shiftXPx,
           shiftYPx: registration.shiftYPx,
           movedFraction: registration.movedFraction,
@@ -326,6 +307,65 @@ export function measureProfileToInk(
     entities: scored,
     onInk: !overAbsolute && !overChance,
     issues,
+  };
+}
+
+/**
+ * The mapping between a profile's own units and the ink's pixels.
+ *
+ * Exposed because a caller that wants to move a profile onto the ink has to map its
+ * points exactly as the measurement does — a mover that used a slightly different
+ * mapping would be optimizing a different function than the one being reported.
+ */
+export interface InkFrame {
+  toPx: (p: [number, number]) => { x: number; y: number };
+  /** Units per pixel along each axis, for moving a point in the profile's units. */
+  unitsPerPxX: number;
+  unitsPerPxY: number;
+  width: number;
+  height: number;
+  diagonal: number;
+  /** True when the drawing carried a scale, so size is being checked. */
+  absolute: boolean;
+}
+
+export function inkFrame(args: {
+  opts: { inkBounds?: { minX: number; minY: number; maxX: number; maxY: number } };
+  entities: ProfileEntity[];
+  width: number;
+  height: number;
+}): InkFrame {
+  const { opts, entities, width: W, height: H } = args;
+  const source =
+    opts.inkBounds ??
+    (() => {
+      const b = boundsOf(entities);
+      if (!b) return { minX: 0, minY: 0, maxX: W, maxY: H };
+      // A square box around the profile, so fitting it into the ink's box keeps
+      // the profile's aspect — a non-uniform fit would make every profile agree.
+      const side = Math.max(b.width, b.height) || 1;
+      const cx = (b.minX + b.maxX) / 2;
+      const cy = (b.minY + b.maxY) / 2;
+      return { minX: cx - side / 2, minY: cy - side / 2, maxX: cx + side / 2, maxY: cy + side / 2 };
+    })();
+  const spanX = source.maxX - source.minX || 1;
+  const spanY = source.maxY - source.minY || 1;
+  // The ink's own box, in the frame's units, is where the profile is fitted to.
+  const targetX = opts.inkBounds ? spanX : (spanX * Math.min(W, H)) / Math.max(W, H);
+  const targetY = opts.inkBounds ? spanY : targetX;
+
+  return {
+    toPx: (p) => ({
+      x: ((p[0] - source.minX) / targetX) * (W - 1),
+      // Raster row 0 is the frame's maxY, matching `rasterizeMesh`'s flipY.
+      y: (1 - (p[1] - source.minY) / targetY) * (H - 1),
+    }),
+    unitsPerPxX: targetX / (W - 1),
+    unitsPerPxY: targetY / (H - 1),
+    width: W,
+    height: H,
+    diagonal: Math.hypot(W, H),
+    absolute: opts.inkBounds !== undefined,
   };
 }
 
