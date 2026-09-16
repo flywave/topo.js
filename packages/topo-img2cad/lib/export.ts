@@ -19,6 +19,7 @@
 
 import { mkdirSync, writeFileSync } from "fs";
 import { extname, join } from "path";
+import { validateGeometry } from "./validators/geometric.js";
 
 export type ExportFormat = "step" | "stl";
 
@@ -159,12 +160,29 @@ export function exportShape(
     }
 
     writeFileSync(hostPath, bytes);
-    files.push({
-      format,
-      path: hostPath,
-      bytes: bytes.length,
-      detail: format === "step" ? stepDetail(bytes) : stlDetail(bytes),
-    });
+    const detail =
+      format === "step" ? stepDetail(bytes) : { ...stlDetail(bytes), watertight: 0 };
+
+    if (format === "stl") {
+      // A structurally valid mesh can still be an open one. The kernel says so
+      // itself — "N faces have been skipped due to null triangulation" — and the
+      // result is a file that looks fine, prints wrong, and slices worse. Check
+      // the mesh against the solid it came from rather than trusting the header.
+      const enclosed = meshVolume(bytes);
+      const solid = validateGeometry(tp, exportable).report.volume;
+      if (enclosed !== null && solid !== undefined && solid > 0) {
+        const ratio = enclosed / solid;
+        detail.watertight = Math.abs(ratio - 1) <= 0.01 ? 1 : 0;
+        detail.volumeRatio = Number(ratio.toFixed(4));
+        if (detail.watertight === 0) {
+          notes.push(
+            `the STL is not watertight: its triangles enclose ${(ratio * 100).toFixed(1)}% of the solid's volume (${enclosed.toFixed(0)} of ${solid.toFixed(0)}), which is what a mesh looks like when the kernel skipped faces it could not triangulate. The STEP is unaffected; treat the STL as unusable until it closes`,
+          );
+        }
+      }
+    }
+
+    files.push({ format, path: hostPath, bytes: bytes.length, detail });
 
     try {
       fs.unlink(memPath);
@@ -231,6 +249,33 @@ function stepDetail(bytes: Uint8Array): Record<string, number> {
   const text = Buffer.from(bytes).toString("utf8");
   // OCCT writes `#12 = TYPE(...)`, with padding before the equals sign.
   return { entities: (text.match(/^#\d+\s*=/gm) ?? []).length };
+}
+
+/**
+ * Signed volume enclosed by a binary STL's triangles.
+ *
+ * The divergence theorem returns the true volume only for a closed mesh wound
+ * outward, so comparing it with the solid's own volume answers "is this mesh
+ * usable" rather than "did the writer finish".
+ */
+function meshVolume(bytes: Uint8Array): number | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const triangles = view.getUint32(80, true);
+  let volume = 0;
+  for (let i = 0; i < triangles; i++) {
+    const base = 84 + i * 50 + 12;
+    const p: number[][] = [];
+    for (let v = 0; v < 3; v++) {
+      const o = base + v * 12;
+      p.push([view.getFloat32(o, true), view.getFloat32(o + 4, true), view.getFloat32(o + 8, true)]);
+    }
+    volume += (
+      p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1]) -
+      p[0][1] * (p[1][0] * p[2][2] - p[1][2] * p[2][0]) +
+      p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0])
+    ) / 6;
+  }
+  return Number.isFinite(volume) ? volume : null;
 }
 
 function stlDetail(bytes: Uint8Array): Record<string, number> {

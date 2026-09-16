@@ -294,6 +294,9 @@ function reportExports(exports: ExportResult | undefined, verified: boolean): vo
   for (const failure of exports.failures) {
     console.log(`  ${failure.format.toUpperCase()} FAILED  ${failure.reason}`);
   }
+  for (const note of exports.notes) {
+    console.log(`  note: ${note}`);
+  }
 }
 
 function formatBytes(n: number): string {

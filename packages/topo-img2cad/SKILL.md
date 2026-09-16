@@ -585,6 +585,13 @@ valid solids — see the table above for the ones that are.
   of those regions would answer a question nobody asked, confidently.
 - **STL export is binary only.** The binding hardcodes it; there is no ASCII switch,
   and post-processing an STL to change that is out of scope here.
+- **A written STL is checked against the solid it came from.** A structurally valid
+  mesh can still be an open one: the kernel skips faces it cannot triangulate and says
+  so in a line nobody reads ("2 faces have been skipped due to null triangulation"),
+  and the result is an STL that looks fine and slices wrong. On the catenary dropper
+  that was **66.7% of the volume** — exactly two faces' worth, on a 50-face solid. The
+  export now reports `watertight` and `volumeRatio` per file and says so in words. The
+  STEP is unaffected; it carries the BREP, not a triangulation.
 - **A STEP is checked for structure, not re-read.** There is no STEP importer in the
   binding surface, so the file is validated for its header, `DATA` section and
   terminator rather than round-tripped. The STL is checked more strongly, because a
