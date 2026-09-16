@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { runBuildFromTree } from "../lib/stages/features.js";
 import { mergeConstraintsVerbose } from "../lib/cad/sketch_codegen.js";
 import { lintFeatureTree } from "../lib/validators/design_intent.js";
+import { parseJsonResponse } from "../lib/prompts/feature_tree.js";
 import { executeInSandbox } from "../lib/stages/review.js";
 import { validateGeometry } from "../lib/validators/geometric.js";
 import { getTopo, installGlobals } from "./helpers/topo.js";
@@ -276,5 +277,22 @@ describe("a solver that throws", () => {
     expect(built.code.source).toMatch(/try \{\s*\n\s*sk_s_block\.solve\(\);/);
     expect(built.code.source).toMatch(/catch \(e\) \{/);
     expect(built.code.source).toMatch(/status: -1, cost: Infinity, note:/);
+  });
+});
+
+describe("a response that ran out of room", () => {
+  it("is reported as truncated, not as missing", () => {
+    // Verbatim shape of a real refinement response: opens as an object, ends
+    // mid-array. "No JSON object found" sent the reader looking for a formatting
+    // problem when the answer had simply run out of tokens.
+    const truncated = '{\n  "name": "dropper",\n  "features": [\n    { "end": ["tube';
+    expect(() => parseJsonResponse(truncated, "feature tree refinement")).toThrow(/truncated/);
+    expect(() => parseJsonResponse(truncated, "feature tree refinement")).toThrow(/maxTokens/);
+  });
+
+  it("still says 'no object' when there was never one", () => {
+    expect(() => parseJsonResponse("I could not repair this tree.", "feature tree")).toThrow(
+      /No JSON object found/,
+    );
   });
 });

@@ -431,6 +431,43 @@ export function mergeConstraintsVerbose(sketch: SketchSpec): MergeConstraintsRes
   const dropped: DroppedConstraint[] = [];
 
   for (const c of sketch.constraints) {
+    // A two-entity DISTANCE must be a [t1, t2, distance] triple. The binding's
+    // 2-entity form is point-to-point between entity PARAMETERS, and a bare
+    // number there does not merely read wrong — it makes the kernel's NLopt
+    // solver fail outright and takes the whole model with it (measured: this is
+    // exactly what "Sketch.solve: nlopt failure" was).
+    if (c.kind === "DISTANCE" && c.tags.length === 2 && typeof c.value === "number") {
+      const a = sketch.entities.find((e) => e.tag === c.tags[0]);
+      const b = sketch.entities.find((e) => e.tag === c.tags[1]);
+      const nearest = a && b ? nearestEndpoints(a, b) : null;
+
+      if (!nearest) {
+        dropped.push({
+          kind: c.kind,
+          tags: c.tags,
+          reason: "a two-entity DISTANCE needs entities with endpoints to measure between",
+        });
+        continue;
+      }
+
+      // The value only means something if it is the distance the drawing already
+      // shows. A model asking for a PERPENDICULAR distance between two parallel
+      // walls writes a number no endpoint pair exhibits — "compression tube outer
+      // diameter 20" where the nearest endpoints are 800 apart — and emitting
+      // that sends the solver 780 units to satisfy it.
+      if (Math.abs(nearest.distance - c.value) > Math.max(1e-6, Math.abs(c.value) * 0.02)) {
+        dropped.push({
+          kind: c.kind,
+          tags: c.tags,
+          reason: `the distance asked for (${c.value}) is not the distance the drawing shows (${nearest.distance.toFixed(3)}) — this binding measures between entity parameters, so a perpendicular distance between parallel edges cannot be stated`,
+        });
+        continue;
+      }
+
+      constraints.push({ ...c, value: [nearest.aIndex, nearest.bIndex, c.value] });
+      continue;
+    }
+
     const translation = TRANSLATED_RELATIONS[c.kind];
     if (translation) {
       // Only lines have a direction to fix.
@@ -518,6 +555,32 @@ export function mergeConstraintsVerbose(sketch: SketchSpec): MergeConstraintsRes
 
 export function mergeConstraints(sketch: SketchSpec): SketchConstraint[] {
   return mergeConstraintsVerbose(sketch).constraints;
+}
+
+/**
+ * The endpoint pair of two entities that lies closest together.
+ *
+ * This is what a bare distance between two entities can mean to a binding that
+ * measures point to point, and for the geometry a model draws — the two side
+ * walls of a rod, the top and bottom of a dropper — it is the pair the number is
+ * about.
+ */
+function nearestEndpoints(
+  a: ProfileEntity,
+  b: ProfileEntity,
+): { aIndex: number; bIndex: number; distance: number } | null {
+  const pa = [a.start, a.end].filter((p): p is [number, number] => Array.isArray(p));
+  const pb = [b.start, b.end].filter((p): p is [number, number] => Array.isArray(p));
+  if (pa.length === 0 || pb.length === 0) return null;
+
+  let best: { aIndex: number; bIndex: number; distance: number } | null = null;
+  for (let i = 0; i < pa.length; i++) {
+    for (let j = 0; j < pb.length; j++) {
+      const distance = Math.hypot(pa[i][0] - pb[j][0], pa[i][1] - pb[j][1]);
+      if (!best || distance < best.distance) best = { aIndex: i, bIndex: j, distance };
+    }
+  }
+  return best;
 }
 
 function pairKey(tags: string[]): string {

@@ -374,7 +374,18 @@ export function parseJsonResponse(raw: string, what: string): Record<string, unk
 
   const objectText = extractBalancedObject(candidate);
   if (!objectText) {
-    throw new Error(`No JSON object found in ${what} response`);
+    // A response that OPENS as an object but never closes is truncated, not
+    // absent — and the two need very different fixes. Reporting the first as
+    // "no JSON object found" sends the reader looking for a formatting problem
+    // when the answer simply ran out of room. Measured: a refinement response
+    // ended mid-array inside a feature's "end" coordinates.
+    const opens = candidate.trimStart().startsWith("{");
+    const closes = candidate.trimEnd().endsWith("}");
+    throw new Error(
+      opens && !closes
+        ? `${what} response is truncated — it opens as a JSON object but never closes, so the answer ran out of room before it finished. Raise maxTokens, or ask for a smaller tree`
+        : `No JSON object found in ${what} response`,
+    );
   }
 
   const cleaned = repairJsonish(objectText);
