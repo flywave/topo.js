@@ -11,6 +11,7 @@
 import type { CadParameter, DatumPlane, Feature, FeatureKind, FeatureTree, ProfileEntity, SketchSpec } from "./model.js";
 import { activeFeatures } from "./model.js";
 import { emitProfileGeometry, planeNormal, validateRevolveProfile } from "./sketch_codegen.js";
+import { fitTreeScale } from "./scale_fit.js";
 
 // ---------------------------------------------------------------------------
 // Result type
@@ -40,6 +41,15 @@ export interface EmitModelOptions {
   indent?: string;
   /** Emit `return body` at the end. */
   returnBody?: boolean;
+  /**
+   * Emit the traced coordinates as they are, without fitting their size to the
+   * drawing's stated dimensions.
+   *
+   * The caller uses this to re-emit when the fitted geometry does not build: the
+   * fit is a hypothesis about the tracer's units, and a hypothesis that produces
+   * a body the kernel refuses is worth less than the traced size it replaced.
+   */
+  noSizeFit?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,13 +177,24 @@ export function emitFeatureTreeCode(
   const sketchByRef = new Map<string, string>(); // sketchId -> wpVar
   const sketchKindByRef = new Map<string, string>(); // sketchId -> emitted kind
   const placementBySketch = new Map<string, [number, number, number]>();
+
+  // One size for the whole part, decided from the dimensions the drawing states
+  // and applied to every sketch. Per-sketch fitting would move a pocket's
+  // coordinates without moving the outline it sits in.
+  const normalized = Object.entries(tree.sketches).map(([id, spec]) => normalizeSketch(id, spec));
+  const sizeFit = opts.noSizeFit
+    ? { scale: 1, notes: [] as string[] }
+    : fitTreeScale(normalized, params);
+  if (Math.abs(sizeFit.scale - 1) > 1e-9) warnings.push(...sizeFit.notes);
+
   push(`${I}// ---- sketches ----`);
-  for (const [id, spec] of Object.entries(tree.sketches)) {
-    const sketch = normalizeSketch(id, spec);
+  for (const sketch of normalized) {
+    const id = sketch.id;
     try {
       const emitted = emitProfileGeometry(sketch, sketch.entities, {
         indent: I,
         wpVar: `wp_${sanitizeId(id)}`,
+        scale: sizeFit.scale,
       });
       for (const line of emitted.code) push(line);
       warnings.push(...emitted.warnings);

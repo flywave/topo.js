@@ -69,6 +69,7 @@ import type {
   SketchSpec,
 } from "./model.js";
 import { reconcileSketch, type ReconcileReport } from "./reconcile.js";
+import { scaleSketch } from "./scale_fit.js";
 import { chainEntities, findConnectedComponents, near } from "./chain.js";
 
 // ---------------------------------------------------------------------------
@@ -726,6 +727,14 @@ export interface EmitGeometryOptions {
   wpVar: string;
   /** Map solve reports land in; omit to skip report capture. */
   reportMapVar?: string | null;
+  /**
+   * Uniform scale to apply to this sketch's traced coordinates.
+   *
+   * Decided once for the whole tree by `fitTreeScale`, never per sketch: a part
+   * is one set of coordinates spread across several sketches, and scaling one of
+   * them moves its features relative to the part they belong to.
+   */
+  scale?: number;
 }
 
 /**
@@ -749,17 +758,29 @@ export function emitProfileGeometry(
 ): EmittedProfile {
   const I = opts.indent ?? "  ";
 
+  // The traced SIZE is fitted to the drawing's stated dimensions before anything
+  // looks at the coordinates, and doing it first is the point: the constraint
+  // merger refuses a two-entity distance its own geometry contradicts, so a
+  // dimension the tracer drew 25% away from was being thrown away — and with it
+  // the only thing tying the parameter to the geometry. Scaled first, the same
+  // dimension MATCHES the geometry it describes and is applied as the constraint
+  // it was meant to be. The factor comes from the tree as a whole; see
+  // `fitTreeScale`.
+  const fitted = scaleSketch({ ...sketch, entities }, opts.scale ?? 1);
+
   // Dimensions are applied to the coordinates here, because the binding's
   // runtime solver computes a solution without writing it back (see
   // reconcile.ts). The emitted code then carries the solved geometry AND the
   // constraints, so the kernel's own solver re-checks the arithmetic at runtime.
-  const reconciled = reconcileSketch({ ...sketch, entities });
-  // Detect multi-component on ORIGINAL entities (reconciled drops disconnected
-  // pieces), but build the final profile on reconciled entities so segments
-  // carry the dimensioned coordinates.
-  const multiCheck = classifyProfile(entities);
+  const reconciled = reconcileSketch(fitted);
+  const profileEntities = reconciled.entities;
+
+  // Detect multi-component on the AUTHORED entities: reconciliation drops
+  // disconnected pieces, so asking it afterwards would silently collapse a
+  // pattern into whichever piece happened to be first.
+  const multiCheck = classifyProfile(fitted.entities);
   const isMulti = multiCheck?.kind === "multi";
-  const classified = isMulti ? multiCheck : classifyProfile(reconciled.entities);
+  const classified = isMulti ? multiCheck : classifyProfile(profileEntities);
   if (!classified) {
     const err = reconciled.report.closureError;
     const detail = Number.isFinite(err)
@@ -825,7 +846,7 @@ export function emitProfileGeometry(
     }
 
     // --- constraints ------------------------------------------------------
-    const merged = mergeConstraintsVerbose({ ...sketch, entities: reconciled.entities });
+    const merged = mergeConstraintsVerbose({ ...sketch, entities: profileEntities });
     for (const c of merged.constraints) {
       code.push(`${I}${emitConstraint(skVar, c)}`);
     }

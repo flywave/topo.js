@@ -134,6 +134,9 @@ export type {
   ViewConsistency,
 } from "./cad/project.js";
 
+export { fitTreeScale, scaleSketch } from "./cad/scale_fit.js";
+export type { TreeScaleFit } from "./cad/scale_fit.js";
+
 export {
   classifyProfile,
   emitProfileGeometry,

@@ -284,6 +284,7 @@ export interface BuildFromTreeResult {
 export function runBuildFromTree(
   tree: FeatureTree,
   paramOverride?: Record<string, number>,
+  opts?: { noSizeFit?: boolean },
 ): BuildFromTreeResult {
   const resolved = resolveParameters(tree.parameters);
   const values = paramOverride ? { ...resolved.values, ...paramOverride } : resolved.values;
@@ -292,7 +293,7 @@ export function runBuildFromTree(
   // substitution here keeps emission total, so a model that authors a properly
   // associative sketch gets an associative model rather than a parse failure.
   const sketches = resolveSketchValues(tree, values);
-  const emission = emitFeatureTreeCode(sketches.tree, values);
+  const emission = emitFeatureTreeCode(sketches.tree, values, opts);
 
   const warnings = [...emission.warnings, ...sketches.issues];
   const errors = [...emission.errors];

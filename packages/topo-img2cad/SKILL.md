@@ -187,6 +187,45 @@ The view is **cropped out of the drawing and shown to the model** (`visionProfil
 on by default in the CLI). Without that the model reads loops out of its own prose
 description of the image, which is a paraphrase being measured against the drawing.
 
+The prompt states the drawing's millimetres-per-pixel, but nothing in the answer
+enforces it: the coordinates come back in units of the model's own choosing.
+Measured on a real annotated drawing, the profile was **25% oversized** — 210 x 186
+units for a part the sheet dimensions as 150 tall — and because the geometry
+contradicted it, the very dimension that said so was *dropped* by the constraint
+merger rather than applied, leaving the parameter driving nothing.
+
+So `lib/cad/scale_fit.ts` fits the traced size to the dimensions the drawing states,
+before any geometry is emitted. It is narrow on purpose:
+
+- **Only a dimension that spans the profile counts.** The candidate's span must
+  match the profile's own width or height within 15%, or it is not evidence about
+  the part's size. A hole diameter or a wall thickness is not, and treating one as
+  if it were would rescale the whole part to match a feature.
+- **The requested value must be near the span it measures** (within 1.5x). A plate
+  60 high whose two long edges are dimensioned 120 apart has a ratio of 2 — a
+  different quantity, not a mis-scaled one.
+- **Dimensions written as expressions are resolved** against the parameters, since
+  that is how a model usually states an overall size (`value: "overallHeight"`).
+- **One scale for the whole tree, never one per sketch.** A part is a single set of
+  coordinates spread across an outline and the pockets inside it; scaling the
+  outline alone was measured to leave the pockets outside the body, and the
+  kernel's cut crashed outright (`NCollection_Sequence::ChangeValue`).
+- **If the dimensions disagree about the shape** (two of them imply scales more than
+  25% apart) no single scale fits, so the traced size is kept and the disagreement
+  is reported with its numbers rather than averaged into a guess.
+
+Fitting first is what turns a *dropped* constraint into an *applied* one: the merger
+refuses a two-entity distance its own geometry contradicts, so once the geometry
+agrees with the dimension, the dimension is emitted as the constraint it was meant
+to be and the parameter drives real geometry.
+
+Like every other hypothesis here, the fit is **verified against the kernel**: if the
+fitted geometry does not build while the traced geometry does, the traced body is
+kept and the run says which happened and why. That is not a theoretical branch —
+measured on the real drawing, the fit computed exactly the right factor (0.798) and
+the corrected geometry contained two detail circles the kernel's cut refuses, so
+the traced body is what survived, with the refusal reported.
+
 Output: `Profile2D` per view.
 
 ### Stage C — Feature tree

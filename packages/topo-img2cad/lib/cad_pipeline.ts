@@ -274,6 +274,24 @@ export class CadPipeline {
     this.edgeDistances = [];
     this.lastReprojection = undefined;
     let review = this.config.tp ? this.review(tree, build) : undefined;
+
+    // The size fit is a hypothesis about the tracer's units — that its
+    // coordinates are the drawing's millimetres once the stated dimensions are
+    // respected — and it is verified like any other: against the kernel. A
+    // hypothesis that produces a body the kernel refuses is worth less than the
+    // traced size it replaced, so the traced size is what gets kept.
+    if (this.config.tp && review && sizeFitWasApplied(build) && hasExecutionFailure(review)) {
+      const traced = runBuildFromTree(tree, undefined, { noSizeFit: true });
+      const tracedReview = this.review(tree, traced);
+      if (!hasExecutionFailure(tracedReview)) {
+        build = traced;
+        review = tracedReview;
+        this.warnings.push(
+          "the size fitted to the drawing's own dimensions did not build, so the traced size was kept — the fitted geometry was refused by the kernel, which is a defect in the model's construction rather than in the fit, but the traced body is the one that exists",
+        );
+      }
+    }
+
     let refinements = 0;
 
     // "Is there something a tree edit could fix" is the whole question. Asking
@@ -844,6 +862,16 @@ const MEASURED_CODES: ReadonlySet<string> = new Set([
   "SKT_NO_DOF",
   "SKT_SOLVER_FAILED",
 ]);
+
+/** Whether this build's coordinates were fitted to the drawing's dimensions. */
+function sizeFitWasApplied(build: BuildFromTreeResult): boolean {
+  return build.warnings.some((w) => w.includes("fitted to the drawing's own dimensions"));
+}
+
+/** Whether executing the emitted code failed outright. */
+function hasExecutionFailure(review: CadReviewOutcome): boolean {
+  return review.issues.some((i) => i.code === "CAD_EXECUTION" || i.code === "CAD_NO_SHAPE");
+}
 
 /**
  * How well a candidate matched the drawing, higher being better.
