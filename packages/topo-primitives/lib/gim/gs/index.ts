@@ -65,6 +65,8 @@ import {
     VTypeInsulatorObject,
     WireObject,
 } from "../../types/gim-gs";
+import { SpecSteelPrimitive } from "./spec_steel";
+import { SteelSpecNodeNames } from "./steel";
 import { angleToRad, BasePrimitive, Primitive, radToAngle } from "../../primitive";
 
 export enum GSPrimitiveType {
@@ -2361,6 +2363,18 @@ export function createGSPrimitive(tp: TopoInstance, args?: GSPrimitiveType | any
             return primitive;
         }
         return undefined;
+    }
+    // 规范型钢节点 (Q/GDW 11809—2018 附录 B): Model+Length 驱动的 18 种型钢
+    if (typeof type === "string") {
+        const suffix = type.replace("GIM/GS/", "");
+        if ((SteelSpecNodeNames as readonly string[]).includes(suffix)) {
+            const prim = new SpecSteelPrimitive(tp, suffix);
+            prim.setParams({ model: obj?.["model"] ?? "", length: obj?.["length"] ?? 0 });
+            if (prim.valid()) {
+                return prim as unknown as GSPrimitive;
+            }
+            return undefined;
+        }
     }
     primitive.setDefault();
     return primitive;
