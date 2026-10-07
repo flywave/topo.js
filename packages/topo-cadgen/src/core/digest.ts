@@ -75,7 +75,39 @@ export function ChangedFeatures(before: FeatureTreeLike, after: FeatureTreeLike)
       }
     }
   }
+  if (changes.length === 0) {
+    // Same rule for parameters: a changed parameter is attributed to every
+    // feature whose op references the name (a taller plate's "h" IS its
+    // pad's distance); an unconsumed parameter stands in under its own
+    // name — still a design change, just one nothing consumes yet.
+    for (const name of changedParamNames(before, after)) {
+      let consumers = 0;
+      for (const f of after.features) {
+        if (opReferences(f.op, name)) {
+          changes.push({ featureId: f.id, kind: "modified" });
+          consumers++;
+        }
+      }
+      if (consumers === 0) changes.push({ featureId: name, kind: "modified" });
+    }
+  }
   return changes;
+}
+
+function changedParamNames(before: FeatureTreeLike, after: FeatureTreeLike): string[] {
+  const oldByName = new Map(before.parameters.map((p) => [p.name, p.expr]));
+  return after.parameters
+    .filter((p) => oldByName.get(p.name) !== p.expr)
+    .map((p) => p.name);
+}
+
+// opReferences — word-boundary match over the op's canonical JSON: op fields
+// are expression strings ("h", "wall+2"), so this is the honest
+// over-approximation of "this feature consumes that parameter".
+function opReferences(op: Record<string, unknown>, name: string): boolean {
+  if (!name) return false;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`).test(jsonStable(op));
 }
 
 function jsonStable(v: unknown): string {

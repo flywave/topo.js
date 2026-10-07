@@ -4,13 +4,23 @@
 import * as THREE from "three";
 import { loadKernel, installGlobals, resolveParams } from "./engine/kernel.js";
 import { TreeInterpreter, registerBuiltinOps } from "./engine/interpreter.js";
-import type { FeatureTreeLike } from "./engine/kernel.js";
 import { Store } from "./core/store.js";
 import { Commands } from "./core/commands.js";
 import { Transport } from "./core/transport.js";
 import { ArtifactService } from "./core/artifacts.js";
 import { SelectionService } from "./core/selection.js";
+import { LocalEditService } from "./core/edits.js";
 import { Viewer } from "./viewer/viewer.js";
+import type { FeatureTreeLike } from "./engine/kernel.js";
+
+// Panel — the features/ extension point: { id, mount(el) }, registered on
+// the app; the host page places panels into its own layout. Panels never
+// import each other; they meet through the store/selection/commands.
+export interface Panel {
+  id: string;
+  title?: string;
+  mount(el: HTMLElement): void;
+}
 
 export interface EditorState {
   runId: string | null;
@@ -38,6 +48,8 @@ export class EditorApp {
   readonly viewer: Viewer;
   readonly artifacts: ArtifactService;
   readonly selection = new SelectionService();
+  readonly edits: LocalEditService;
+  private panels = new Map<string, Panel>();
   private interpreter: TreeInterpreter | null = null;
 
   constructor(
@@ -49,7 +61,69 @@ export class EditorApp {
     this.artifacts = new ArtifactService({
       interpret: (tree, params) => this.ensureInterpreter().then((i) => i.interpret(tree, params)),
     } as any);
+    this.edits = new LocalEditService({
+      interpret: (tree, params) => this.ensureInterpreter().then((i) => i.interpret(tree, params)),
+      replay: (tree) => this.transport.replayTree(this.store.get().runId!, tree),
+    });
     this.viewer.onFacePick((faceId) => void this.pick(faceId));
+    this.registerBuiltinCommands();
+  }
+
+  // registerPanel — the features/ extension point (duplicate ids throw:
+  // panels are part of the extension API, collisions are bugs).
+  registerPanel(panel: Panel): void {
+    if (this.panels.has(panel.id)) throw new Error(`panel ${panel.id} already registered`);
+    this.panels.set(panel.id, panel);
+  }
+
+  panelIDs(): string[] {
+    return [...this.panels.keys()];
+  }
+
+  mountPanel(id: string, el: HTMLElement): void {
+    const panel = this.panels.get(id);
+    if (!panel) throw new Error(`panel ${id} not registered`);
+    panel.mount(el);
+  }
+
+  // applyTree — the structured-edit closed loop: local preview first (the
+  // browser kernel is free), server replay only on a clean preview. On
+  // success the server has already cut a version; reload from it so the
+  // editor state IS the server state (no optimistic divergence).
+  async applyTree(next: FeatureTreeLike): Promise<boolean> {
+    const { runId, tree, params, busy } = this.store.get();
+    if (!runId || !tree || busy) return false;
+    this.store.set({ busy: true });
+    try {
+      const result = await this.edits.commit(tree, next, params);
+      if (!result.ok) {
+        this.log("warning", `编辑被拒绝: ${result.error}`);
+        return false;
+      }
+      this.log("done", `已落版 ${result.version ? `v${result.version.index}` : ""} — 变更: ${result.changed.map((c) => `${c.featureId}(${c.kind})`).join(", ")}`);
+      await this.loadRun(runId);
+      return true;
+    } finally {
+      this.store.set({ busy: false });
+    }
+  }
+
+  private registerBuiltinCommands(): void {
+    this.commands.register({ id: "edit.undo", title: "撤销", keys: "ctrl+z", run: () => void this.undoRedo("undo") });
+    this.commands.register({ id: "edit.redo", title: "重做", keys: "ctrl+shift+z", run: () => void this.undoRedo("redo") });
+  }
+
+  private async undoRedo(kind: "undo" | "redo"): Promise<void> {
+    const runId = this.store.get().runId;
+    if (!runId) return;
+    const { status, data } = kind === "undo"
+      ? await this.transport.undo(runId)
+      : await this.transport.redo(runId);
+    if (status !== 200) {
+      this.log("warning", `${kind} 被拒绝: ${JSON.stringify(data).slice(0, 200)}`);
+      return;
+    }
+    await this.loadRun(runId);
   }
 
   private async ensureInterpreter(): Promise<TreeInterpreter> {
