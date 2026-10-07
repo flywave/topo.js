@@ -140,4 +140,11 @@ app.commands.bindKeys(window);
 
 const urlRun = new URLSearchParams(location.search).get("run");
 if (urlRun) (document.getElementById("runId") as HTMLInputElement).value = urlRun;
-void load();
+void load().then(() => {
+  // ?edge=N — deep-link an edge selection after the run loads (deterministic
+  // for tests and shareable reviews).
+  const edge = new URLSearchParams(location.search).get("edge");
+  if (edge !== null && app.store.get().topology) {
+    (app as any).pickEdge(Number(edge));
+  }
+});

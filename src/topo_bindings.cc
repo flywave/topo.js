@@ -16,6 +16,7 @@
 #include "vector.hh"
 #include "vertex.hh"
 #include "wire.hh"
+#include <Standard_Failure.hxx>
 #include <Geom_TrimmedCurve.hxx>
 
 using namespace flywave;
@@ -5415,21 +5416,36 @@ EMSCRIPTEN_BINDINGS(Topo) {
                       emscripten::optional_override(
                           [](emscripten::val shpVal, emscripten::val edgesVal,
                              emscripten::val radiusVal) -> emscripten::val {
-                            auto shp = shpVal.as<shape>();
-                            std::vector<edge> edges;
-                            if (edgesVal.isArray()) {
-                              const size_t length =
-                                  edgesVal["length"].as<size_t>();
-                              for (size_t i = 0; i < length; i++) {
-                                edges.push_back(edgesVal[i].as<edge>());
+                            try {
+                              auto shp = shpVal.as<shape>();
+                              std::vector<edge> edges;
+                              if (edgesVal.isArray()) {
+                                const size_t length =
+                                    edgesVal["length"].as<size_t>();
+                                for (size_t i = 0; i < length; i++) {
+                                  edges.push_back(edgesVal[i].as<edge>());
+                                }
                               }
-                            }
-                            double radius = radiusVal.as<double>();
+                              double radius = radiusVal.as<double>();
 
-                            auto result =
-                                flywave::topo::fillet(shp, edges, radius);
-                            if (result) {
-                              return emscripten::val(*result);
+                              auto result =
+                                  flywave::topo::fillet(shp, edges, radius);
+                              if (result) {
+                                return emscripten::val(*result);
+                              }
+                              return emscripten::val::undefined();
+                            } catch (const Standard_Failure &f) {
+                              emscripten::val::global("Error")
+                                  .new_(std::string("ShapeOps.fillet: ") +
+                                        (f.GetMessageString()
+                                             ? f.GetMessageString()
+                                             : f.DynamicType()->Name()))
+                                  .throw_();
+                            } catch (const std::exception &e) {
+                              emscripten::val::global("Error")
+                                  .new_(std::string("ShapeOps.fillet: ") +
+                                        e.what())
+                                  .throw_();
                             }
                             return emscripten::val::undefined();
                           }))

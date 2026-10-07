@@ -262,13 +262,27 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                 emscripten::optional_override([](workplane &self,
                                                  emscripten::val selectorVal,
                                                  const std::string &tag = "") {
-                  if (selectorVal.isString()) {
-                    auto selector = selectorVal.as<std::string>();
-                    return emscripten::val(self.edges(selector, tag));
-                  } else {
-                    auto sel = selectorVal.as<selector_ptr>();
-                    return emscripten::val(self.edges(sel, tag));
+                  try {
+                    if (selectorVal.isString()) {
+                      auto selector = selectorVal.as<std::string>();
+                      return emscripten::val(self.edges(selector, tag));
+                    } else {
+                      auto sel = selectorVal.as<selector_ptr>();
+                      return emscripten::val(self.edges(sel, tag));
+                    }
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.edges: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.edges: ") + e.what())
+                        .throw_();
                   }
+                  return emscripten::val();
                 }))
       .function("wires",
                 emscripten::optional_override([](workplane &self,
