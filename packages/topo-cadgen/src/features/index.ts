@@ -5,8 +5,10 @@
 import type { EditorApp } from "../app.js";
 import { createParamsPanel } from "./params.js";
 import { createEditChatPanel } from "./editChat.js";
+import { createFeatureTreePanel } from "./featureTree.js";
 
 export function registerBuiltinPanels(app: EditorApp): void {
+  app.registerPanel(createFeatureTreePanel(app));
   app.registerPanel(createParamsPanel(app));
   app.registerPanel(createEditChatPanel(app));
 }

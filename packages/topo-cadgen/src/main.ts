@@ -35,7 +35,10 @@ for (const id of app.panelIDs()) {
   app.mountPanel(id, body);
   // Panels set their own section titles via .panel-section-title; derive the
   // header from the registered id.
-  title.textContent = id === "params" ? "参数与特征" : id === "editChat" ? "编辑对话" : id;
+  title.textContent = id === "params" ? "参数与特征"
+    : id === "editChat" ? "编辑对话"
+    : id === "featureTree" ? "特征树"
+    : id;
 }
 
 const load = async () => {
