@@ -20,25 +20,30 @@ describe.skipIf(!gated)("interpreter parity vs go-cadgen goldens", () => {
     // the Embind workplane — and its own suite proves those work.
     const { CQWorkplane } = await import("../../topo-primitives/lib/cq/index.js");
     const cq = {
-      workplane: (plane?: string, origin?: number[]) =>
+      workplane: (plane?: string, origin?: number[]): any =>
         new CQWorkplane(tp, plane ?? "XY",
           origin ? new tp.Vector(...origin) : undefined),
       vec: (x: number, y: number, z: number) => new tp.Vector(x, y, z),
-    };
+    } as any;
     const interp = new TreeInterpreter(tp, cq);
     registerBuiltinOps(interp, cq);
 
-    const goldens = JSON.parse(readFileSync(join(GOLDENS, "goldens.json"), "utf-8"));
+        const goldens = JSON.parse(readFileSync(join(GOLDENS, "goldens.json"), "utf-8"));
+    // Soft-fail per tree with a full table: one red tree must not hide the
+    // rest of the ratchet state. The overall test still fails if any diverges.
+    const failures: string[] = [];
     let checked = 0;
     for (const [name, golden] of Object.entries(goldens) as Array<[string, { volume: number; bbox: number[] }]>) {
       const raw = readFileSync(join(GOLDENS, name + ".json"), "utf-8");
       const tree = JSON.parse(raw);
       const result = await interp.interpret(tree, resolveParams(tree));
-      console.log(`[${name}] volume=${result.volume.toFixed(1)} golden=${golden.volume} emitted=${result.emitted.join(",")} skipped=${JSON.stringify(result.skipped)}`);
       const gap = Math.abs(result.volume - golden.volume) / golden.volume;
-      expect(gap, `${name}: volume gap ${(gap * 100).toFixed(2)}%`).toBeLessThan(0.015);
+      const ok = gap < 0.015 && result.skipped.length === 0;
+      console.log(`[${name}] gap=${(gap * 100).toFixed(2)}% emitted=${result.emitted.join(",")} skipped=${JSON.stringify(result.skipped)}`);
+      if (!ok) failures.push(`${name}: gap ${(gap * 100).toFixed(2)}%, skipped=${result.skipped.length}`);
       checked++;
     }
+    expect(failures, "parity failures:\n" + failures.join("\n")).toEqual([]);
     expect(checked).toBeGreaterThan(0);
   }, 300_000);
 });

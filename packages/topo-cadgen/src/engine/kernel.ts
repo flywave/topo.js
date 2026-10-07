@@ -83,7 +83,21 @@ export async function loadKernel(): Promise<KernelGlobal> {
 
 export function installGlobals(tp: KernelGlobal): void {
   const g = globalThis as any;
-  if (!g.tp) g.tp = tp;
+  g.tp = tp;
+  // Register EVERY kernel export as a global: the bindings dispatch with
+  // instanceof across far more classes than the base list (selector/boolean
+  // paths touch Compound/Solid/Shape/Axis/Dir/...), and a missing global
+  // surfaces as "Right-hand side of instanceof is not an object".
+  for (const name of Object.getOwnPropertyNames(tp)) {
+    if (name === "default" || name === "__esModule") continue;
+    if (g[name] === undefined) {
+      try {
+        g[name] = (tp as any)[name];
+      } catch {
+        // non-readable export — skip
+      }
+    }
+  }
 }
 
 // resolveParams — evaluate each parameter expression against the others

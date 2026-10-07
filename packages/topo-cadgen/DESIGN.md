@@ -69,13 +69,24 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
 - 内核加载/解释器骨架/pad/pocket/fillet/chamfer/extrudeSimple 已通：
   plate_bore_fillet/tube_revolve/twin_pads 等 pad+凹槽家族的语料 parity 达标
   (1.5% 容差)。
-- **boolean 缺口收窄为几何分歧 (2026-10-07)**：castCompound 路线已通 ——
-  Workplane.cut(Compound) 不再报绑定错误，pad+boolean 全 emit；但
-  boolean_cut_plate 体积 1166.7 vs golden 24250 (几何分歧，非绑定失败)。
-  同一树在 Go interp = 24250 (与 golden 一致)。怀疑与工作区未提交的
-  topo.full.wasm 重编相关 (cut 绑定同时从"收 Workplane"变为"收
-  Compound"也是该重编的伴生变化)。**验证方法**：对已提交版 wasm 重跑本
-  parity; 若旧版通过则为新 wasm 回归，走 kernel 侧回归流程。parity 保持
-  env-gated 至分歧闭合。
-- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
+- **棘轮全表 (2026-10-07, castCompound 路线)**：
+
+  | 树 | gap | 备注 |
+  |---|---|---|
+  | boolean_union_boss | 0.00% ✓ | 联动全通 |
+  | boolean_cut_plate | 95.19% ✗ | pad+cut 全 emit；cut 后体积分歧 1166.7 (确定性复现，所有工具形态同值) |
+  | twin_bores | 0.05% ✓ | 双圆孔 pocket 精确 |
+  | tube_revolve | 0.11% ✓ | revolveSimple |
+  | twin_pads | 64.58% ✗ | 双组件剖面拆分 (splitLoops) 产出错误环 |
+  | pattern_polar_plate | 1.62% ⚠️ | 孔位近似达标 (3 孔)，略超容差 |
+  | plate_bore_fillet | 33.32% ✗ | fillet 选择器语义 (TS shim "|Z" 面集与 Go 不同) |
+  | mirror_pair | 0.09% ✓ | mirroredFromAxis2/Workplane mirror |
+  | pattern_linear_bore | 0.13% ✓ | Shape.translated 链 |
+  | shell_tray | 46.93% ✗ | 内核 shell 直接失败 (shelling operation failed) |
+
+  已修：circleCentered 圆孔路径、castCompound 布尔工具、多组件剖面拆分、
+  revolve op 注册、installGlobals 全量类注册（修 "instanceof is not an
+  object" 族）。**剩余四类**（boolean cut 分歧 / 双组件拆环 / fillet 选择器
+  语义 / shell 失败）均为内核绑定/语义层问题，逐项迭代即是后续 op 覆盖
+  工作本身 —— 棘轮表格就是它们的工作清单。- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
   不进默认 CI；缺口闭合后移入默认门禁。

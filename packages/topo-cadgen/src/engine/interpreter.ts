@@ -27,7 +27,10 @@ export type CQWp = {
   close(): CQWp;
   circle(r: number, forConstruction?: boolean): CQWp;
   center(x: number, y: number): CQWp;
-  extrude(distance: number, combine: boolean | undefined, clean?: boolean, both?: boolean, taper?: number): CQWp;
+  extrude(distance: number, combine?: boolean | undefined, clean?: boolean, both?: boolean, taper?: number): CQWp;
+  extrudeSimple?(distance: number): CQWp;
+  revolveSimple?(angleDeg: number): CQWp;
+  revolve?(angleDeg: number, p1?: any, p2?: any, makeSolid?: boolean, isFrenet?: boolean): CQWp;
   cut(other: any, clean?: boolean, tol?: number): CQWp;
   union(other: CQWp, clean?: boolean, glue?: boolean, tol?: number): CQWp;
   intersect(other: any, clean?: boolean, tol?: number): CQWp;
@@ -48,8 +51,14 @@ export interface OpContext {
   sketches: Record<string, SketchCtx>;
   body: CQWp | undefined;
   tools: Map<string, any[]>;
+  /** Retain every intermediate kernel object for the build's lifetime —
+   * unreferenced Embind wrappers get GC-collected and the C++ side dies
+   * mid-build (nondeterministic zeros/volumes are this exact bug). */
+  keep: (obj: any) => any;
   feature: FeatureLike;
   toVec: (x: number, y: number, z: number) => any;
+  toPnt: (x: number, y: number, z: number) => any;
+  toDir: (x: number, y: number, z: number) => any;
   evalParam: (expr: string | number | undefined, fallback: number) => number;
   fail: (msg: string) => never;
 }
@@ -84,6 +93,14 @@ export class TreeInterpreter {
     const result: InterpResult = { mesh: null, volume: 0, bbox: null, emitted: [], skipped: [], warnings: [] };
     let body: CQWp | undefined;
     const tools = new Map<string, any[]>();
+    const keepAlive: any[] = [];
+    // Retain every intermediate kernel object for the build's lifetime —
+    // unreferenced Embind wrappers get GC-collected and the C++ side dies
+    // mid-build (nondeterministic zero volumes are this exact bug).
+    const keep = (obj: any) => {
+      keepAlive.push(obj);
+      return obj;
+    };
 
     for (const feature of tree.features) {
       const handler = this.ops.get(feature.op.op);
@@ -95,10 +112,13 @@ export class TreeInterpreter {
         tp: this.tp,
         params: resolved,
         sketches: tree.sketches as Record<string, SketchCtx>,
-        body,
+        body: keep(body),
         tools,
+        keep,
         feature,
-        toVec: (x, y, z) => this.cq.vec(x, y, z),
+        toVec: (x, y, z) => new this.tp.gp_Vec_4(x, y, z),
+        toPnt: (x, y, z) => new this.tp.gp_Pnt_3(x, y, z),
+        toDir: (x, y, z) => new this.tp.gp_Dir_3(new this.tp.gp_XYZ(x, y, z)),
         evalParam: (expr, fallback) => {
           if (expr === undefined || expr === "") return fallback;
           if (typeof expr === "number") return expr;
@@ -121,6 +141,7 @@ export class TreeInterpreter {
         continue;
       }
       body = ctx.body;
+      keep(body);
       result.emitted.push(feature.id);
     }
 
@@ -148,14 +169,14 @@ export function registerBuiltinOps(
   };
 
   const profileWp = (ctx: OpContext, sk: SketchCtx): CQWp => {
-    const wp = cq.workplane(sk.plane?.kind ?? "XY", sk.plane?.origin);
+    const wp = ctx.keep(cq.workplane(sk.plane?.kind ?? "XY", sk.plane?.origin));
     const lines = (sk.entities ?? []).filter((e) => e.type === "line" && !e.construction);
     const circles = (sk.entities ?? []).filter((e) => e.type === "circle" && !e.construction);
     if (circles.length > 0 && lines.length === 0) {
       const c = circles[0];
-      const w = wp.center(c.center[0], c.center[1]);
-      w.circle(c.radius, false);
-      return w;
+      const w2 = ctx.keep(wp.center(c.center[0], c.center[1]));
+      ctx.keep(w2.circleCentered(c.radius));
+      return w2;
     }
     if (lines.length > 0) {
       // Sketch coords are 2D in the plane's local frame → local gp_Pnt (z=0).
@@ -163,17 +184,28 @@ export function registerBuiltinOps(
         .map((l) => l.start)
         .concat([lines[lines.length - 1].end])
         .map(([x, y]) => new ctx.tp.gp_Pnt_3(x, y, 0));
+      ctx.keep(wp);
       wp.polyline(pts, false, false);
-      wp.close();
+      ctx.keep(wp.close());
       return wp;
     }
     throw new Error("sketch has no drawable entities");
   };
 
   const extrudeSketch = (ctx: OpContext, sk: SketchCtx, distance: number): CQWp => {
-    const prism = profileWp(ctx, sk).extrudeSimple(distance);
+    const prism = ctx.keep(profileWp(ctx, sk).extrudeSimple(distance));
     if (!prism || prism.vals().length === 0) throw new Error("extrusion produced no body");
-    return prism;
+    return ctx.keep(prism);
+  };
+
+  // toCompoundOf — Workplane/Shape/Compound → the Compound instance the
+  // Embind Workplane.cut demands (each wrapper exposes a different path).
+  const toCompoundOf = (obj: any): any => {
+    if (obj.toCompound) return obj.toCompound();
+    if (obj.castCompound) return obj.castCompound();
+    const c = new ctx.tp.Compound();
+    c.add(obj);
+    return c;
   };
 
   const firstTool = (ctx: OpContext, id: string | undefined): any | undefined => {
@@ -200,7 +232,7 @@ export function registerBuiltinOps(
     // a raw Workplane tool is rejected ("Expected Compound, got Workplane").
     const toolShape = prism.vals()[0];
     if (!ctx.body) ctx.fail("pocket before any body");
-    ctx.body = ctx.body.cut(toolShape.castCompound(), true, 0);
+    ctx.body = ctx.keep(ctx.body.cut(toolShape.castCompound(), true, 0));
     if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("cut produced no body");
     recordTool(ctx, ctx.feature.id, toolShape);
   });
@@ -208,16 +240,18 @@ export function registerBuiltinOps(
   interp.registerOp("fillet", (ctx, op) => {
     if (!ctx.body) ctx.fail("fillet before any body");
     const r = ctx.evalParam(op.radius, 1);
-    const wp = ctx.body.edges(op.selector ?? "|Z", "").fillet(r);
+    const wp = ctx.keep(ctx.body.edges(op.selector ?? "|Z", "").fillet(r));
     if (!wp || wp.vals().length === 0) ctx.fail("fillet produced no body");
+    ctx.keep(wp.vals()[0]);
     ctx.body = wp;
   });
 
   interp.registerOp("chamfer", (ctx, op) => {
     if (!ctx.body) ctx.fail("chamfer before any body");
     const l = ctx.evalParam(op.length, 1);
-    const wp = ctx.body.edges(op.selector ?? "|Z", "").chamfer(l, 0);
+    const wp = ctx.keep(ctx.body.edges(op.selector ?? "|Z", "").chamfer(l, 0));
     if (!wp || wp.vals().length === 0) ctx.fail("chamfer produced no body");
+    ctx.keep(wp.vals()[0]);
     ctx.body = wp;
   });
 
@@ -228,11 +262,11 @@ export function registerBuiltinOps(
     const toolShape = prism.vals()[0];
     if (!ctx.body) ctx.fail("boolean before any body");
     if (op.kind === "union") {
-      ctx.body = ctx.body.union(prism, true, false, 0);
+      ctx.body = ctx.keep(ctx.body.union(prism, true, false, 0));
     } else if (op.kind === "intersect") {
       ctx.body = ctx.body.intersect(toolShape.castCompound(), true, 0);
     } else {
-      ctx.body = ctx.body.cut(toolShape.castCompound(), true, 0);
+      ctx.body = ctx.keep(ctx.body.cut(toolShape.castCompound(), true, 0));
     }
     if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`boolean ${op.kind} produced no body`);
     if (op.kind !== "union") recordTool(ctx, ctx.feature.id, toolShape);
@@ -247,8 +281,8 @@ export function registerBuiltinOps(
     const dz = ctx.evalParam(op.dz, 0);
     if (!ctx.body) ctx.fail("pattern before any body");
     for (let i = 1; i < count; i++) {
-      const inst = src.translate(ctx.toVec(dx * i, dy * i, dz * i));
-      ctx.body = ctx.body.cut(inst.castCompound(), true, 0);
+      const inst = src.translated(ctx.toVec(dx * i, dy * i, dz * i));
+      ctx.body = ctx.keep(ctx.body.cut(inst.castCompound(), true, 0));
       if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`pattern cut failed at instance ${i}`);
     }
   });
@@ -262,8 +296,9 @@ export function registerBuiltinOps(
     const axis = op.axis === "x" ? [1, 0, 0] : op.axis === "y" ? [0, 1, 0] : [0, 0, 1];
     if (!ctx.body) ctx.fail("pattern before any body");
     for (let i = 1; i < count; i++) {
-      const inst = src.rotate(ctx.toVec(0, 0, 0), ctx.toVec(axis[0], axis[1], axis[2]), step * i);
-      ctx.body = ctx.body.cut(inst.castCompound(), true, 0);
+      const toolWpR = ctx.keep(new ctx.tp.Workplane("XY", undefined, src));
+      const inst = toolWpR.rotate(ctx.toPnt(0, 0, 0), ctx.toPnt(0, 0, 1), step * i);
+      ctx.body = ctx.keep(ctx.body.cut(inst.castCompound(), true, 0));
       if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`polar cut failed at instance ${i}`);
     }
   });
@@ -272,10 +307,24 @@ export function registerBuiltinOps(
     const src = firstTool(ctx, op.ofFeature);
     if (!src) throw new Error(`mirror source "${op.ofFeature}" is not a material-removal feature`);
     const plane = op.plane?.kind ?? "YZ";
-    const reflected = src.mirror(plane, ctx.toVec(0, 0, 0));
+    const axisN = plane === "XZ" ? [0, 1, 0] : plane === "XY" ? [0, 0, 1] : [1, 0, 0];
+    // Mirror at the Workplane level (shim surface — proven in iteration 4):
+    // wrap the tool shape, mirror it, extract the reflected shape.
+    const toolWpM = ctx.keep(new ctx.tp.Workplane(plane ?? "YZ", undefined, src));
+    const reflected = toolWpM.mirror(plane, ctx.toPnt(0, 0, 0));
     if (!ctx.body) ctx.fail("mirror before any body");
-    ctx.body = ctx.body.cut(reflected.castCompound(), true, 0);
+    ctx.body = ctx.keep(ctx.body.cut(reflected.vals()[0].castCompound(), true, 0));
     if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("mirror cut produced no body");
+  });
+
+  interp.registerOp("revolve", (ctx, op) => {
+    const sk = sketchOf(ctx, op.sketchId);
+    const angle = op.angle !== undefined ? ctx.evalParam(op.angle, 360) : 360;
+    const prism = profileWp(ctx, sk).revolveSimple
+      ? profileWp(ctx, sk).revolveSimple(angle)
+      : profileWp(ctx, sk).revolve(angle, undefined, undefined, true, true);
+    if (!prism || prism.vals().length === 0) ctx.fail("revolve produced no body");
+    ctx.body = prism;
   });
 
   interp.registerOp("shell", (ctx, op) => {
@@ -283,8 +332,9 @@ export function registerBuiltinOps(
     const t = ctx.evalParam(op.thickness, 1);
     let target: CQWp = ctx.body;
     if (op.openSelector) target = target.faces(op.openSelector, "");
-    const wp = target.shell(t, "arc");
+    const wp = ctx.keep(target.shell(t, "arc"));
     if (!wp || wp.vals().length === 0) ctx.fail("shell produced no body");
+    ctx.keep(wp.vals()[0]);
     ctx.body = wp;
   });
 }
@@ -336,4 +386,33 @@ function fingerprint(mesh: { vertices: number[][]; triangles: number[][] }): { v
     }
   }
   return { volume: Math.abs(volume), bbox: [min[0], min[1], min[2], max[0], max[1], max[2]] };
+}
+
+// splitLoops — chain lines into closed loops by endpoint proximity (the
+// interpreter's profile-component rule; unordered entity lists are the norm).
+function splitLoops(lines: Array<Record<string, any>>): Array<Array<Record<string, any>>> {
+  const remaining = [...lines];
+  const loops: Array<Array<Record<string, any>>> = [];
+  const key = (p: any) => `${p[0].toFixed(6)},${p[1].toFixed(6)}`;
+  while (remaining.length > 0) {
+    const loop = [remaining.shift()!];
+    let tail = loop[0].end;
+    for (let guard = 0; guard < remaining.length; guard++) {
+      const idx = remaining.findIndex(
+        (l) => key(l.start) === key(tail) || key(l.end) === key(tail),
+      );
+      if (idx < 0) break;
+      const next = remaining.splice(idx, 1)[0];
+      if (key(next.start) !== key(tail)) {
+        const s = next.start;
+        next.start = next.end;
+        next.end = s;
+      }
+      loop.push(next);
+      tail = next.end;
+      guard = -1; // restart scan (list shrank)
+    }
+    loops.push(loop);
+  }
+  return loops;
 }
