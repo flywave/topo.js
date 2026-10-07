@@ -137,3 +137,35 @@ describe("applyPatch.setSketchEntity", () => {
     })).toThrow(/missing/);
   });
 });
+
+describe("applyPatch — the six whole-object ops (Go TreeEdit mirror)", () => {
+  const base = plate("10");
+  const newFeature = { id: "f_bore", op: { op: "pocket", sketchId: "s_base", through: true } };
+
+  it("addFeature appends; replaceFeature keeps the named id; missing replace throws", () => {
+    const added = applyPatch(base, { kind: "addFeature", feature: newFeature as any });
+    expect(added.features.map((f) => f.id)).toEqual(["f_pad", "f_bore"]);
+    const replaced = applyPatch(base, {
+      kind: "replaceFeature", featureId: "f_pad",
+      feature: { id: "whatever", op: { op: "pad", sketchId: "s_base", distance: "18" } } as any,
+    });
+    expect(replaced.features[0].id).toBe("f_pad");
+    expect((replaced.features[0].op as any).distance).toBe("18");
+    expect(() => applyPatch(base, { kind: "replaceFeature", featureId: "nope", feature: newFeature as any }))
+      .toThrow(/no feature/);
+  });
+
+  it("addSketch rejects duplicates; replace/remove of a missing sketch throws", () => {
+    const sk = { id: "s_extra", plane: { kind: "XY" }, entities: [], constraints: [] };
+    const added = applyPatch(base, { kind: "addSketch", sketch: sk as any });
+    expect(Object.keys(added.sketches)).toContain("s_extra");
+    expect(() => applyPatch(added, { kind: "addSketch", sketch: sk as any })).toThrow(/already exists/);
+    expect(() => applyPatch(base, { kind: "replaceSketch", sketchId: "nope", sketch: sk as any }))
+      .toThrow(/no sketch/);
+    expect(() => applyPatch(base, { kind: "removeSketch", sketchId: "nope" })).toThrow(/no sketch/);
+    const removed = applyPatch(applyPatch(base, { kind: "addSketch", sketch: sk as any }), {
+      kind: "removeSketch", sketchId: "s_extra",
+    });
+    expect(Object.keys(removed.sketches)).not.toContain("s_extra");
+  });
+});

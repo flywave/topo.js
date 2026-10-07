@@ -62,6 +62,14 @@ export class Transport {
     return this.req("PUT", `/runs/${runId}/tree`, tree);
   }
 
+  // runEdits — the patch wire form: name only what changes (the same
+  // six-op vocabulary the prompt-to-edit path carries). The server applies
+  // the patch and replays through the same gates; identical 200/422
+  // semantics as a whole-tree PUT.
+  runEdits(runId: string, patch: { edits: unknown[] }) {
+    return this.req("PUT", `/runs/${runId}/edits`, patch);
+  }
+
   undo(runId: string) {
     return this.req("POST", `/runs/${runId}/undo`);
   }

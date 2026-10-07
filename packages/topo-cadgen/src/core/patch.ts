@@ -2,14 +2,25 @@
 // Every edit is a new tree object (the previous one stays intact for undo
 // comparison and digest diffing); the server replays the whole tree, so a
 // patch is just "the smallest tree change that expresses the user's intent".
-import type { FeatureTreeLike, FeatureLike } from "../engine/kernel.js";
+import type { FeatureTreeLike, FeatureLike, SketchLike } from "../engine/kernel.js";
 
 export type Patch =
+  // UI-level fine edits (the editor's structured surface).
   | { kind: "setParameter"; name: string; expr: string }
   | { kind: "setOpField"; featureId: string; field: string; value: unknown }
   | { kind: "removeFeature"; featureId: string }
   | { kind: "setSketchEntity"; sketchId: string; tag: string; field: string; value: unknown }
-  | { kind: "setSketchConstraint"; sketchId: string; index: number; value: number };
+  | { kind: "setSketchConstraint"; sketchId: string; index: number; value: number }
+  // Whole-object edits — the same six ops the prompt-to-edit path's
+  // TreePatch carries (session/edit.go ApplyTreePatch), mirrored so the
+  // editor can express anything an LLM edit can. Wire form is unchanged:
+  // both layers apply locally, the tree (or the patch via PUT /edits)
+  // crosses the wire.
+  | { kind: "addFeature"; feature: FeatureLike }
+  | { kind: "replaceFeature"; featureId: string; feature: FeatureLike }
+  | { kind: "addSketch"; sketch: SketchLike }
+  | { kind: "replaceSketch"; sketchId: string; sketch: SketchLike }
+  | { kind: "removeSketch"; sketchId: string };
 
 export function applyPatch(tree: FeatureTreeLike, patch: Patch): FeatureTreeLike {
   switch (patch.kind) {
@@ -27,6 +38,36 @@ export function applyPatch(tree: FeatureTreeLike, patch: Patch): FeatureTreeLike
     }
     case "removeFeature": {
       return { ...tree, features: tree.features.filter((f) => f.id !== patch.featureId) };
+    }
+    case "addFeature": {
+      if (!patch.feature.id) throw new Error("add-feature needs a feature with an id");
+      return { ...tree, features: [...tree.features, patch.feature] };
+    }
+    case "replaceFeature": {
+      let found = false;
+      const features = tree.features.map((f) => {
+        if (f.id !== patch.featureId) return f;
+        found = true;
+        return { ...patch.feature, id: patch.featureId };
+      });
+      if (!found) throw new Error(`no feature ${patch.featureId} to replace`);
+      return { ...tree, features };
+    }
+    case "addSketch": {
+      if (!patch.sketch.id) throw new Error("add-sketch needs a sketch with an id");
+      if (tree.sketches[patch.sketch.id]) throw new Error(`sketch ${patch.sketch.id} already exists`);
+      return { ...tree, sketches: { ...tree.sketches, [patch.sketch.id]: patch.sketch } };
+    }
+    case "replaceSketch": {
+      const sk = tree.sketches[patch.sketchId];
+      if (!sk) throw new Error(`no sketch ${patch.sketchId} to replace`);
+      return { ...tree, sketches: { ...tree.sketches, [patch.sketchId]: { ...patch.sketch, id: patch.sketchId } } };
+    }
+    case "removeSketch": {
+      if (!tree.sketches[patch.sketchId]) throw new Error(`no sketch ${patch.sketchId} to remove`);
+      const sketches = { ...tree.sketches };
+      delete sketches[patch.sketchId];
+      return { ...tree, sketches };
     }
     case "setSketchEntity": {
       // A moved sketch entity IS the feature that consumes it (the digest's
