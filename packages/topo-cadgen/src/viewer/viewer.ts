@@ -6,6 +6,7 @@
 // core selection/artifacts.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 export interface MeshData {
   vertices: number[][];
@@ -22,6 +23,9 @@ export class Viewer {
   private pickHandler: ((faceId: number) => void) | null = null;
   private edgePickHandler: ((edgeId: number) => void) | null = null;
   private container: HTMLElement;
+  /** The assembly view's objects (GLB scene), kept apart from the part
+   * mesh so the two views can replace each other cleanly. */
+  private assemblyObjects: THREE.Object3D[] = [];
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -152,6 +156,61 @@ export class Viewer {
       this.camera.updateProjectionMatrix();
     }
     this.resize(this.container);
+  }
+
+  // showAssemblyGLB — replace the viewport with a parsed glTF scene (the
+  // assembly view). The part mesh/edges stay in the scene graph but hidden,
+  // so returning to the part view is a visibility flip, not a rebuild.
+  showAssemblyGLB(glb: ArrayBuffer): Promise<void> {
+    return new Promise((resolve, reject) => {
+      new GLTFLoader().parse(glb, "", (gltf) => {
+        this.setPartVisible(false);
+        const box = new THREE.Box3();
+        gltf.scene.traverse((o) => {
+          if ((o as THREE.Mesh).isMesh) {
+            const m = o as THREE.Mesh;
+            if (m.material && !(Array.isArray(m.material))) {
+              (m.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+            }
+          }
+        });
+        gltf.scene.updateMatrixWorld(true);
+        box.setFromObject(gltf.scene);
+        this.scene.add(gltf.scene);
+        this.assemblyObjects = [gltf.scene];
+        if (!box.isEmpty()) this.frameBox(box);
+        this.resize(this.container);
+        resolve();
+      }, (err) => reject(err instanceof Error ? err : new Error(String(err))));
+    });
+  }
+
+  // showPart — back from the assembly view: hide the GLB objects, restore
+  // the part mesh/edges.
+  showPart(): void {
+    this.assemblyObjects.forEach((o) => this.scene.remove(o));
+    this.assemblyObjects = [];
+    this.setPartVisible(true);
+    this.resize(this.container);
+  }
+
+  get assemblyShown(): boolean {
+    return this.assemblyObjects.length > 0;
+  }
+
+  private setPartVisible(visible: boolean): void {
+    this.faceMeshes.forEach((m) => (m.visible = visible));
+    this.edgeLines.forEach((l) => (l.visible = visible));
+  }
+
+  private frameBox(box: THREE.Box3): void {
+    const size = box.getSize(new THREE.Vector3()).length();
+    const center = box.getCenter(new THREE.Vector3());
+    this.camera.position.set(center.x + size, center.y + size * 0.6, center.z + size);
+    this.controls.target.copy(center);
+    this.camera.near = size / 1000;
+    this.camera.far = size * 100;
+    this.camera.updateProjectionMatrix();
   }
 
   // highlight — paint the faces of the selected feature; the rest base.

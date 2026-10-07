@@ -22,6 +22,21 @@ export interface Panel {
   mount(el: HTMLElement): void;
 }
 
+export interface RunProperties {
+  volume: number;
+  surfaceArea: number;
+  centreOfMass: number[];
+  bbox: number[];
+  ok: boolean;
+  reason?: string;
+}
+
+export interface AssemblyInventory {
+  id: string;
+  name: string;
+  parts: Array<{ name: string; volume: number; bbox: number[] }>;
+}
+
 export interface EditorState {
   runId: string | null;
   tree: FeatureTreeLike | null;
@@ -31,6 +46,10 @@ export interface EditorState {
   busy: boolean;
   /** The run's addressable face/edge index (undefined: unavailable). */
   topology?: { faces: Array<{ id: number; featureId?: string }>; edges: Array<{ id: number; ref: unknown; faces: number[]; points: number[][] }> };
+  /** The current tree's physical properties (undefined: not fetched yet). */
+  properties?: RunProperties;
+  /** The loaded assembly view (undefined: the part view is showing). */
+  assembly?: AssemblyInventory;
 }
 
 export interface EditorOptions {
@@ -237,6 +256,40 @@ export class EditorApp {
       this.viewer.setEdges(null);
     }
     await this.refreshVersions();
+    await this.refreshProperties();
+  }
+
+  // refreshProperties — the digital-twin read: the mass properties follow
+  // the current tree, so every load/apply/undo lands fresh numbers.
+  async refreshProperties(): Promise<void> {
+    const runId = this.store.get().runId;
+    if (!runId) return;
+    const { status, data } = await this.transport.runProperties(runId);
+    if (status === 200 && data?.ok) {
+      this.store.set({ properties: data });
+    } else {
+      this.store.set({ properties: undefined });
+    }
+  }
+
+  // loadAssembly — switch the viewport to the assembly view: inventory into
+  // the store (panels render it), the GLB into the viewer.
+  async loadAssembly(id: string): Promise<void> {
+    const { status, data } = await this.transport.assembly(id);
+    if (status !== 200) {
+      this.log("warning", `装配 ${id} 加载失败`);
+      return;
+    }
+    const glb = await this.transport.assemblyGLB(id);
+    await this.viewer.showAssemblyGLB(glb);
+    this.store.set({ assembly: { id: data.assemblyId ?? id, name: data.name, parts: data.parts ?? [] } });
+    this.log("done", `装配视图: ${data.name} (${(data.parts ?? []).length} 件)`);
+  }
+
+  // showPart — back from the assembly view.
+  showPart(): void {
+    this.viewer.showPart();
+    this.store.set({ assembly: undefined });
   }
 
   async refreshArtifacts(): Promise<void> {

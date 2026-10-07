@@ -47,6 +47,9 @@ for (const id of app.panelIDs()) {
   title.textContent = id === "params" ? "参数与特征"
     : id === "editChat" ? "编辑对话"
     : id === "featureTree" ? "特征树"
+    : id === "properties" ? "物理属性"
+    : id === "exports" ? "导出"
+    : id === "assembly" ? "装配"
     : id;
 }
 

@@ -31,6 +31,7 @@ export type CQWp = {
   extrude(distance: number, combine?: boolean | undefined, clean?: boolean, both?: boolean, taper?: number): CQWp;
   extrudeSimple?(distance: number): CQWp;
   revolveSimple?(angleDeg: number): CQWp;
+  revolveAboutAxis?(angleDeg: number, axisStart: { x: number; y: number; z: number }, axisEnd: { x: number; y: number; z: number }): CQWp;
   revolve?(angleDeg: number, p1?: any, p2?: any, makeSolid?: boolean, isFrenet?: boolean): CQWp;
   cut(other: any, clean?: boolean, tol?: number): CQWp;
   union(other: CQWp, clean?: boolean, glue?: boolean, tol?: number): CQWp;
@@ -52,6 +53,11 @@ export interface OpContext {
   sketches: Record<string, SketchCtx>;
   body: CQWp | undefined;
   tools: Map<string, any[]>;
+  /** featureShapes — the material a body-creating feature added (its own
+   * solid, before it merged into the body). The material-source half of
+   * pattern / mirror / boolean: patterning a boss re-emits and unions it,
+   * where a removal tool re-emits and cuts. Mirrors Go featureShapes. */
+  featureShapes: Map<string, any>;
   /** Retain every intermediate kernel object for the build's lifetime —
    * unreferenced Embind wrappers get GC-collected and the C++ side dies
    * mid-build (nondeterministic zeros/volumes are this exact bug). */
@@ -94,6 +100,7 @@ export class TreeInterpreter {
     const result: InterpResult = { mesh: null, volume: 0, bbox: null, emitted: [], skipped: [], warnings: [] };
     let body: CQWp | undefined;
     const tools = new Map<string, any[]>();
+    const featureShapes = new Map<string, any>();
     const keepAlive: any[] = [];
     // Retain every intermediate kernel object for the build's lifetime —
     // unreferenced Embind wrappers get GC-collected and the C++ side dies
@@ -115,6 +122,7 @@ export class TreeInterpreter {
         sketches: tree.sketches as Record<string, SketchCtx>,
         body: keep(body),
         tools,
+        featureShapes,
         keep,
         feature,
         toVec: (x, y, z) => new this.tp.gp_Vec_4(x, y, z),
@@ -159,6 +167,31 @@ export class TreeInterpreter {
   }
 }
 
+/** degToRad — the wasm rotate consumes RADIANS (the same gp_Trsf::SetRotation
+ * the Go side measured), while tree angles are degrees. */
+export const degToRad = Math.PI / 180;
+
+/** planeAxes — the sketch plane's world axes (u along x, v along y, extrude
+ * along n). Named planes return their fixed frames; a custom plane is NOT
+ * constructible on this wasm build (TopoPlane unexposed) — the sketch-level
+ * check rejects it before axes matter. Mirrors Go cad.PlaneAxes. */
+export function planeAxes(plane?: { kind?: string; normal?: number[]; xAxis?: number[] }): { ex: number[]; ey: number[]; n: number[] } {
+  if (plane?.kind === "XZ") return { ex: [1, 0, 0], ey: [0, 0, 1], n: [0, -1, 0] };
+  if (plane?.kind === "YZ") return { ex: [0, 1, 0], ey: [0, 0, 1], n: [1, 0, 0] };
+  if (plane?.kind === "custom" && plane.normal) {
+    const l = Math.hypot(...plane.normal) || 1;
+    const n = plane.normal.map((v) => v / l);
+    let x = plane.xAxis ?? (Math.abs(n[0]) >= 0.9 ? [0, 1, 0] : [1, 0, 0]);
+    const d = x[0] * n[0] + x[1] * n[1] + x[2] * n[2];
+    x = [x[0] - d * n[0], x[1] - d * n[1], x[2] - d * n[2]];
+    const xl = Math.hypot(...x) || 1;
+    x = x.map((v) => v / xl);
+    const ey = [n[1] * x[2] - n[2] * x[1], n[2] * x[0] - n[0] * x[2], n[0] * x[1] - n[1] * x[0]];
+    return { ex: x, ey, n };
+  }
+  return { ex: [1, 0, 0], ey: [0, 1, 0], n: [0, 0, 1] };
+}
+
 export function registerBuiltinOps(
   interp: TreeInterpreter,
   cq: { workplane: (plane?: string, origin?: number[]) => CQWp; vec: (x: number, y: number, z: number) => any },
@@ -176,6 +209,12 @@ export function registerBuiltinOps(
   // on its own, then unioned — the same profile-component rule the Go side
   // applies.
   const profileWps = (ctx: OpContext, sk: SketchCtx): CQWp[] => {
+    // Custom planes are honest skips locally: the wasm build does not expose
+    // TopoPlane, so the frame is not constructible — the server builds them
+    // (第三轮 Go 侧已落地) and the editor falls back to the server mesh.
+    if (sk.plane?.kind === "custom") {
+      throw new Error("custom datum planes are not constructible in the local kernel (TopoPlane unexposed) — the server builds them");
+    }
     const lines = (sk.entities ?? []).filter((e) => e.type === "line" && !e.construction);
     const circles = (sk.entities ?? []).filter((e) => e.type === "circle" && !e.construction);
     const wps: CQWp[] = [];
@@ -236,11 +275,22 @@ export function registerBuiltinOps(
   const recordTool = (ctx: OpContext, id: string, tool: any): void => {
     ctx.tools.set(id, [tool]);
   };
+  // patternSourceKind — "cut" (a removal tool re-emitted and cut) or "union"
+  // (a body-creating feature's material re-emitted and unioned). Mirrors the
+  // Go interpreter's source resolution: patterns work on BOTH kinds.
+  const patternSourceKind = (ctx: OpContext, id: string): "cut" | "union" | null => {
+    if (ctx.tools.has(id) && (ctx.tools.get(id)?.length ?? 0) > 0) return "cut";
+    if (ctx.featureShapes.has(id)) return "union";
+    return null;
+  };
+  const patternSource = (ctx: OpContext, id: string): any | undefined =>
+    firstTool(ctx, id) ?? ctx.featureShapes.get(id);
 
   interp.registerOp("pad", (ctx, op) => {
     const sk = sketchOf(ctx, op.sketchId);
     const d = ctx.evalParam(op.distance, 10);
     const prism = extrudeSketch(ctx, sk, d);
+    ctx.featureShapes.set(ctx.feature.id, prism);
     ctx.body = ctx.body ? ctx.body.union(prism, true, false, 0) : prism;
     if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("pad produced no body");
   });
@@ -305,78 +355,171 @@ export function registerBuiltinOps(
   });
 
   interp.registerOp("boolean", (ctx, op) => {
-    const sk = sketchOf(ctx, op.sketchId);
-    const d = op.distance !== undefined ? ctx.evalParam(op.distance, 10) : 50;
-    const prism = extrudeSketch(ctx, sk, d);
-    const toolShape = prism.vals()[0];
+    // Body-vs-body: another body-creating feature's material as the tool.
+    // Union against it is identity (bodies merge as they are created) — say
+    // so instead of pretending to work. Mirrors Go toolFeature.
+    let toolShape: any;
+    let prism: CQWp | undefined;
+    if (op.toolFeature) {
+      const src = ctx.featureShapes.get(op.toolFeature);
+      if (!src) ctx.fail(`boolean toolFeature "${op.toolFeature}" is not a body-creating feature`);
+      if (op.kind === "union") ctx.fail(`boolean union with toolFeature "${op.toolFeature}" is a no-op — that material is already in the body`);
+      toolShape = src;
+    } else {
+      const sk = sketchOf(ctx, op.sketchId);
+      const d = op.distance !== undefined ? ctx.evalParam(op.distance, 10) : 50;
+      prism = extrudeSketch(ctx, sk, d);
+      toolShape = prism.vals()[0];
+    }
     if (!ctx.body) ctx.fail("boolean before any body");
     if (op.kind === "union") {
-      ctx.body = ctx.keep(ctx.body.union(prism, true, false, 0));
+      ctx.body = ctx.keep(ctx.body.union(prism!, true, false, 0));
     } else if (op.kind === "intersect") {
       ctx.body = ctx.body.intersect(toolShape.castCompound(), true, 0);
     } else {
       ctx.body = ctx.keep(ctx.body.cut(toolShape.castCompound(), true, 0));
     }
     if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`boolean ${op.kind} produced no body`);
-    if (op.kind !== "union") recordTool(ctx, ctx.feature.id, toolShape);
+    if (op.kind !== "union" && prism) recordTool(ctx, ctx.feature.id, toolShape);
   });
 
   interp.registerOp("pattern_linear", (ctx, op) => {
-    const src = firstTool(ctx, op.ofFeature);
-    if (!src) throw new Error(`pattern source "${op.ofFeature}" is not a material-removal feature`);
-    const count = Math.max(1, op.count ?? 1);
+    const kind = patternSourceKind(ctx, op.ofFeature);
+    const src = patternSource(ctx, op.ofFeature);
+    if (!src) throw new Error(`pattern source "${op.ofFeature}" is neither a cut nor a body-creating feature`);
+    const count = Math.max(1, op.count ?? op.nx ?? 1);
+    const ny = Math.max(1, op.ny ?? 1);
     const dx = ctx.evalParam(op.dx, 0);
     const dy = ctx.evalParam(op.dy, 0);
     const dz = ctx.evalParam(op.dz, 0);
+    const dx2 = ctx.evalParam(op.dx2, 0);
+    const dy2 = ctx.evalParam(op.dy2, 0);
+    const dz2 = ctx.evalParam(op.dz2, 0);
     if (!ctx.body) ctx.fail("pattern before any body");
-    for (let i = 1; i < count; i++) {
-      const inst = src.translated(ctx.toVec(dx * i, dy * i, dz * i));
-      ctx.body = ctx.keep(ctx.body.cut(inst.castCompound(), true, 0));
-      if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`pattern cut failed at instance ${i}`);
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < count; i++) {
+        if (i === 0 && j === 0) continue; // the source is already in the body
+        const inst = ctx.keep(src.translated(ctx.toVec(dx * i + dx2 * j, dy * i + dy2 * j, dz * i + dz2 * j)));
+        if (kind === "cut") {
+          ctx.body = ctx.keep(ctx.body.cut(inst.castCompound(), true, 0));
+          if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`pattern cut failed at (${i},${j})`);
+        } else {
+          ctx.body = ctx.keep(ctx.body.union(inst.castCompound(), true, false, 0));
+          if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`pattern union failed at (${i},${j})`);
+        }
+      }
     }
   });
 
   interp.registerOp("pattern_polar", (ctx, op) => {
-    const src = firstTool(ctx, op.ofFeature);
-    if (!src) throw new Error(`polar pattern source "${op.ofFeature}" is not a removal feature`);
+    const kind = patternSourceKind(ctx, op.ofFeature);
+    const src = patternSource(ctx, op.ofFeature);
+    if (!src) throw new Error(`polar pattern source "${op.ofFeature}" is neither a cut nor a body-creating feature`);
     const total = op.angle !== undefined ? ctx.evalParam(op.angle, 360) : 360;
     const count = Math.max(1, op.count ?? 1);
     const step = total / count;
-    const axis = op.axis === "x" ? [1, 0, 0] : op.axis === "y" ? [0, 1, 0] : [0, 0, 1];
+    // An explicit axis line (eccentric axes included) or the named global
+    // axis through the origin.
+    const p1 = op.axisLine?.start ?? [0, 0, 0];
+    const p2 = op.axisLine?.end ?? (op.axis === "x" ? [1, 0, 0] : op.axis === "y" ? [0, 1, 0] : [0, 0, 1]);
     if (!ctx.body) ctx.fail("pattern before any body");
     for (let i = 1; i < count; i++) {
       const toolWpR = ctx.keep(new ctx.tp.Workplane("XY", undefined, src));
-      const rotated = toolWpR.rotate(ctx.toPnt(0, 0, 0), ctx.toPnt(0, 0, 1), step * i);
-      // rotate returns a Workplane here; normalize whatever comes back to
-      // the Compound the Embind Workplane.cut demands.
+      // DEGREES → RADIANS: the wasm rotate hands the raw value to
+      // gp_Trsf::SetRotation (the Go side measured the same bug).
+      const rotated = toolWpR.rotate(ctx.toPnt(p1[0], p1[1], p1[2]), ctx.toPnt(p2[0], p2[1], p2[2]), step * i * degToRad);
       const inst = typeof rotated.vals === "function" ? rotated.vals()[0] : rotated;
-      ctx.body = ctx.keep(ctx.body.cut(toCompoundOf(inst), true, 0));
-      if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`polar cut failed at instance ${i}`);
+      if (kind === "cut") {
+        ctx.body = ctx.keep(ctx.body.cut(toCompoundOf(inst), true, 0));
+        if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`polar cut failed at instance ${i}`);
+      } else {
+        ctx.body = ctx.keep(ctx.body.union(toCompoundOf(inst), true, false, 0));
+        if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`polar union failed at instance ${i}`);
+      }
     }
   });
 
   interp.registerOp("mirror", (ctx, op) => {
-    const src = firstTool(ctx, op.ofFeature);
-    if (!src) throw new Error(`mirror source "${op.ofFeature}" is not a material-removal feature`);
+    const kind = patternSourceKind(ctx, op.ofFeature);
+    const src = patternSource(ctx, op.ofFeature);
+    if (!src) throw new Error(`mirror source "${op.ofFeature}" is neither a cut nor a body-creating feature`);
     const plane = op.plane?.kind ?? "YZ";
-    const axisN = plane === "XZ" ? [0, 1, 0] : plane === "XY" ? [0, 0, 1] : [1, 0, 0];
+    if (plane === "custom") throw new Error("mirror about a custom plane is not available in the local kernel — the server builds it");
     // Mirror at the Workplane level (shim surface — proven in iteration 4):
     // wrap the tool shape, mirror it, extract the reflected shape.
     const toolWpM = ctx.keep(new ctx.tp.Workplane(plane ?? "YZ", undefined, src));
     const reflected = toolWpM.mirror(plane, ctx.toPnt(0, 0, 0));
+    const reflShape = reflected.vals()[0];
     if (!ctx.body) ctx.fail("mirror before any body");
-    ctx.body = ctx.keep(ctx.body.cut(reflected.vals()[0].castCompound(), true, 0));
-    if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("mirror cut produced no body");
+    if (kind === "cut") {
+      ctx.body = ctx.keep(ctx.body.cut(reflShape.castCompound(), true, 0));
+      if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("mirror cut produced no body");
+    } else {
+      ctx.body = ctx.keep(ctx.body.union(reflShape.castCompound(), true, false, 0));
+      if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("mirror union produced no body");
+    }
   });
 
   interp.registerOp("revolve", (ctx, op) => {
     const sk = sketchOf(ctx, op.sketchId);
     const angle = op.angle !== undefined ? ctx.evalParam(op.angle, 360) : 360;
-    const prism = profileWp(ctx, sk).revolveSimple
-      ? profileWp(ctx, sk).revolveSimple(angle)
-      : profileWp(ctx, sk).revolve(angle, undefined, undefined, true, true);
+    // The axis: a named global axis or an explicit world line (axisLine).
+    // The kernel converts the axis points with the sketch plane's frame, so
+    // a WORLD axis must be expressed plane-locally first — world coordinates
+    // revolve about the wrong line (measured on the Go side, same kernel).
+    let axisStart: [number, number, number] | undefined;
+    let axisEnd: [number, number, number] | undefined;
+    if (op.axisLine?.start && op.axisLine?.end) {
+      axisStart = op.axisLine.start;
+      axisEnd = op.axisLine.end;
+    } else {
+      const named = op.axis === "x" ? [1, 0, 0] : op.axis === "y" ? [0, 1, 0] : [0, 0, 1];
+      axisStart = [0, 0, 0];
+      axisEnd = named as [number, number, number];
+    }
+    const wp = profileWp(ctx, sk);
+    let prism: CQWp;
+    if (op.axisLine?.start && op.axisLine?.end) {
+      // An explicit world axis line: expressed plane-locally (the kernel
+      // converts with the plane's to_world — world points revolve about the
+      // wrong line; the Go side measured this exact trap).
+      const o = sk.plane?.origin ?? [0, 0, 0];
+      const axes = planeAxes(sk.plane);
+      const toLocal = (p: number[]): { x: number; y: number; z: number } => {
+        const r = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
+        return {
+          x: r[0] * axes.ex[0] + r[1] * axes.ex[1] + r[2] * axes.ex[2],
+          y: r[0] * axes.ey[0] + r[1] * axes.ey[1] + r[2] * axes.ey[2],
+          z: r[0] * axes.n[0] + r[1] * axes.n[1] + r[2] * axes.n[2],
+        };
+      };
+      const ls = toLocal(axisStart);
+      const le = toLocal(axisEnd);
+      prism = ctx.keep(wp.revolveAboutAxis(angle, ls, le));
+    } else {
+      // The named-axis default — the corpus-proven path.
+      prism = wp.revolveSimple ? wp.revolveSimple(angle) : wp.revolve(angle, undefined, undefined, true, true);
+    }
     if (!prism || prism.vals().length === 0) ctx.fail("revolve produced no body");
+    ctx.featureShapes.set(ctx.feature.id, prism);
     ctx.body = prism;
+  });
+
+  // sweep / loft — named skips, not silent unknowns: the kernel's
+  // MakePipeShell/ThruSections produce empty or wild surfaces for these
+  // (the Go side probe-measured the same kernel behaviour and ships the
+  // straight-tube loft + honest gates there). The editor falls back to the
+  // server mesh, which builds them.
+  interp.registerOp("sweep", (ctx, op) => {
+    if (op.pathKind === "helix") {
+      ctx.fail("helix sweep: the kernel's section loft cannot follow a rotating path — the server refuses it too");
+    }
+    ctx.fail("sweep: the local kernel's pipe surface is unreliable — the server builds sweeps and the editor falls back to its mesh");
+  });
+
+  interp.registerOp("loft", (ctx, op) => {
+    void op;
+    ctx.fail("loft: the local kernel's ThruSections cannot reconcile rotated sections — the server builds lofts and the editor falls back to its mesh");
   });
 
   interp.registerOp("shell", (ctx, op) => {

@@ -306,6 +306,13 @@ export class CQWorkplane {
         return this._wrap(this.wp.revolve(angleDeg, undefined, undefined, true, true));
     }
 
+    /** revolveAboutAxis — an explicit axis line (world points). The kernel
+     * converts the points with the workplane plane's frame, so callers pass
+     * plane-LOCAL coordinates (the Go interpreter's revolveAxisLocal rule). */
+    revolveAboutAxis(angleDeg: number, axisStart: { x: number; y: number; z: number }, axisEnd: { x: number; y: number; z: number }): CQWorkplane {
+        return this._wrap(this.wp.revolve(angleDeg, axisStart, axisEnd, true, true));
+    }
+
     loftSimple(): CQWorkplane {
         return this._wrap(this.wp.loft(false, true, true));
     }
