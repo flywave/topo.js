@@ -84,9 +84,15 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
   | pattern_linear_bore | 0.13% ✓ | Shape.translated 链 |
   | shell_tray | 46.93% ✗ | 内核 shell 直接失败 (shelling operation failed) |
 
-  已修：circleCentered 圆孔路径、castCompound 布尔工具、多组件剖面拆分、
-  revolve op 注册、installGlobals 全量类注册（修 "instanceof is not an
-  object" 族）。**剩余四类**（boolean cut 分歧 / 双组件拆环 / fillet 选择器
-  语义 / shell 失败）均为内核绑定/语义层问题，逐项迭代即是后续 op 覆盖
-  工作本身 —— 棘轮表格就是它们的工作清单。- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
+  已修：circleCentered 圆孔路径、castCompound 布尔工具、revolve op 注册、
+  installGlobals 全量类注册（修 "instanceof is not an object" 族）。
+  **重要澄清**：解释器必须搭配 CQ shim 表面使用（编辑器 app.ts 与 parity
+  测试的 cq 工厂都是 shim 实例）—— shim 在裸 Embind Workplane 之上补了
+  extrudeSimple/circleCentered 等方法；裸表面缺这些方法属预期，不是缺陷。
+  **剩余四类缺口**（经 shim 表面实测）：
+  1. boolean cut 分歧（95.19%，全工具形态确定性复现，Go=24250/TS=1166.7）
+  2. 双组件剖面拆环（twin_pads 64.58%，splitLoops 拆出的环 extrude 后体积不符）
+  3. plate_bore_fillet 33.32%（fillet 选择器 "|Z" 两侧语义差异）
+  4. shell_tray 46.93%（内核 shelling operation failed）
+  逐项迭代即是后续 op 覆盖工作本身 —— 棘轮表格就是它们的工作清单。- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
   不进默认 CI；缺口闭合后移入默认门禁。
