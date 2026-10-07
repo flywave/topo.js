@@ -50,6 +50,14 @@ export class Transport {
     return this.req("GET", `/runs/${runId}/artifacts`);
   }
 
+  runTopology(runId: string) {
+    return this.req("GET", `/runs/${runId}/topology`);
+  }
+
+  selectEdge(runId: string, edgeRef: unknown) {
+    return this.req("POST", `/runs/${runId}/select`, { edgeRef });
+  }
+
   runVersions(runId: string) {
     return this.req("GET", `/runs/${runId}/versions`);
   }

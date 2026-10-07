@@ -18,7 +18,9 @@ export class Viewer {
   readonly renderer: THREE.WebGLRenderer;
   readonly controls: OrbitControls;
   private faceMeshes: THREE.Mesh[] = [];
+  private edgeLines: THREE.Line[] = [];
   private pickHandler: ((faceId: number) => void) | null = null;
+  private edgePickHandler: ((edgeId: number) => void) | null = null;
   private container: HTMLElement;
 
   constructor(container: HTMLElement) {
@@ -45,6 +47,16 @@ export class Viewer {
       );
       const ray = new THREE.Raycaster();
       ray.setFromCamera(p, this.camera);
+      // EDGES FIRST: an edge lies exactly ON faces, so a face-first raycast
+      // would win every time and edge picking could never fire (observed
+      // live). The line threshold gives the edge a small capture zone; only
+      // a clean miss falls through to the face beneath.
+      ray.params.Line = { threshold: Math.max(2.5, this.camera.position.distanceTo(this.controls.target) * 0.02) };
+      const edgeHits = ray.intersectObjects(this.edgeLines, false);
+      if (edgeHits.length && edgeHits[0].object.userData.edgeId !== undefined) {
+        this.edgePickHandler?.(edgeHits[0].object.userData.edgeId as number);
+        return;
+      }
       const hits = ray.intersectObjects(this.faceMeshes, false);
       if (hits.length && hits[0].object.userData.faceId !== undefined) {
         this.pickHandler(hits[0].object.userData.faceId as number);
@@ -65,6 +77,42 @@ export class Viewer {
     this.pickHandler = handler;
   }
 
+  onEdgePick(handler: (edgeId: number) => void): void {
+    this.edgePickHandler = handler;
+  }
+
+  // setEdges — the topology's sampled polylines as a pickable overlay.
+  setEdges(edges: Array<{ id: number; points: number[][] }> | null): void {
+    this.edgeLines.forEach((l) => {
+      this.scene.remove(l);
+      l.geometry.dispose();
+      (l.material as THREE.Material).dispose();
+    });
+    this.edgeLines = [];
+    if (!edges) return;
+    for (const e of edges) {
+      if (!e.points || e.points.length < 2) continue;
+      const geom = new THREE.BufferGeometry().setFromPoints(
+        e.points.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
+      );
+      const mat = new THREE.LineBasicMaterial({ color: 0x222831 });
+      const line = new THREE.Line(geom, mat);
+      line.userData.edgeId = e.id;
+      this.edgeLines.push(line);
+      this.scene.add(line);
+    }
+  }
+
+  // highlightEdges — paint the picked edge(s); called with an empty set to
+  // clear. Non-selected edges keep their base colour.
+  highlightEdges(selectedEdgeIds: Set<number>): void {
+    this.edgeLines.forEach((l) => {
+      (l.material as THREE.LineBasicMaterial).color.set(
+        selectedEdgeIds.has(l.userData.edgeId as number) ? 0xff8830 : 0x222831,
+      );
+    });
+  }
+
   setMesh(mesh: MeshData | null): void {
     this.faceMeshes.forEach((m) => {
       this.scene.remove(m);
@@ -72,6 +120,12 @@ export class Viewer {
       m.material.dispose();
     });
     this.faceMeshes = [];
+    this.edgeLines.forEach((l) => {
+      this.scene.remove(l);
+      l.geometry.dispose();
+      (l.material as THREE.Material).dispose();
+    });
+    this.edgeLines = [];
     if (!mesh) return;
     const box = new THREE.Box3();
     const base = new THREE.MeshStandardMaterial({ color: 0x8fa3bf, metalness: 0.1, roughness: 0.65, side: THREE.DoubleSide });

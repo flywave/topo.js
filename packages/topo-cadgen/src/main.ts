@@ -31,6 +31,7 @@ const app = new EditorApp({
   },
 });
 registerBuiltinPanels(app);
+(window as any).cadgenApp = app;
 
 for (const id of app.panelIDs()) {
   const box = document.createElement("section");

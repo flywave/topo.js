@@ -29,6 +29,8 @@ export interface EditorState {
   sessionId: string | null;
   selection: string | null;
   busy: boolean;
+  /** The run's addressable face/edge index (undefined: unavailable). */
+  topology?: { faces: Array<{ id: number; featureId?: string }>; edges: Array<{ id: number; ref: unknown; faces: number[]; points: number[][] }> };
 }
 
 export interface EditorOptions {
@@ -70,6 +72,7 @@ export class EditorApp {
       replay: (tree) => this.transport.replayTree(this.store.get().runId!, tree),
     });
     this.viewer.onFacePick((faceId) => void this.pick(faceId));
+    this.viewer.onEdgePick((edgeId) => void this.pickEdge(edgeId));
     this.registerBuiltinCommands();
   }
 
@@ -171,6 +174,29 @@ export class EditorApp {
       const owned = new Set<number>(am.faces.filter((f: any) => f.featureId === data.featureId).map((f: any) => f.faceId));
       this.viewer.highlight(owned);
     }
+    this.viewer.highlightEdges(new Set());
+  }
+
+  // pickEdge — the edge half of selection: server resolves the ref (the
+  // same EdgeRefResolution the fillet op uses) → featureId via adjacency.
+  private async pickEdge(edgeId: number): Promise<void> {
+    const { runId, topology } = this.store.get();
+    if (!runId || !topology) return;
+    const edge = topology.edges.find((e) => e.id === edgeId);
+    if (!edge) return;
+    const { status, data } = await this.transport.selectEdge(runId, edge.ref);
+    if (status !== 200) {
+      this.log("warning", `edge ${edgeId} 解析失败`);
+      return;
+    }
+    this.selection.set({
+      featureId: data.featureId, kind: "edge",
+      edgeId: data.edgeId ?? edgeId, edgeRef: edge.ref as any,
+    });
+    this.store.set({ selection: data.featureId });
+    this.viewer.highlightEdges(new Set([data.edgeId ?? edgeId]));
+    this.viewer.highlight(new Set());
+    this.log("done", `选中 edge#${data.edgeId ?? edgeId} (${data.resolvedBy}) → ${data.featureId}`);
   }
 
   // loadRun — pull tree/mesh/artifacts/versions and display.
@@ -194,6 +220,21 @@ export class EditorApp {
       this.log("warning", `local build fell back to server mesh: ${e instanceof Error ? e.message : e}`);
       const { data: mesh, status } = await this.transport.runMesh(runId);
       if (status === 200) this.viewer.setMesh(mesh);
+    }
+    // The topology overlay (edges render + picks address) — optional: a
+    // failed or tool-less run simply has none.
+    try {
+      const { status, data } = await this.transport.runTopology(runId);
+      if (status === 200 && data?.edges) {
+        this.store.set({ topology: data });
+        this.viewer.setEdges(data.edges);
+      } else {
+        this.store.set({ topology: undefined });
+        this.viewer.setEdges(null);
+      }
+    } catch {
+      this.store.set({ topology: undefined });
+      this.viewer.setEdges(null);
     }
     await this.refreshVersions();
   }

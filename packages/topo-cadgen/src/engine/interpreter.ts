@@ -12,6 +12,7 @@
 //   - Workplane.cut rejects a Workplane tool ("Expected Compound") — tools
 //     are passed as Shape → castCompound().
 //   - pad's later-feature union works at Workplane level.
+import { resolveEdgeRef } from "../../../topo-primitives/lib/topo/edge_ref.js";
 import type { FeatureTreeLike, FeatureLike, KernelGlobal } from "./kernel.js";
 import { resolveParams } from "./kernel.js";
 
@@ -260,7 +261,35 @@ export function registerBuiltinOps(
   interp.registerOp("fillet", (ctx, op) => {
     if (!ctx.body) ctx.fail("fillet before any body");
     const r = ctx.evalParam(op.radius, 1);
-    const wp = ctx.keep(ctx.body.edges(op.selector ?? "|Z", "").fillet(r));
+    let wp: CQWp;
+    if (op.edges?.length) {
+      // Interactive addressing: stable edge references resolved against the
+      // current body (edge_ref.ts — the same byFaces/byIndex contract the
+      // server side runs). The workplane wraps the solid (find_solid) and
+      // `add` puts exactly the named edges into its selection.
+      let shape = ctx.body.vals()[0];
+      if (shape && shape.Solids) {
+        const solids = shape.Solids();
+        if (solids && solids.length) shape = solids[0];
+      }
+      if (!shape) ctx.fail("fillet by reference: no body shape");
+      // Kernel direct call — the SAME topo::fillet(solid, edges, r) the Go
+      // interpreter drives (topo.Fillet). The workplane find_solid path
+      // refused these very cases (measured), the direct call accepts them.
+      const resolvedEdges: any[] = [];
+      for (const ref of op.edges) {
+        const res = resolveEdgeRef(shape, ref);
+        if (!res.ok) ctx.fail(`fillet by reference: ${res.reason ?? "unresolved"}`);
+        if (res.resolvedBy === "byIndex" && res.reason) {
+          console.warn(`edge ${ref.index}: ${res.reason}`);
+        }
+        resolvedEdges.push(res.edge);
+      }
+      const out = (ctx.tp.ShapeOps ?? (ctx.tp as any).Shape).fillet(shape, resolvedEdges, r);
+      wp = ctx.keep(new ctx.tp.Workplane("XY", undefined, out));
+    } else {
+      wp = ctx.keep(ctx.body.edges(op.selector ?? "|Z", "").fillet(r));
+    }
     if (!wp || wp.vals().length === 0) ctx.fail("fillet produced no body");
     ctx.keep(wp.vals()[0]);
     ctx.body = wp;

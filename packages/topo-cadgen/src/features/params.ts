@@ -199,6 +199,44 @@ export function createParamsPanel(app: EditorApp) {
           hint.textContent = "（点选面后可编辑对应特征）";
           table.appendChild(hint);
         }
+
+        // Edge selection → the fillet/chamfer authoring surface: a radius
+        // input and two verbs, each committing an add-feature patch keyed by
+        // the edge's stable reference.
+        const sel = app.store.get().selection;
+        const selObj = app.selection.get();
+        if (sel && selObj?.kind === "edge" && selObj.edgeRef) {
+          const head = document.createElement("div");
+          head.textContent = `边 #${selObj.edgeId}（归属 ${sel}）`;
+          head.className = "panel-section-title";
+          table.appendChild(head);
+
+          const row = document.createElement("div");
+          row.className = "panel-row";
+          const label = document.createElement("label");
+          label.textContent = "半径=";
+          const input = document.createElement("input");
+          input.value = "2";
+          input.disabled = busy;
+          const mkOp = (op: "fillet" | "chamfer"): Patch => ({
+            kind: "addFeature",
+            feature: {
+              id: `f_${op}_${selObj.edgeId}`,
+              name: op === "fillet" ? "圆角" : "倒角",
+              op: { op, edges: [selObj.edgeRef], ...(op === "fillet" ? { radius: input.value || "2" } : { length: input.value || "2" }) },
+            } as any,
+          });
+          const round = document.createElement("button");
+          round.textContent = "圆角";
+          round.disabled = busy;
+          round.onclick = () => void commit(mkOp("fillet"));
+          const chamfer = document.createElement("button");
+          chamfer.textContent = "倒角";
+          chamfer.disabled = busy;
+          chamfer.onclick = () => void commit(mkOp("chamfer"));
+          row.append(label, input, round, chamfer);
+          table.appendChild(row);
+        }
       };
 
       const commit = async (patch: Patch) => {

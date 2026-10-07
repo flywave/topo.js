@@ -4,6 +4,12 @@ export interface Selection {
   featureId: string;
   sketchId?: string;
   faceId?: number;
+  /** kind defaults to "face" for face picks; "edge" for edge picks. */
+  kind?: "face" | "edge";
+  /** edgeId in the run's topology index (the render/pick address). */
+  edgeId?: number;
+  /** The stable edge reference (byFaces + index) — survives rebuilds. */
+  edgeRef?: { byFaces?: Array<{ min: number[]; max: number[] }>; index: number };
   sourceRange?: { featureId: string; start: number; end: number };
 }
 
