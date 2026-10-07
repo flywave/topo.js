@@ -102,5 +102,6 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
 - 内核绑定增量（text/chamferAngle/拓扑邻接查询）已在工作树编译进 wasm，
   其 WIP 探针 (corpus_replay/topology_query) 缺 fixture 仍红，随绑定一起
   后续收口。
-- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
-  不进默认 CI；**全绿后建议移入默认门禁**（棘轮不再允许回退）。
+- parity 测试**已移入默认门禁** (2026-10-07)：wasm 与 goldens 兄弟检出均
+  存在时默认运行（自动探测），`CADGEN_EDITOR_KERNEL=0` 显式退出——全绿后
+  棘轮不再允许回退。

@@ -1,16 +1,21 @@
 // Corpus parity (P3 framework ratchet): the browser interpreter must land in
-// the same place as the Go one. Env-gated like tree_goldens_dump: the wasm
-// kernel only loads where it exists.
-//
-//   CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=<go-cadgen>/testdata/corpus/trees pnpm test interpreter_parity
+// the same place as the Go one. Runs by DEFAULT wherever the kernel wasm and
+// the go-cadgen goldens are both present (sibling workspace checkout); set
+// CADGEN_EDITOR_KERNEL=0 to opt out, CADGEN_GOLDENS to point elsewhere.
+// The ratchet is all-green (10/10) — a regression here is a red build.
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadKernel, installGlobals, resolveParams } from "../src/engine/kernel.js";
 import { TreeInterpreter, registerBuiltinOps } from "../src/engine/interpreter.js";
 
-const GOLDENS = process.env.CADGEN_GOLDENS ?? "";
-const gated = process.env.CADGEN_EDITOR_KERNEL === "1" && GOLDENS && existsSync(GOLDENS);
+const here = dirname(fileURLToPath(import.meta.url));
+const GOLDENS = process.env.CADGEN_GOLDENS
+  ?? join(here, "..", "..", "..", "..", "go-cadgen", "testdata", "corpus", "trees");
+const WASM = join(here, "..", "..", "topo-wasm", "src", "topo.full.wasm");
+const optOut = process.env.CADGEN_EDITOR_KERNEL === "0";
+const gated = !optOut && existsSync(WASM) && existsSync(join(GOLDENS, "goldens.json"));
 
 describe.skipIf(!gated)("interpreter parity vs go-cadgen goldens", () => {
   it("volume/bbox within the two-sided tolerance (1.5%)", async () => {
