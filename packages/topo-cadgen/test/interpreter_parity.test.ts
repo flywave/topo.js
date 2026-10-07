@@ -34,7 +34,7 @@ describe.skipIf(!gated)("interpreter parity vs go-cadgen goldens", () => {
       const raw = readFileSync(join(GOLDENS, name + ".json"), "utf-8");
       const tree = JSON.parse(raw);
       const result = await interp.interpret(tree, resolveParams(tree));
-      console.log(`[${name}] emitted=${result.emitted.join(",")} skipped=${JSON.stringify(result.skipped)} warnings=${result.warnings.length}`);
+      console.log(`[${name}] volume=${result.volume.toFixed(1)} golden=${golden.volume} emitted=${result.emitted.join(",")} skipped=${JSON.stringify(result.skipped)}`);
       const gap = Math.abs(result.volume - golden.volume) / golden.volume;
       expect(gap, `${name}: volume gap ${(gap * 100).toFixed(2)}%`).toBeLessThan(0.015);
       checked++;

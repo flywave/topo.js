@@ -1,4 +1,4 @@
-# topo-cadgen-editor — 编辑器框架 (P3 迭代 4)
+# topo-cadgen — 编辑器框架 (P3)
 
 go-cadgen 前端编辑器的**框架**：以 FeatureTree 为交互对象，浏览器内 topo.js
 内核本地翻译生成几何（预览），go-cadgen 服务端是**验证权威**（门禁/版本/
@@ -69,12 +69,13 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
 - 内核加载/解释器骨架/pad/pocket/fillet/chamfer/extrudeSimple 已通：
   plate_bore_fillet/tube_revolve/twin_pads 等 pad+凹槽家族的语料 parity 达标
   (1.5% 容差)。
-- **当前已知缺口 (环境棘轮已红)**：boolean 族在 Embind 层的工具入参绑定
-  异常 —— Workplane.cut 拒收 Workplane 工具 (要求 Compound)，而
-  tp.Compound 的 Embind 构造重载同样失配 ("invalid number of parameters")。
-  这与 go-topo 侧 Workplane.Cut(Workplane) 可用的行为不一致，属内核 Embind
-  绑定缺口 (与 AGENTS"已知坑"同类)。绕行路径：boolean 工具以
-  shape-to-Compound 的正确构造方式接入 (待查 Embind 正确 ctor)，或 kernel
-  侧补 cut(Workplane) 绑定 —— 与 phase2 §3.3 的内核绑定增量同批处理。
+- **boolean 缺口收窄为几何分歧 (2026-10-07)**：castCompound 路线已通 ——
+  Workplane.cut(Compound) 不再报绑定错误，pad+boolean 全 emit；但
+  boolean_cut_plate 体积 1166.7 vs golden 24250 (几何分歧，非绑定失败)。
+  同一树在 Go interp = 24250 (与 golden 一致)。怀疑与工作区未提交的
+  topo.full.wasm 重编相关 (cut 绑定同时从"收 Workplane"变为"收
+  Compound"也是该重编的伴生变化)。**验证方法**：对已提交版 wasm 重跑本
+  parity; 若旧版通过则为新 wasm 回归，走 kernel 侧回归流程。parity 保持
+  env-gated 至分歧闭合。
 - parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
   不进默认 CI；缺口闭合后移入默认门禁。

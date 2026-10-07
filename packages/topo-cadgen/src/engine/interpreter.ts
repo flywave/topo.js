@@ -4,6 +4,14 @@
 // coverage is ratcheted by test/interpreter_parity.test.ts against
 // go-cadgen's corpus goldens. A missing/failing op SKIPS the feature with a
 // reason — fail-soft-with-reasons, never a silent wrong body.
+//
+// Kernel binding notes (measured on the current wasm, 2026-10-07):
+//   - Workplane ctor origin takes a Vector (gp_Pnt is rejected).
+//   - extrude's taper must be undefined (0 triggers the inner-wire taper
+//     error on profiles with holes).
+//   - Workplane.cut rejects a Workplane tool ("Expected Compound") — tools
+//     are passed as Shape → castCompound().
+//   - pad's later-feature union works at Workplane level.
 import type { FeatureTreeLike, FeatureLike, KernelGlobal } from "./kernel.js";
 import { resolveParams } from "./kernel.js";
 
@@ -20,9 +28,9 @@ export type CQWp = {
   circle(r: number, forConstruction?: boolean): CQWp;
   center(x: number, y: number): CQWp;
   extrude(distance: number, combine: boolean | undefined, clean?: boolean, both?: boolean, taper?: number): CQWp;
-  cut(other: CQWp, clean?: boolean, tol?: number): CQWp;
+  cut(other: any, clean?: boolean, tol?: number): CQWp;
   union(other: CQWp, clean?: boolean, glue?: boolean, tol?: number): CQWp;
-  intersect(other: CQWp, clean?: boolean, tol?: number): CQWp;
+  intersect(other: any, clean?: boolean, tol?: number): CQWp;
   fillet(radius: number): CQWp;
   chamfer(length: number, length2?: number): CQWp;
   edges(selector?: string, tag?: string): CQWp;
@@ -32,15 +40,14 @@ export type CQWp = {
   translate(vec: any): CQWp;
   rotate(axisStart: any, axisEnd: any, angleDeg: number): CQWp;
   vals(): any[];
-  toCompound(): any;
 };
 
 export interface OpContext {
   tp: any;
   params: Record<string, number>;
   sketches: Record<string, SketchCtx>;
-  body: any | undefined; // the current solid Shape
-  tools: Map<string, CQWp[]>;
+  body: CQWp | undefined;
+  tools: Map<string, any[]>;
   feature: FeatureLike;
   toVec: (x: number, y: number, z: number) => any;
   evalParam: (expr: string | number | undefined, fallback: number) => number;
@@ -76,7 +83,7 @@ export class TreeInterpreter {
     const resolved = params ?? resolveParams(tree);
     const result: InterpResult = { mesh: null, volume: 0, bbox: null, emitted: [], skipped: [], warnings: [] };
     let body: CQWp | undefined;
-    const tools = new Map<string, CQWp[]>();
+    const tools = new Map<string, any[]>();
 
     for (const feature of tree.features) {
       const handler = this.ops.get(feature.op.op);
@@ -132,7 +139,7 @@ export class TreeInterpreter {
 
 export function registerBuiltinOps(
   interp: TreeInterpreter,
-  cq: { workplane: (plane?: string, origin?: number[]) => CQWp },
+  cq: { workplane: (plane?: string, origin?: number[]) => CQWp; vec: (x: number, y: number, z: number) => any },
 ): void {
   const sketchOf = (ctx: OpContext, id: string | undefined): SketchCtx => {
     const sk = id ? ctx.sketches[id] : undefined;
@@ -164,18 +171,16 @@ export function registerBuiltinOps(
   };
 
   const extrudeSketch = (ctx: OpContext, sk: SketchCtx, distance: number): CQWp => {
-    // The Embind extrude's taper param is ALL-or-nothing: passing 0 triggers
-    // "Inner wires not allowed with tapered extrusion" — pass undefined.
     const prism = profileWp(ctx, sk).extrudeSimple(distance);
     if (!prism || prism.vals().length === 0) throw new Error("extrusion produced no body");
     return prism;
   };
 
-  const firstTool = (ctx: OpContext, id: string | undefined): CQWp | undefined => {
+  const firstTool = (ctx: OpContext, id: string | undefined): any | undefined => {
     const list = id ? ctx.tools.get(id) : undefined;
     return list && list.length > 0 ? list[0] : undefined;
   };
-  const recordTool = (ctx: OpContext, id: string, tool: CQWp): void => {
+  const recordTool = (ctx: OpContext, id: string, tool: any): void => {
     ctx.tools.set(id, [tool]);
   };
 
@@ -183,48 +188,54 @@ export function registerBuiltinOps(
     const sk = sketchOf(ctx, op.sketchId);
     const d = ctx.evalParam(op.distance, 10);
     const prism = extrudeSketch(ctx, sk, d);
-    const toolShape = prism.vals()[0];
-    ctx.body = ctx.body ? shapeLevel(ctx, "fuse", ctx.body, toolShape) : toolShape;
-    if (!ctx.body) ctx.fail("pad produced no body");
+    ctx.body = ctx.body ? ctx.body.union(prism, true, false, 0) : prism;
+    if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("pad produced no body");
   });
 
   interp.registerOp("pocket", (ctx, op) => {
     const sk = sketchOf(ctx, op.sketchId);
     const depth = op.through ? 400 : ctx.evalParam(op.depth, 5);
     const prism = extrudeSketch(ctx, sk, depth);
-    const toolShape = prism.vals()[0].translate(ctx.toVec(0, 0, -depth / 2));
+    // The Embind Workplane.cut takes the tool as a Compound (castCompound):
+    // a raw Workplane tool is rejected ("Expected Compound, got Workplane").
+    const toolShape = prism.vals()[0];
     if (!ctx.body) ctx.fail("pocket before any body");
-    ctx.body = shapeLevel(ctx, "cut", ctx.body, toolShape);
-    if (!ctx.body) ctx.fail("cut produced no body");
+    ctx.body = ctx.body.cut(toolShape.castCompound(), true, 0);
+    if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("cut produced no body");
     recordTool(ctx, ctx.feature.id, toolShape);
   });
 
   interp.registerOp("fillet", (ctx, op) => {
     if (!ctx.body) ctx.fail("fillet before any body");
     const r = ctx.evalParam(op.radius, 1);
-    const wp = wrapShape(ctx, ctx.body).edges(op.selector ?? "|Z", "").fillet(r);
+    const wp = ctx.body.edges(op.selector ?? "|Z", "").fillet(r);
     if (!wp || wp.vals().length === 0) ctx.fail("fillet produced no body");
-    ctx.body = wp.vals()[0];
+    ctx.body = wp;
   });
 
   interp.registerOp("chamfer", (ctx, op) => {
     if (!ctx.body) ctx.fail("chamfer before any body");
     const l = ctx.evalParam(op.length, 1);
-    const wp = wrapShape(ctx, ctx.body).edges(op.selector ?? "|Z", "").chamfer(l, 0);
+    const wp = ctx.body.edges(op.selector ?? "|Z", "").chamfer(l, 0);
     if (!wp || wp.vals().length === 0) ctx.fail("chamfer produced no body");
-    ctx.body = wp.vals()[0];
+    ctx.body = wp;
   });
 
   interp.registerOp("boolean", (ctx, op) => {
     const sk = sketchOf(ctx, op.sketchId);
     const d = op.distance !== undefined ? ctx.evalParam(op.distance, 10) : 50;
     const prism = extrudeSketch(ctx, sk, d);
+    const toolShape = prism.vals()[0];
     if (!ctx.body) ctx.fail("boolean before any body");
-    if (op.kind === "union") ctx.body = ctx.body.union(prism, true, false, 0);
-    else if (op.kind === "intersect") ctx.body = ctx.body.intersect(prism, true, 0);
-    else ctx.body = ctx.body.cut(prism, true, 0);
+    if (op.kind === "union") {
+      ctx.body = ctx.body.union(prism, true, false, 0);
+    } else if (op.kind === "intersect") {
+      ctx.body = ctx.body.intersect(toolShape.castCompound(), true, 0);
+    } else {
+      ctx.body = ctx.body.cut(toolShape.castCompound(), true, 0);
+    }
     if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`boolean ${op.kind} produced no body`);
-    if (op.kind !== "union") recordTool(ctx, ctx.feature.id, prism);
+    if (op.kind !== "union") recordTool(ctx, ctx.feature.id, toolShape);
   });
 
   interp.registerOp("pattern_linear", (ctx, op) => {
@@ -237,8 +248,8 @@ export function registerBuiltinOps(
     if (!ctx.body) ctx.fail("pattern before any body");
     for (let i = 1; i < count; i++) {
       const inst = src.translate(ctx.toVec(dx * i, dy * i, dz * i));
-      ctx.body = ctx.body.cut((inst as any).toCompound(), true, 0);
-      if (!ctx.body) ctx.fail(`pattern cut failed at instance ${i}`);
+      ctx.body = ctx.body.cut(inst.castCompound(), true, 0);
+      if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`pattern cut failed at instance ${i}`);
     }
   });
 
@@ -252,8 +263,8 @@ export function registerBuiltinOps(
     if (!ctx.body) ctx.fail("pattern before any body");
     for (let i = 1; i < count; i++) {
       const inst = src.rotate(ctx.toVec(0, 0, 0), ctx.toVec(axis[0], axis[1], axis[2]), step * i);
-      ctx.body = ctx.body.cut((inst as any).toCompound(), true, 0);
-      if (!ctx.body) ctx.fail(`polar cut failed at instance ${i}`);
+      ctx.body = ctx.body.cut(inst.castCompound(), true, 0);
+      if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`polar cut failed at instance ${i}`);
     }
   });
 
@@ -263,49 +274,25 @@ export function registerBuiltinOps(
     const plane = op.plane?.kind ?? "YZ";
     const reflected = src.mirror(plane, ctx.toVec(0, 0, 0));
     if (!ctx.body) ctx.fail("mirror before any body");
-    ctx.body = ctx.body.cut((reflected as any).toCompound(), true, 0);
-    if (!ctx.body) ctx.fail("mirror cut produced no body");
+    ctx.body = ctx.body.cut(reflected.castCompound(), true, 0);
+    if (!ctx.body || ctx.body.vals().length === 0) ctx.fail("mirror cut produced no body");
   });
 
   interp.registerOp("shell", (ctx, op) => {
     if (!ctx.body) ctx.fail("shell before any body");
     const t = ctx.evalParam(op.thickness, 1);
-    let target: any = wrapShape(ctx, ctx.body);
+    let target: CQWp = ctx.body;
     if (op.openSelector) target = target.faces(op.openSelector, "");
     const wp = target.shell(t, "arc");
     if (!wp || wp.vals().length === 0) ctx.fail("shell produced no body");
-    ctx.body = wp.vals()[0];
+    ctx.body = wp;
   });
-}
-
-// shapeLevel — the boolean at SHAPE level through the kernel's exposed
-// statics (the go-topo topo::cut/fuse/intersect equivalents): Workplane-level
-// cut rejects a Workplane tool in this kernel build; the shape-level statics
-// accept plain Shapes and are what the prototype's gates exercised.
-function shapeLevel(ctx: OpContext, op: "cut" | "fuse" | "intersect", body: any, tool: any): any {
-  // The Shape class is reachable from the instance (tp.Shape may not carry
-  // the statics in every build).
-  const ShapeClass = body.constructor;
-  if (op === "fuse") {
-    return ShapeClass.fuse([body, tool], 1e-6, false);
-  }
-  return ShapeClass.cut(body, tool, 1e-6);
-}
-
-// wrapShape — a Workplane around an existing shape, for selector ops
-// (edges/faces + fillet/chamfer/shell). The Embind Workplane ctor takes the
-// shape as its third parameter.
-function wrapShape(ctx: OpContext, shape: any): CQWp {
-  return new ctx.tp.Workplane("XY", undefined, shape);
 }
 
 // meshOf — the built body's MeshData via the kernel's per-face mesh call,
 // probing call shapes exactly like the prototype's getMeshData bridge.
-function meshOf(body: any): { vertices: number[][]; triangles: number[][] } | null {
-  // The body may be a Workplane (extrude result) or a raw Shape (after
-  // shape-level booleans) — collect the shapes either way.
-  const candidates: any[] = typeof body.vals === "function" ? body.vals() : [body];
-  for (const shp of candidates) {
+function meshOf(wp: CQWp): { vertices: number[][]; triangles: number[][] } | null {
+  for (const shp of wp.vals()) {
     for (const args of [[0.1, 0.1, 30, false], []] as unknown[][]) {
       try {
         const data = (shp as any).mesh(...args);

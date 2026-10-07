@@ -1,9 +1,9 @@
 {
-  "name": "topo-cadgen-editor",
+  "name": "topo-cadgen",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "go-cadgen 编辑器框架: FeatureTree 为交互对象, 浏览器内核本地翻译, 服务端验证权威",
+  "description": "go-cadgen 编辑器: FeatureTree 为交互对象, 浏览器内核本地翻译, 服务端验证权威",
   "main": "dist/app.js",
   "scripts": {
     "test": "vitest run",
