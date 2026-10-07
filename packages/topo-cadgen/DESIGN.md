@@ -123,3 +123,11 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
   - MeshStandardMaterial 无灯光即黑 —— 视口必须有基础灯光。
   - Embind Workplane ctor 的 origin 要 Vector 不是 gp_Pnt（parity 工厂
     是唯一正确范本，app 工厂必须逐字对齐）。
+
+## 8. 参数化专业引擎的接入点 (GIM 等)
+
+GIM/铁路/水电等参数化配方以工厂注册：go 侧 `topo.RegisterParametricBuilder`
+(session/gim.go 模式) + RecipeRegistry 参数目录；浏览器侧由解释器
+`registerOp` 承接 (方案 B, 双写)。wasm C++ 层尚无装配级工厂接口 ——
+对齐路径与切换判据见 go-cadgen `docs/domain-expansion.md` §2；
+未来专业 (煤矿/管网) 按 §1 清单接入, 核心零改动。
