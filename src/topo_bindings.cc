@@ -1185,6 +1185,23 @@ EMSCRIPTEN_BINDINGS(Topo) {
       .function("numCompSolids", &shape::num_comp_solids)
       // 导出导入
       .function("exportStep", &shape::export_step)
+      .function("exportStepUnit",
+                emscripten::optional_override(
+                    [](const shape &self, const std::string &path,
+                       emscripten::val writePcurvesVal,
+                       emscripten::val precisionModeVal,
+                       emscripten::val unitVal) {
+                      bool writePcurves = writePcurvesVal.isUndefined()
+                                              ? true
+                                              : writePcurvesVal.as<bool>();
+                      int precisionMode = precisionModeVal.isUndefined()
+                                              ? 0
+                                              : precisionModeVal.as<int>();
+                      std::string unit =
+                          unitVal.isUndefined() ? "" : unitVal.as<std::string>();
+                      return self.export_step_unit(path, writePcurves,
+                                                   precisionMode, unit);
+                    }))
       .function("exportBrep", &shape::export_brep)
       .function("writeToStl", emscripten::optional_override(
                                   [](const shape &self,
@@ -5440,6 +5457,166 @@ EMSCRIPTEN_BINDINGS(Topo) {
                                                      distance2);
                 if (result) {
                   return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      // ---- 拓扑邻接查询 (roadmap T1.2) ----
+      .class_function(
+          "getEdgeFaces",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val edgeVal) {
+                auto shp = shpVal.as<shape>();
+                auto e = edgeVal.as<edge>();
+                std::vector<face> faces = flywave::topo::get_edge_faces(shp, e);
+                emscripten::val arr = emscripten::val::array();
+                for (size_t i = 0; i < faces.size(); i++) {
+                  arr.set(i, emscripten::val(faces[i]));
+                }
+                return arr;
+              }))
+      .class_function(
+          "getCommonEdge",
+          emscripten::optional_override(
+              [](emscripten::val f1Val, emscripten::val f2Val) {
+                auto f1 = f1Val.as<face>();
+                auto f2 = f2Val.as<face>();
+                auto result = flywave::topo::get_common_edge(f1, f2);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "faceIsPlanar",
+          emscripten::optional_override(
+              [](emscripten::val faceVal) {
+                auto f = faceVal.as<face>();
+                return flywave::topo::face_is_planar(f);
+              }))
+      .class_function(
+          "getOppositeEdge",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val edgeVal,
+                 emscripten::val toleranceVal, emscripten::val alongVal) {
+                auto shp = shpVal.as<shape>();
+                auto e = edgeVal.as<edge>();
+                double tolerance =
+                    toleranceVal.isUndefined() ? 1e-6 : toleranceVal.as<double>();
+                boost::optional<gp_Dir> along;
+                if (alongVal.isArray() && alongVal["length"].as<size_t>() >= 3) {
+                  along = gp_Dir(alongVal[0].as<double>(),
+                                 alongVal[1].as<double>(),
+                                 alongVal[2].as<double>());
+                }
+                auto result =
+                    flywave::topo::get_opposite_edge(shp, e, tolerance, along);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "getNextAdjacentEdge",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val edgeVal,
+                 emscripten::val toleranceVal) {
+                auto shp = shpVal.as<shape>();
+                auto e = edgeVal.as<edge>();
+                double tolerance =
+                    toleranceVal.isUndefined() ? 1e-6 : toleranceVal.as<double>();
+                auto result =
+                    flywave::topo::get_next_adjacent_edge(shp, e, tolerance);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "getPrevAdjacentEdge",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val edgeVal,
+                 emscripten::val toleranceVal) {
+                auto shp = shpVal.as<shape>();
+                auto e = edgeVal.as<edge>();
+                double tolerance =
+                    toleranceVal.isUndefined() ? 1e-6 : toleranceVal.as<double>();
+                auto result =
+                    flywave::topo::get_prev_adjacent_edge(shp, e, tolerance);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "closestEdge",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val pointVal) {
+                auto shp = shpVal.as<shape>();
+                gp_Pnt p(0, 0, 0);
+                if (pointVal.isArray()) {
+                  p = gp_Pnt(pointVal[0].as<double>(), pointVal[1].as<double>(),
+                             pointVal[2].as<double>());
+                } else {
+                  p = pointVal.as<gp_Pnt>();
+                }
+                auto result = flywave::topo::closest_edge(shp, p);
+                if (result) {
+                  return emscripten::val(*result);
+                }
+                return emscripten::val::undefined();
+              }))
+      .class_function(
+          "tangentEdgeChain",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val seedVal,
+                 emscripten::val toleranceVal) {
+                auto shp = shpVal.as<shape>();
+                auto seed = seedVal.as<edge>();
+                double tolerance =
+                    toleranceVal.isUndefined() ? 1e-4 : toleranceVal.as<double>();
+                std::vector<edge> chain =
+                    flywave::topo::tangent_edge_chain(shp, seed, tolerance);
+                emscripten::val arr = emscripten::val::array();
+                for (size_t i = 0; i < chain.size(); i++) {
+                  arr.set(i, emscripten::val(chain[i]));
+                }
+                return arr;
+              }))
+      // ---- 距离+角度倒角 (roadmap T1.3) ----
+      .class_function(
+          "chamferAngle",
+          emscripten::optional_override(
+              [](emscripten::val shpVal, emscripten::val edgesVal,
+                 emscripten::val distanceVal, emscripten::val angleVal,
+                 emscripten::val refFacesVal) -> emscripten::val {
+                auto shp = shpVal.as<shape>();
+                std::vector<edge> edges;
+                if (edgesVal.isArray()) {
+                  const size_t length = edgesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    edges.push_back(edgesVal[i].as<edge>());
+                  }
+                }
+                double distance = distanceVal.as<double>();
+                double angleDegrees = angleVal.as<double>();
+                std::vector<face> refFaces;
+                if (refFacesVal.isArray()) {
+                  const size_t length = refFacesVal["length"].as<size_t>();
+                  for (size_t i = 0; i < length; i++) {
+                    refFaces.push_back(refFacesVal[i].as<face>());
+                  }
+                }
+                try {
+                  auto result = flywave::topo::chamfer_angle(
+                      shp, edges, distance, angleDegrees, refFaces);
+                  if (result) {
+                    return emscripten::val(*result);
+                  }
+                  return emscripten::val::undefined();
+                } catch (const std::exception &e) {
+                  emscripten::val::global("Error")
+                      .new_(std::string("ShapeOps.chamferAngle: ") + e.what())
+                      .throw_();
                 }
                 return emscripten::val::undefined();
               }))

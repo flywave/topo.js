@@ -1,5 +1,6 @@
 #include "binding.hh"
 #include "workplane.hh"
+#include "font_type.hh"
 #include <Standard_Failure.hxx>
 
 using namespace flywave;
@@ -457,6 +458,61 @@ EMSCRIPTEN_BINDINGS(Workplane) {
                   auto rotate = rotateVal.as<gp_Vec>();
                   auto offset = offsetVal.as<gp_Vec>();
                   return emscripten::val(self.transformed(rotate, offset));
+                }))
+      .function("text",
+                emscripten::optional_override([](workplane &self,
+                                                 const std::string &txt,
+                                                 double fontsize,
+                                                 double distance,
+                                                 emscripten::val cutVal,
+                                                 emscripten::val combineVal,
+                                                 emscripten::val cleanVal,
+                                                 emscripten::val fontVal,
+                                                 emscripten::val fontPathVal,
+                                                 emscripten::val kindVal,
+                                                 emscripten::val halignVal,
+                                                 emscripten::val valignVal) {
+                  // 与 CadQuery 默认一致 (workplane.hh): cut=true? 不 — 声明默认
+                  // cut=true, combine=false, clean=true, font="Arial",
+                  // kind=REGULAR(0), halign=CENTER(1), valign=CENTER(1)
+                  const bool cut = cutVal.isUndefined() ? true : cutVal.as<bool>();
+                  const bool combine =
+                      combineVal.isUndefined() ? false : combineVal.as<bool>();
+                  const bool clean =
+                      cleanVal.isUndefined() ? true : cleanVal.as<bool>();
+                  const std::string font =
+                      fontVal.isUndefined() ? "Arial" : fontVal.as<std::string>();
+                  // workplane::text 解引用 fontPath, 必须传值; 空串 = 按名查找
+                  boost::optional<std::string> fontPath = std::string("");
+                  if (!fontPathVal.isUndefined() && !fontPathVal.isNull()) {
+                    fontPath = fontPathVal.as<std::string>();
+                  }
+                  const int kind =
+                      kindVal.isUndefined() ? 0 : kindVal.as<int>();
+                  const int halign =
+                      halignVal.isUndefined() ? 1 : halignVal.as<int>();
+                  const int valign =
+                      valignVal.isUndefined() ? 1 : valignVal.as<int>();
+                  try {
+                    return emscripten::val(self.text(
+                        txt, fontsize, distance, cut, combine, clean, font,
+                        fontPath,
+                        static_cast<flywave::topo::font_kind>(kind),
+                        static_cast<flywave::topo::horizontal_align>(halign),
+                        static_cast<flywave::topo::vertical_align>(valign)));
+                  } catch (const Standard_Failure &f) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.text: ") +
+                              (f.GetMessageString()
+                                   ? f.GetMessageString()
+                                   : f.DynamicType()->Name()))
+                        .throw_();
+                  } catch (const std::exception &e) {
+                    emscripten::val::global("Error")
+                        .new_(std::string("Workplane.text: ") + e.what())
+                        .throw_();
+                  }
+                  return emscripten::val();
                 }))
       .function(
           "rarray",
