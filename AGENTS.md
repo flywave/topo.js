@@ -4,7 +4,7 @@ go-topo (OpenCASCADE C++ 几何内核) 的 WASM 移植: Emscripten 编译 + Embi
 
 > 演进路线图与 Go 化方案**已迁至新项目** `/Users/xuning/Work/go-cadgen` (module `github.com/flywave/go-cadgen`):
 > `docs/cadgen-roadmap.md` (原型演进史/规格来源) · `docs/go-cadgen-plan.md` (B/S 架构方案 v2) · `docs/testing-gates.md` (门禁突变规范) · `docs/contracts/` (FeatureTree/MeshData schema + SSE 事件 + API 草案)。
-> 本仓库的 topo-img2cad 自 Go 移植立项起**冻结为参考规格**: 其 46 错误码突变测试、95 条语料 (语料副本在 go-cadgen/testdata/corpus)、e2e 是 Go 侧验收标准; 修 bug 只进 Go 侧, TS 侧仅回滚性修复。
+> 本仓库的 topo-img2cad 已于 2026-10-07 **整体移除** (commit c060ebdc; 最终状态归档在前一提交 b8b0c4fe): Go 移植 (go-cadgen) 已完整吸收流水线 A-F 全部阶段 (含 associativity 门) 与全部门禁/修环/resume/逐字提示语, 两侧语料对账 (go-cadgen/testdata/corpus, 含 mesh-diff) 长期有效。**golden 再基线**: 如需重生成, `git checkout b8b0c4fe -- packages/topo-img2cad` 临时恢复后按 test/tree_goldens_dump.test.ts 的环境变量流程跑, 完成后再删。
 
 ## 项目结构
 
@@ -14,7 +14,7 @@ go-topo (OpenCASCADE C++ 几何内核) 的 WASM 移植: Emscripten 编译 + Embi
 - `packages/topo-primitives/` — 参数化 Primitive 类 (`lib/`, 含 `lib/railway/` 52 个铁路类 + 布局闭环)
 - `packages/topo-threejs/` / `packages/topo-js/` — Three.js 桥接 / 高层 API
 - `packages/topo-example/` — 示例应用 (webpack)
-- `packages/topo-img2cad/` — 图片 → 参数化 CAD 流水线: 视图识别 → 轮廓提取 → 特征树 → 代码 → **实测复核** (L4 把 BREP 实体沿图纸视图重投影, 与图纸像素剪影比 IoU/像素偏差; L4b 在图纸取不出剪影时改比"模型轮廓到图纸墨迹的距离") → 导出 STEP + 二进制 STL。`lib/` 为库, `cli/` 为 `topo-img2cad` 命令 (见 `SKILL.md`)。**注意**: ① `bin` 指向 `dist/es/cli/index.js`, 由 rollup 构建 (不是从源码跑), 改 CLI 后必须 `pnpm --filter topo-img2cad build`; ② 依赖 Node (`node:zlib` 解 PNG、`node:fs` 读图), 只支持 PNG/PNM 非隔行, 不支持 JPEG; ③ `CadPipelineConfig.references` 一般不用传 — 有 `tp` 时参考剪影直接自图纸读出; ④ **导出必须走 `lib/export.ts`** — 内核的 `exportStep`/`writeToStl` 写的是 Emscripten 内存 FS, 直接给宿主路径**不产生文件却返回 `true`** (AGENTS"已知坑"里那条的根因), 所以统一写 `/tmp` 再 `tp.FS.readFile` 读回
+- ~~`packages/topo-img2cad/`~~ — 已移除 (见文首); 流水线行为由 go-cadgen 承接。其"导出走内存 FS"等内核已知坑仍适用 Go 侧之外的 TS 内核调用者
 - `packages/topo-editor/` — 可视化编辑器 (webpack + CodeMirror 6 + three.js 视口): 左侧写 JS 右侧实时渲染, 用于所见即所得验证 topo.js 接口。`pnpm --filter topo-editor dev` → http://localhost:4002 (沙箱注入 `tp`/`CQ`/`CQWorkplane`/`pnt`/`vec`/`gpVec`/`render()`, 内置 10 个与测试套件对齐的示例 snippet)。**注意**: 它经 workspace 包名引用 topo-primitives/topo-js/topo-threejs 的 **dist 构建产物**, 改了这些包的 `lib/`/`src/` 后必须先 `pnpm --filter <pkg> build` 重建 dist, 否则编辑器拿到的是旧代码 (如 CQ 导出缺失报 `CQ is not defined`)
 
 ## 构建
