@@ -168,32 +168,53 @@ export function registerBuiltinOps(
     return sk;
   };
 
-  const profileWp = (ctx: OpContext, sk: SketchCtx): CQWp => {
-    const wp = ctx.keep(cq.workplane(sk.plane?.kind ?? "XY", sk.plane?.origin));
+  // profileWps — one workplane per profile component. A sketch may carry
+  // several disjoint closed loops (twin pads, a pattern of holes), and
+  // chaining all entities into a single polyline welds the components
+  // together with spurious cross-links; each loop must be drawn and extruded
+  // on its own, then unioned — the same profile-component rule the Go side
+  // applies.
+  const profileWps = (ctx: OpContext, sk: SketchCtx): CQWp[] => {
     const lines = (sk.entities ?? []).filter((e) => e.type === "line" && !e.construction);
     const circles = (sk.entities ?? []).filter((e) => e.type === "circle" && !e.construction);
-    if (circles.length > 0 && lines.length === 0) {
-      const c = circles[0];
-      const w2 = ctx.keep(wp.center(c.center[0], c.center[1]));
-      ctx.keep(w2.circleCentered(c.radius));
-      return w2;
+    const wps: CQWp[] = [];
+    if (circles.length > 0) {
+      for (const c of circles) {
+        const wp = ctx.keep(cq.workplane(sk.plane?.kind ?? "XY", sk.plane?.origin));
+        const w2 = ctx.keep(wp.center(c.center[0], c.center[1]));
+        ctx.keep(w2.circleCentered(c.radius));
+        wps.push(w2);
+      }
+      return wps;
     }
-    if (lines.length > 0) {
-      // Sketch coords are 2D in the plane's local frame → local gp_Pnt (z=0).
-      const pts = lines
-        .map((l) => l.start)
-        .concat([lines[lines.length - 1].end])
-        .map(([x, y]) => new ctx.tp.gp_Pnt_3(x, y, 0));
-      ctx.keep(wp);
-      wp.polyline(pts, false, false);
-      ctx.keep(wp.close());
-      return wp;
+    for (const loop of splitLoops(lines)) {
+      const wp = ctx.keep(cq.workplane(sk.plane?.kind ?? "XY", sk.plane?.origin));
+      // Loop vertices in chain order, closed wrap-around — through the Sketch
+      // API shim (sketchLoop); the workplane polyline+close path yields
+      // corrupt prisms off-origin (see shim note).
+      const verts = loop.map((l) => [l.start[0], l.start[1]] as [number, number]);
+      wps.push(ctx.keep(wp.sketchLoop(verts)));
     }
-    throw new Error("sketch has no drawable entities");
+    if (wps.length === 0) throw new Error("sketch has no drawable entities");
+    return wps;
+  };
+
+  // profileWp — the single-component case (revolve's only well-defined one).
+  const profileWp = (ctx: OpContext, sk: SketchCtx): CQWp => {
+    const wps = profileWps(ctx, sk);
+    if (wps.length !== 1) throw new Error(`profile must be a single loop, got ${wps.length}`);
+    return wps[0];
   };
 
   const extrudeSketch = (ctx: OpContext, sk: SketchCtx, distance: number): CQWp => {
-    const prism = ctx.keep(profileWp(ctx, sk).extrudeSimple(distance));
+    // Union the per-loop prisms so every caller sees one body, matching the
+    // Go interpreter's multi-component profile.
+    let prism: CQWp | undefined;
+    for (const wp of profileWps(ctx, sk)) {
+      const part = ctx.keep(wp.extrudeSimple(distance));
+      if (!part || part.vals().length === 0) throw new Error("extrusion produced no body");
+      prism = prism ? ctx.keep(prism.union(part, true, false, 0)) : part;
+    }
     if (!prism || prism.vals().length === 0) throw new Error("extrusion produced no body");
     return ctx.keep(prism);
   };
@@ -203,8 +224,7 @@ export function registerBuiltinOps(
   const toCompoundOf = (obj: any): any => {
     if (obj.toCompound) return obj.toCompound();
     if (obj.castCompound) return obj.castCompound();
-    const c = new ctx.tp.Compound();
-    c.add(obj);
+    const c = (interp as any).tp.Compound.makeCompound([obj]);
     return c;
   };
 
@@ -297,8 +317,11 @@ export function registerBuiltinOps(
     if (!ctx.body) ctx.fail("pattern before any body");
     for (let i = 1; i < count; i++) {
       const toolWpR = ctx.keep(new ctx.tp.Workplane("XY", undefined, src));
-      const inst = toolWpR.rotate(ctx.toPnt(0, 0, 0), ctx.toPnt(0, 0, 1), step * i);
-      ctx.body = ctx.keep(ctx.body.cut(inst.castCompound(), true, 0));
+      const rotated = toolWpR.rotate(ctx.toPnt(0, 0, 0), ctx.toPnt(0, 0, 1), step * i);
+      // rotate returns a Workplane here; normalize whatever comes back to
+      // the Compound the Embind Workplane.cut demands.
+      const inst = typeof rotated.vals === "function" ? rotated.vals()[0] : rotated;
+      ctx.body = ctx.keep(ctx.body.cut(toCompoundOf(inst), true, 0));
       if (!ctx.body || ctx.body.vals().length === 0) ctx.fail(`polar cut failed at instance ${i}`);
     }
   });
@@ -390,7 +413,7 @@ function fingerprint(mesh: { vertices: number[][]; triangles: number[][] }): { v
 
 // splitLoops — chain lines into closed loops by endpoint proximity (the
 // interpreter's profile-component rule; unordered entity lists are the norm).
-function splitLoops(lines: Array<Record<string, any>>): Array<Array<Record<string, any>>> {
+export function splitLoops(lines: Array<Record<string, any>>): Array<Array<Record<string, any>>> {
   const remaining = [...lines];
   const loops: Array<Array<Record<string, any>>> = [];
   const key = (p: any) => `${p[0].toFixed(6)},${p[1].toFixed(6)}`;

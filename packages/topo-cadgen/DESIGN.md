@@ -64,35 +64,43 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
 - 交互协议 = api.md；本包是它的第一个"厚"消费者。
 
 
-## 6. Parity 棘轮现状 (2026-10-07)
+## 6. Parity 棘轮现状 (2026-10-07, 迭代 7 后)
 
-- 内核加载/解释器骨架/pad/pocket/fillet/chamfer/extrudeSimple 已通：
-  plate_bore_fillet/tube_revolve/twin_pads 等 pad+凹槽家族的语料 parity 达标
-  (1.5% 容差)。
-- **棘轮全表 (2026-10-07, castCompound 路线)**：
+- **棘轮全表 (10/10 全绿，零 skipped，最大 gap 0.18%)**：
 
   | 树 | gap | 备注 |
   |---|---|---|
-  | boolean_union_boss | 0.00% ✓ | 联动全通 |
-  | boolean_cut_plate | 95.19% ✗ | pad+cut 全 emit；cut 后体积分歧 1166.7 (确定性复现，所有工具形态同值) |
-  | twin_bores | 0.05% ✓ | 双圆孔 pocket 精确 |
+  | boolean_union_boss | 0.00% ✓ | |
+  | boolean_cut_plate | 0.00% ✓ | 迭代 7 前为 95.19% |
+  | twin_bores | 0.05% ✓ | |
   | tube_revolve | 0.11% ✓ | revolveSimple |
-  | twin_pads | 64.58% ✗ | 双组件剖面拆分 (splitLoops) 产出错误环 |
-  | pattern_polar_plate | 1.62% ⚠️ | 孔位近似达标 (3 孔)，略超容差 |
-  | plate_bore_fillet | 33.32% ✗ | fillet 选择器语义 (TS shim "|Z" 面集与 Go 不同) |
-  | mirror_pair | 0.09% ✓ | mirroredFromAxis2/Workplane mirror |
-  | pattern_linear_bore | 0.13% ✓ | Shape.translated 链 |
-  | shell_tray | 46.93% ✗ | 内核 shell 直接失败 (shelling operation failed) |
+  | twin_pads | 0.00% ✓ | 迭代 7 前为 64.58% |
+  | pattern_polar_plate | 0.04% ✓ | 迭代 7 前为 1.62% + skipped |
+  | plate_bore_fillet | 0.01% ✓ | 迭代 7 前为 33.32% |
+  | mirror_pair | 0.09% ✓ | |
+  | pattern_linear_bore | 0.13% ✓ | |
+  | shell_tray | 0.18% ✓ | 迭代 7 前为 46.93% + skipped |
 
-  已修：circleCentered 圆孔路径、castCompound 布尔工具、revolve op 注册、
-  installGlobals 全量类注册（修 "instanceof is not an object" 族）。
-  **重要澄清**：解释器必须搭配 CQ shim 表面使用（编辑器 app.ts 与 parity
-  测试的 cq 工厂都是 shim 实例）—— shim 在裸 Embind Workplane 之上补了
-  extrudeSimple/circleCentered 等方法；裸表面缺这些方法属预期，不是缺陷。
-  **剩余四类缺口**（经 shim 表面实测）：
-  1. boolean cut 分歧（95.19%，全工具形态确定性复现，Go=24250/TS=1166.7）
-  2. 双组件剖面拆环（twin_pads 64.58%，splitLoops 拆出的环 extrude 后体积不符）
-  3. plate_bore_fillet 33.32%（fillet 选择器 "|Z" 两侧语义差异）
-  4. shell_tray 46.93%（内核 shelling operation failed）
-  逐项迭代即是后续 op 覆盖工作本身 —— 棘轮表格就是它们的工作清单。- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
-  不进默认 CI；缺口闭合后移入默认门禁。
+- **迭代 7 根因复盘（重要）**：§6 前版记录的"剩余四类缺口"
+  （boolean cut 分歧 / 双组件拆环 / fillet 选择器语义 / shell 失败）
+  **全部是同一个根因的不同症状**：解释器剖面构建走了 workplane 的
+  `polyline+close` 路径，而 go-topo C++ 的 pending-edge → wire → face
+  管线对**偏离原点的矩形**确定性产出腐坏实体（错误体积、负质量、mesh
+  延伸到原点；探针复现：16×16×5 矩形在 cx=30 得 1280 ✓、cx=−30 得
+  853.3 ✗、cx=100 得 2400 ✗）。既往 6/10 达标的语料恰好都是含原点的
+  剖面，所以掩盖了它。
+- **修复**：剖面构建迁移到 **Sketch API 路径**
+  （`plane.sketch() → segmentBetweenPoints → assemble(ADD) → finalize →
+  extrude`），与 Go 侧 `topo.Sketch` 配方逐字对齐；shim 层封装为
+  `sketchLoop(vertices)` 并注明禁用 polyline 路径的原因。探针实测该路径
+  在所有位置精确（1280/2560/双实体数全对）。
+- 次要修复：`pattern_polar` 的 rotate 返回 Workplane 需取 `vals()[0]` 再
+  转 Compound（`toCompoundOf` 兜底改用 `Compound.makeCompound`，并修掉
+  其闭包误引用 ctx 的潜在 ReferenceError）。
+- **方法论沉淀**：内核层的"几何分歧"先做位置敏感性探针再下结论——
+  同一配方在不同坐标下结果不同 ⇒ 内核路径腐坏，而不是选择器/语义差异。
+- 内核绑定增量（text/chamferAngle/拓扑邻接查询）已在工作树编译进 wasm，
+  其 WIP 探针 (corpus_replay/topology_query) 缺 fixture 仍红，随绑定一起
+  后续收口。
+- parity 测试保持 env-gated (`CADGEN_EDITOR_KERNEL=1 CADGEN_GOLDENS=…`)，
+  不进默认 CI；**全绿后建议移入默认门禁**（棘轮不再允许回退）。

@@ -137,6 +137,28 @@ export class CQWorkplane {
         return this._wrap(this.wp.close());
     }
 
+    /**
+     * sketchLoop(vertices) — a closed polygon profile through the Sketch API
+     * (wp.sketch → segment → assemble → finalize), the same recipe the Go
+     * interpreter uses. The workplane polyline+close path is NOT used: its
+     * pending-edge → wire → face pipeline produces corrupt prisms for
+     * rectangles off the origin (deterministic wrong volumes, verified by
+     * probe; the Sketch path is exact at every position).
+     * `vertices` are [x, y] pairs in sketch coords; the loop closes
+     * wrap-around.
+     */
+    sketchLoop(vertices: Array<[number, number]>): CQWorkplane {
+        const sk = this.wp.sketch();
+        const V = (x: number, y: number) => new this.tp.Vector(x, y, 0);
+        for (let i = 0; i < vertices.length; i++) {
+            const [x1, y1] = vertices[i];
+            const [x2, y2] = vertices[(i + 1) % vertices.length];
+            sk.segmentBetweenPoints(V(x1, y1), V(x2, y2), undefined, false);
+        }
+        sk.assemble(this.tp.SketchMode.ADD, undefined);
+        return this._wrap(sk.finalize());
+    }
+
     mirrorX(): CQWorkplane {
         return this._wrap(this.wp.mirrorX());
     }
