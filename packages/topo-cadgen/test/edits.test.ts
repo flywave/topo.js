@@ -109,3 +109,31 @@ describe("LocalEditService.commit", () => {
     expect(replayed).toEqual([after]);
   });
 });
+
+describe("applyPatch.setSketchEntity", () => {
+  it("moves a circle center immutably, keeping numbers numeric", () => {
+    const before: FeatureTreeLike = {
+      name: "plate",
+      units: { length: "mm", toMillimeter: 1 },
+      datums: {},
+      sketches: {
+        s_bore: {
+          id: "s_bore", plane: { kind: "XY" },
+          entities: [{ tag: "c1", type: "circle", center: [0, 0], radius: 10 }],
+          constraints: [],
+        },
+      },
+      features: [{ id: "f_bore", op: { op: "pocket", sketchId: "s_bore", through: true } }],
+      parameters: [],
+    };
+    const after = applyPatch(before, {
+      kind: "setSketchEntity", sketchId: "s_bore", tag: "c1", field: "center", value: [25, 0],
+    });
+    expect((after.sketches.s_bore.entities[0] as any).center).toEqual([25, 0]);
+    expect((before.sketches.s_bore.entities[0] as any).center).toEqual([0, 0]);
+    // unknown sketch fails loudly
+    expect(() => applyPatch(before, {
+      kind: "setSketchEntity", sketchId: "nope", tag: "c1", field: "center", value: [1, 2],
+    })).toThrow(/missing/);
+  });
+});

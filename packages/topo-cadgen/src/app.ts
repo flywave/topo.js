@@ -102,6 +102,9 @@ export class EditorApp {
       const result = await this.edits.commit(tree, next, params);
       if (!result.ok) {
         this.log("warning", `编辑被拒绝: ${result.error}`);
+        // The rejection is authoritative: resync from the server so the
+        // panels never keep showing an edit the pipeline refused.
+        await this.loadRun(runId);
         return false;
       }
       this.log("done", `已落版 ${result.version ? `v${result.version.index}` : ""} — 变更: ${result.changed.map((c) => `${c.featureId}(${c.kind})`).join(", ")}`);
