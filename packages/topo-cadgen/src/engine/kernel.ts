@@ -57,6 +57,13 @@ export async function loadKernel(): Promise<KernelGlobal> {
         // Node (tests): the archived helper's exact pattern — absolute POSIX
         // path import + node Buffer for wasmBinary. A file:// URL import or
         // a bare ArrayBuffer both end in "BufferSource is empty".
+        // The emscripten runtime's randomFill wants the WHATWG crypto global
+        // (the kernel is built for web,worker); Node <20 doesn't expose it.
+        const g = globalThis as any;
+        if (typeof g.crypto === "undefined") {
+          const { webcrypto } = await import("node:crypto");
+          g.crypto = webcrypto;
+        }
         const { readFileSync } = await import("node:fs");
         const { join, dirname } = await import("node:path");
         const { fileURLToPath } = await import("node:url");

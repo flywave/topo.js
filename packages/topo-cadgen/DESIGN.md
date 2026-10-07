@@ -127,7 +127,10 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
 ## 8. 参数化专业引擎的接入点 (GIM 等)
 
 GIM/铁路/水电等参数化配方以工厂注册：go 侧 `topo.RegisterParametricBuilder`
-(session/gim.go 模式) + RecipeRegistry 参数目录；浏览器侧由解释器
-`registerOp` 承接 (方案 B, 双写)。wasm C++ 层尚无装配级工厂接口 ——
-对齐路径与切换判据见 go-cadgen `docs/domain-expansion.md` §2；
-未来专业 (煤矿/管网) 按 §1 清单接入, 核心零改动。
+(session/gim.go 模式) + RecipeRegistry 参数目录。**方案 A 已落地
+(2026-10-07)**：C++ 核心同构工厂 (`go-topo/src/parametric.hh`) + Embind
+`registerParametricBuilder/buildParametric/setAssemblyParametric` —— JS
+builder 直接注册进 C++ 注册表，试点 gim_cover_plate 与 Go 基准体积差
+0.006% (`test/parametric_pilot.test.ts`，与 go `gim_volume_test.go` 成对
+钉基准)。JS 配方剖面一律走 sketch 路径。契约详见 go-cadgen
+`docs/domain-expansion.md` §2；未来专业 (煤矿/管网) 按 §1 清单接入。
