@@ -6,6 +6,14 @@
 import { EditorApp } from "./app.js";
 import { registerBuiltinPanels } from "./features/index.js";
 
+// One boot per page: a duplicated module evaluation would create two apps,
+// and a click on one instance's button reads the OTHER instance's input
+// (observed live) — silent no-op.
+if ((window as any).__cadgenEditorBooted) {
+  throw new Error("cadgen editor already booted on this page");
+}
+(window as any).__cadgenEditorBooted = true;
+
 const viewport = document.getElementById("viewport")!;
 const panelsHost = document.getElementById("panels")!;
 const logEl = document.getElementById("log")!;
@@ -58,6 +66,71 @@ const load = async () => {
     logEl.appendChild(logLine);
   }
 };
+
+// ---- run creation (text prompt / image upload) — the front half of both
+// real-LLM flows; the run then loads through the same loadRun as ?run= ----
+const createStatus = (text: string) => { statusEl.textContent = text; };
+const waitRun = async (runId: string) => {
+  for (let i = 0; i < 120; i++) {
+    const { status, data } = await app.transport.runStatus(runId);
+    if (status !== 200) throw new Error(`run status ${status}`);
+    if (data.status === "done" || data.status === "failed") return data;
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  throw new Error("run timed out");
+};
+
+const textInput = document.createElement("input");
+textInput.type = "text";
+textInput.placeholder = "文字创建：如 一个 120x60mm、厚 10mm 的板";
+const textBtn = document.createElement("button");
+textBtn.id = "textCreate";
+textBtn.textContent = "文字创建";
+textBtn.onclick = async () => {
+  const prompt = textInput.value.trim();
+  if (!prompt) return;
+  textBtn.disabled = true;
+  createStatus("创建文本运行 …");
+  try {
+    const { status, data } = await app.transport.createTextRun(prompt);
+    if (status !== 200 && status !== 201) throw new Error(`create ${status}`);
+    createStatus(`运行 ${data.runId} 中（真实 LLM，约 1-3 分钟）…`);
+    const done = await waitRun(data.runId);
+    (document.getElementById("runId") as HTMLInputElement).value = data.runId;
+    await app.loadRun(data.runId);
+    createStatus(`run ${data.runId} — ${done.status}/${done.verdict ?? "?"}`);
+  } catch (e) {
+    createStatus(`创建失败: ${e instanceof Error ? e.message : e}`);
+  } finally { textBtn.disabled = false; }
+};
+
+const imgInput = document.createElement("input");
+imgInput.type = "file";
+imgInput.accept = "image/png,image/jpeg";
+imgInput.style.display = "none";
+const imgBtn = document.createElement("button");
+imgBtn.textContent = "图纸创建";
+imgBtn.onclick = () => imgInput.click();
+imgInput.onchange = async () => {
+  const file = imgInput.files?.[0];
+  if (!file) return;
+  imgBtn.disabled = true;
+  createStatus("上传图纸 …");
+  try {
+    const { status, data } = await app.transport.createImageRun(file, "part");
+    if (status !== 200 && status !== 201) throw new Error(`create ${status}`);
+    createStatus(`运行 ${data.runId} 中（视觉模型读图，约 2-5 分钟）…`);
+    const done = await waitRun(data.runId);
+    (document.getElementById("runId") as HTMLInputElement).value = data.runId;
+    await app.loadRun(data.runId);
+    createStatus(`run ${data.runId} — ${done.status}/${done.verdict ?? "?"}`);
+  } catch (e) {
+    createStatus(`创建失败: ${e instanceof Error ? e.message : e}`);
+  } finally { imgBtn.disabled = false; imgInput.value = ""; }
+};
+
+const header = document.querySelector("header")!;
+header.append(textInput, textBtn, imgBtn, imgInput);
 
 (document.getElementById("load") as HTMLButtonElement).onclick = () => void load();
 (document.getElementById("undo") as HTMLButtonElement).onclick = () => void app.commands.execute("edit.undo");
