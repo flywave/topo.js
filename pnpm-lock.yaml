@@ -18,6 +18,22 @@ importers:
         specifier: ^2.4.1
         version: 2.8.8
 
+  packages/topo-cadgen:
+    dependencies:
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.4.5
+        version: 5.4.5
+      vite:
+        specifier: ^4.0.4
+        version: 4.5.14(@types/node@20.19.43)(terser@5.39.1)
+      vitest:
+        specifier: ^0.28.5
+        version: 0.28.5(terser@5.39.1)
+
   packages/topo-editor:
     dependencies:
       three:
@@ -142,61 +158,6 @@ importers:
       webpack-dev-server:
         specifier: ^4.15.1
         version: 4.15.2(webpack-cli@5.1.4)(webpack@5.99.8)
-
-  packages/topo-img2cad:
-    dependencies:
-      three:
-        specifier: '>=0.174.0'
-        version: 0.176.0
-      topo-js:
-        specifier: workspace:*
-        version: link:../topo-js
-      topo-primitives:
-        specifier: workspace:*
-        version: link:../topo-primitives
-      topo-threejs:
-        specifier: workspace:*
-        version: link:../topo-threejs
-      topo-wasm:
-        specifier: workspace:*
-        version: link:../topo-wasm
-    devDependencies:
-      '@rollup/plugin-commonjs':
-        specifier: ^25.0.1
-        version: 25.0.8(rollup@3.10.1)
-      '@rollup/plugin-json':
-        specifier: ^6.0.0
-        version: 6.0.0(rollup@3.10.1)
-      '@rollup/plugin-node-resolve':
-        specifier: ^15.0.0
-        version: 15.0.1(rollup@3.10.1)
-      '@rollup/plugin-terser':
-        specifier: ^0.4.3
-        version: 0.4.4(rollup@3.10.1)
-      '@rollup/plugin-typescript':
-        specifier: ^11.1.0
-        version: 11.1.6(rollup@3.10.1)(tslib@2.8.1)(typescript@5.1.6)
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.43
-      '@types/three':
-        specifier: ^0.174.0
-        version: 0.174.0
-      rollup:
-        specifier: 3.10.1
-        version: 3.10.1
-      rollup-plugin-sourcemaps:
-        specifier: ^0.6.3
-        version: 0.6.3(@types/node@20.19.43)(rollup@3.10.1)
-      rollup-plugin-ts:
-        specifier: 3.1.1
-        version: 3.1.1(@swc/core@1.11.24(@swc/helpers@0.4.37))(@swc/helpers@0.4.37)(rollup@3.10.1)(typescript@5.1.6)
-      typescript:
-        specifier: ^5.1.6
-        version: 5.1.6
-      vitest:
-        specifier: ^0.28.5
-        version: 0.28.5(terser@5.39.1)
 
   packages/topo-js:
     dependencies:
@@ -930,19 +891,6 @@ packages:
       rollup: ^2.0.0||^3.0.0||^4.0.0
     peerDependenciesMeta:
       rollup:
-        optional: true
-
-  '@rollup/plugin-typescript@11.1.6':
-    resolution: {integrity: sha512-R92yOmIACgYdJ7dJ97p4K69I8gg6IEHt8M7dUBxN3W6nrO8uUxX5ixl0yU/N3aZTi8WhPuICvOHXQvF6FaykAA==}
-    engines: {node: '>=14.0.0'}
-    peerDependencies:
-      rollup: ^2.14.0||^3.0.0||^4.0.0
-      tslib: '*'
-      typescript: '>=3.7.0'
-    peerDependenciesMeta:
-      rollup:
-        optional: true
-      tslib:
         optional: true
 
   '@rollup/plugin-virtual@3.0.2':
@@ -4465,6 +4413,9 @@ packages:
     peerDependencies:
       three: '>=0.162.0 <1.0.0'
 
+  three@0.160.1:
+    resolution: {integrity: sha512-Bgl2wPJypDOZ1stAxwfWAcJ0WQf7QzlptsxkjYiURPz+n5k4RBDLsq+6f9Y75TYxn6aHLcWz+JNmwTOXWrQTBQ==}
+
   three@0.176.0:
     resolution: {integrity: sha512-PWRKYWQo23ojf9oZSlRGH8K09q7nRSWx6LY/HF/UUrMdYgN9i1e2OwJYHoQjwc6HF/4lvvYLC5YC1X8UJL2ZpA==}
 
@@ -4607,6 +4558,11 @@ packages:
 
   typescript@5.4.2:
     resolution: {integrity: sha512-+2/g0Fds1ERlP6JsakQQDXjZdZMM+rqpamFZJEKh4kwTIn3iDkgKtby0CeNd5ATNZ4Ry1ax15TMx0W2V+miizQ==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@5.4.5:
+    resolution: {integrity: sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -5239,7 +5195,7 @@ snapshots:
       execa: 5.0.0
       strong-log-transformer: 2.1.0
 
-  '@lerna/create@7.1.5(@swc/core@1.11.24)(encoding@0.1.13)(typescript@5.1.6)':
+  '@lerna/create@7.1.5(@swc/core@1.11.24)(encoding@0.1.13)(typescript@5.4.2)':
     dependencies:
       '@lerna/child-process': 7.1.5
       '@npmcli/run-script': 6.0.2
@@ -5253,7 +5209,7 @@ snapshots:
       columnify: 1.6.0
       conventional-changelog-core: 5.0.1
       conventional-recommended-bump: 7.0.1
-      cosmiconfig: 8.3.6(typescript@5.1.6)
+      cosmiconfig: 8.3.6(typescript@5.4.2)
       dedent: 0.7.0
       execa: 5.0.0
       fs-extra: 11.3.0
@@ -5601,12 +5557,6 @@ snapshots:
     optionalDependencies:
       rollup: 3.10.1
 
-  '@rollup/plugin-json@6.0.0(rollup@3.10.1)':
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@3.10.1)
-    optionalDependencies:
-      rollup: 3.10.1
-
   '@rollup/plugin-json@6.0.0(rollup@3.28.0)':
     dependencies:
       '@rollup/pluginutils': 5.1.4(rollup@3.28.0)
@@ -5650,15 +5600,6 @@ snapshots:
       terser: 5.39.1
     optionalDependencies:
       rollup: 3.28.0
-
-  '@rollup/plugin-typescript@11.1.6(rollup@3.10.1)(tslib@2.8.1)(typescript@5.1.6)':
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@3.10.1)
-      resolve: 1.22.10
-      typescript: 5.1.6
-    optionalDependencies:
-      rollup: 3.10.1
-      tslib: 2.8.1
 
   '@rollup/plugin-virtual@3.0.2(rollup@3.28.0)':
     optionalDependencies:
@@ -6812,14 +6753,14 @@ snapshots:
 
   core-util-is@1.0.3: {}
 
-  cosmiconfig@8.3.6(typescript@5.1.6):
+  cosmiconfig@8.3.6(typescript@5.4.2):
     dependencies:
       import-fresh: 3.3.1
       js-yaml: 4.1.0
       parse-json: 5.2.0
       path-type: 4.0.0
     optionalDependencies:
-      typescript: 5.1.6
+      typescript: 5.4.2
 
   crelt@1.0.7: {}
 
@@ -7982,7 +7923,7 @@ snapshots:
   lerna@7.1.5(@swc/core@1.11.24)(encoding@0.1.13):
     dependencies:
       '@lerna/child-process': 7.1.5
-      '@lerna/create': 7.1.5(@swc/core@1.11.24)(encoding@0.1.13)(typescript@5.1.6)
+      '@lerna/create': 7.1.5(@swc/core@1.11.24)(encoding@0.1.13)(typescript@5.4.2)
       '@npmcli/run-script': 6.0.2
       '@nx/devkit': 16.10.0(nx@16.10.0(@swc/core@1.11.24))
       '@octokit/plugin-enterprise-rest': 6.0.1
@@ -7995,7 +7936,7 @@ snapshots:
       conventional-changelog-angular: 6.0.0
       conventional-changelog-core: 5.0.1
       conventional-recommended-bump: 7.0.1
-      cosmiconfig: 8.3.6(typescript@5.1.6)
+      cosmiconfig: 8.3.6(typescript@5.4.2)
       dedent: 0.7.0
       envinfo: 7.8.1
       execa: 5.0.0
@@ -8047,7 +7988,7 @@ snapshots:
       strong-log-transformer: 2.1.0
       tar: 6.1.11
       temp-dir: 1.0.0
-      typescript: 5.1.6
+      typescript: 5.4.2
       upath: 2.0.1
       uuid: 9.0.1
       validate-npm-package-license: 3.0.4
@@ -9104,14 +9045,6 @@ snapshots:
     dependencies:
       glob: 9.3.5
 
-  rollup-plugin-sourcemaps@0.6.3(@types/node@20.19.43)(rollup@3.10.1):
-    dependencies:
-      '@rollup/pluginutils': 3.1.0(rollup@3.10.1)
-      rollup: 3.10.1
-      source-map-resolve: 0.6.0
-    optionalDependencies:
-      '@types/node': 20.19.43
-
   rollup-plugin-sourcemaps@0.6.3(@types/node@22.15.18)(rollup@3.10.1):
     dependencies:
       '@rollup/pluginutils': 3.1.0(rollup@3.10.1)
@@ -9545,6 +9478,8 @@ snapshots:
     dependencies:
       three: 0.176.0
 
+  three@0.160.1: {}
+
   three@0.176.0: {}
 
   through2@2.0.5:
@@ -9665,6 +9600,8 @@ snapshots:
   typescript@5.1.6: {}
 
   typescript@5.4.2: {}
+
+  typescript@5.4.5: {}
 
   ua-parser-js@1.0.40: {}
 

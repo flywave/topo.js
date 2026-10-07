@@ -70,11 +70,17 @@ export class LocalEditService {
     if (status !== 200) {
       return { ok: false, changed, error: `server rejected the replay (${status}): ${JSON.stringify(data).slice(0, 300)}` };
     }
-    const version = data?.version ?? data?.run?.version;
+    // api.md: PUT /runs/:id/tree answers { verdict, version: <index>,
+    // digest, changed } — the version is a bare index; accept the object
+    // form too (tests, and any future richer payload).
+    const v = data?.version;
+    const index = typeof v === "number" ? v : typeof v?.index === "number" ? v.index : undefined;
+    const verdict = typeof v === "object" && v !== null ? v.verdict : data?.verdict;
+    const sha = typeof v === "object" && v !== null ? (v.sha ?? v.digest) : data?.digest;
     return {
       ok: true,
       changed,
-      version: version ? { index: version.index, verdict: version.verdict, sha: version.sha ?? version.digest } : undefined,
+      version: index !== undefined ? { index, verdict, sha } : undefined,
     };
   }
 

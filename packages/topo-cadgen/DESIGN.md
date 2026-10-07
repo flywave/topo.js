@@ -105,3 +105,21 @@ verdict 只在服务端重放时产生）。本包不打补丁式实现，而是
 - parity 测试**已移入默认门禁** (2026-10-07)：wasm 与 goldens 兄弟检出均
   存在时默认运行（自动探测），`CADGEN_EDITOR_KERNEL=0` 显式退出——全绿后
   棘轮不再允许回退。
+
+## 7. 宿主构建与开发服务器 (迭代 10)
+
+- `pnpm build:editor` = vite build（index.html + src/main.ts 入口）+ 把
+  `topo-wasm/src/topo.full.{js,wasm}` 拷进 dist/（dist 不入 git）。
+- 内核 URL 由宿主显式指定：`globalThis.TOPO_KERNEL_URL`（main.ts 用
+  `document.baseURI` 解析 —— vite 会把 import.meta.url 编译成
+  self.location，页面挂在任意路径前缀下都必须以挂载点为基准）。
+- 开发服务器：`go run ./cmd/cadgen-serve -addr :8080 -web
+  ../topo.js/packages/topo-cadgen/dist -mock`，编辑器在 `/editor/`。
+- 真机闭环已验证（浏览器 GUI）：加载 run → 浏览器内核本地构建 + 归属 →
+  参数面板改值 → 本地预览 → 服务端门禁重放落版 → 回读重绘；undo/redo
+  按钮同链路。要点沉淀：
+  - 面板提交走 input 防抖 (800ms) + Enter/blur 立即 —— 不依赖
+    change-on-blur（headless 驱动下不可靠）；busy 时静默跳过重入。
+  - MeshStandardMaterial 无灯光即黑 —— 视口必须有基础灯光。
+  - Embind Workplane ctor 的 origin 要 Vector 不是 gp_Pnt（parity 工厂
+    是唯一正确范本，app 工厂必须逐字对齐）。

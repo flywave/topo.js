@@ -37,10 +37,28 @@ export function createParamsPanel(app: EditorApp) {
             const input = document.createElement("input");
             input.value = p.expr;
             input.disabled = busy;
-            input.onchange = () => {
+            // Commit on typing pause (debounced preview), Enter, or blur —
+            // whichever lands first; headless drivers and fast typists both
+            // get one predictable commit path.
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            const tryCommit = () => {
+              if (timer) { clearTimeout(timer); timer = null; }
+              // The detach-blur of a store-driven re-render fires a second
+              // tryCommit while the first commit is in flight — busy means
+              // the edit is already being applied.
+              if (app.store.get().busy) return;
               if (input.value === p.expr) return;
+              app.log("done", `参数编辑提交: ${p.name} = ${input.value}`);
               void commit({ kind: "setParameter", name: p.name, expr: input.value });
             };
+            input.addEventListener("input", () => {
+              if (timer) clearTimeout(timer);
+              timer = setTimeout(tryCommit, 800);
+            });
+            input.addEventListener("blur", tryCommit);
+            input.addEventListener("keydown", (ev) => {
+              if (ev.key === "Enter") tryCommit();
+            });
             row.append(label, input);
             table.appendChild(row);
           }

@@ -49,13 +49,17 @@ export class EditorApp {
   readonly artifacts: ArtifactService;
   readonly selection = new SelectionService();
   readonly edits: LocalEditService;
+  readonly log: (kind: string, text: string) => void;
   private panels = new Map<string, Panel>();
   private interpreter: TreeInterpreter | null = null;
 
   constructor(
     private opts: EditorOptions,
-    public readonly log: (kind: string, text: string) => void = () => {},
+    log?: (kind: string, text: string) => void,
   ) {
+    // Log routing: explicit ctor fn wins, then opts.onLog — a host that
+    // passes onLog but not the ctor fn must still see the pipeline's voice.
+    this.log = log ?? opts.onLog ?? (() => {});
     this.transport = new Transport(opts.base ?? "");
     this.viewer = new Viewer(opts.container);
     this.artifacts = new ArtifactService({
@@ -103,6 +107,9 @@ export class EditorApp {
       this.log("done", `已落版 ${result.version ? `v${result.version.index}` : ""} — 变更: ${result.changed.map((c) => `${c.featureId}(${c.kind})`).join(", ")}`);
       await this.loadRun(runId);
       return true;
+    } catch (e) {
+      this.log("warning", `编辑失败: ${e instanceof Error ? e.message : String(e)}`);
+      return false;
     } finally {
       this.store.set({ busy: false });
     }
@@ -133,9 +140,8 @@ export class EditorApp {
       const { CQWorkplane } = await import("../../topo-primitives/lib/cq/index.js");
       const cq = {
         workplane: (plane?: string, origin?: number[]) =>
-          origin
-            ? (new CQWorkplane(tp, plane, new tp.gp_Pnt_3(origin[0], origin[1], origin[2])) as any)
-            : (new CQWorkplane(tp, plane) as any),
+          new CQWorkplane(tp, plane ?? "XY",
+            origin ? new tp.Vector(origin[0], origin[1], origin[2]) : undefined) as any,
         vec: (x: number, y: number, z: number) => new tp.Vector(x, y, z),
       };
       this.interpreter = new TreeInterpreter(tp, cq);

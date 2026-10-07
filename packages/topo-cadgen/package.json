@@ -8,11 +8,13 @@
   "scripts": {
     "test": "vitest run",
     "test:kernel": "CADGEN_EDITOR_KERNEL=1 vitest run interpreter_parity",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "build:editor": "vite build && cp ../topo-wasm/src/topo.full.js ../topo-wasm/src/topo.full.wasm dist/"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
-    "vitest": "^0.28.5"
+    "vitest": "^0.28.5",
+    "vite": "^4.0.4"
   },
   "dependencies": {
     "three": "^0.160.0"

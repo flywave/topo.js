@@ -19,14 +19,22 @@ export class Viewer {
   readonly controls: OrbitControls;
   private faceMeshes: THREE.Mesh[] = [];
   private pickHandler: ((faceId: number) => void) | null = null;
+  private container: HTMLElement;
 
   constructor(container: HTMLElement) {
+    this.container = container;
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     container.appendChild(this.renderer.domElement);
     this.scene.background = new THREE.Color(0x14171c);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100000);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
+    // Lights: MeshStandardMaterial is black without any — hemisphere for the
+    // base tone, a directional for shape-defining shading.
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.1));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(1, 1.6, 0.8);
+    this.scene.add(sun);
 
     this.renderer.domElement.addEventListener("pointerdown", (ev) => {
       if (ev.button !== 0 || !this.pickHandler) return;
@@ -89,7 +97,7 @@ export class Viewer {
       this.camera.far = size * 100;
       this.camera.updateProjectionMatrix();
     }
-    this.resize();
+    this.resize(this.container);
   }
 
   // highlight — paint the faces of the selected feature; the rest base.

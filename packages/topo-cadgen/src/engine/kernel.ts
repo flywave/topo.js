@@ -4,8 +4,6 @@
 // dispatches through. This is the ONLY module that touches the raw kernel
 // global; everything else sees MeshData and numbers.
 
-import { readFileSync } from "node:fs";
-
 export interface MeshData {
   vertices: number[][];
   triangles: number[][];
@@ -59,6 +57,7 @@ export async function loadKernel(): Promise<KernelGlobal> {
         // Node (tests): the archived helper's exact pattern — absolute POSIX
         // path import + node Buffer for wasmBinary. A file:// URL import or
         // a bare ArrayBuffer both end in "BufferSource is empty".
+        const { readFileSync } = await import("node:fs");
         const { join, dirname } = await import("node:path");
         const { fileURLToPath } = await import("node:url");
         const here = dirname(fileURLToPath(import.meta.url)); // …/src/engine
@@ -71,9 +70,12 @@ export async function loadKernel(): Promise<KernelGlobal> {
         return tp as KernelGlobal;
       }
       // Browser: import the kernel URL and point locateFile at the sibling
-      // wasm (served next to it).
-      const loaderURL = new URL("../../../topo-wasm/src/topo.full.js", import.meta.url).href;
-      const wasmURL = new URL("../../../topo-wasm/src/topo.full.wasm", import.meta.url).href;
+      // wasm (served next to it). A host page can override both via
+      // TOPO_KERNEL_URL (the dev server ships the kernel inside dist/, so
+      // the source-tree-relative default does not resolve there).
+      const loaderURL = (globalThis as any).TOPO_KERNEL_URL
+        ?? new URL("../../../topo-wasm/src/topo.full.js", import.meta.url).href;
+      const wasmURL = loaderURL.replace(/\.js$/, ".wasm");
       const mod: any = await import(/* @vite-ignore */ loaderURL);
       return mod.default({ locateFile: () => wasmURL });
     })();
