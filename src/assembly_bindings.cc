@@ -2,6 +2,7 @@
 #include "binding.hh"
 #include "compound.hh"
 #include <Standard_Failure.hxx>
+#include "binding_guard.hh"
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -58,7 +59,7 @@ EMSCRIPTEN_BINDINGS(Assembly) {
           emscripten::optional_override(
               [](emscripten::val objVal, emscripten::val locVal,
                  std::string name, emscripten::val colorVal,
-                 emscripten::val metadataVal) {
+                 emscripten::val metadataVal) { try {
                 assembly_object obj = boost::blank{};
                 if (!objVal.isUndefined()) {
                   if (objVal.instanceof(emscripten::val::global("Workplane"))) {
@@ -99,18 +100,18 @@ EMSCRIPTEN_BINDINGS(Assembly) {
                 }
 
                 return assembly::create(obj, loc, name, color, metadata);
-              }),
+               } TOPO_BINDING_CATCH("create")}),
           emscripten::allow_raw_pointers())
-      .function("copy", emscripten::optional_override([](assembly &self) {
+      .function("copy", emscripten::optional_override([](assembly &self) { try {
                   return emscripten::val(self.copy());
-                }))
+                 } TOPO_BINDING_CATCH("copy")}))
       .function(
           "add", emscripten::optional_override([](assembly &self,
                                                   emscripten::val objVal,
                                                   emscripten::val locVal,
                                                   std::string name,
                                                   emscripten::val colorVal,
-                                                  emscripten::val metadataVal) {
+                                                  emscripten::val metadataVal) { try {
             if (objVal.instanceof(emscripten::val::global("Assembly"))) {
               auto subAssembly = objVal.as<std::shared_ptr<assembly>>();
               auto loc = locVal.isUndefined()
@@ -164,41 +165,41 @@ EMSCRIPTEN_BINDINGS(Assembly) {
               auto &r = self.add(obj, loc, name, color, metadata);
               return emscripten::val(r.shared_from_this());
             }
-          }))
+           } TOPO_BINDING_CATCH("add")}))
       .function("remove", emscripten::optional_override(
-                              [](assembly &self, const std::string &name) {
+                              [](assembly &self, const std::string &name) { try {
                                 auto &r = self.remove(name);
                                 return emscripten::val(r.shared_from_this());
-                              }))
-      .function("shapes", emscripten::optional_override([](assembly &self) {
+                               } TOPO_BINDING_CATCH("remove")}))
+      .function("shapes", emscripten::optional_override([](assembly &self) { try {
                   auto shapes = self.shapes();
                   emscripten::val result = emscripten::val::array();
                   for (auto &shape : shapes) {
                     result.call<void>("push", emscripten::val(shape));
                   }
                   return result;
-                }))
+                 } TOPO_BINDING_CATCH("shapes")}))
       .function("traverse",
                 emscripten::optional_override(
-                    [](assembly &self, emscripten::val callback) {
+                    [](assembly &self, emscripten::val callback) { try {
                       self.traverse([callback](const std::string &name,
                                                const assembly &assm) {
                         callback(name, emscripten::val(assm.shared_from_this()));
                       });
-                    }))
-      .function("toCompound", emscripten::optional_override([](assembly &self) {
+                     } TOPO_BINDING_CATCH("traverse")}))
+      .function("toCompound", emscripten::optional_override([](assembly &self) { try {
                   return emscripten::val(self.to_compound());
-                }))
-      .function("flatten", emscripten::optional_override([](assembly &self) {
+                 } TOPO_BINDING_CATCH("toCompound")}))
+      .function("flatten", emscripten::optional_override([](assembly &self) { try {
                   auto flattened = self.flatten();
                   emscripten::val result = emscripten::val::object();
                   for (auto pair : flattened) {
                     result.set(pair.first, emscripten::val(pair.second));
                   }
                   return result;
-                }))
+                 } TOPO_BINDING_CATCH("flatten")}))
       .function("getElements",
-                emscripten::optional_override([](assembly &self) {
+                emscripten::optional_override([](assembly &self) { try {
                   auto elements = self.get_elements();
                   emscripten::val result = emscripten::val::array();
                   for (auto &elem : elements) {
@@ -215,21 +216,21 @@ EMSCRIPTEN_BINDINGS(Assembly) {
                     result.call<void>("push", obj);
                   }
                   return result;
-                }))
+                 } TOPO_BINDING_CATCH("getElements")}))
       .function("name", emscripten::optional_override(
-                            [](assembly &self) { return self.name(); }))
-      .function("location", emscripten::optional_override([](assembly &self) {
+                            [](assembly &self) { try { return self.name();  } TOPO_BINDING_CATCH("name")}))
+      .function("location", emscripten::optional_override([](assembly &self) { try {
                   return emscripten::val(self.location());
-                }))
-      .function("hasColor", emscripten::optional_override([](assembly &self) {
+                 } TOPO_BINDING_CATCH("location")}))
+      .function("hasColor", emscripten::optional_override([](assembly &self) { try {
                   return self.has_color();
-                }))
-      .function("color", emscripten::optional_override([](assembly &self) {
+                 } TOPO_BINDING_CATCH("hasColor")}))
+      .function("color", emscripten::optional_override([](assembly &self) { try {
                   return emscripten::val(self.color());
-                }))
+                 } TOPO_BINDING_CATCH("color")}))
       .function("hasObj", emscripten::optional_override(
-                              [](assembly &self) { return self.has_obj(); }))
-      .function("obj", emscripten::optional_override([](assembly &self) {
+                              [](assembly &self) { try { return self.has_obj();  } TOPO_BINDING_CATCH("hasObj")}))
+      .function("obj", emscripten::optional_override([](assembly &self) { try {
                   const auto &obj = self.obj();
                   if (const auto *shapePtr = boost::get<shape>(&obj)) {
                     return emscripten::val(*shapePtr);
@@ -239,15 +240,15 @@ EMSCRIPTEN_BINDINGS(Assembly) {
                   } else {
                     return emscripten::val::null();
                   }
-                }))
-      .function("children", emscripten::optional_override([](assembly &self) {
+                 } TOPO_BINDING_CATCH("obj")}))
+      .function("children", emscripten::optional_override([](assembly &self) { try {
                   auto children = self.children();
                   emscripten::val result = emscripten::val::array();
                   for (auto &child : children) {
                     result.call<void>("push", emscripten::val(child));
                   }
                   return result;
-                }))
+                 } TOPO_BINDING_CATCH("children")}))
       .function(
           "constrain",
           emscripten::optional_override([](assembly &self, emscripten::val q1,
@@ -400,12 +401,12 @@ EMSCRIPTEN_BINDINGS(Assembly) {
           }),
           emscripten::allow_raw_pointers())
       .function("hasError", emscripten::optional_override(
-                                [](assembly &self) { return self.has_error(); }))
+                                [](assembly &self) { try { return self.has_error();  } TOPO_BINDING_CATCH("hasError")}))
       .function("getError", emscripten::optional_override(
-                                [](assembly &self) -> emscripten::val {
+                                [](assembly &self) -> emscripten::val { try {
                                   if (self.has_error()) {
                                     return emscripten::val(self.error());
                                   }
                                   return emscripten::val::null();
-                                }));
+                                 } TOPO_BINDING_CATCH("getError")}));
 }

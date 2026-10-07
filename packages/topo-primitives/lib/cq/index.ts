@@ -163,6 +163,37 @@ export class CQWorkplane {
         );
     }
 
+    /**
+     * 放置文字 (T1.1, workplane::text)。WASM 无系统字体, 需经 fontPath 提供
+     * ttf (可先 tp.FS.writeFile 进 MEMFS)。kind: 0=REGULAR 1=BOLD 2=ITALIC;
+     * halign: 0=LEFT 1=CENTER 2=RIGHT; valign: 0=BOTTOM 1=CENTER 2=TOP。
+     */
+    text(
+        txt: string,
+        fontsize: number,
+        distance: number,
+        opts?: {
+            cut?: boolean;
+            combine?: boolean;
+            clean?: boolean;
+            font?: string;
+            fontPath?: string;
+            kind?: number;
+            halign?: number;
+            valign?: number;
+        }
+    ): CQWorkplane {
+        const o = opts ?? {};
+        return this._wrap(
+            this.wp.text(
+                txt, fontsize, distance,
+                o.cut ?? true, o.combine ?? false, o.clean ?? true,
+                o.font ?? "Arial", o.fontPath ?? "",
+                o.kind ?? 0, o.halign ?? 1, o.valign ?? 1
+            )
+        );
+    }
+
     translate(gpVecArg: any): CQWorkplane {
         return this._wrap(this.wp.translate(gpVecArg));
     }

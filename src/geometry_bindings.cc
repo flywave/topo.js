@@ -1,5 +1,6 @@
 #include "binding.hh"
 #include "geometry_creator.hh"
+#include "binding_guard.hh"
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -10,329 +11,215 @@ EMSCRIPTEN_BINDINGS(Geometry) {
       // 圆弧创建方法
       .class_function(
           "makeArcOfCircle",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Circ &, const Standard_Real, const Standard_Real,
-              const bool)>(&geometry_creator::make_arc_of_circle))
+          emscripten::optional_override([](const gp_Circ & a1, const Standard_Real a2, const Standard_Real a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfCircle") }))
       .class_function("makeArcOfCircleWithPoint",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Circ &, const gp_Pnt &, const Standard_Real,
-                          const bool)>(&geometry_creator::make_arc_of_circle))
+                      emscripten::optional_override([](const gp_Circ & a1, const gp_Pnt & a2, const Standard_Real a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfCircleWithPoint") }))
       .class_function(
           "makeArcOfCircleWithTwoPoints",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Circ &, const gp_Pnt &, const gp_Pnt &, const bool)>(
-              &geometry_creator::make_arc_of_circle))
+          emscripten::optional_override([](const gp_Circ & a1, const gp_Pnt & a2, const gp_Pnt & a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfCircleWithTwoPoints") }))
       .class_function("makeArcOfCircleWithThreePoints",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_arc_of_circle))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3); } TOPO_BINDING_CATCH("makeArcOfCircleWithThreePoints") }))
       .class_function("makeArcOfCircleWithVector",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Pnt &, const gp_Vec &, const gp_Pnt &)>(
-                          &geometry_creator::make_arc_of_circle_vector))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Vec & a2, const gp_Pnt & a3) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle_vector(a1, a2, a3); } TOPO_BINDING_CATCH("makeArcOfCircleWithVector") }))
 
       // 椭圆弧创建方法
       .class_function(
           "makeArcOfEllipse",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Elips &, const Standard_Real, const Standard_Real,
-              bool)>(&geometry_creator::make_arc_of_ellipse))
+          emscripten::optional_override([](const gp_Elips & a1, const Standard_Real a2, const Standard_Real a3, bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfEllipse") }))
       .class_function("makeArcOfEllipseWithPoint",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Elips &, const gp_Pnt &, const Standard_Real,
-                          const bool)>(&geometry_creator::make_arc_of_ellipse))
+                      emscripten::optional_override([](const gp_Elips & a1, const gp_Pnt & a2, const Standard_Real a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfEllipseWithPoint") }))
       .class_function(
           "makeArcOfEllipseWithTwoPoints",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Elips &, const gp_Pnt &, const gp_Pnt &, const bool)>(
-              &geometry_creator::make_arc_of_ellipse))
+          emscripten::optional_override([](const gp_Elips & a1, const gp_Pnt & a2, const gp_Pnt & a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfEllipseWithTwoPoints") }))
 
       // 双曲线弧创建方法
       .class_function(
           "makeArcOfHyperbola",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Hypr &, const Standard_Real, const Standard_Real,
-              const bool)>(&geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr & a1, const Standard_Real a2, const Standard_Real a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfHyperbola") }))
       .class_function(
           "makeArcOfHyperbolaWithPoint",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Hypr &, const gp_Pnt &, const Standard_Real,
-              const bool)>(&geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr & a1, const gp_Pnt & a2, const Standard_Real a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfHyperbolaWithPoint") }))
       .class_function(
           "makeArcOfHyperbolaWithTwoPoints",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Hypr &, const gp_Pnt &, const gp_Pnt &, const bool)>(
-              &geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr & a1, const gp_Pnt & a2, const gp_Pnt & a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfHyperbolaWithTwoPoints") }))
 
       // 抛物线弧创建方法
       .class_function(
           "makeArcOfParabola",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Parab &, const Standard_Real, const Standard_Real,
-              bool)>(&geometry_creator::make_arc_of_parabola))
+          emscripten::optional_override([](const gp_Parab & a1, const Standard_Real a2, const Standard_Real a3, bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfParabola") }))
       .class_function("makeArcOfParabolaWithPoint",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Parab &, const gp_Pnt &, const Standard_Real,
-                          const bool)>(&geometry_creator::make_arc_of_parabola))
+                      emscripten::optional_override([](const gp_Parab & a1, const gp_Pnt & a2, const Standard_Real a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfParabolaWithPoint") }))
       .class_function(
           "makeArcOfParabolaWithTwoPoints",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Parab &, const gp_Pnt &, const gp_Pnt &, const bool)>(
-              &geometry_creator::make_arc_of_parabola))
+          emscripten::optional_override([](const gp_Parab & a1, const gp_Pnt & a2, const gp_Pnt & a3, const bool a4) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeArcOfParabolaWithTwoPoints") }))
 
       // 圆创建方法
       .class_function(
           "makeCircle",
-          emscripten::select_overload<Handle(Geom_Circle)(const gp_Circ &)>(
-              &geometry_creator::make_circle))
+          emscripten::optional_override([](const gp_Circ & a1) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1); } TOPO_BINDING_CATCH("makeCircle") }))
       .class_function("makeCircleWithAxis",
-                      emscripten::select_overload<Handle(Geom_Circle)(
-                          const gp_Ax2 &, const Standard_Real)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Ax2 & a1, const Standard_Real a2) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("makeCircleWithAxis") }))
       .class_function("makeCircleWithDistance",
-                      emscripten::select_overload<Handle(Geom_Circle)(
-                          const gp_Circ &, const Standard_Real)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Circ & a1, const Standard_Real a2) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("makeCircleWithDistance") }))
       .class_function(
           "makeCircleWithPoint",
-          emscripten::select_overload<Handle(Geom_Circle)(
-              const gp_Circ &, const gp_Pnt &)>(&geometry_creator::make_circle))
+          emscripten::optional_override([](const gp_Circ & a1, const gp_Pnt & a2) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("makeCircleWithPoint") }))
       .class_function("makeCircleWithThreePoints",
-                      emscripten::select_overload<Handle(Geom_Circle)(
-                          const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("makeCircleWithThreePoints") }))
       .class_function("makeCircleWithCenterNormal",
-                      emscripten::select_overload<Handle(Geom_Circle)(
-                          const gp_Pnt &, const gp_Dir &, const Standard_Real)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Dir & a2, const Standard_Real a3) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("makeCircleWithCenterNormal") }))
       .class_function("makeCircleWithCenterAxisPoint",
-                      emscripten::select_overload<Handle(Geom_Circle)(
-                          const gp_Pnt &, const gp_Pnt &, const Standard_Real)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const Standard_Real a3) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("makeCircleWithCenterAxisPoint") }))
       .class_function("makeCircleWithAxis1",
-                      emscripten::select_overload<Handle(Geom_Circle)(
-                          const gp_Ax1 &, const Standard_Real)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Ax1 & a1, const Standard_Real a2) -> Handle(Geom_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("makeCircleWithAxis1") }))
 
       // 椭圆创建方法
       .class_function(
           "makeEllipse",
-          emscripten::select_overload<Handle(Geom_Ellipse)(const gp_Elips &)>(
-              &geometry_creator::make_ellipse))
+          emscripten::optional_override([](const gp_Elips & a1) -> Handle(Geom_Ellipse) { try { return geometry_creator::make_ellipse(a1); } TOPO_BINDING_CATCH("makeEllipse") }))
       .class_function(
           "makeEllipseWithAxis",
-          emscripten::select_overload<Handle(Geom_Ellipse)(
-              const gp_Ax2 &, const Standard_Real, const Standard_Real)>(
-              &geometry_creator::make_ellipse))
+          emscripten::optional_override([](const gp_Ax2 & a1, const Standard_Real a2, const Standard_Real a3) -> Handle(Geom_Ellipse) { try { return geometry_creator::make_ellipse(a1, a2, a3); } TOPO_BINDING_CATCH("makeEllipseWithAxis") }))
       .class_function("makeEllipseWithThreePoints",
-                      emscripten::select_overload<Handle(Geom_Ellipse)(
-                          const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_ellipse))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_Ellipse) { try { return geometry_creator::make_ellipse(a1, a2, a3); } TOPO_BINDING_CATCH("makeEllipseWithThreePoints") }))
 
       // 双曲线创建方法
       .class_function(
           "makeHyperbola",
-          emscripten::select_overload<Handle(Geom_Hyperbola)(const gp_Hypr &)>(
-              &geometry_creator::make_hyperbola))
+          emscripten::optional_override([](const gp_Hypr & a1) -> Handle(Geom_Hyperbola) { try { return geometry_creator::make_hyperbola(a1); } TOPO_BINDING_CATCH("makeHyperbola") }))
       .class_function(
           "makeHyperbolaWithAxis",
-          emscripten::select_overload<Handle(Geom_Hyperbola)(
-              const gp_Ax2 &, const Standard_Real, const Standard_Real)>(
-              &geometry_creator::make_hyperbola))
+          emscripten::optional_override([](const gp_Ax2 & a1, const Standard_Real a2, const Standard_Real a3) -> Handle(Geom_Hyperbola) { try { return geometry_creator::make_hyperbola(a1, a2, a3); } TOPO_BINDING_CATCH("makeHyperbolaWithAxis") }))
       .class_function("makeHyperbolaWithThreePoints",
-                      emscripten::select_overload<Handle(Geom_Hyperbola)(
-                          const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_hyperbola))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_Hyperbola) { try { return geometry_creator::make_hyperbola(a1, a2, a3); } TOPO_BINDING_CATCH("makeHyperbolaWithThreePoints") }))
 
       // 圆锥曲面创建方法
       .class_function(
           "makeConicalSurface",
-          emscripten::select_overload<Handle(Geom_ConicalSurface)(
-              const gp_Ax2 &, const Standard_Real, const Standard_Real)>(
-              &geometry_creator::make_conical_surface))
+          emscripten::optional_override([](const gp_Ax2 & a1, const Standard_Real a2, const Standard_Real a3) -> Handle(Geom_ConicalSurface) { try { return geometry_creator::make_conical_surface(a1, a2, a3); } TOPO_BINDING_CATCH("makeConicalSurface") }))
       .class_function(
           "makeConicalSurfaceWithCone",
-          emscripten::select_overload<Handle(Geom_ConicalSurface)(
-              const gp_Cone &)>(&geometry_creator::make_conical_surface))
+          emscripten::optional_override([](const gp_Cone & a1) -> Handle(Geom_ConicalSurface) { try { return geometry_creator::make_conical_surface(a1); } TOPO_BINDING_CATCH("makeConicalSurfaceWithCone") }))
       .class_function(
           "makeConicalSurfaceWithFourPoints",
-          emscripten::select_overload<Handle(Geom_ConicalSurface)(
-              const gp_Pnt &, const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_conical_surface))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3, const gp_Pnt & a4) -> Handle(Geom_ConicalSurface) { try { return geometry_creator::make_conical_surface(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeConicalSurfaceWithFourPoints") }))
       .class_function(
           "makeConicalSurfaceWithTwoPointsTwoRadii",
-          emscripten::select_overload<Handle(Geom_ConicalSurface)(
-              const gp_Pnt &, const gp_Pnt &, const Standard_Real,
-              const Standard_Real)>(&geometry_creator::make_conical_surface))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const Standard_Real a3, const Standard_Real a4) -> Handle(Geom_ConicalSurface) { try { return geometry_creator::make_conical_surface(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeConicalSurfaceWithTwoPointsTwoRadii") }))
 
       // 圆柱曲面创建方法
       .class_function(
           "makeCylindricalSurface",
-          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
-              const gp_Ax2 &, const Standard_Real)>(
-              &geometry_creator::make_cylindrical_surface))
+          emscripten::optional_override([](const gp_Ax2 & a1, const Standard_Real a2) -> Handle(Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1, a2); } TOPO_BINDING_CATCH("makeCylindricalSurface") }))
       .class_function("makeCylindricalSurfaceWithCylinder",
-                      emscripten::select_overload<Handle(
-                          Geom_CylindricalSurface)(const gp_Cylinder &)>(
-                          &geometry_creator::make_cylindrical_surface))
+                      emscripten::optional_override([](const gp_Cylinder & a1) -> Handle(
+                          Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1); } TOPO_BINDING_CATCH("makeCylindricalSurfaceWithCylinder") }))
       .class_function(
           "makeCylindricalSurfaceWithPoint",
-          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
-              const gp_Cylinder &, const gp_Pnt &)>(
-              &geometry_creator::make_cylindrical_surface))
+          emscripten::optional_override([](const gp_Cylinder & a1, const gp_Pnt & a2) -> Handle(Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1, a2); } TOPO_BINDING_CATCH("makeCylindricalSurfaceWithPoint") }))
       .class_function(
           "makeCylindricalSurfaceWithDistance",
-          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
-              const gp_Cylinder &, const Standard_Real)>(
-              &geometry_creator::make_cylindrical_surface))
+          emscripten::optional_override([](const gp_Cylinder & a1, const Standard_Real a2) -> Handle(Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1, a2); } TOPO_BINDING_CATCH("makeCylindricalSurfaceWithDistance") }))
       .class_function(
           "makeCylindricalSurfaceWithThreePoints",
-          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
-              const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_cylindrical_surface))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1, a2, a3); } TOPO_BINDING_CATCH("makeCylindricalSurfaceWithThreePoints") }))
       .class_function(
           "makeCylindricalSurfaceWithAxis1",
-          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
-              const gp_Ax1 &, const Standard_Real)>(
-              &geometry_creator::make_cylindrical_surface))
+          emscripten::optional_override([](const gp_Ax1 & a1, const Standard_Real a2) -> Handle(Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1, a2); } TOPO_BINDING_CATCH("makeCylindricalSurfaceWithAxis1") }))
       .class_function(
           "makeCylindricalSurfaceWithCirc",
-          emscripten::select_overload<Handle(Geom_CylindricalSurface)(
-              const gp_Circ &)>(&geometry_creator::make_cylindrical_surface))
+          emscripten::optional_override([](const gp_Circ & a1) -> Handle(Geom_CylindricalSurface) { try { return geometry_creator::make_cylindrical_surface(a1); } TOPO_BINDING_CATCH("makeCylindricalSurfaceWithCirc") }))
 
       // 直线创建方法
       .class_function(
           "makeLine",
-          emscripten::select_overload<Handle(Geom_Line)(const gp_Ax1 &)>(
-              &geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Ax1 & a1) -> Handle(Geom_Line) { try { return geometry_creator::make_line(a1); } TOPO_BINDING_CATCH("makeLine") }))
       .class_function(
           "makeLineWithLin",
-          emscripten::select_overload<Handle(Geom_Line)(const gp_Lin &)>(
-              &geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Lin & a1) -> Handle(Geom_Line) { try { return geometry_creator::make_line(a1); } TOPO_BINDING_CATCH("makeLineWithLin") }))
       .class_function(
           "makeLineWithPointDir",
-          emscripten::select_overload<Handle(Geom_Line)(
-              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Dir & a2) -> Handle(Geom_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("makeLineWithPointDir") }))
       .class_function(
           "makeLineWithLinPoint",
-          emscripten::select_overload<Handle(Geom_Line)(
-              const gp_Lin &, const gp_Pnt &)>(&geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Lin & a1, const gp_Pnt & a2) -> Handle(Geom_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("makeLineWithLinPoint") }))
       .class_function(
           "makeLineWithTwoPoints",
-          emscripten::select_overload<Handle(Geom_Line)(
-              const gp_Pnt &, const gp_Pnt &)>(&geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2) -> Handle(Geom_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("makeLineWithTwoPoints") }))
 
       // 镜像变换创建方法
       .class_function("makeMirrorWithPoint",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Pnt &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Pnt & a1) -> Handle(Geom_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("makeMirrorWithPoint") }))
       .class_function("makeMirrorWithAxis1",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Ax1 &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Ax1 & a1) -> Handle(Geom_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("makeMirrorWithAxis1") }))
       .class_function("makeMirrorWithLin",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Lin &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Lin & a1) -> Handle(Geom_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("makeMirrorWithLin") }))
       .class_function(
           "makeMirrorWithPointDir",
-          emscripten::select_overload<Handle(Geom_Transformation)(
-              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_mirror))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Dir & a2) -> Handle(Geom_Transformation) { try { return geometry_creator::make_mirror(a1, a2); } TOPO_BINDING_CATCH("makeMirrorWithPointDir") }))
       .class_function("makeMirrorWithPln",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Pln &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Pln & a1) -> Handle(Geom_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("makeMirrorWithPln") }))
       .class_function("makeMirrorWithAxis2",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Ax2 &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Ax2 & a1) -> Handle(Geom_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("makeMirrorWithAxis2") }))
 
       // 旋转变换创建方法
       .class_function("makeRotationWithLin",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Lin &, const Standard_Real)>(
-                          &geometry_creator::make_rotation))
+                      emscripten::optional_override([](const gp_Lin & a1, const Standard_Real a2) -> Handle(Geom_Transformation) { try { return geometry_creator::make_rotation(a1, a2); } TOPO_BINDING_CATCH("makeRotationWithLin") }))
       .class_function("makeRotationWithAxis1",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Ax1 &, const Standard_Real)>(
-                          &geometry_creator::make_rotation))
+                      emscripten::optional_override([](const gp_Ax1 & a1, const Standard_Real a2) -> Handle(Geom_Transformation) { try { return geometry_creator::make_rotation(a1, a2); } TOPO_BINDING_CATCH("makeRotationWithAxis1") }))
       .class_function("makeRotationWithPointDir",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Pnt &, const gp_Dir &, const Standard_Real)>(
-                          &geometry_creator::make_rotation))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Dir & a2, const Standard_Real a3) -> Handle(Geom_Transformation) { try { return geometry_creator::make_rotation(a1, a2, a3); } TOPO_BINDING_CATCH("makeRotationWithPointDir") }))
 
       // 平移变换创建方法
       .class_function("makeTranslationWithVec",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Vec &)>(&geometry_creator::make_translation))
+                      emscripten::optional_override([](const gp_Vec & a1) -> Handle(Geom_Transformation) { try { return geometry_creator::make_translation(a1); } TOPO_BINDING_CATCH("makeTranslationWithVec") }))
       .class_function("makeTranslationWithTwoPoints",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_translation))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2) -> Handle(Geom_Transformation) { try { return geometry_creator::make_translation(a1, a2); } TOPO_BINDING_CATCH("makeTranslationWithTwoPoints") }))
 
       // 缩放变换创建方法
       .class_function("makeScale",
-                      emscripten::select_overload<Handle(Geom_Transformation)(
-                          const gp_Pnt &, const Standard_Real)>(
-                          &geometry_creator::make_scale))
+                      emscripten::optional_override([](const gp_Pnt & a1, const Standard_Real a2) -> Handle(Geom_Transformation) { try { return geometry_creator::make_scale(a1, a2); } TOPO_BINDING_CATCH("makeScale") }))
 
       // 平面创建方法
       .class_function(
           "makePlane",
-          emscripten::select_overload<Handle(Geom_Plane)(const gp_Pln &)>(
-              &geometry_creator::make_plane))
+          emscripten::optional_override([](const gp_Pln & a1) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1); } TOPO_BINDING_CATCH("makePlane") }))
       .class_function(
           "makePlaneWithPointDir",
-          emscripten::select_overload<Handle(Geom_Plane)(
-              const gp_Pnt &, const gp_Dir &)>(&geometry_creator::make_plane))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Dir & a2) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1, a2); } TOPO_BINDING_CATCH("makePlaneWithPointDir") }))
       .class_function(
           "makePlaneWithCoefficients",
-          emscripten::select_overload<Handle(Geom_Plane)(
-              const Standard_Real, const Standard_Real, const Standard_Real,
-              const Standard_Real)>(&geometry_creator::make_plane))
+          emscripten::optional_override([](const Standard_Real a1, const Standard_Real a2, const Standard_Real a3, const Standard_Real a4) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makePlaneWithCoefficients") }))
       .class_function(
           "makePlaneWithPlnPoint",
-          emscripten::select_overload<Handle(Geom_Plane)(
-              const gp_Pln &, const gp_Pnt &)>(&geometry_creator::make_plane))
+          emscripten::optional_override([](const gp_Pln & a1, const gp_Pnt & a2) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1, a2); } TOPO_BINDING_CATCH("makePlaneWithPlnPoint") }))
       .class_function("makePlaneWithPlnDistance",
-                      emscripten::select_overload<Handle(Geom_Plane)(
-                          const gp_Pln &, const Standard_Real)>(
-                          &geometry_creator::make_plane))
+                      emscripten::optional_override([](const gp_Pln & a1, const Standard_Real a2) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1, a2); } TOPO_BINDING_CATCH("makePlaneWithPlnDistance") }))
       .class_function("makePlaneWithThreePoints",
-                      emscripten::select_overload<Handle(Geom_Plane)(
-                          const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_plane))
+                      emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1, a2, a3); } TOPO_BINDING_CATCH("makePlaneWithThreePoints") }))
       .class_function(
           "makePlaneWithAxis1",
-          emscripten::select_overload<Handle(Geom_Plane)(const gp_Ax1 &)>(
-              &geometry_creator::make_plane))
+          emscripten::optional_override([](const gp_Ax1 & a1) -> Handle(Geom_Plane) { try { return geometry_creator::make_plane(a1); } TOPO_BINDING_CATCH("makePlaneWithAxis1") }))
 
       // 线段创建方法
       .class_function(
           "makeSegmentWithTwoPoints",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Pnt &, const gp_Pnt &)>(&geometry_creator::make_segment))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_segment(a1, a2); } TOPO_BINDING_CATCH("makeSegmentWithTwoPoints") }))
       .class_function(
           "makeSegmentWithLinParams",
-          emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-              const gp_Lin &, const Standard_Real, const Standard_Real)>(
-              &geometry_creator::make_segment))
+          emscripten::optional_override([](const gp_Lin & a1, const Standard_Real a2, const Standard_Real a3) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_segment(a1, a2, a3); } TOPO_BINDING_CATCH("makeSegmentWithLinParams") }))
       .class_function("makeSegmentWithLinPointParam",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Lin &, const gp_Pnt &, const Standard_Real)>(
-                          &geometry_creator::make_segment))
+                      emscripten::optional_override([](const gp_Lin & a1, const gp_Pnt & a2, const Standard_Real a3) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_segment(a1, a2, a3); } TOPO_BINDING_CATCH("makeSegmentWithLinPointParam") }))
       .class_function("makeSegmentWithLinTwoPoints",
-                      emscripten::select_overload<Handle(Geom_TrimmedCurve)(
-                          const gp_Lin &, const gp_Pnt &, const gp_Pnt &)>(
-                          &geometry_creator::make_segment))
+                      emscripten::optional_override([](const gp_Lin & a1, const gp_Pnt & a2, const gp_Pnt & a3) -> Handle(Geom_TrimmedCurve) { try { return geometry_creator::make_segment(a1, a2, a3); } TOPO_BINDING_CATCH("makeSegmentWithLinTwoPoints") }))
 
       // 修剪圆锥曲面创建方法
       .class_function(
           "makeTrimmedConeWithFourPoints",
-          emscripten::select_overload<Handle(Geom_RectangularTrimmedSurface)(
-              const gp_Pnt &, const gp_Pnt &, const gp_Pnt &, const gp_Pnt &)>(
-              &geometry_creator::make_trimmed_cone))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const gp_Pnt & a3, const gp_Pnt & a4) -> Handle(Geom_RectangularTrimmedSurface) { try { return geometry_creator::make_trimmed_cone(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeTrimmedConeWithFourPoints") }))
       .class_function(
           "makeTrimmedConeWithTwoPointsTwoRadii",
-          emscripten::select_overload<Handle(Geom_RectangularTrimmedSurface)(
-              const gp_Pnt &, const gp_Pnt &, const Standard_Real,
-              const Standard_Real)>(&geometry_creator::make_trimmed_cone))
+          emscripten::optional_override([](const gp_Pnt & a1, const gp_Pnt & a2, const Standard_Real a3, const Standard_Real a4) -> Handle(Geom_RectangularTrimmedSurface) { try { return geometry_creator::make_trimmed_cone(a1, a2, a3, a4); } TOPO_BINDING_CATCH("makeTrimmedConeWithTwoPointsTwoRadii") }))
 
       // 修剪圆柱曲面创建方法
       .class_function("makeTrimmedCylinderWithThreePoints",
@@ -351,234 +238,146 @@ EMSCRIPTEN_BINDINGS(Geometry) {
       // 曲线近似转换方法
       .class_function(
           "convertApproxCurve",
-          emscripten::select_overload<Handle(Geom_BSplineCurve)(
-              const Handle(Geom_Curve) &, const Standard_Real,
-              const GeomAbs_Shape, const Standard_Integer,
-              const Standard_Integer)>(&geometry_creator::convert_approx_curve))
+          emscripten::optional_override([](const Handle(Geom_Curve) & a1, const Standard_Real a2, const GeomAbs_Shape a3, const Standard_Integer a4, const Standard_Integer a5) -> Handle(Geom_BSplineCurve) { try { return geometry_creator::convert_approx_curve(a1, a2, a3, a4, a5); } TOPO_BINDING_CATCH("convertApproxCurve") }))
 
       // 曲面近似转换方法
       .class_function("convertApproxSurface",
-                      emscripten::select_overload<Handle(Geom_BSplineSurface)(
-                          const Handle(Geom_Surface) &, const Standard_Real,
-                          const GeomAbs_Shape, const GeomAbs_Shape,
-                          const Standard_Integer, const Standard_Integer,
-                          const Standard_Integer, const Standard_Integer)>(
-                          &geometry_creator::convert_approx_surface))
+                      emscripten::optional_override([](const Handle(Geom_Surface) & a1, const Standard_Real a2, const GeomAbs_Shape a3, const GeomAbs_Shape a4, const Standard_Integer a5, const Standard_Integer a6, const Standard_Integer a7, const Standard_Integer a8) -> Handle(Geom_BSplineSurface) { try { return geometry_creator::convert_approx_surface(a1, a2, a3, a4, a5, a6, a7, a8); } TOPO_BINDING_CATCH("convertApproxSurface") }))
 
       // 2D圆弧创建方法
       .class_function(
           "make2dArcOfCircle",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Circ2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_circle))
+          emscripten::optional_override([](const gp_Circ2d & a1, Standard_Real a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfCircle") }))
       .class_function(
           "make2dArcOfCircleWithPoint",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Circ2d &, const gp_Pnt2d &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_circle))
+          emscripten::optional_override([](const gp_Circ2d & a1, const gp_Pnt2d & a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfCircleWithPoint") }))
       .class_function(
           "make2dArcOfCircleWithTwoPoints",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Circ2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
-              &geometry_creator::make_arc_of_circle))
+          emscripten::optional_override([](const gp_Circ2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfCircleWithTwoPoints") }))
       .class_function(
           "make2dArcOfCircleWithThreePoints",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
-              &geometry_creator::make_arc_of_circle))
+          emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle(a1, a2, a3); } TOPO_BINDING_CATCH("make2dArcOfCircleWithThreePoints") }))
       .class_function(
           "make2dArcOfCircleWithVector",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Pnt2d &, const gp_Vec2d &, const gp_Pnt2d &)>(
-              &geometry_creator::make_arc_of_circle_vector))
+          emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Vec2d & a2, const gp_Pnt2d & a3) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_circle_vector(a1, a2, a3); } TOPO_BINDING_CATCH("make2dArcOfCircleWithVector") }))
 
       // 2D几何创建方法
       .class_function(
           "make2dArcOfEllipse",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Elips2d &, const Standard_Real, const Standard_Real,
-              bool)>(&geometry_creator::make_arc_of_ellipse))
+          emscripten::optional_override([](const gp_Elips2d & a1, const Standard_Real a2, const Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfEllipse") }))
       .class_function(
           "make2dArcOfHyperbola",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Hypr2d &, const Standard_Real, const Standard_Real,
-              bool)>(&geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr2d & a1, const Standard_Real a2, const Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfHyperbola") }))
       .class_function(
           "make2dArcOfParabola",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Parab2d &, const Standard_Real, const Standard_Real,
-              bool)>(&geometry_creator::make_arc_of_parabola))
+          emscripten::optional_override([](const gp_Parab2d & a1, const Standard_Real a2, const Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfParabola") }))
 
       // 2D椭圆弧创建方法
       .class_function(
           "make2dArcOfEllipse",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Elips2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_ellipse))
+          emscripten::optional_override([](const gp_Elips2d & a1, Standard_Real a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfEllipse") }))
       .class_function(
           "make2dArcOfEllipseWithPoint",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Elips2d &, const gp_Pnt2d &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_ellipse))
+          emscripten::optional_override([](const gp_Elips2d & a1, const gp_Pnt2d & a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfEllipseWithPoint") }))
       .class_function(
           "make2dArcOfEllipseWithTwoPoints",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Elips2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
-              &geometry_creator::make_arc_of_ellipse))
+          emscripten::optional_override([](const gp_Elips2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfEllipseWithTwoPoints") }))
 
       // 2D双曲线弧创建方法
       .class_function(
           "make2dArcOfHyperbola",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Hypr2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr2d & a1, Standard_Real a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfHyperbola") }))
       .class_function(
           "make2dArcOfHyperbolaWithPoint",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Hypr2d &, const gp_Pnt2d &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr2d & a1, const gp_Pnt2d & a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfHyperbolaWithPoint") }))
       .class_function(
           "make2dArcOfHyperbolaWithTwoPoints",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Hypr2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
-              &geometry_creator::make_arc_of_hyperbola))
+          emscripten::optional_override([](const gp_Hypr2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfHyperbolaWithTwoPoints") }))
 
       // 2D抛物线弧创建方法
       .class_function(
           "make2dArcOfParabola",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Parab2d &, Standard_Real, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_parabola))
+          emscripten::optional_override([](const gp_Parab2d & a1, Standard_Real a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfParabola") }))
       .class_function(
           "make2dArcOfParabolaWithPoint",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Parab2d &, const gp_Pnt2d &, Standard_Real, bool)>(
-              &geometry_creator::make_arc_of_parabola))
+          emscripten::optional_override([](const gp_Parab2d & a1, const gp_Pnt2d & a2, Standard_Real a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfParabolaWithPoint") }))
       .class_function(
           "make2dArcOfParabolaWithTwoPoints",
-          emscripten::select_overload<Handle(Geom2d_TrimmedCurve)(
-              const gp_Parab2d &, const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
-              &geometry_creator::make_arc_of_parabola))
+          emscripten::optional_override([](const gp_Parab2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3, bool a4) -> Handle(Geom2d_TrimmedCurve) { try { return geometry_creator::make_arc_of_parabola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dArcOfParabolaWithTwoPoints") }))
 
       // 2D圆创建方法
       .class_function(
           "make2dCircle",
-          emscripten::select_overload<Handle(Geom2d_Circle)(const gp_Circ2d &)>(
-              &geometry_creator::make_circle))
+          emscripten::optional_override([](const gp_Circ2d & a1) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1); } TOPO_BINDING_CATCH("make2dCircle") }))
       .class_function("make2dCircleWithAxis",
-                      emscripten::select_overload<Handle(Geom2d_Circle)(
-                          const gp_Ax2d &, Standard_Real, bool)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Ax2d & a1, Standard_Real a2, bool a3) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("make2dCircleWithAxis") }))
       .class_function(
           "make2dCircleWithAxis2d",
-          emscripten::select_overload<Handle(Geom2d_Circle)(
-              const gp_Ax22d &, Standard_Real)>(&geometry_creator::make_circle))
+          emscripten::optional_override([](const gp_Ax22d & a1, Standard_Real a2) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("make2dCircleWithAxis2d") }))
       .class_function("make2dCircleWithDistance",
-                      emscripten::select_overload<Handle(Geom2d_Circle)(
-                          const gp_Circ2d &, Standard_Real)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Circ2d & a1, Standard_Real a2) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("make2dCircleWithDistance") }))
       .class_function("make2dCircleWithPoint",
-                      emscripten::select_overload<Handle(Geom2d_Circle)(
-                          const gp_Circ2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Circ2d & a1, const gp_Pnt2d & a2) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2); } TOPO_BINDING_CATCH("make2dCircleWithPoint") }))
       .class_function(
           "make2dCircleWithThreePoints",
-          emscripten::select_overload<Handle(Geom2d_Circle)(
-              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
-              &geometry_creator::make_circle))
+          emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("make2dCircleWithThreePoints") }))
       .class_function("make2dCircleWithCenterRadius",
-                      emscripten::select_overload<Handle(Geom2d_Circle)(
-                          const gp_Pnt2d &, Standard_Real, bool)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, Standard_Real a2, bool a3) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("make2dCircleWithCenterRadius") }))
       .class_function("make2dCircleWithCenterPoint",
-                      emscripten::select_overload<Handle(Geom2d_Circle)(
-                          const gp_Pnt2d &, const gp_Pnt2d &, bool)>(
-                          &geometry_creator::make_circle))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2, bool a3) -> Handle(Geom2d_Circle) { try { return geometry_creator::make_circle(a1, a2, a3); } TOPO_BINDING_CATCH("make2dCircleWithCenterPoint") }))
 
       // 2D椭圆创建方法
       .class_function("make2dEllipse",
-                      emscripten::select_overload<Handle(Geom2d_Ellipse)(
-                          const gp_Elips2d &)>(&geometry_creator::make_ellipse))
+                      emscripten::optional_override([](const gp_Elips2d & a1) -> Handle(Geom2d_Ellipse) { try { return geometry_creator::make_ellipse(a1); } TOPO_BINDING_CATCH("make2dEllipse") }))
       .class_function("make2dEllipseWithMajorAxis",
-                      emscripten::select_overload<Handle(Geom2d_Ellipse)(
-                          const gp_Ax2d &, Standard_Real, Standard_Real, bool)>(
-                          &geometry_creator::make_ellipse))
+                      emscripten::optional_override([](const gp_Ax2d & a1, Standard_Real a2, Standard_Real a3, bool a4) -> Handle(Geom2d_Ellipse) { try { return geometry_creator::make_ellipse(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dEllipseWithMajorAxis") }))
       .class_function("make2dEllipseWithAxis2d",
-                      emscripten::select_overload<Handle(Geom2d_Ellipse)(
-                          const gp_Ax22d &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_ellipse))
+                      emscripten::optional_override([](const gp_Ax22d & a1, Standard_Real a2, Standard_Real a3) -> Handle(Geom2d_Ellipse) { try { return geometry_creator::make_ellipse(a1, a2, a3); } TOPO_BINDING_CATCH("make2dEllipseWithAxis2d") }))
       .class_function(
           "make2dEllipseWithThreePoints",
-          emscripten::select_overload<Handle(Geom2d_Ellipse)(
-              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
-              &geometry_creator::make_ellipse))
+          emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3) -> Handle(Geom2d_Ellipse) { try { return geometry_creator::make_ellipse(a1, a2, a3); } TOPO_BINDING_CATCH("make2dEllipseWithThreePoints") }))
 
       // 2D双曲线创建方法
       .class_function(
           "make2dHyperbola",
-          emscripten::select_overload<Handle(Geom2d_Hyperbola)(
-              const gp_Hypr2d &)>(&geometry_creator::make_hyperbola))
+          emscripten::optional_override([](const gp_Hypr2d & a1) -> Handle(Geom2d_Hyperbola) { try { return geometry_creator::make_hyperbola(a1); } TOPO_BINDING_CATCH("make2dHyperbola") }))
       .class_function("make2dHyperbolaWithMajorAxis",
-                      emscripten::select_overload<Handle(Geom2d_Hyperbola)(
-                          const gp_Ax2d &, Standard_Real, Standard_Real, bool)>(
-                          &geometry_creator::make_hyperbola))
+                      emscripten::optional_override([](const gp_Ax2d & a1, Standard_Real a2, Standard_Real a3, bool a4) -> Handle(Geom2d_Hyperbola) { try { return geometry_creator::make_hyperbola(a1, a2, a3, a4); } TOPO_BINDING_CATCH("make2dHyperbolaWithMajorAxis") }))
       .class_function("make2dHyperbolaWithAxis2d",
-                      emscripten::select_overload<Handle(Geom2d_Hyperbola)(
-                          const gp_Ax22d &, Standard_Real, Standard_Real)>(
-                          &geometry_creator::make_hyperbola))
+                      emscripten::optional_override([](const gp_Ax22d & a1, Standard_Real a2, Standard_Real a3) -> Handle(Geom2d_Hyperbola) { try { return geometry_creator::make_hyperbola(a1, a2, a3); } TOPO_BINDING_CATCH("make2dHyperbolaWithAxis2d") }))
       .class_function(
           "make2dHyperbolaWithThreePoints",
-          emscripten::select_overload<Handle(Geom2d_Hyperbola)(
-              const gp_Pnt2d &, const gp_Pnt2d &, const gp_Pnt2d &)>(
-              &geometry_creator::make_hyperbola))
+          emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2, const gp_Pnt2d & a3) -> Handle(Geom2d_Hyperbola) { try { return geometry_creator::make_hyperbola(a1, a2, a3); } TOPO_BINDING_CATCH("make2dHyperbolaWithThreePoints") }))
 
       // 2D直线创建方法
       .class_function(
           "make2dLine",
-          emscripten::select_overload<Handle(Geom2d_Line)(const gp_Ax2d &)>(
-              &geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Ax2d & a1) -> Handle(Geom2d_Line) { try { return geometry_creator::make_line(a1); } TOPO_BINDING_CATCH("make2dLine") }))
       .class_function(
           "make2dLineWithLin2d",
-          emscripten::select_overload<Handle(Geom2d_Line)(const gp_Lin2d &)>(
-              &geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Lin2d & a1) -> Handle(Geom2d_Line) { try { return geometry_creator::make_line(a1); } TOPO_BINDING_CATCH("make2dLineWithLin2d") }))
       .class_function("make2dLineWithPointDir",
-                      emscripten::select_overload<Handle(Geom2d_Line)(
-                          const gp_Pnt2d &, const gp_Dir2d &)>(
-                          &geometry_creator::make_line))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Dir2d & a2) -> Handle(Geom2d_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("make2dLineWithPointDir") }))
       .class_function("make2dLineWithLinPoint",
-                      emscripten::select_overload<Handle(Geom2d_Line)(
-                          const gp_Lin2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_line))
+                      emscripten::optional_override([](const gp_Lin2d & a1, const gp_Pnt2d & a2) -> Handle(Geom2d_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("make2dLineWithLinPoint") }))
       .class_function(
           "make2dLineWithLinDistance",
-          emscripten::select_overload<Handle(Geom2d_Line)(
-              const gp_Lin2d &, Standard_Real)>(&geometry_creator::make_line))
+          emscripten::optional_override([](const gp_Lin2d & a1, Standard_Real a2) -> Handle(Geom2d_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("make2dLineWithLinDistance") }))
       .class_function("make2dLineWithTwoPoints",
-                      emscripten::select_overload<Handle(Geom2d_Line)(
-                          const gp_Pnt2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_line))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2) -> Handle(Geom2d_Line) { try { return geometry_creator::make_line(a1, a2); } TOPO_BINDING_CATCH("make2dLineWithTwoPoints") }))
 
       // 2D抛物线创建方法
       .class_function(
           "make2dParabola",
-          emscripten::select_overload<Handle(Geom2d_Parabola)(
-              const gp_Parab2d &)>(&geometry_creator::make_parabola))
+          emscripten::optional_override([](const gp_Parab2d & a1) -> Handle(Geom2d_Parabola) { try { return geometry_creator::make_parabola(a1); } TOPO_BINDING_CATCH("make2dParabola") }))
       .class_function("make2dParabolaWithAxis",
-                      emscripten::select_overload<Handle(Geom2d_Parabola)(
-                          const gp_Ax22d &, Standard_Real)>(
-                          &geometry_creator::make_parabola))
+                      emscripten::optional_override([](const gp_Ax22d & a1, Standard_Real a2) -> Handle(Geom2d_Parabola) { try { return geometry_creator::make_parabola(a1, a2); } TOPO_BINDING_CATCH("make2dParabolaWithAxis") }))
       .class_function("make2dParabolaWithMirrorAxis",
-                      emscripten::select_overload<Handle(Geom2d_Parabola)(
-                          const gp_Ax2d &, Standard_Real, bool)>(
-                          &geometry_creator::make_parabola))
+                      emscripten::optional_override([](const gp_Ax2d & a1, Standard_Real a2, bool a3) -> Handle(Geom2d_Parabola) { try { return geometry_creator::make_parabola(a1, a2, a3); } TOPO_BINDING_CATCH("make2dParabolaWithMirrorAxis") }))
       .class_function("make2dParabolaWithDirectrix",
-                      emscripten::select_overload<Handle(Geom2d_Parabola)(
-                          const gp_Ax2d &, const gp_Pnt2d &, bool)>(
-                          &geometry_creator::make_parabola))
+                      emscripten::optional_override([](const gp_Ax2d & a1, const gp_Pnt2d & a2, bool a3) -> Handle(Geom2d_Parabola) { try { return geometry_creator::make_parabola(a1, a2, a3); } TOPO_BINDING_CATCH("make2dParabolaWithDirectrix") }))
       .class_function("make2dParabolaWithTwoPoints",
-                      emscripten::select_overload<Handle(Geom2d_Parabola)(
-                          const gp_Pnt2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_parabola))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2) -> Handle(Geom2d_Parabola) { try { return geometry_creator::make_parabola(a1, a2); } TOPO_BINDING_CATCH("make2dParabolaWithTwoPoints") }))
       // 2D线段创建方法
       .class_function("make2dSegment",
                       select_overload<Handle(Geom2d_TrimmedCurve)(
@@ -605,38 +404,26 @@ EMSCRIPTEN_BINDINGS(Geometry) {
 
       // 2D变换创建方法
       .class_function("make2dMirror",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Pnt2d &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Pnt2d & a1) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("make2dMirror") }))
       .class_function("make2dMirrorWithAxis",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Ax2d &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Ax2d & a1) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("make2dMirrorWithAxis") }))
       .class_function("make2dMirrorWithLine",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Lin2d &)>(&geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Lin2d & a1) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_mirror(a1); } TOPO_BINDING_CATCH("make2dMirrorWithLine") }))
       .class_function("make2dMirrorWithPointDir",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Pnt2d &, const gp_Dir2d &)>(
-                          &geometry_creator::make_mirror))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Dir2d & a2) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_mirror(a1, a2); } TOPO_BINDING_CATCH("make2dMirrorWithPointDir") }))
 
       // 2D旋转创建方法
       .class_function("make2dRotation",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Pnt2d &, const Standard_Real)>(
-                          &geometry_creator::make_rotation))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const Standard_Real a2) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_rotation(a1, a2); } TOPO_BINDING_CATCH("make2dRotation") }))
 
       // 2D缩放创建方法
       .class_function("make2dScale",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Pnt2d &, const Standard_Real)>(
-                          &geometry_creator::make_scale))
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const Standard_Real a2) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_scale(a1, a2); } TOPO_BINDING_CATCH("make2dScale") }))
 
       // 2D平移创建方法
       .class_function(
           "make2dTranslation",
-          emscripten::select_overload<Handle(Geom2d_Transformation)(
-              const gp_Vec2d &)>(&geometry_creator::make_translation))
+          emscripten::optional_override([](const gp_Vec2d & a1) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_translation(a1); } TOPO_BINDING_CATCH("make2dTranslation") }))
       .class_function("make2dTranslationWithPoints",
-                      emscripten::select_overload<Handle(Geom2d_Transformation)(
-                          const gp_Pnt2d &, const gp_Pnt2d &)>(
-                          &geometry_creator::make_translation));
+                      emscripten::optional_override([](const gp_Pnt2d & a1, const gp_Pnt2d & a2) -> Handle(Geom2d_Transformation) { try { return geometry_creator::make_translation(a1, a2); } TOPO_BINDING_CATCH("make2dTranslationWithPoints") }));
 }

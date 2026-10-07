@@ -21,6 +21,17 @@ import {
   type BuildFromTreeResult,
 } from "./stages/features.js";
 import { lintFeatureTree, checkAssociativity, type FeatureTreeLint, type AssociativityReport } from "./validators/design_intent.js";
+import { checkDimensions, type DimensionCheckResult } from "./validators/dimension_check.js";
+import { CorrectionLoop } from "./cad/correction_loop.js";
+import { checkQualityContract, type QualityContractReport } from "./validators/quality_contract.js";
+import { RunStateStore, type RunStatePayload } from "./cad/run_state.js";
+import {
+    gateScopesFor,
+    gradeConfidence,
+    type ConfidenceGrade,
+    type GateScope,
+    type Verdict,
+} from "./validators/honesty.js";
 import {
   evaluateSketchSolves,
   type RawSolveStatus,
@@ -69,6 +80,19 @@ import {
 
 export interface CadPipelineConfig {
   llm: LLMProvider;
+  /**
+   * Resume a killed run from `<workDir>/.topo-img2cad/state.json` (T2.4):
+   * completed stages A/B (per view)/C are reused instead of paying their model
+   * calls again. The state is bound to the drawing's SHA-256 — resuming over a
+   * different drawing fails loudly with RESUME_HASH_MISMATCH. Requires workDir.
+   */
+  resume?: boolean;
+  /**
+   * Fail closed on an incomplete tree BEFORE any code is emitted (T2.2):
+   * declared-dimension coverage, every profiled view entering the tree, and
+   * stage-B ink callouts answered. Default true.
+   */
+  qualityContract?: boolean;
   /** Working directory for emitted artifacts. */
   workDir?: string;
   /**
@@ -148,6 +172,20 @@ export interface CadReviewOutcome {
   edgeDistance?: EdgeDistanceResult[];
   /** Feature ids the emitter could not express. */
   skippedFeatures: Array<{ id: string; reason: string }>;
+  /** Per-dimension verification against the drawing's stated dimensions (T2.1). */
+  dimensions?: DimensionCheckResult;
+  /** Three-state honest verdict (T2.5): unevaluated beats a fake pass. */
+  verdict: Verdict;
+  /** Per-gate scope statements: what each gate proves and what it does not. */
+  gateScopes: GateScope[];
+  /** Declared dimensions the solid could not answer for — listed, not absent. */
+  unmeasuredDimensions: Array<{
+    sketch: string;
+    kind: string;
+    tags: string[];
+    declared: number;
+    reason: string;
+  }>;
 }
 
 export interface CadRunResult {
@@ -167,6 +205,14 @@ export interface CadRunResult {
   refinements: number;
   warnings: string[];
   errors: string[];
+  /** Why the repair loop halted for human input (ceiling / plateau), when it did. */
+  refinementHalted?: { reason: "max-rounds" | "plateau"; message: string };
+  /** The quality-contract report (present whether it blocked or passed). */
+  qualityBlocked?: QualityContractReport;
+  /** Top-level honest verdict (T2.5). "unevaluated" when nothing was measured. */
+  verdict: Verdict;
+  /** Evidence-completeness grade: view coverage + dimension tolerance achieved. */
+  confidence?: ConfidenceGrade;
 }
 
 // ---------------------------------------------------------------------------
@@ -210,14 +256,48 @@ export class CadPipeline {
     this.reviewedShape = null;
     const maxRefinements = this.config.maxRefinements ?? 3;
 
+    // ---- T2.4 — resumable run state -------------------------------------
+    // Persistence is active whenever a workDir exists; `resume` decides whether
+    // a previous run's stages are REUSED. The state carries the drawing's hash:
+    // resuming over a different drawing is refused here, before any model call.
+    let runState: RunStateStore | undefined;
+    let resumed: RunStatePayload | null = null;
+    let resumeMismatch: { expected: string; actual: string } | undefined;
+    if (this.config.workDir) {
+      const opened = RunStateStore.open(this.config.workDir, imagePath);
+      runState = opened.store;
+      if (opened.mismatch) {
+        resumeMismatch = opened.mismatch;
+      } else if (this.config.resume) {
+        resumed = opened.resumed;
+      }
+    }
+    if (resumeMismatch) {
+      this.warnings.push(
+        `RESUME_HASH_MISMATCH: the run state in ${this.config.workDir} was produced from a different drawing ` +
+          `(state sha256 ${resumeMismatch.expected.slice(0, 12)}…, this image ${resumeMismatch.actual.slice(0, 12)}…) — ` +
+          `the state was discarded and the run starts fresh, because profiles measured on one drawing are poison for another`,
+      );
+    }
+
     // ---- A. view intake ------------------------------------------------
-    this.log("stage A: view intake");
-    const intake = await runViewIntake(imagePath, this.config.llm, {
-      context: objectName,
-      industry: this.config.industry,
-    });
-    this.warnings.push(...intake.warnings);
-    let viewSet = intake.viewSet;
+    let viewSet: import("./cad/model.js").ViewSet;
+    if (resumed?.stages["views"] && resumed.viewSet) {
+      this.log("stage A: view intake — resumed from run state");
+      viewSet = resumed.viewSet as import("./cad/model.js").ViewSet;
+    } else {
+      this.log("stage A: view intake");
+      const intake = await runViewIntake(imagePath, this.config.llm, {
+        context: objectName,
+        industry: this.config.industry,
+      });
+      this.warnings.push(...intake.warnings);
+      viewSet = intake.viewSet;
+      if (runState) {
+        runState.state.viewSet = viewSet;
+        runState.mark("views");
+      }
+    }
 
     // The reference is read off the drawing ONCE, before anything is built: the
     // drawing does not change when the tree does, and re-deriving it per round
@@ -240,7 +320,24 @@ export class CadPipeline {
     const profileViews = viewSet.views.filter((v) => wantedKinds.has(v.kind));
 
     const profiles: Profile2D[] = [];
+    const resumedProfiles = (resumed?.profiles ?? []) as Profile2D[];
     for (const view of profileViews) {
+      // Per-view resume granularity: a run killed mid-stage-B does not pay for
+      // the views it already extracted.
+      const reused = resumedProfiles.find((p) => p.viewId === view.id);
+      if (reused) {
+        this.log(`stage B: profile for ${view.id} — resumed from run state`);
+        profiles.push(reused);
+        // The ink measurement is pure and cheap — recomputed so the run's
+        // measurements are always the current drawing's (same sha256, so the
+        // same drawing, but the in-memory checks must exist for this process).
+        const check = this.checkProfileAgainstInk(reused, view);
+        if (check) {
+          this.profileChecks.push(check);
+          for (const issue of check.issues) this.warnings.push(issue.message);
+        }
+        continue;
+      }
       this.log(`stage B: profile for ${view.id} (${view.kind})`);
       try {
         const result = await runProfileExtraction(view, viewSet, this.config.llm, {
@@ -261,12 +358,17 @@ export class CadPipeline {
           this.profileChecks.push(check);
           for (const issue of check.issues) this.warnings.push(issue.message);
         }
+        if (runState) {
+          runState.state.profiles = profiles;
+          runState.save();
+        }
       } catch (e) {
         this.warnings.push(
           `view ${view.id}: profile extraction failed — ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     }
+    if (runState) runState.mark("profiles");
     if (profiles.length === 0 && profileViews.length > 0) {
       this.warnings.push(
         "no view yielded a usable profile; the feature tree will be authored from the view description alone",
@@ -274,42 +376,92 @@ export class CadPipeline {
     }
 
     // ---- C. feature tree ------------------------------------------------
-    this.log("stage C: feature tree");
-    const authored = await runFeatureTree(
-      {
-        objectName: objectName ?? "(unnamed)",
-        views: viewSet,
-        profiles,
-        context: buildContext(viewSet),
-        industry: this.config.industry,
-        // Measured, not advised: the tree stage is told which traced entities do
-        // not follow the drawing, so it can re-aim them instead of copying a
-        // coordinate it has no reason to distrust.
-        profileChecks: this.profileChecks.map((c) => ({
-          viewId: c.viewId ?? "(view)",
-          meanPx: c.meanPx,
-          meanRatio: c.meanRatio,
-          registration: c.registration,
-          entities: c.entities.slice(0, 6).map((e) => ({
-            tag: e.tag,
-            type: e.type,
-            meanPx: e.meanPx,
-            description: e.description,
+    let authored: Awaited<ReturnType<typeof runFeatureTree>>;
+    if (resumed?.stages["tree"] && resumed.tree) {
+      this.log("stage C: feature tree — resumed from run state");
+      const tree = resumed.tree as FeatureTree;
+      authored = { tree, lint: lintFeatureTree(tree), warnings: [] };
+    } else {
+      this.log("stage C: feature tree");
+      authored = await runFeatureTree(
+        {
+          objectName: objectName ?? "(unnamed)",
+          views: viewSet,
+          profiles,
+          context: buildContext(viewSet),
+          industry: this.config.industry,
+          // Measured, not advised: the tree stage is told which traced entities do
+          // not follow the drawing, so it can re-aim them instead of copying a
+          // coordinate it has no reason to distrust.
+          profileChecks: this.profileChecks.map((c) => ({
+            viewId: c.viewId ?? "(view)",
+            meanPx: c.meanPx,
+            meanRatio: c.meanRatio,
+            registration: c.registration,
+            entities: c.entities.slice(0, 6).map((e) => ({
+              tag: e.tag,
+              type: e.type,
+              meanPx: e.meanPx,
+              description: e.description,
+            })),
           })),
-        })),
-      },
-      this.config.llm,
-    );
+        },
+        this.config.llm,
+      );
+      if (runState) {
+        runState.state.tree = authored.tree;
+        runState.mark("tree");
+      }
+    }
 
     let tree = authored.tree;
     let lint = authored.lint;
     this.warnings.push(...authored.warnings);
 
     // ---- D. build + measured review, with tree-level refinement --------
+    // T2.2 — the quality contract, fail-closed: an incomplete tree gets a
+    // machine-readable BLOCKED report and ZERO emitted code, because everything
+    // downstream (build, gates, refinement rounds) is expensive and would come
+    // back with only "the shape is wrong" to show for it.
+    let qualityBlocked: QualityContractReport | undefined;
+    if (this.config.qualityContract !== false) {
+      const qc = checkQualityContract({
+        tree,
+        profileChecks: this.profileChecks,
+        params: lint.resolved.values,
+      });
+      if (!qc.ok) {
+        this.warnings.push(`QUALITY CONTRACT BLOCKED — no code was emitted. Report:\n${qc.report}`);
+        return {
+          viewSet,
+          profiles,
+          tree,
+          resolved: lint.resolved.values,
+          code: { source: "", entryPoint: "main", imports: [], methodsUsed: [] },
+          lint,
+          review: undefined,
+          refinements: 0,
+          warnings: dedupe(this.warnings),
+          errors: [
+            `QC_BLOCKED: the feature tree is incomplete, so nothing was built — ${qc.gaps.length} gap(s): ${qc.gaps
+              .map((g) => g.code)
+              .join(", ")}`,
+          ],
+          qualityBlocked: qc,
+          verdict: "unevaluated",
+          confidence: {
+            level: "low",
+            reasons: ["the tree was blocked by the quality contract — nothing was built or measured"],
+          },
+        };
+      }
+      qualityBlocked = qc;
+    }
+
     let build = runBuildFromTree(tree);
     this.edgeDistances = [];
     this.lastReprojection = undefined;
-    let review = this.config.tp ? this.review(tree, build) : undefined;
+    let review = this.config.tp ? this.review(tree, build, lint.resolved.values) : undefined;
 
     // The size fit is a hypothesis about the tracer's units — that its
     // coordinates are the drawing's millimetres once the stated dimensions are
@@ -334,15 +486,36 @@ export class CadPipeline {
     // separately whether the gates passed used to disable the loop for exactly
     // the cases worth repairing: a silhouette that matches at IoU 0.75 is graded
     // a warning, so the gates "pass" and no repair is ever attempted.
-    while (refinements < maxRefinements && this.isWorthRefining(lint, review)) {
+    // T2.3 — the bounded correction loop. Round history + stop/escalate policy:
+    // one reverted repair is not fatal (the next attempt runs, escalated if the
+    // same defects survive or the model is oscillating); plateau and the hard
+    // ceiling halt for human input and nothing below them can override that.
+    const correction = new CorrectionLoop({ maxRounds: maxRefinements });
+    let refinementHalted: CadRunResult["refinementHalted"];
+
+    while (true) {
+      const intent = correction.nextIntent();
+      if (!intent.continueRefining) {
+        this.warnings.push(intent.reason);
+        refinementHalted = {
+          reason: intent.reason.includes("ceiling") ? "max-rounds" : "plateau",
+          message: intent.reason,
+        };
+        break;
+      }
+      if (!this.isWorthRefining(lint, review)) break;
       refinements++;
-      this.log(`refinement ${refinements}: repairing the feature tree`);
+      this.log(`refinement ${refinements}: repairing the feature tree${intent.escalate ? " (escalated: structure, not dimensions)" : ""}`);
 
       try {
         const repaired = await this.refineTree(
           tree,
           collectIssues(lint, review),
-          { lint, review: review ? summarizeReview(review) : undefined },
+          {
+            lint,
+            review: review ? summarizeReview(review) : undefined,
+            escalate: intent.escalate ? { reason: intent.reason } : undefined,
+          },
         );
         const candidateTree = { ...repaired, provenance: tree.provenance };
         const candidateLint = lintFeatureTree(candidateTree);
@@ -351,16 +524,24 @@ export class CadPipeline {
         // The candidate has to be MEASURED before it can be judged, and measuring
         // overwrites the body the run would export if the candidate is rejected.
         const shapeBefore = this.reviewedShape;
-        const candidateReview = this.config.tp ? this.review(candidateTree, candidateBuild) : undefined;
+        const candidateReview = this.config.tp ? this.review(candidateTree, candidateBuild, candidateLint.resolved.values) : undefined;
 
         const verdict = acceptRepair(
           { lint, review },
           { lint: candidateLint, review: candidateReview },
         );
+        correction.addRound({
+          codes: fixableCodes(collectIssues(candidateLint, candidateReview)),
+          errorCount: countErrors(candidateLint.issues) + countErrors(candidateReview?.issues),
+          score: silhouetteScore(candidateReview),
+          accepted: verdict.ok,
+        });
         if (!verdict.ok) {
           this.reviewedShape = shapeBefore;
           this.warnings.push(`refinement ${refinements} ${verdict.reason}`);
-          break;
+          // v2: one revert is not fatal — the loop continues; oscillation,
+          // plateau, and the ceiling decide what happens next.
+          continue;
         }
 
         tree = candidateTree;
@@ -386,6 +567,32 @@ export class CadPipeline {
     }
 
     this.log(`done: ${build.code.source.split("\n").length} lines, ${refinements} refinement(s)`);
+
+    // ---- T2.5 — the honest grade ---------------------------------------
+    // The verdict is three-state: nothing measured is "unevaluated", never a
+    // pass. The confidence grade says how COMPLETE the evidence is (view
+    // coverage, dimension tolerance) so a caller can tell a verified part from
+    // a part that merely was not contradicted.
+    const orthoViews = viewSet.views.filter((v) =>
+      ORTHOGRAPHIC_KINDS.has(v.kind),
+    ).length;
+    const comparedViews =
+      (review?.reprojection?.compared ? 1 : 0) +
+      (review?.edgeDistance?.some((e) => e.compared) ? 1 : 0);
+    const runVerdict: Verdict = review
+      ? review.verdict
+      : lint.passed && errors.length === 0
+        ? "unevaluated"
+        : "fail";
+    const confidence = gradeConfidence({
+      verdict: runVerdict,
+      measuredGates: (review?.gateScopes ?? []).filter((g) => g.ran).map((g) => g.gate),
+      orthoViews,
+      comparedViews,
+      dimensionsChecked: review?.dimensions?.checked.length ?? 0,
+      dimensionsUnevaluated: review?.dimensions?.unevaluated.length ?? 0,
+    });
+    this.log(`verdict ${runVerdict} (confidence ${confidence.level}: ${confidence.reasons.join("; ")})`);
 
     // ---- E. deliverables ------------------------------------------------
     // Written BEFORE the associativity probes, and deliberately so. Those probes
@@ -471,6 +678,10 @@ export class CadPipeline {
       refinements,
       warnings: dedupe(this.warnings),
       errors,
+      refinementHalted,
+      qualityBlocked,
+      verdict: runVerdict,
+      confidence,
     };
   }
 
@@ -479,7 +690,7 @@ export class CadPipeline {
   // -----------------------------------------------------------------------
 
   /** Run every measured gate that the available environment supports. */
-  private review(tree: FeatureTree, build: BuildFromTreeResult): CadReviewOutcome {
+  private review(tree: FeatureTree, build: BuildFromTreeResult, params: Record<string, number> = {}): CadReviewOutcome {
     const code = build.code;
     const issues: ReviewIssue[] = [];
     const skippedFeatures: Array<{ id: string; reason: string }> = [];
@@ -493,7 +704,21 @@ export class CadPipeline {
         message: `Emitted code does not parse: ${syntax.error}`,
         suggestion: "This is an emitter defect — the tree was valid but the code was not",
       });
-      return { passed: false, issues, skippedFeatures };
+      return {
+        passed: false,
+        issues,
+        skippedFeatures,
+        verdict: "unevaluated",
+        gateScopes: gateScopesFor({
+          hasShape: false,
+          reprojectionCompared: false,
+          edgeDistanceCompared: false,
+          dimensionsChecked: 0,
+          solvesReported: false,
+          qualityContractRan: true,
+        }),
+        unmeasuredDimensions: [],
+      };
     }
 
     // L1 — execute, collecting sketch solve reports.
@@ -541,11 +766,30 @@ export class CadPipeline {
       geometry = geo.report;
       issues.push(...geo.issues);
 
+      // T2.1 — per-dimension gate. Each dimension the drawing states is verified
+      // against the built solid on its own; a whole-part metric (IoU, ink
+      // distance) is blind to interior features, and no IoU can excuse a hole
+      // that is 20% off the size the sheet states.
+      if (Object.keys(params).length > 0 || (tree.sketches && Object.values(tree.sketches).some((sk: any) => (sk?.constraints ?? []).length > 0))) {
+        const dims = checkDimensions(tree, params, sandbox.shape, this.config.tp);
+        this.lastDimensionCheck = dims;
+        issues.push(...dims.issues);
+      }
+
       // L3 — re-projection against the reference silhouettes.
       const reprojection = this.reproject(tree, sandbox.shape);
       this.lastReprojection = reprojection;
       if (reprojection) {
         issues.push(...reprojection.issues);
+        const comparedViews =
+          (reprojection.compared ? 1 : 0) +
+          (this.edgeDistances.filter((e) => e.compared).length > 0 ? 1 : 0);
+        const dims = this.lastDimensionCheck;
+        const verdict: Verdict = issues.some((i) => i.severity === "error")
+          ? "fail"
+          : comparedViews > 0 || (dims?.checked.length ?? 0) > 0
+            ? "pass"
+            : "unevaluated";
         return {
           passed: !issues.some((i) => i.severity === "error"),
           issues,
@@ -554,6 +798,23 @@ export class CadPipeline {
           reprojection,
           edgeDistance: this.edgeDistances.length > 0 ? [...this.edgeDistances] : undefined,
           skippedFeatures,
+          dimensions: dims,
+          verdict,
+          gateScopes: gateScopesFor({
+            hasShape: true,
+            reprojectionCompared: reprojection.compared,
+            edgeDistanceCompared: this.edgeDistances.some((e) => e.compared),
+            dimensionsChecked: dims?.checked.length ?? 0,
+            solvesReported: !!solves,
+            qualityContractRan: true,
+          }),
+          unmeasuredDimensions: (dims?.unevaluated ?? []).map((u) => ({
+            sketch: u.dim.sketchId,
+            kind: u.dim.kind,
+            tags: u.dim.tags,
+            declared: u.dim.value,
+            reason: u.reason,
+          })),
         };
       }
     } else if (!sandbox.error) {
@@ -565,6 +826,17 @@ export class CadPipeline {
       });
     }
 
+    const comparedViews =
+      (this.lastReprojection?.compared ? 1 : 0) +
+      (this.edgeDistances.filter((e) => e.compared).length > 0 ? 1 : 0);
+    const dims = this.lastDimensionCheck;
+    const hasMeasured =
+      comparedViews > 0 || (dims?.checked.length ?? 0) > 0;
+    const verdict: Verdict = issues.some((i) => i.severity === "error")
+      ? "fail"
+      : hasMeasured
+        ? "pass"
+        : "unevaluated";
     return {
       passed: !issues.some((i) => i.severity === "error"),
       issues,
@@ -573,8 +845,27 @@ export class CadPipeline {
       reprojection: this.lastReprojection,
       edgeDistance: this.edgeDistances.length > 0 ? [...this.edgeDistances] : undefined,
       skippedFeatures,
+      dimensions: dims,
+      verdict,
+      gateScopes: gateScopesFor({
+        hasShape: true,
+        reprojectionCompared: this.lastReprojection?.compared ?? false,
+        edgeDistanceCompared: this.edgeDistances.some((e) => e.compared),
+        dimensionsChecked: dims?.checked.length ?? 0,
+        solvesReported: !!solves,
+        qualityContractRan: true,
+      }),
+      unmeasuredDimensions: (dims?.unevaluated ?? []).map((u) => ({
+        sketch: u.dim.sketchId,
+        kind: u.dim.kind,
+        tags: u.dim.tags,
+        declared: u.dim.value,
+        reason: u.reason,
+      })),
     };
   }
+
+  private lastDimensionCheck: DimensionCheckResult | undefined;
 
   private reproject(tree: FeatureTree, shape: unknown): ReprojectionReport | undefined {
     const refs = this.config.references;
@@ -721,32 +1012,9 @@ export class CadPipeline {
    */
   private isWorthRefining(lint: FeatureTreeLint, review?: CadReviewOutcome): boolean {
     const issues = collectIssues(lint, review);
-    const fixableByTreeEdit = new Set([
-      "DIN_MISSING_SKETCH",
-      "DIN_MISSING_PATTERN_SOURCE",
-      "DIN_UNRESOLVED_PARAMETER",
-      "DIN_NO_BASE_FEATURE",
-      "DIN_DEGENERATE_AXIS",
-      "DIN_LOFT_SECTIONS",
-      "DIN_NO_SELECTOR",
-      "DIN_NON_POSITIVE_DIMENSION",
-      "DIN_INERT_PARAMETER",
-      "DIN_ARC_INCONSISTENT",
-      "RPR_LOW_IOU",
-      "RPR_DEVIATION",
-      "EDG_OUTLINE_MISMATCH",
-      "EDG_LOCAL_MISMATCH",
-      "RPR_VIEW_MISMATCH",
-      "RPR_EMPTY_MODEL",
-      "SKT_HIGH_RESIDUAL",
-      "SKT_NO_DOF",
-      "SKT_SOLVER_FAILED",
-      "CAD_EXECUTION",
-      "CAD_NO_SHAPE",
-    ]);
     return issues.some((i) => {
       const code = i.code ?? "";
-      if (!fixableByTreeEdit.has(code)) return false;
+      if (!FIXABLE_BY_TREE_EDIT.has(code)) return false;
       // Measured verdicts are worth acting on whether or not they rose to
       // "error". A silhouette that matches at IoU 0.75 is a part a quarter too
       // small, and grading that a warning while refusing to repair it means the
@@ -785,8 +1053,9 @@ export class CadPipeline {
     tree: FeatureTree,
     issues: ReviewIssue[],
     measurements: unknown,
+    escalate?: { reason: string },
   ): Promise<FeatureTree> {
-    const prompt = buildFeatureTreeRefinePrompt(tree, issues, measurements);
+    const prompt = buildFeatureTreeRefinePrompt(tree, issues, measurements, escalate);
     const raw = await this.config.llm.complete(prompt, FEATURE_TREE_REFINE_SYSTEM);
     const parsed = parseJsonResponse(raw, "feature tree refinement");
     return coerceFeatureTree(parsed);
@@ -904,6 +1173,36 @@ function extractSolveReports(captured: unknown): Record<string, RawSolveStatus> 
   return {};
 }
 
+/** Defect codes a tree edit could fix — shared by isWorthRefining and the correction loop. */
+const FIXABLE_BY_TREE_EDIT: ReadonlySet<string> = new Set([
+  "DIN_MISSING_SKETCH",
+  "DIN_MISSING_PATTERN_SOURCE",
+  "DIN_UNRESOLVED_PARAMETER",
+  "DIN_NO_BASE_FEATURE",
+  "DIN_DEGENERATE_AXIS",
+  "DIN_LOFT_SECTIONS",
+  "DIN_NO_SELECTOR",
+  "DIN_NON_POSITIVE_DIMENSION",
+  "DIN_INERT_PARAMETER",
+  "DIN_ARC_INCONSISTENT",
+  "RPR_LOW_IOU",
+  "RPR_DEVIATION",
+  "EDG_OUTLINE_MISMATCH",
+  "EDG_LOCAL_MISMATCH",
+  "RPR_VIEW_MISMATCH",
+  "RPR_EMPTY_MODEL",
+  "SKT_HIGH_RESIDUAL",
+  "SKT_NO_DOF",
+  "SKT_SOLVER_FAILED",
+  "DIM_MISMATCH",
+  "CAD_EXECUTION",
+  "CAD_NO_SHAPE",
+]);
+
+function fixableCodes(issues: ReviewIssue[]): string[] {
+  return issues.map((i) => i.code ?? "").filter((c) => FIXABLE_BY_TREE_EDIT.has(c));
+}
+
 function collectIssues(lint: FeatureTreeLint, review?: CadReviewOutcome): ReviewIssue[] {
   return [...lint.issues, ...(review?.issues ?? [])];
 }
@@ -926,6 +1225,7 @@ const MEASURED_CODES: ReadonlySet<string> = new Set([
   "SKT_HIGH_RESIDUAL",
   "SKT_NO_DOF",
   "SKT_SOLVER_FAILED",
+  "DIM_MISMATCH",
 ]);
 
 /** Whether this build's coordinates were fitted to the drawing's dimensions. */
@@ -1013,6 +1313,27 @@ function acceptRepair(
 function summarizeReview(review: CadReviewOutcome): unknown {
   return {
     passed: review.passed,
+    // The per-dimension verdicts name exactly which stated size is off — the
+    // one thing a repair must move, and the whole-part metrics cannot say it.
+    dimensions: review.dimensions
+      ? {
+          checked: review.dimensions.checked.map((c) => ({
+            sketch: c.dim.sketchId,
+            kind: c.dim.kind,
+            tags: c.dim.tags,
+            declared: c.dim.value,
+            measured: Number(c.measured.toFixed(4)),
+            ok: c.ok,
+          })),
+          unevaluated: review.dimensions.unevaluated.map((u) => ({
+            sketch: u.dim.sketchId,
+            kind: u.dim.kind,
+            tags: u.dim.tags,
+            declared: u.dim.value,
+            reason: u.reason,
+          })),
+        }
+      : undefined,
     geometry: review.geometry,
     reprojection: review.reprojection
       ? {

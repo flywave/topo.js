@@ -394,6 +394,7 @@ export function buildFeatureTreeRefinePrompt(
   tree: unknown,
   issues: Array<{ code?: string; message: string; suggestion?: string }>,
   measurements?: unknown,
+  escalate?: { reason: string },
 ): string {
   return `Repair this feature tree.
 
@@ -403,6 +404,7 @@ ${JSON.stringify(tree, null, 2)}
 FAILURES (measured, not judged):
 ${issues.map((i) => `- [${i.code ?? "?"}] ${i.message}${i.suggestion ? `\n    -> ${i.suggestion}` : ""}`).join("\n")}
 ${measurements ? `\nMEASUREMENTS:\n${JSON.stringify(measurements, null, 2)}` : ""}
+${escalate ? `\nESCALATION — dimension-level repair has failed:\n${escalate.reason}\nStop adjusting dimension values. Re-examine the tree's STRUCTURE: feature order, the construction approach (pad vs revolve vs sweep), how the sketch is decomposed, whether a feature belongs at all. Output a differently-shaped tree.` : ""}
 
 Guidance:
 - RPR_LOW_IOU with precision < recall: the model is missing material in that view — a feature is absent or a dimension is small.

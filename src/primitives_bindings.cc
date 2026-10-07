@@ -1,6 +1,7 @@
 #include "binding.hh"
 #include "primitives.hh"
 #include "primitives_railway.hh"
+#include "binding_guard.hh"
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -2365,7 +2366,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                &create_wire));
   function("sampleWire",
            emscripten::optional_override(
-               [](emscripten::val paramsVal, double tessellation) {
+               [](emscripten::val paramsVal, double tessellation) { try {
                  wire_params params = paramsVal.as<wire_params>();
 
                  auto sampledPoints = sample_wire(params, tessellation);
@@ -2375,7 +2376,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                    result.set(i, sampledPoints[i]);
                  }
                  return result;
-               }));
+                } TOPO_BINDING_CATCH("sampleWire")}));
 
   // 电缆参数结构体
   value_object<cable_params>("CableParams")
@@ -2398,7 +2399,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                &create_cable));
   function("sampleCable",
            emscripten::optional_override(
-               [](emscripten::val paramsVal, double tessellation) {
+               [](emscripten::val paramsVal, double tessellation) { try {
                  cable_params params = paramsVal.as<cable_params>();
 
                  auto sampledPoints = sample_cable(params, tessellation);
@@ -2408,7 +2409,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                    result.set(i, sampledPoints[i]);
                  }
                  return result;
-               }));
+                } TOPO_BINDING_CATCH("sampleCable")}));
   // 曲线类型枚举
   enum_<curve_type>("CurveType")
       .value("LINE", curve_type::LINE)
@@ -2439,7 +2440,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("sampleCurvePoints",
            emscripten::optional_override([](emscripten::val controlPointsVal,
                                             emscripten::val segmentsVal,
-                                            double tessellation) {
+                                            double tessellation) { try {
              std::vector<std::vector<gp_Pnt>> controlPoints;
              if (controlPointsVal.isArray()) {
                int length = controlPointsVal["length"].as<int>();
@@ -2473,7 +2474,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                result.set(i, points[i]);
              }
              return result;
-           }));
+            } TOPO_BINDING_CATCH("sampleCurvePoints")}));
 
   // 角钢参数结构体
   value_object<angle_steel_params>("AngleSteelParams")
@@ -2974,7 +2975,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("sampleTransmissionLine",
            emscripten::optional_override(
                [](emscripten::val paramsVal, emscripten::val startPointVal,
-                  emscripten::val endPointVal, double tessellation) {
+                  emscripten::val endPointVal, double tessellation) { try {
                  transmission_line_params params =
                      paramsVal.as<transmission_line_params>();
                  gp_Pnt startPoint = startPointVal.as<gp_Pnt>();
@@ -2988,7 +2989,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                    result.set(i, sampledPoints[i]);
                  }
                  return result;
-               }));
+                } TOPO_BINDING_CATCH("sampleTransmissionLine")}));
 
   // 绝缘子材质枚举绑定
   enum_<insulator_material>("InsulatorMaterial")
@@ -3822,7 +3823,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
       .field("type", &channel_point::type);
 
   function("createChannelCenterline",
-           emscripten::optional_override([](emscripten::val pointsVal) {
+           emscripten::optional_override([](emscripten::val pointsVal) { try {
              std::vector<channel_point> points;
              if (pointsVal.isArray()) {
                int length = pointsVal["length"].as<int>();
@@ -3836,11 +3837,11 @@ EMSCRIPTEN_BINDINGS(Primitive) {
              }
 
              return create_channel_centerline(points);
-           }));
+            } TOPO_BINDING_CATCH("createChannelCenterline")}));
 
   function("sampleChannelPoints",
            emscripten::optional_override([](emscripten::val pointsVal,
-                                            double tessellation) {
+                                            double tessellation) { try {
              std::vector<channel_point> points;
              if (pointsVal.isArray()) {
                int length = pointsVal["length"].as<int>();
@@ -3860,7 +3861,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                result.set(i, sampledPoints[i]);
              }
              return result;
-           }));
+            } TOPO_BINDING_CATCH("sampleChannelPoints")}));
 
   // 桥架样式枚举绑定
   emscripten::enum_<cable_tray_style>("CableTrayStyle")
@@ -4427,7 +4428,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("sampleSegmentPoints",
            emscripten::optional_override([](emscripten::val wiresVal,
                                             emscripten::val segmentsVal,
-                                            double tessellation) {
+                                            double tessellation) { try {
              std::vector<std::vector<gp_Pnt>> wires;
              if (wiresVal.isArray()) {
                int wireCount = wiresVal["length"].as<int>();
@@ -4460,7 +4461,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                result.set(i, points[i]);
              }
              return result;
-           }));
+            } TOPO_BINDING_CATCH("sampleSegmentPoints")}));
 
   // 管道参数结构体
   value_object<pipe_params>("PipeParams")
@@ -4494,7 +4495,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                &create_pipe));
   function("createPipeWithSplitDistances",
            emscripten::optional_override([](const pipe_params &params,
-                                            emscripten::val splitDistancesVal) {
+                                            emscripten::val splitDistancesVal) { try {
              std::array<double, 2> splitDistances = {0.0, -1};
              if (splitDistancesVal.isArray() &&
                  splitDistancesVal["length"].as<size_t>() == 2) {
@@ -4502,7 +4503,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                splitDistances[1] = splitDistancesVal[1].as<double>();
              }
              return create_pipe_with_split_distances(params, splitDistances);
-           }));
+            } TOPO_BINDING_CATCH("createPipeWithSplitDistances")}));
 
   // 创建多段管道函数
   function("createMultiSegmentPipe",
@@ -4518,7 +4519,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function(
       "createMultiSegmentPipeWithSplitDistances",
       emscripten::optional_override([](const multi_segment_pipe_params &params,
-                                       emscripten::val splitDistancesVal) {
+                                       emscripten::val splitDistancesVal) { try {
         std::array<double, 2> splitDistances = {0.0, -1};
         if (splitDistancesVal.isArray() &&
             splitDistancesVal["length"].as<size_t>() == 2) {
@@ -4527,7 +4528,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
         }
         return create_multi_segment_pipe_with_split_distances(params,
                                                               splitDistances);
-      }));
+       } TOPO_BINDING_CATCH("createMultiSegmentPipeWithSplitDistances")}));
 
   emscripten::value_object<profile_layer>("ProfileLayer")
       .field("name", &profile_layer::name)
@@ -4548,20 +4549,20 @@ EMSCRIPTEN_BINDINGS(Primitive) {
 
   function("createMultiLayerExtrusionStructure",
            emscripten::optional_override(
-               [](const multi_layer_extrusion_structure_params &params) {
+               [](const multi_layer_extrusion_structure_params &params) { try {
                  auto results = create_multi_layer_extrusion_structure(params);
                  emscripten::val obj = emscripten::val::object();
                  for (const auto &pair : results) {
                    obj.set(pair.first, emscripten::val(pair.second));
                  }
                  return obj;
-               }));
+                } TOPO_BINDING_CATCH("createMultiLayerExtrusionStructure")}));
 
   function("createMultiLayerExtrusionStructureWithPosition",
            emscripten::optional_override(
                [](const multi_layer_extrusion_structure_params &params,
                   const gp_Pnt &position, const gp_Dir &direction,
-                  const gp_Dir &xDir) {
+                  const gp_Dir &xDir) { try {
                  auto results = create_multi_layer_extrusion_structure(
                      params, position, direction, xDir);
                  emscripten::val obj = emscripten::val::object();
@@ -4569,7 +4570,7 @@ EMSCRIPTEN_BINDINGS(Primitive) {
                    obj.set(pair.first, emscripten::val(pair.second));
                  }
                  return obj;
-               }));
+                } TOPO_BINDING_CATCH("createMultiLayerExtrusionStructureWithPosition")}));
 
   emscripten::function("createMultiLayerExtrusionStructureCenterline",
                        &create_multi_layer_extrusion_structure_centerline);
@@ -5142,14 +5143,14 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   // Borehole (钻孔)
   // ==========================================================================
   function("createBorehole",
-           emscripten::optional_override([](const borehole_params &params) {
+           emscripten::optional_override([](const borehole_params &params) { try {
              auto results = create_borehole(params);
              emscripten::val obj = emscripten::val::object();
              for (const auto &pair : results) {
                obj.set(pair.first, emscripten::val(pair.second));
              }
              return obj;
-           }));
+            } TOPO_BINDING_CATCH("createBorehole")}));
 
   // ==========================================================================
   // TRACK GROUP 1: 轨道组 — from primitives_railway.hh

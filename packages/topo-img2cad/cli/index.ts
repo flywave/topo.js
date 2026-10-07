@@ -47,6 +47,7 @@ interface CLIArgs {
   noWasm: boolean;
   noAssociativity: boolean;
   noVision: boolean;
+  resume: boolean;
   json: boolean;
   verbose: boolean;
   help: boolean;
@@ -64,6 +65,8 @@ Options:
   --industry <text>    Domain vocabulary / typical construction for this industry
   --industry-file <f>  Same, read from a file
   --tree <path>        Rebuild from a saved feature tree instead of calling a model
+  --resume             Resume a killed run from <outDir>/.topo-img2cad/state.json
+                       (refuses when the drawing's SHA-256 no longer matches)
   --out, -o <dir>      Where to write the artifacts (default: next to the image)
   --llm <type>         openai | anthropic | mock (default: openai)
   --model <name>       Model name
@@ -106,6 +109,7 @@ function parseArgs(argv: string[]): CLIArgs {
     noWasm: false,
     noAssociativity: false,
     noVision: false,
+    resume: false,
     json: false,
     verbose: false,
     help: false,
@@ -187,6 +191,9 @@ function parseArgs(argv: string[]): CLIArgs {
         break;
       case "--no-associativity":
         args.noAssociativity = true;
+        break;
+      case "--resume":
+        args.resume = true;
         break;
       case "--no-vision":
         args.noVision = true;
@@ -467,6 +474,7 @@ async function runFromImage(args: CLIArgs): Promise<number> {
     industry: args.industry,
     visionProfiles: !args.noVision,
     checkAssociativity: !args.noAssociativity,
+    resume: args.resume,
     exportFormats: args.exportFormats,
     stlDeflection: args.stlDeflection,
     // --json promises stdout carries the result and nothing else.

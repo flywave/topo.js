@@ -103,6 +103,9 @@ func BuildObjectFile(workDir string, buildDir string, basePath string, args map[
 		"-DOCCT_NO_PLUGINS",
 		"-frtti",
 		"-DHAVE_RAPIDJSON",
+		// OCCT Font 模块在此开关下才编译真实的 FreeType 路径; 缺它 text 恒报
+		// "Font not found" (checkFont 编译成空桩), 2026-10 T1.1 补上
+		"-DHAVE_FREETYPE",
 		"-Os",
 	}
 

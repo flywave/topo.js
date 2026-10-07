@@ -2,6 +2,10 @@
 
 go-topo (OpenCASCADE C++ 几何内核) 的 WASM 移植: Emscripten 编译 + Embind 绑定 + TS SDK。pnpm + lerna monorepo。
 
+> 演进路线图与 Go 化方案**已迁至新项目** `/Users/xuning/Work/go-cadgen` (module `github.com/flywave/go-cadgen`):
+> `docs/cadgen-roadmap.md` (原型演进史/规格来源) · `docs/go-cadgen-plan.md` (B/S 架构方案 v2) · `docs/testing-gates.md` (门禁突变规范) · `docs/contracts/` (FeatureTree/MeshData schema + SSE 事件 + API 草案)。
+> 本仓库的 topo-img2cad 自 Go 移植立项起**冻结为参考规格**: 其 46 错误码突变测试、95 条语料 (语料副本在 go-cadgen/testdata/corpus)、e2e 是 Go 侧验收标准; 修 bug 只进 Go 侧, TS 侧仅回滚性修复。
+
 ## 项目结构
 
 - `gen/` — Go 构建工具链 (Clang AST → Embind 绑定生成 → emcc 并行编译 → 链接 → TS 声明生成)
@@ -112,6 +116,19 @@ pnpm --filter topo-primitives test:watch  # watch 模式
 - `test/llm.test.ts` 另含 **thinking 模型烧完预算后重试一次(预算翻倍)**: 实测 `deepseek-v4.1-flash` 32768 token 全花在思考上、`content` 为空, 把一次已跑了四分钟的运行杀死在最后一步 (特征树合成)。只在"只有思考没有答案 / `finish_reason=length`"时重试 —— 答案**本就是空串**属于提示语问题, 重试只会白花一次调用; 重试经 `onLog` 出声(等待翻倍不能静默), 两次都空则报出预算并说明思考与答案共用它
 - `test/export.test.ts` — STEP/STL 导出: 字节真落在宿主 FS、STEP 头/`DATA`/终止符、STL 二进制且 `84+50n` 对齐、deflection 真的改变网格密度; 并用**三角片有符号体积**反证 STL 闭合且外向 (体积与 BREP 对齐)
 - 改了 `lib/` 或 `cli/` 后若要跑 `topo-img2cad` 命令, 必须先 `pnpm --filter topo-img2cad build` (CLI 从 `dist/` 跑)
+
+## 拓扑邻接查询与局部特征地基 (2026-10, roadmap T1.x, 详见 docs/cadgen-roadmap.md)
+
+- **新增拓扑查询集** (go-topo `src/shape_ops.{hh,cc}` → `topo_c_api` → Go `shape_ops.go` → Embind `ShapeOps`): `getEdgeFaces` / `getCommonEdge` / `faceIsPlanar` / `getOppositeEdge`(along 语义 = **从 e 中点指向候选中点**的偏移方向过滤, 同 modeling-api) / `getNextAdjacentEdge` / `getPrevAdjacentEdge` / `closestEdge` / `tangentEdgeChain`(G1 切向链, 弧度容差)。配套 `chamferAngle`(距离+角度倒角, 角度收**度**, 内部转弧度; refFaces 指定角度基准面) 与 `Shape.exportStepUnit`(INCH/MM/… 白名单, 非法单位 false)。双侧测试: go-topo `topology_query_test.go` + topo-primitives `test/topology_query.test.ts` 同口径。**坑**: ① `BRepAdaptor_Curve` 此版无 FirstTangent/LastTangent, 用 `D1(FirstParameter/LastParameter)` 求端点切向; ② `BRepBuilderAPI_MakeWire` 会**拷贝边** — 跨内核传回的"同一条"边不是同一 TShape, `tangentEdgeChain` 已做几何兜底匹配 (端点+中点重合); ③ Go 的 `EdgeIterator`/TS 的 `shape.edges()` 沿用 TopExp_Explorer 语义**不去重** (box 12 条边迭代出 24 条), 消费方自行按 TShape 哈希/bbox 去重; ④ go-topo 改了 `src/*_c_api.h` 后必须 `cp` 到 `libs/` (cgo `-I ./libs` 用的是副本, `libs/topo_c_api.h` 不是符号链接)。
+- **`Workplane.text` 已绑定** (T1.1): Embind `Workplane.text` + CQ shim `text(txt, fontsize, distance, opts)` (opts: cut/combine/clean/font/fontPath/kind/halign/valign)。**前提是 OCCT 须带 `-DHAVE_FREETYPE` 编译** — 此前 gen 工具链没定义它, `Font_FontMgr::checkFont` 编译成空桩, text 恒报 "Font not found" (2026-10 已在 `gen/compile.go` 的 BuildObjectFile flags 补上, 见该处注释)。WASM 无系统字体: 宿主先把 ttf 写进 MEMFS (`tp.FS.writeFile('/tmp/x.ttf', bytes)`) 再经 `fontPath` 传入; 只影响 4 个 OCCT 文件 (Font_FontMgr/Font_FTLibrary/Font_FTFont/StdPrs_BRepFont), 改 flag 后删这 4 个 `.o` 并用 `./build/topo build-ogg -d . -t single-threaded` 补编 (make rebuild 不含 OCCT 步骤), 再 make rebuild 链接。
+- **`lib/topo/edge_ref.ts` StableEdgeRef** (T1.6): 边由相邻面 bbox 集合命名 (modeling-api EdgeSpecifier 语义), `captureEdgeRef`/`resolveEdgeRef`/`stableEdges`。v1 边界: 同参数重建稳定; **参数变化会移动邻接面**, byFaces 失配时明确退化到 byIndex 并带 reason, 不静默错配。选择器语义命名 (">Z") 是 v2 方向。依赖全局 `ShapeOps` 注册。
+- **可恢复状态机 (T2.4, 2026-10)**: `packages/topo-img2cad/lib/cad/run_state.ts` — `<workDir>/.topo-img2cad/state.json` 落盘 views/profiles(逐视图)/tree, 绑定图纸 SHA-256; `--resume` (config.resume) 复用已完成段 (B 段复用的剖面重算 ink 度量); 哈希不符 → RESUME_HASH_MISMATCH warning + 状态弃用从头跑; 截断状态按无状态处理。
+- **质量合同 fail-closed (T2.2, 2026-10)**: `packages/topo-img2cad/lib/validators/quality_contract.ts` — 树发射代码**之前**的硬门, 三条检查: QC_DIMENSION_COVERAGE (profiles.dimensions 声明的尺寸在树里的应答率 ≥ 50%: 参数同名 / 约束同 kind+值 / 参数解析值)、QC_VIEW_NO_ENTRY (有剖面的视图实体 tag 全不在树里 = 该视图没进模型)、QC_INK_CALLOUT (stage B 点名 >8px 的离墨实体 tag 必须在树里)。不过 → JSON BLOCKED 报告 + 空代码 + `qualityBlocked` 字段; `qualityContract: false` 可关。
+- **修复环 v2 (T2.3, 2026-10)**: `packages/topo-img2cad/lib/cad/correction_loop.ts` — 修环停机/升级状态机 (优先级: 硬天花板 > plateau > 振荡 > 同缺陷两轮存活 > 正常)。"拒绝即 break" 已改为 "回退记账后继续": 一次回退不 fatal, 升级轮次的修环提示语带 ESCALATION 段 (重审树结构而非调数值), plateau/天花板停机记入 `CadRunResult.refinementHalted` 并出 warning。单调接受分: bestAcceptedScore 只在"接受且更优"时上移。突变测试 `test/correction_loop.test.ts` 10 例; refine_loop/cad_pipeline 的两个 "拒绝即停" 用例已按 v2 语义改写。
+- **逐尺寸门 (T2.1, 2026-10)**: `packages/topo-img2cad/lib/validators/dimension_check.ts` — 图纸声明尺寸对建出的实体**逐条**验收 (RADIUS 对实体圆边任意匹配 + 2% 容差; 跨剖面的 2 实体 DISTANCE 按草图平面对照 bbox 轴; LENGTH/ANGLE 进 `unevaluated` 清单, 不检查的不冒充已检查)。AND 门: `DIM_MISMATCH` 是 error, 不被整体 IoU 豁免, 已进 isWorthRefining 的 fixable 集 + MEASURED_CODES; summarizeReview 带逐条清单 (声明多少/实测多少/差多少) 进修环提示语。突变测试 `test/dimension_check.test.ts`: **φ12 声明 vs φ9.6 模型必拒且点名**。v1 边界: 半径匹配是"实体上存在该尺寸的孔"而非"图上那个孔在正确位置" (位置匹配需要 sketch→solid 变换, v2)。
+- **绑定层异常翻译已铺开** (T1.4, 2026-10): `src/binding_guard.hh` 提供 `rethrowAsJsError` + `TOPO_BINDING_CATCH(api)` 宏 (`val::throw_` 是 [[noreturn]], catch 后无需补 return); 机械变换脚本 `scripts/wrap_binding_lambdas.py` (引号/括号感知的平衡扫描, 自动跳过已有手写 catch 的 lambda) 与 `scripts/wrap_select_overloads.py` (select_overload 显式签名 → guarded lambda, 参数表取 `<>` 内**最后一个**顶层括号组 — ret 自身可带括号如 Handle(...))。覆盖 sketch(63)/assembly(18)/primitives(12)/geometry(123) 共 216 个绑定面; 生成前回归证明行为零变化 (1210/0)。**仍裸抛的面**: primitives/railway 的 `create_*` 直绑函数由 gen 生成器 (Clang AST) 产出, 守卫需做进生成器模板; workplane/topo_bindings 的既有手写 catch 行为等价未迁移。
+- **语料库** (T0.2): `packages/topo-text2cad/fixtures/corpus/` — 95 条 (cq_examples 33 + railway 52 + editor snippets 10), 程序化提取非手抄; 重放测试 `packages/topo-primitives/test/corpus_replay.test.ts` (cq 组连 golden bbox 逐坐标对账)。门禁突变测试规范与 22 个未测错误码缺口见 `docs/testing-gates.md` (T0.3)。
+- **沙箱 helper 必须按原签名直接传 CQ.pnt/vec/gpVec** (2026-10 editor 语料排查教训): 这些 helper 的首参是 `tp` 由调用方 (snippet) 自带 — 若在 `new Function` 沙箱里包装成少一个形参的箭头 `(x,y,z) => CQ.pnt(tp,x,y,z)`, snippet 调 `pnt(tp, 10, 6, 0)` 时 `tp` 被当成 x 坐标, 造出坐标为 NaN/指针值的 gp_Pnt, 下游 OCCT 抛**裸 number** (无 message 无 stack)。这与编辑器 runner 的差异就是它直接解构 `{ pnt } = CQ` 不包装。排查此类问题先对照 `packages/topo-editor/src/runner.ts` 的注入面。
 
 ## CadQuery 兼容层
 

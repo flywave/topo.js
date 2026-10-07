@@ -160,16 +160,23 @@ describe("the refinement loop repairs the tree, not the code", () => {
     expect(rep.views[0].iou).toBeGreaterThan(0.9);
   }, 180_000);
 
-  it("stops rather than burning the budget when a repair changes nothing", async () => {
+  it("v2: one reverted repair gets another (escalated) try; oscillation and the hard ceiling end it", async () => {
     const imagePath = drawPlate(join(WORK, "plate120b.png"), 120);
-    // Both trees are the same wrong 90mm plate: a "repair" that repairs nothing.
+    // All trees are the same wrong 90mm plate: repairs that repair nothing.
+    // v2 correction-loop semantics: round 1 revert → round 2 ESCALATED (the same
+    // defect survived; the prompt now asks for structure, not dimensions) →
+    // identical repairs move the measured score by exactly zero, so the PLATEAU
+    // rule halts for human input before a third round burns the budget.
     const llm = providerWith([plateTree("90", 90), plateTree("90", 90)]);
 
     const pipeline = new CadPipeline({ llm, tp, maxRefinements: 3 });
     const result = await pipeline.run(imagePath, "Plate");
 
-    expect(result.refinements).toBe(1);
-    expect(result.warnings.join(" ")).toMatch(/did not improve|worse tree/);
+    expect(result.refinements).toBe(2);
+    const warnings = result.warnings.join(" ");
+    expect(warnings).toMatch(/did not improve/);
+    expect(warnings).toMatch(/plateau/);
+    expect(result.refinementHalted?.reason).toBe("plateau");
     expect(result.review!.passed).toBe(false);
   }, 180_000);
 

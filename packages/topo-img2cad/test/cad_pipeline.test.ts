@@ -220,18 +220,26 @@ describe("CAD pipeline end to end", () => {
     expect(result.warnings.join(" ")).toMatch(/scale evidence/);
   });
 
-  it("stops refining when the repair makes things worse", async () => {
+  it("v2: a repair that makes nothing better is reverted, escalation runs, and the ceiling halts", async () => {
     const llm = new MockProvider();
     llm.setResponse("analyzeImage", VIEW_INTAKE_PHOTO_ONE_VIEW);
     llm.queueResponse("complete", TREE_MISSING_SKETCH);
-    // A "repair" that is equally broken must not be accepted as progress.
+    // Repairs that are equally broken must not be accepted as progress. v2:
+    // round 1 is reverted (not accepted), the SAME defect surviving sends round
+    // 2 in ESCALATED (structure, not dimensions), and after the budget's last
+    // round the hard ceiling halts for human input.
+    llm.queueResponse("complete", TREE_MISSING_SKETCH);
+    llm.queueResponse("complete", TREE_MISSING_SKETCH);
     llm.queueResponse("complete", TREE_MISSING_SKETCH);
 
     const pipeline = new CadPipeline({ llm, maxRefinements: 3 });
     const result = await pipeline.run(IMAGE_PATH, "Plate");
 
-    expect(result.refinements).toBe(1);
-    expect(result.warnings.join(" ")).toMatch(/worse tree|did not improve/);
+    expect(result.refinements).toBe(3);
+    const warnings = result.warnings.join(" ");
+    expect(warnings).toMatch(/worse tree|did not improve/);
+    expect(warnings).toMatch(/ceiling/);
+    expect(result.refinementHalted?.reason).toBe("max-rounds");
     expect(result.lint.passed).toBe(false);
   });
 

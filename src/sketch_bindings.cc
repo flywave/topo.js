@@ -1,6 +1,7 @@
 #include "binding.hh"
 #include "sketch.hh"
 #include <Standard_Failure.hxx>
+#include "binding_guard.hh"
 
 using namespace flywave;
 using namespace flywave::topo;
@@ -28,10 +29,10 @@ EMSCRIPTEN_BINDINGS(Sketch) {
   class_<sketch>("Sketch")
       .smart_ptr<std::shared_ptr<sketch>>("Sketch")
       .constructor(emscripten::optional_override(
-          [] { return std::make_shared<sketch>(); }))
+          [] { try { return std::make_shared<sketch>();  } TOPO_BINDING_CATCH("Sketch")}))
       .constructor(emscripten::optional_override([](emscripten::val inPlane,
                                                     emscripten::val locsVal,
-                                                    emscripten::val objVal) {
+                                                    emscripten::val objVal) { try {
         if (inPlane.instanceof(emscripten::val::global("Workplane"))) {
           auto plane = inPlane.as<std::shared_ptr<workplane>>();
           std::vector<topo_location> locs;
@@ -51,9 +52,9 @@ EMSCRIPTEN_BINDINGS(Sketch) {
         } else {
           return std::make_shared<sketch>();
         }
-      }))
+       } TOPO_BINDING_CATCH("Sketch")}))
       .constructor(emscripten::optional_override(
-          [](emscripten::val locsVal, emscripten::val objVal) {
+          [](emscripten::val locsVal, emscripten::val objVal) { try {
             if (locsVal.isArray()) {
               std::vector<topo_location> locs;
               const size_t rows = locsVal["length"].as<size_t>();
@@ -70,25 +71,25 @@ EMSCRIPTEN_BINDINGS(Sketch) {
             } else {
               return std::make_shared<sketch>();
             }
-          }))
+           } TOPO_BINDING_CATCH("Sketch")}))
       .function("hashCode", &sketch::hash_code)
       .function(
           "getFaces",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             const auto &faces = self.get_faces();
             emscripten::val result = emscripten::val::array();
             for (size_t i = 0; i < faces.size(); ++i) {
               result.set(i, faces[i]);
             }
             return result;
-          }),
+           } TOPO_BINDING_CATCH("getFaces")}),
           emscripten::allow_raw_pointers())
       .function(
           "face",
           emscripten::optional_override(
               [](sketch &self, emscripten::val shp, emscripten::val angleVal,
                  emscripten::val modeVal, emscripten::val tagVal,
-                 emscripten::val ignoreSelectionVal) -> emscripten::val {
+                 emscripten::val ignoreSelectionVal) -> emscripten::val { try {
                 double angle =
                     angleVal.isUndefined() ? 0.0 : angleVal.as<double>();
                 Mode mode =
@@ -123,13 +124,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 } else {
                   throw std::runtime_error("Unsupported type for face()");
                 }
-              }),
+               } TOPO_BINDING_CATCH("face")}),
           emscripten::allow_raw_pointers())
       .function("rect",
                 emscripten::optional_override(
                     [](sketch &self, double w, double h,
                        emscripten::val angleVal, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       double angle =
                           angleVal.isUndefined() ? 0.0 : angleVal.as<double>();
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
@@ -141,13 +142,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.rect(w, h, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("rect")}),
                 emscripten::allow_raw_pointers())
       // Circle
       .function("circle",
                 emscripten::optional_override(
                     [](sketch &self, double r, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
                                                         : modeVal.as<Mode>();
                       boost::optional<std::string> tag =
@@ -157,14 +158,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &rr = self.circle(r, mode, tag);
                       return emscripten::val(rr.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("circle")}),
                 emscripten::allow_raw_pointers())
       // Ellipse
       .function("ellipse",
                 emscripten::optional_override(
                     [](sketch &self, double a1, double a2,
                        emscripten::val angleVal, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       double angle =
                           angleVal.isUndefined() ? 0.0 : angleVal.as<double>();
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
@@ -175,7 +176,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : boost::make_optional(tagVal.as<std::string>());
                       auto &r = self.ellipse(a1, a2, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("ellipse")}),
                 emscripten::allow_raw_pointers())
       // Trapezoid
       .function("trapezoid",
@@ -183,7 +184,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                     [](sketch &self, double w, double h, double a1,
                        emscripten::val a2Val, emscripten::val angleVal,
                        emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       boost::optional<double> a2 =
                           a2Val.isUndefined()
                               ? boost::none
@@ -199,14 +200,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.trapezoid(w, h, a1, a2, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("trapezoid")}),
                 emscripten::allow_raw_pointers())
       // Slot
       .function("slot",
                 emscripten::optional_override(
                     [](sketch &self, double w, double h,
                        emscripten::val angleVal, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       double angle =
                           angleVal.isUndefined() ? 0.0 : angleVal.as<double>();
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
@@ -217,14 +218,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : boost::make_optional(tagVal.as<std::string>());
                       auto &r = self.slot(w, h, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("slot")}),
                 emscripten::allow_raw_pointers())
       // Regular Polygon
       .function("regularPolygon",
                 emscripten::optional_override(
                     [](sketch &self, double r, int n, emscripten::val angleVal,
                        emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       double angle =
                           angleVal.isUndefined() ? 0.0 : angleVal.as<double>();
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
@@ -235,14 +236,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : boost::make_optional(tagVal.as<std::string>());
                       auto &rr = self.regular_polygon(r, n, angle, mode, tag);
                       return emscripten::val(rr.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("regularPolygon")}),
                 emscripten::allow_raw_pointers())
       // Polygon
       .function("polygon",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val ptsVal,
                        emscripten::val angleVal, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       std::vector<topo_vector> pts;
                       const size_t len = ptsVal["length"].as<size_t>();
                       pts.reserve(len);
@@ -260,33 +261,33 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.polygon(pts, angle, mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("polygon")}),
                 emscripten::allow_raw_pointers())
       .function(
           "rarray",
           emscripten::optional_override([](sketch &self, double xs, double ys,
-                                           int nx, int ny) -> emscripten::val {
+                                           int nx, int ny) -> emscripten::val { try {
             auto &r = self.rarray(xs, ys, nx, ny);
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("rarray")}),
           emscripten::allow_raw_pointers())
       // PArray
       .function("parray",
                 emscripten::optional_override(
                     [](sketch &self, double r, double a1, double da, int n,
-                       emscripten::val rotateVal) -> emscripten::val {
+                       emscripten::val rotateVal) -> emscripten::val { try {
                       bool rotate =
                           rotateVal.isUndefined() ? true : rotateVal.as<bool>();
                       auto &rr = self.parray(r, a1, da, n, rotate);
                       return emscripten::val(rr.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("parray")}),
                 emscripten::allow_raw_pointers())
       // Distribute
       .function("distribute",
                 emscripten::optional_override(
                     [](sketch &self, int n, emscripten::val startVal,
                        emscripten::val stopVal,
-                       emscripten::val rotateVal) -> emscripten::val {
+                       emscripten::val rotateVal) -> emscripten::val { try {
                       double start =
                           startVal.isUndefined() ? 0.0 : startVal.as<double>();
                       double stop =
@@ -295,13 +296,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                           rotateVal.isUndefined() ? true : rotateVal.as<bool>();
                       auto &r = self.distribute(n, start, stop, rotate);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("distribute")}),
                 emscripten::allow_raw_pointers())
 
       .function("push",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val locsVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       std::vector<topo_location> locs;
                       if (locsVal.isArray()) {
                         const size_t len = locsVal["length"].as<size_t>();
@@ -318,14 +319,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.push(locs, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("push")}),
                 emscripten::allow_raw_pointers())
       // eachFace - 处理返回face的回调
       .function("eachFace",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val callbackVal,
                        emscripten::val modeVal, emscripten::val tagVal,
-                       emscripten::val ignoreSelectionVal) -> emscripten::val {
+                       emscripten::val ignoreSelectionVal) -> emscripten::val { try {
                       auto callback = [callbackVal](const topo_location &loc) {
                         return callbackVal(loc).as<topo::face>();
                       };
@@ -341,14 +342,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.each(callback, mode, tag, ignoreSelection);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("eachFace")}),
                 emscripten::allow_raw_pointers())
       // eachSketch - 处理返回sketch的回调
       .function("eachSketch",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val callbackVal,
                        emscripten::val modeVal, emscripten::val tagVal,
-                       emscripten::val ignoreSelectionVal) -> emscripten::val {
+                       emscripten::val ignoreSelectionVal) -> emscripten::val { try {
                       auto callback = [callbackVal](const topo_location &loc) {
                         return callbackVal(loc).as<std::shared_ptr<sketch>>();
                       };
@@ -364,14 +365,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.each(callback, mode, tag, ignoreSelection);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("eachSketch")}),
                 emscripten::allow_raw_pointers())
       // eachCompound - 处理返回compound的回调
       .function("eachCompound",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val callbackVal,
                        emscripten::val modeVal, emscripten::val tagVal,
-                       emscripten::val ignoreSelectionVal) -> emscripten::val {
+                       emscripten::val ignoreSelectionVal) -> emscripten::val { try {
                       auto callback = [callbackVal](const topo_location &loc) {
                         return callbackVal(loc).as<compound>();
                       };
@@ -387,12 +388,12 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.each(callback, mode, tag, ignoreSelection);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("eachCompound")}),
                 emscripten::allow_raw_pointers())
       .function("hull",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
                                                         : modeVal.as<Mode>();
                       boost::optional<std::string> tag =
@@ -401,14 +402,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : boost::make_optional(tagVal.as<std::string>());
                       auto &r = self.hull(mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("hull")}),
                 emscripten::allow_raw_pointers())
 
       // Offset
       .function("offset",
                 emscripten::optional_override(
                     [](sketch &self, double d, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       Mode mode = modeVal.isUndefined() ? Mode::ADD
                                                         : modeVal.as<Mode>();
                       boost::optional<std::string> tag =
@@ -417,49 +418,49 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : boost::make_optional(tagVal.as<std::string>());
                       auto &r = self.offset(d, mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("offset")}),
                 emscripten::allow_raw_pointers())
 
       // Fillet
       .function("fillet",
                 emscripten::optional_override(
-                    [](sketch &self, double d) -> emscripten::val {
+                    [](sketch &self, double d) -> emscripten::val { try {
                       auto &r = self.fillet(d);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("fillet")}),
                 emscripten::allow_raw_pointers())
 
       // Chamfer
       .function("chamfer",
                 emscripten::optional_override(
-                    [](sketch &self, double d) -> emscripten::val {
+                    [](sketch &self, double d) -> emscripten::val { try {
                       auto &r = self.chamfer(d);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("chamfer")}),
                 emscripten::allow_raw_pointers())
       // Clean
       .function(
           "clean",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto &r = self.clean();
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("clean")}),
           emscripten::allow_raw_pointers())
       // Tag
       .function(
           "tag",
           emscripten::optional_override(
-              [](sketch &self, const std::string &tag) -> emscripten::val {
+              [](sketch &self, const std::string &tag) -> emscripten::val { try {
                 auto &r = self.tag(tag);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("tag")}),
           emscripten::allow_raw_pointers())
 
       // Select
       .function(
           "select",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val tagsVal) -> emscripten::val {
+              [](sketch &self, emscripten::val tagsVal) -> emscripten::val { try {
                 std::vector<std::string> tags;
                 const size_t len = tagsVal["length"].as<size_t>();
                 tags.reserve(len);
@@ -468,13 +469,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 }
                 auto &r = self.select(tags);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("select")}),
           emscripten::allow_raw_pointers())
 
       .function("faces",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val selectorVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       std::string tag =
                           tagVal.isUndefined() ? "" : tagVal.as<std::string>();
 
@@ -487,13 +488,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                         auto &r = self.faces(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
-                    }),
+                     } TOPO_BINDING_CATCH("faces")}),
                 emscripten::allow_raw_pointers())
       // wires - 统一处理字符串和选择器
       .function("wires",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val selectorVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       std::string tag =
                           tagVal.isUndefined() ? "" : tagVal.as<std::string>();
 
@@ -506,14 +507,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                         auto &r = self.wires(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
-                    }),
+                     } TOPO_BINDING_CATCH("wires")}),
                 emscripten::allow_raw_pointers())
 
       // edges - 统一处理字符串和选择器
       .function("edges",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val selectorVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       std::string tag =
                           tagVal.isUndefined() ? "" : tagVal.as<std::string>();
 
@@ -526,14 +527,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                         auto &r = self.edges(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
-                    }),
+                     } TOPO_BINDING_CATCH("edges")}),
                 emscripten::allow_raw_pointers())
 
       // vertices - 统一处理字符串和选择器
       .function("vertices",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val selectorVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       std::string tag =
                           tagVal.isUndefined() ? "" : tagVal.as<std::string>();
 
@@ -546,24 +547,24 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                         auto &r = self.vertices(sel, tag);
                         return emscripten::val(r.shared_from_this());
                       }
-                    }),
+                     } TOPO_BINDING_CATCH("vertices")}),
                 emscripten::allow_raw_pointers())
       // Reset
       .function(
           "reset",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto &r = self.reset();
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("reset")}),
           emscripten::allow_raw_pointers())
 
       // Delete Selected
       .function(
           "deleteSelected",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto &r = self.delete_selected();
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("deleteSelected")}),
           emscripten::allow_raw_pointers())
 
       // Edge
@@ -571,7 +572,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
           "edge",
           emscripten::optional_override(
               [](sketch &self, emscripten::val edgeVal, emscripten::val tagVal,
-                 emscripten::val forConstructionVal) -> emscripten::val {
+                 emscripten::val forConstructionVal) -> emscripten::val { try {
                 auto edge = edgeVal.as<topo::edge>();
                 boost::optional<std::string> tag =
                     tagVal.isUndefined()
@@ -582,14 +583,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                                            : forConstructionVal.as<bool>();
                 auto &r = self.edge(edge, tag, forConstruction);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("edge")}),
           emscripten::allow_raw_pointers())
       // segmentBetweenPoints - 两点间线段
       .function("segmentBetweenPoints",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val p1Val,
                        emscripten::val p2Val, emscripten::val tagVal,
-                       emscripten::val forConstructionVal) -> emscripten::val {
+                       emscripten::val forConstructionVal) -> emscripten::val { try {
                       auto p1 = p1Val.as<topo_vector>();
                       auto p2 = p2Val.as<topo_vector>();
                       boost::optional<std::string> tag =
@@ -602,14 +603,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : forConstructionVal.as<bool>();
                       auto &r = self.segment(p1, p2, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("segmentBetweenPoints")}),
                 emscripten::allow_raw_pointers())
       // segmentToPoint - 从当前位置到指定点
       .function(
           "segmentToPoint",
           emscripten::optional_override(
               [](sketch &self, emscripten::val p2Val, emscripten::val tagVal,
-                 emscripten::val forConstructionVal) -> emscripten::val {
+                 emscripten::val forConstructionVal) -> emscripten::val { try {
                 auto p2 = p2Val.as<topo_vector>();
                 boost::optional<std::string> tag =
                     tagVal.isUndefined()
@@ -620,13 +621,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                                            : forConstructionVal.as<bool>();
                 auto &r = self.segment(p2, tag, forConstruction);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("segmentToPoint")}),
           emscripten::allow_raw_pointers())
       // segmentByLengthAngle - 通过长度和角度创建线段
       .function("segmentByLengthAngle",
                 emscripten::optional_override(
                     [](sketch &self, double l, double a, emscripten::val tagVal,
-                       emscripten::val forConstructionVal) -> emscripten::val {
+                       emscripten::val forConstructionVal) -> emscripten::val { try {
                       boost::optional<std::string> tag =
                           tagVal.isUndefined()
                               ? boost::none
@@ -637,7 +638,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : forConstructionVal.as<bool>();
                       auto &r = self.segment(l, a, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("segmentByLengthAngle")}),
                 emscripten::allow_raw_pointers())
 
       // arcByThreePoints - 三点圆弧
@@ -646,7 +647,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
           emscripten::optional_override(
               [](sketch &self, emscripten::val p1Val, emscripten::val p2Val,
                  emscripten::val p3Val, emscripten::val tagVal,
-                 emscripten::val forConstructionVal) -> emscripten::val {
+                 emscripten::val forConstructionVal) -> emscripten::val { try {
                 auto p1 = p1Val.as<topo_vector>();
                 auto p2 = p2Val.as<topo_vector>();
                 auto p3 = p3Val.as<topo_vector>();
@@ -659,7 +660,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                                            : forConstructionVal.as<bool>();
                 auto &r = self.arc(p1, p2, p3, tag, forConstruction);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("arcByThreePoints")}),
           emscripten::allow_raw_pointers())
 
       // arcByTwoPoints - 两点圆弧(从当前位置到指定点)
@@ -667,7 +668,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val p2Val,
                        emscripten::val p3Val, emscripten::val tagVal,
-                       emscripten::val forConstructionVal) -> emscripten::val {
+                       emscripten::val forConstructionVal) -> emscripten::val { try {
                       auto p2 = p2Val.as<topo_vector>();
                       auto p3 = p3Val.as<topo_vector>();
                       boost::optional<std::string> tag =
@@ -680,7 +681,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : forConstructionVal.as<bool>();
                       auto &r = self.arc(p2, p3, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("arcByTwoPoints")}),
                 emscripten::allow_raw_pointers())
 
       // arcByCenter - 中心点圆弧
@@ -689,7 +690,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
           emscripten::optional_override(
               [](sketch &self, emscripten::val centerVal, double radius,
                  double startAngle, double deltaAngle, emscripten::val tagVal,
-                 emscripten::val forConstructionVal) -> emscripten::val {
+                 emscripten::val forConstructionVal) -> emscripten::val { try {
                 auto center = centerVal.as<topo_vector>();
                 boost::optional<std::string> tag =
                     tagVal.isUndefined()
@@ -701,7 +702,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 auto &r = self.arc(center, radius, startAngle, deltaAngle, tag,
                                   forConstruction);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("arcByCenter")}),
           emscripten::allow_raw_pointers())
       // splineWithTangents - 带切线控制的样条曲线
       .function(
@@ -710,7 +711,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
               [](sketch &self, emscripten::val pointsVal,
                  emscripten::val tangentsVal, emscripten::val periodicVal,
                  emscripten::val tagVal,
-                 emscripten::val forConstructionVal) -> emscripten::val {
+                 emscripten::val forConstructionVal) -> emscripten::val { try {
                 std::vector<topo_vector> points;
                 const size_t len = pointsVal["length"].as<size_t>();
                 points.reserve(len);
@@ -738,7 +739,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 auto &r = self.spline(points, tangents, periodic, tag,
                                      forConstruction);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("splineWithTangents")}),
           emscripten::allow_raw_pointers())
 
       // spline - 简单样条曲线
@@ -746,7 +747,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val pointsVal,
                        emscripten::val tagVal,
-                       emscripten::val forConstructionVal) -> emscripten::val {
+                       emscripten::val forConstructionVal) -> emscripten::val { try {
                       std::vector<topo_vector> points;
                       const size_t len = pointsVal["length"].as<size_t>();
                       points.reserve(len);
@@ -765,14 +766,14 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.spline(points, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("spline")}),
                 emscripten::allow_raw_pointers())
       // bezier - 贝塞尔曲线
       .function("bezier",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val pointsVal,
                        emscripten::val tagVal,
-                       emscripten::val forConstructionVal) -> emscripten::val {
+                       emscripten::val forConstructionVal) -> emscripten::val { try {
                       std::vector<topo_vector> points;
                       const size_t len = pointsVal["length"].as<size_t>();
                       points.reserve(len);
@@ -791,26 +792,26 @@ EMSCRIPTEN_BINDINGS(Sketch) {
 
                       auto &r = self.bezier(points, tag, forConstruction);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("bezier")}),
                 emscripten::allow_raw_pointers())
       // close - 闭合图形
       .function(
           "close",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val tagVal) -> emscripten::val {
+              [](sketch &self, emscripten::val tagVal) -> emscripten::val { try {
                 boost::optional<std::string> tag =
                     tagVal.isUndefined()
                         ? boost::none
                         : boost::make_optional(tagVal.as<std::string>());
                 auto &r = self.close(tag);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("close")}),
           emscripten::allow_raw_pointers())
       // assemble - 装配操作
       .function("assemble",
                 emscripten::optional_override(
                     [](sketch &self, emscripten::val modeVal,
-                       emscripten::val tagVal) -> emscripten::val {
+                       emscripten::val tagVal) -> emscripten::val { try {
                       Mode mode = modeVal.as<Mode>();
                       boost::optional<std::string> tag =
                           tagVal.isUndefined()
@@ -818,21 +819,21 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                               : boost::make_optional(tagVal.as<std::string>());
                       auto &r = self.assemble(mode, tag);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("assemble")}),
                 emscripten::allow_raw_pointers())
       // copy - 复制草图
       .function(
           "copy",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto result = self.copy();
             return emscripten::val(result);
-          }),
+           } TOPO_BINDING_CATCH("copy")}),
           emscripten::allow_raw_pointers())
       // moved - 移动草图到多个位置
       .function(
           "moved",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val locsVal) -> emscripten::val {
+              [](sketch &self, emscripten::val locsVal) -> emscripten::val { try {
                 std::vector<topo_location> locs;
                 const size_t len = locsVal["length"].as<size_t>();
                 locs.reserve(len);
@@ -841,42 +842,42 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 }
                 auto result = self.moved(locs);
                 return emscripten::val(result);
-              }),
+               } TOPO_BINDING_CATCH("moved")}),
           emscripten::allow_raw_pointers())
       // located - 移动草图到单个位置
       .function(
           "located",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val locVal) -> emscripten::val {
+              [](sketch &self, emscripten::val locVal) -> emscripten::val { try {
                 auto loc = locVal.as<topo_location>();
                 auto result = self.located(loc);
                 return emscripten::val(result);
-              }),
+               } TOPO_BINDING_CATCH("located")}),
           emscripten::allow_raw_pointers())
       // finalize - 完成草图
       .function(
           "finalize",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto result = self.finalize();
             return emscripten::val(result);
-          }),
+           } TOPO_BINDING_CATCH("finalize")}),
           emscripten::allow_raw_pointers())
       // val - 获取单个值
       .function(
           "val",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto result = self.val();
             if (result.type() == typeid(shape)) {
               return emscripten::val(boost::get<shape>(result));
             } else {
               return emscripten::val(boost::get<topo_location>(result));
             }
-          }),
+           } TOPO_BINDING_CATCH("val")}),
           emscripten::allow_raw_pointers())
       // vals - 获取值数组
       .function(
           "vals",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto results = self.vals();
             emscripten::val array = emscripten::val::array();
             for (const auto &result : results) {
@@ -889,84 +890,84 @@ EMSCRIPTEN_BINDINGS(Sketch) {
               }
             }
             return array;
-          }),
+           } TOPO_BINDING_CATCH("vals")}),
           emscripten::allow_raw_pointers())
       // add - 添加操作
       .function(
           "add",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto &r = self.add();
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("add")}),
           emscripten::allow_raw_pointers())
 
       // subtract - 减去操作
       .function(
           "subtract",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto &r = self.subtract();
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("subtract")}),
           emscripten::allow_raw_pointers())
 
       // replace - 替换操作
       .function(
           "replace",
-          emscripten::optional_override([](sketch &self) -> emscripten::val {
+          emscripten::optional_override([](sketch &self) -> emscripten::val { try {
             auto &r = self.replace();
             return emscripten::val(r.shared_from_this());
-          }),
+           } TOPO_BINDING_CATCH("replace")}),
           emscripten::allow_raw_pointers())
 
       // operator+ - 加法运算符
       .function(
           "plus",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val otherVal) -> emscripten::val {
+              [](sketch &self, emscripten::val otherVal) -> emscripten::val { try {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self + *other;
                 return emscripten::val(result.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("plus")}),
           emscripten::allow_raw_pointers())
 
       // operator- - 减法运算符
       .function(
           "minus",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val otherVal) -> emscripten::val {
+              [](sketch &self, emscripten::val otherVal) -> emscripten::val { try {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self - *other;
                 return emscripten::val(result.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("minus")}),
           emscripten::allow_raw_pointers())
 
       // operator* - 乘法运算符
       .function(
           "multiply",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val otherVal) -> emscripten::val {
+              [](sketch &self, emscripten::val otherVal) -> emscripten::val { try {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self * *other;
                 return emscripten::val(result.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("multiply")}),
           emscripten::allow_raw_pointers())
 
       // operator/ - 除法运算符
       .function(
           "divide",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val otherVal) -> emscripten::val {
+              [](sketch &self, emscripten::val otherVal) -> emscripten::val { try {
                 auto other = otherVal.as<std::shared_ptr<sketch>>();
                 auto result = self / *other;
                 return emscripten::val(result.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("divide")}),
           emscripten::allow_raw_pointers())
 
       // operator[] - 索引运算符
       .function(
           "at",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val indicesVal) -> emscripten::val {
+              [](sketch &self, emscripten::val indicesVal) -> emscripten::val { try {
                 std::vector<int> indices;
                 const size_t len = indicesVal["length"].as<size_t>();
                 indices.reserve(len);
@@ -975,13 +976,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 }
                 auto &r = self[indices];
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("at")}),
           emscripten::allow_raw_pointers())
       // filter - 过滤草图元素
       .function(
           "filter",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val predVal) -> emscripten::val {
+              [](sketch &self, emscripten::val predVal) -> emscripten::val { try {
                 auto pred = [predVal](const sketch_val &val) {
                   emscripten::val jsVal;
                   if (val.type() == typeid(shape)) {
@@ -993,12 +994,12 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 };
                 auto &r = self.filter(pred);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("filter")}),
           emscripten::allow_raw_pointers())
       // map - 映射草图元素
       .function("map",
                 emscripten::optional_override(
-                    [](sketch &self, emscripten::val fVal) -> emscripten::val {
+                    [](sketch &self, emscripten::val fVal) -> emscripten::val { try {
                       auto f = [fVal](const sketch_val &val) -> sketch_val {
                         emscripten::val jsVal;
                         if (val.type() == typeid(shape)) {
@@ -1023,13 +1024,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                       };
                       auto &r = self.map(f);
                       return emscripten::val(r.shared_from_this());
-                    }),
+                     } TOPO_BINDING_CATCH("map")}),
                 emscripten::allow_raw_pointers())
       // apply - 应用函数到所有元素
       .function(
           "apply",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val fVal) -> emscripten::val {
+              [](sketch &self, emscripten::val fVal) -> emscripten::val { try {
                 auto f = [fVal](const std::vector<sketch_val> &vals)
                     -> std::vector<sketch_val> {
                   emscripten::val jsVals = emscripten::val::array();
@@ -1063,13 +1064,13 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 };
                 auto &r = self.apply(f);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("apply")}),
           emscripten::allow_raw_pointers())
       // sort - 排序元素
       .function(
           "sort",
           emscripten::optional_override(
-              [](sketch &self, emscripten::val compVal) -> emscripten::val {
+              [](sketch &self, emscripten::val compVal) -> emscripten::val { try {
                 auto comp = [compVal](const sketch_val &a,
                                       const sketch_val &b) -> bool {
                   emscripten::val jsA, jsB;
@@ -1087,7 +1088,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                 };
                 auto &r = self.sort(comp);
                 return emscripten::val(r.shared_from_this());
-              }),
+               } TOPO_BINDING_CATCH("sort")}),
           emscripten::allow_raw_pointers())
 
       // constrain - 添加约束 (单 tag 或双 tag)
@@ -1190,7 +1191,7 @@ EMSCRIPTEN_BINDINGS(Sketch) {
       .function(
           "solve_status",
           emscripten::optional_override(
-              [](sketch &self) -> emscripten::val {
+              [](sketch &self) -> emscripten::val { try {
                 emscripten::val result = emscripten::val::object();
                 for (const auto &pair : self.solve_status()) {
                   if (pair.second.type() == typeid(double)) {
@@ -1220,6 +1221,6 @@ EMSCRIPTEN_BINDINGS(Sketch) {
                   }
                 }
                 return result;
-              }),
+               } TOPO_BINDING_CATCH("solve_status")}),
           emscripten::allow_raw_pointers());
 }
