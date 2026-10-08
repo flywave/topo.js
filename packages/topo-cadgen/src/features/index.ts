@@ -9,6 +9,7 @@ import { createFeatureTreePanel } from "./featureTree.js";
 import { createPropertiesPanel, createExportsPanel } from "./properties.js";
 import { createAssemblyPanel } from "./assembly.js";
 import { createCreationPanel } from "./creation.js";
+import { createVersionsPanel } from "./versions.js";
 
 export function registerBuiltinPanels(app: EditorApp): void {
   app.registerPanel(createCreationPanel(app));
@@ -18,4 +19,5 @@ export function registerBuiltinPanels(app: EditorApp): void {
   app.registerPanel(createPropertiesPanel(app));
   app.registerPanel(createExportsPanel(app));
   app.registerPanel(createAssemblyPanel(app));
+  app.registerPanel(createVersionsPanel(app));
 }

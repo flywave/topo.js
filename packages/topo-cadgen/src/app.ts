@@ -37,6 +37,16 @@ export interface AssemblyInventory {
   parts: Array<{ name: string; volume: number; bbox: number[] }>;
 }
 
+/** One entry of the run's version chain (GET /runs/:id/versions). */
+export interface VersionEntry {
+  index: number;
+  digest: string;
+  changed?: Array<{ featureId: string; kind: string }>;
+  verdict: string;
+  at: string;
+  current: boolean;
+}
+
 export interface EditorState {
   runId: string | null;
   tree: FeatureTreeLike | null;
@@ -50,6 +60,8 @@ export interface EditorState {
   properties?: RunProperties;
   /** The loaded assembly view (undefined: the part view is showing). */
   assembly?: AssemblyInventory;
+  /** The run's version chain, oldest first (undefined: not fetched yet). */
+  versions?: VersionEntry[];
   /** A panel-visible notice (Zoo 的错误横幅经验): authoritative failures —
    * an edit the pipeline refused — surface on the feature tree, not just in
    * the log overlay. Cleared by the next successful load/apply. */
@@ -364,8 +376,38 @@ export class EditorApp {
 
   async refreshVersions(): Promise<void> {
     if (!this.store.get().runId) return;
-    const { data } = await this.transport.runVersions(this.store.get().runId);
-    this.store.set({}); // panels read versions through transport; hook point
+    const { status, data } = await this.transport.runVersions(this.store.get().runId!);
+    if (status === 200 && Array.isArray(data?.versions)) {
+      this.store.set({ versions: data.versions });
+    } else {
+      this.store.set({ versions: undefined });
+    }
+  }
+
+  // restoreVersion — the timeline jump: the server lands the old tree as a
+  // NEW version on top (history never rewritten, one undo walks back); the
+  // reload makes the jump indistinguishable from any other accepted edit.
+  async restoreVersion(index: number): Promise<void> {
+    const runId = this.store.get().runId;
+    if (!runId || this.store.get().busy) return;
+    this.store.set({ busy: true });
+    try {
+      const { status, data } = await this.transport.restoreVersion(runId, index);
+      if (status !== 200) {
+        const why = (data as any)?.gaps?.join("; ") || JSON.stringify(data).slice(0, 160);
+        this.log("warning", `跳转 v${index} 被拒绝: ${why}`);
+        this.store.set({ notice: { kind: "error", text: `跳转 v${index} 被拒绝: ${why}` } });
+        return;
+      }
+      if ((data as any)?.unchanged) {
+        this.log("done", `v${index} 即当前版本 — 无需跳转`);
+        return;
+      }
+      this.log("done", `已跳转到 v${(data as any)?.index ?? index}（落为新版本）`);
+      await this.loadRun(runId);
+    } finally {
+      this.store.set({ busy: false });
+    }
   }
 
 }

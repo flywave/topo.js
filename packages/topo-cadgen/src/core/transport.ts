@@ -74,6 +74,11 @@ export class Transport {
     return this.req("GET", `/runs/${runId}/versions`);
   }
 
+  /** restoreVersion — the timeline jump: the old tree lands as a NEW version. */
+  restoreVersion(runId: string, index: number) {
+    return this.req("POST", `/runs/${runId}/versions/${index}/restore`, {});
+  }
+
   select(runId: string, body: Record<string, unknown>) {
     return this.req("POST", `/runs/${runId}/select`, body);
   }

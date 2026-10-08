@@ -36,7 +36,7 @@ registerBuiltinPanels(app);
 // Lifecycle display rule (同屏困扰修复): 创建面板只在**无运行**时显示,
 // 运行面板 (特征树/参数/编辑对话/属性/导出/装配) 只在**有运行**时显示 —
 // 两种输入语义不同时可见, 不再互相干扰。
-const runPanels = new Set(["featureTree", "params", "editChat", "properties", "exports", "assembly"]);
+const runPanels = new Set(["featureTree", "params", "editChat", "properties", "exports", "assembly", "versions"]);
 const panelSections: Record<string, HTMLElement> = {};
 
 for (const id of app.panelIDs()) {
@@ -58,6 +58,7 @@ for (const id of app.panelIDs()) {
     : id === "properties" ? "物理属性"
     : id === "exports" ? "导出"
     : id === "assembly" ? "装配"
+    : id === "versions" ? "版本历史"
     : id;
 }
 
