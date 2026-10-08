@@ -23,15 +23,27 @@ export class Transport {
     return { status: resp.status, data };
   }
 
+  // createRun — the UNIFIED creation entry (迭代 23 双模态): a prompt with
+  // an image rides multipart (双模态 img2cad — the words condition the
+  // stages and their stated sizes gate the build); a prompt alone rides
+  // JSON (text2cad). The server routes on Content-Type.
+  createRun(opts: { prompt: string; image?: File; partName?: string }) {
+    if (opts.image) {
+      const form = new FormData();
+      form.append("image", opts.image);
+      form.append("partName", opts.partName ?? "part");
+      if (opts.prompt) form.append("prompt", opts.prompt);
+      return this.req("POST", "/runs", form, true);
+    }
+    return this.req("POST", "/runs", { prompt: opts.prompt });
+  }
+
   createImageRun(image: File, partName: string) {
-    const form = new FormData();
-    form.append("image", image);
-    form.append("partName", partName);
-    return this.req("POST", "/runs", form, true);
+    return this.createRun({ prompt: "", image, partName });
   }
 
   createTextRun(prompt: string) {
-    return this.req("POST", "/runs", { prompt });
+    return this.createRun({ prompt });
   }
 
   runStatus(runId: string) {
@@ -90,11 +102,11 @@ export class Transport {
     return this.req("POST", `/runs/${runId}/feedback`, { feedback });
   }
 
-  createSession(body: { prompt: string; runId?: string; tree?: unknown; selectedFeatureIDs?: string[]; sourceRanges?: unknown[] }) {
+  createSession(body: { prompt: string; runId?: string; tree?: unknown; selectedFeatureIDs?: string[]; sourceRanges?: unknown[]; image?: string }) {
     return this.req("POST", "/sessions", body);
   }
 
-  sessionMessage(sessionId: string, body: { prompt: string; selectedFeatureIDs?: string[]; sourceRanges?: unknown[] }) {
+  sessionMessage(sessionId: string, body: { prompt: string; selectedFeatureIDs?: string[]; sourceRanges?: unknown[]; image?: string }) {
     return this.req("POST", `/sessions/${sessionId}/messages`, body);
   }
 

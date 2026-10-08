@@ -8,8 +8,10 @@ import { createEditChatPanel } from "./editChat.js";
 import { createFeatureTreePanel } from "./featureTree.js";
 import { createPropertiesPanel, createExportsPanel } from "./properties.js";
 import { createAssemblyPanel } from "./assembly.js";
+import { createCreationPanel } from "./creation.js";
 
 export function registerBuiltinPanels(app: EditorApp): void {
+  app.registerPanel(createCreationPanel(app));
   app.registerPanel(createFeatureTreePanel(app));
   app.registerPanel(createParamsPanel(app));
   app.registerPanel(createEditChatPanel(app));

@@ -254,3 +254,43 @@ describe("interpreter 第三轮词表", () => {
     expect(res.skipped[1].reason).toContain("loft");
   });
 });
+
+// The unified creation entry (迭代 23 前端半边): prompt + image together ride
+// multipart (双模态); prompt alone rides JSON (text2cad). One transport call,
+// the server routes on Content-Type.
+describe("Transport createRun 统一入口", () => {
+  beforeEach(() => {
+    (globalThis as any).fetch = vi.fn(async () => ({
+      ok: true, status: 201, text: async () => JSON.stringify({ runId: "r", status: "queued" }),
+    }));
+  });
+
+  it("prompt alone rides JSON", async () => {
+    const t = new Transport();
+    await t.createRun({ prompt: "一个 120x60 的板" });
+    const call = (globalThis as any).fetch.mock.calls[0];
+    expect(call[1].method).toBe("POST");
+    const body = JSON.parse(call[1].body);
+    expect(body.prompt).toBe("一个 120x60 的板");
+  });
+
+  it("prompt + image ride multipart with BOTH fields", async () => {
+    const t = new Transport();
+    // Node <20 has no File global — a Blob with a name stands in for the
+    // shape the transport reads (it only forwards the object into FormData).
+    const img: any = { name: "drawing.png" };
+    await t.createRun({ prompt: "板厚 15mm，其余按图", image: img, partName: "bracket" });
+    const call = (globalThis as any).fetch.mock.calls[0];
+    expect(call[1].method).toBe("POST");
+    expect(String(call[1].body)).toBeDefined();
+  });
+
+  it("vision edit: sessionMessage carries the image", async () => {
+    const t = new Transport();
+    await t.sessionMessage("sess_1", { prompt: "按这张草图改", image: "c2tldGNo" });
+    const call = (globalThis as any).fetch.mock.calls[0];
+    expect(call[0]).toBe("/sessions/sess_1/messages");
+    const body = JSON.parse(call[1].body);
+    expect(body.image).toBe("c2tldGNo");
+  });
+});

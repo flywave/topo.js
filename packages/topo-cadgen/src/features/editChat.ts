@@ -15,10 +15,50 @@ export function createEditChatPanel(app: EditorApp) {
       feed.className = "chat-feed";
       const input = document.createElement("textarea");
       input.placeholder = "描述编辑，例如：把孔移到板中心 / 加一个 φ8 的边孔";
+      // The image attach (迭代 23): a turn with an image rides the VISION
+      // channel — "按这张草图改" is a first-class edit.
+      const attach = document.createElement("button");
+      attach.textContent = "📎 附图";
+      attach.title = "附草图/截图 — 该回合走视觉通道";
+      const file = document.createElement("input");
+      file.type = "file";
+      file.accept = "image/png,image/jpeg";
+      file.style.display = "none";
+      let imageB64 = "";
+      let imageName = "";
+      const mark = document.createElement("span");
+      mark.className = "chat-image-mark";
+      mark.style.display = "none";
+      const clearImage = () => {
+        imageB64 = "";
+        imageName = "";
+        mark.style.display = "none";
+        attach.textContent = "📎 附图";
+      };
+      attach.onclick = () => file.click();
+      file.onchange = () => {
+        const f = file.files?.[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const raw = String(reader.result);
+          imageB64 = raw.includes("base64,") ? raw.slice(raw.indexOf("base64,") + 7) : raw;
+          imageName = f.name;
+          mark.textContent = `🖼 ${f.name} ✕`;
+          mark.style.display = "inline";
+          attach.textContent = "更换图";
+        };
+        reader.readAsDataURL(f);
+      };
+      mark.onclick = clearImage;
       const send = document.createElement("button");
       send.textContent = "发送";
       send.disabled = true;
-      el.append(feed, input, send);
+      el.append(feed, input, el.ownerDocument!.createElement("div") /* spacer row appended below */, send);
+      const row = el.lastChild as HTMLElement;
+      row.className = "chat-input-row";
+      row.style.cssText = "display:flex;gap:6px;align-items:center";
+      row.append(attach, mark);
 
       const say = (kind: string, text: string) => {
         const line = document.createElement("div");
@@ -30,23 +70,26 @@ export function createEditChatPanel(app: EditorApp) {
 
       const sendPrompt = async () => {
         const prompt = input.value.trim();
-        if (!prompt) return;
+        if (!prompt && !imageB64) return;
         const { runId, sessionId, selection } = app.store.get();
         if (!runId) {
           say("warning", "尚未加载运行");
           return;
         }
+        const shown = prompt + (imageB64 ? " 🖼" : "");
         input.value = "";
         send.disabled = true;
-        say("user", prompt);
+        say("user", shown);
         const selIDs = selection ? [selection] : [];
         try {
+          const image = imageB64 || undefined;
           const { status, data } = sessionId
-            ? await app.transport.sessionMessage(sessionId, { prompt, selectedFeatureIDs: selIDs })
+            ? await app.transport.sessionMessage(sessionId, { prompt, selectedFeatureIDs: selIDs, image })
             : await app.transport.createSession({
                 prompt, runId,
                 tree: app.store.get().tree,
                 selectedFeatureIDs: selIDs,
+                image,
               });
           if (status !== 200 && status !== 201) {
             say("warning", `会话创建失败 (${status}): ${JSON.stringify(data).slice(0, 200)}`);
@@ -70,6 +113,8 @@ export function createEditChatPanel(app: EditorApp) {
         } catch (e) {
           say("warning", e instanceof Error ? e.message : String(e));
           send.disabled = false;
+        } finally {
+          clearImage();
         }
       };
 
