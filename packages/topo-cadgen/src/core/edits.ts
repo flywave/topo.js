@@ -68,7 +68,13 @@ export class LocalEditService {
 
     const { status, data } = await this.ports.replay(after);
     if (status !== 200) {
-      return { ok: false, changed, error: `server rejected the replay (${status}): ${JSON.stringify(data).slice(0, 300)}` };
+      // Human-readable refusal: the gap list's own messages, not raw JSON
+      // (the banner/toast quote this verbatim).
+      const gaps: string[] = Array.isArray(data?.gaps)
+        ? data.gaps.map((g: unknown) => typeof g === "string" ? g : String((g as any)?.message ?? JSON.stringify(g)))
+        : [];
+      const why = gaps.length ? gaps.join("; ") : JSON.stringify(data).slice(0, 300);
+      return { ok: false, changed, error: `server rejected the replay (${status}): ${why}` };
     }
     // api.md: PUT /runs/:id/tree answers { verdict, version: <index>,
     // digest, changed } — the version is a bare index; accept the object

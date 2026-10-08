@@ -85,7 +85,10 @@ export class StreamFeed {
         break;
       }
       case "done": {
-        this.verdict = typeof payload?.verdict === "string" ? payload.verdict : null;
+        // The wire shape nests the summary under data ({verdict,…}).
+        const d = payload?.data ?? {};
+        this.verdict = typeof payload?.verdict === "string" ? payload.verdict
+          : typeof d.verdict === "string" ? d.verdict : null;
         break;
       }
       default:

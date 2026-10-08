@@ -194,7 +194,8 @@ export function createEditChatPanel(app: EditorApp) {
             if (type === "done") {
               sf.ingest(type, payload);
               renderCards(sf);
-              say(sf.verdict === "failed" ? "warning" : "done", `完成 verdict=${payload?.verdict ?? "?"}`);
+              const verdict = payload?.verdict ?? payload?.data?.verdict ?? "?";
+              say(sf.verdict === "failed" ? "warning" : "done", `完成 verdict=${verdict}`);
               es.close();
               app.store.set({ busy: false });
               void app.loadRun(runId);
@@ -225,6 +226,11 @@ export function createEditChatPanel(app: EditorApp) {
         send.disabled = s.busy || !s.runId;
         cancelBtn.style.display = s.busy ? "" : "none";
       });
+      // The chip reads BOTH the selection service (kind/ids) and the store
+      // (the announced featureId) — pick() sets the service first and the
+      // store a beat later, so both subscriptions are needed to render the
+      // final text.
+      app.store.subscribe(() => renderCtx());
       app.selection.subscribe(() => renderCtx());
       renderCtx();
     },
