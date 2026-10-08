@@ -235,6 +235,16 @@ export class EditorApp {
     this.viewer.highlightEdges(new Set());
   }
 
+  // clearSelection — deselect (the context chip's ✕): back to no selection,
+  // plain base colors. Vertices included — the service holds those too.
+  clearSelection(): void {
+    this.selection.set(null);
+    this.store.set({ selection: null });
+    this.viewer.highlight(new Set());
+    this.viewer.highlightEdges(new Set());
+    this.viewer.highlightVertex(null);
+  }
+
   // previewFeature — the tree-row hover's quiet tint (Zoo 的 hover 高亮):
   // paint the hovered feature's faces without touching the selection.
   previewFeature(featureId: string): void {

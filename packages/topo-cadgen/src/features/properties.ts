@@ -35,15 +35,21 @@ export function createPropertiesPanel(app: EditorApp): Panel {
 
 // exports 面板 — the deliverable downloads, always the CURRENT tree (the
 // server rebuilds on digest change). Plain links: the browser handles the
-// binary.
+// binary. Zoo 的导出前置校验经验: busy（编辑落版中）不给下载 — 半程树
+// 导出的是旧物; 树本身构建失败时明确警示而不是给一个必然 404 的链接。
 export function createExportsPanel(app: EditorApp): Panel {
   const el = document.createElement("div");
   const render = () => {
-    const runId = app.store.get().runId;
+    const { runId, busy, properties } = app.store.get();
     if (!runId) {
       el.innerHTML = `<div style="color:var(--dim);font-size:12px">加载运行后可下载交付物</div>`;
       return;
     }
+    if (busy) {
+      el.innerHTML = `<div style="color:var(--dim);font-size:12px">编辑落版中 — 导出稍候…</div>`;
+      return;
+    }
+    const buildBroken = properties ? properties.ok === false : false;
     const url = (f: string) => app.transport.exportUrl(runId, f as any);
     el.innerHTML = `
       <div class="export-row">
@@ -51,6 +57,7 @@ export function createExportsPanel(app: EditorApp): Panel {
         <a class="export-link" href="${url("stl")}" download>STL</a>
         <a class="export-link" href="${url("glb")}" download>glTF</a>
       </div>
+      ${buildBroken ? `<div class="export-warn">当前树未通过构建 — 导出可能失败，先修参数或撤销</div>` : ""}
       <div style="color:var(--dim);font-size:12px;margin-top:4px">导出跟随当前树（编辑后自动重建）</div>`;
   };
   return {
@@ -59,7 +66,7 @@ export function createExportsPanel(app: EditorApp): Panel {
     mount(host: HTMLElement) {
       host.appendChild(el);
       render();
-      app.store.select("runId", () => render());
+      app.store.subscribe(render);
     },
   };
 }

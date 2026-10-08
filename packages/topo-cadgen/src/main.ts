@@ -19,6 +19,22 @@ const panelsHost = document.getElementById("panels")!;
 const logEl = document.getElementById("log")!;
 const statusEl = document.getElementById("status")!;
 
+// Toasts (Zoo 的 toast 经验): 关键事件短暂横陈视口上方, 不抢占交互, 点击
+// 即散。日志浮层仍是全量流水 — toast 只是「现在就得看见」的那一小撮。
+const toastHost = document.createElement("div");
+toastHost.id = "toasts";
+viewport.appendChild(toastHost);
+const toast = (kind: string, text: string) => {
+  while (toastHost.children.length >= 3) toastHost.firstChild?.remove();
+  const t = document.createElement("div");
+  t.className = `toast toast-${kind}`;
+  t.textContent = text;
+  t.title = "点击关闭";
+  t.onclick = () => t.remove();
+  toastHost.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+};
+
 const app = new EditorApp({
   container: viewport,
   base: "",
@@ -71,6 +87,15 @@ const applyPanelVisibility = (hasRun: boolean) => {
 app.store.subscribe((s) => applyPanelVisibility(Boolean(s.runId)));
 applyPanelVisibility(Boolean(app.store.get().runId));
 
+// A notice is the app-level "the user must see this" channel (a refused
+// edit, a refused jump): echo it as a toast the moment it appears.
+let lastNotice: string | undefined;
+app.store.subscribe((s) => {
+  const text = s.notice?.text;
+  if (text && text !== lastNotice) toast(s.notice!.kind, text);
+  lastNotice = text;
+});
+
 const load = async () => {
   const runId = (document.getElementById("runId") as HTMLInputElement).value.trim()
     || new URLSearchParams(location.search).get("run") || "";
@@ -83,6 +108,7 @@ const load = async () => {
     const err = e as Error;
     statusEl.textContent = `加载失败: ${err?.message ?? e}`;
     console.error("loadRun failed:", err?.stack ?? e);
+    toast("error", `加载失败: ${err?.message ?? e}`);
     const logLine = document.createElement("div");
     logLine.textContent = err?.stack ?? String(e);
     logEl.appendChild(logLine);

@@ -64,7 +64,38 @@ export function createEditChatPanel(app: EditorApp) {
       const row = document.createElement("div");
       row.className = "chat-input-row";
       row.append(attach, mark, send, cancelBtn);
-      el.append(feed, input, row);
+      // The selection-context chip row (Zoo: "We send selection context to
+      // help"): what the next turn will carry, visible before sending.
+      const ctxRow = document.createElement("div");
+      ctxRow.className = "chat-ctx-row";
+      ctxRow.style.display = "none";
+      el.append(feed, ctxRow, input, row);
+
+      const renderCtx = () => {
+        const sel = app.selection.get();
+        const { selection } = app.store.get();
+        ctxRow.innerHTML = "";
+        if (!sel) {
+          ctxRow.style.display = "none";
+          return;
+        }
+        ctxRow.style.display = "";
+        const chip = document.createElement("span");
+        chip.className = "chat-ctx-chip";
+        if (sel.kind === "vertex") {
+          chip.textContent = `🎯 顶点 #${sel.vertexId ?? "?"}（局部读数，不随消息发送）`;
+          chip.classList.add("chat-ctx-local");
+        } else if (sel.kind === "edge") {
+          chip.textContent = `🎯 边 #${sel.edgeId ?? "?"} → ${selection}`;
+        } else {
+          chip.textContent = `🎯 面 #${sel.faceId ?? "?"} → ${selection}`;
+        }
+        const clear = document.createElement("button");
+        clear.textContent = "✕";
+        clear.title = "取消选中";
+        clear.onclick = () => app.clearSelection();
+        ctxRow.append(chip, clear);
+      };
 
       // Auto-scroll etiquette (Zoo): programmatic follow ONLY while the user
       // hasn't scrolled away; scrolling back to the bottom re-arms it.
@@ -194,6 +225,8 @@ export function createEditChatPanel(app: EditorApp) {
         send.disabled = s.busy || !s.runId;
         cancelBtn.style.display = s.busy ? "" : "none";
       });
+      app.selection.subscribe(() => renderCtx());
+      renderCtx();
     },
   };
 }
