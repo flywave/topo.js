@@ -70,6 +70,17 @@ export class Viewer {
   private measurePts: THREE.Vector3[] = [];
   private measureMarks: THREE.Object3D[] = [];
   private measureBtn: HTMLButtonElement | null = null;
+  // ---- selection mode: 点/边/面 are picked in DISJOINT modes — the mixed
+  // edge-first capture made faces steal edge clicks and neither reliable.
+  private selectMode: "vertex" | "edge" | "face" = "face";
+  private selectButtons: Record<"vertex" | "edge" | "face", HTMLButtonElement | null> = {
+    vertex: null, edge: null, face: null,
+  };
+  // vertex overlay: deduped topology edge endpoints, pickable as a Points cloud
+  private vertexCloud: THREE.Points | null = null;
+  private vertexPositions: Array<[number, number, number]> = [];
+  private vertexPickHandler: ((vertexId: number) => void) | null = null;
+  private vertexMarker: THREE.Mesh | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -118,7 +129,6 @@ export class Viewer {
         this.measureClick(ev.clientX, ev.clientY);
         return;
       }
-      if (!this.pickHandler) return;
       const rect = this.renderer.domElement.getBoundingClientRect();
       const p = new THREE.Vector2(
         ((ev.clientX - rect.left) / rect.width) * 2 - 1,
@@ -126,16 +136,28 @@ export class Viewer {
       );
       const ray = new THREE.Raycaster();
       ray.setFromCamera(p, this.camera);
-      // EDGES FIRST: an edge lies exactly ON faces, so a face-first raycast
-      // would win every time and edge picking could never fire (observed
-      // live). The line threshold gives the edge a small capture zone; only
-      // a clean miss falls through to the face beneath.
-      ray.params.Line = { threshold: Math.max(2.5, this.camera.position.distanceTo(this.controls.target) * 0.02) };
-      const edgeHits = ray.intersectObjects(this.edgeLines, false);
-      if (edgeHits.length && edgeHits[0].object.userData.edgeId !== undefined) {
-        this.edgePickHandler?.(edgeHits[0].object.userData.edgeId as number);
+      // One primitive per mode: the capture zone belongs to the mode's own
+      // geometry only, so nothing steals a click from anything else.
+      const dist = this.camera.position.distanceTo(this.controls.target);
+      if (this.selectMode === "edge") {
+        ray.params.Line = { threshold: Math.max(5, dist * 0.04) };
+        const edgeHits = ray.intersectObjects(this.edgeLines, false);
+        if (edgeHits.length && edgeHits[0].object.userData.edgeId !== undefined) {
+          this.edgePickHandler?.(edgeHits[0].object.userData.edgeId as number);
+        }
         return;
       }
+      if (this.selectMode === "vertex") {
+        ray.params.Points = { threshold: Math.max(5, dist * 0.035) };
+        if (this.vertexCloud) {
+          const vHits = ray.intersectObject(this.vertexCloud, false);
+          if (vHits.length && vHits[0].index !== undefined) {
+            this.vertexPickHandler?.(vHits[0].index);
+          }
+        }
+        return;
+      }
+      if (!this.pickHandler) return;
       const hits = ray.intersectObjects(this.faceMeshes, false);
       if (hits.length && hits[0].object.userData.faceId !== undefined) {
         this.pickHandler(hits[0].object.userData.faceId as number);
@@ -182,7 +204,77 @@ export class Viewer {
     this.edgePickHandler = handler;
   }
 
-  // setEdges — the topology's sampled polylines as a pickable overlay.
+  onVertexPick(handler: (vertexId: number) => void): void {
+    this.vertexPickHandler = handler;
+  }
+
+  // getVertex — the deduped topology vertex's world position (pick address
+  // → readout; vertices have no server-side semantics, selection is local).
+  getVertex(id: number): { id: number; position: [number, number, number] } | null {
+    const p = this.vertexPositions[id];
+    return p ? { id, position: p } : null;
+  }
+
+  get selectModeValue(): "vertex" | "edge" | "face" {
+    return this.selectMode;
+  }
+
+  // setSelectMode — 点/边/面 disjoint picking; also gates the overlay
+  // visibility so the aimed primitive is the VISIBLE one.
+  setSelectMode(mode: "vertex" | "edge" | "face"): void {
+    this.selectMode = mode;
+    if (this.vertexCloud) this.vertexCloud.visible = mode === "vertex";
+    this.clearVertexMarker();
+    for (const k of ["vertex", "edge", "face"] as const) {
+      this.selectButtons[k]?.classList.toggle("active", k === mode);
+    }
+    this.renderer.domElement.style.cursor = "";
+    const tips: Record<"vertex" | "edge" | "face", string> = {
+      vertex: "顶点模式：点击端点/角点",
+      edge: "边模式：点击靠近棱线（有加宽捕获区）",
+      face: "面模式：点击表面",
+    };
+    const tip = this.container.querySelector(".viewer-axis-tip") as HTMLElement | null;
+    if (tip) {
+      tip.textContent = tips[mode];
+      tip.style.display = "block";
+      tip.style.left = "8px";
+      tip.style.top = "34px";
+      if (this.tipHideTimer) clearTimeout(this.tipHideTimer);
+      this.tipHideTimer = setTimeout(() => {
+        tip.style.display = "none";
+      }, 2200) as unknown as number;
+    }
+  }
+
+  private tipHideTimer: number | null = null;
+
+  // highlightVertex — the marker on the picked vertex (local selection).
+  highlightVertex(id: number | null): void {
+    this.clearVertexMarker();
+    if (id === null) return;
+    const p = this.vertexPositions[id];
+    if (!p) return;
+    const size = Math.max(this.camera.position.distanceTo(this.controls.target) * 0.012, 1.2);
+    const marker = new THREE.Mesh(
+      new THREE.SphereGeometry(size),
+      new THREE.MeshBasicMaterial({ color: 0xffd27a }),
+    );
+    marker.position.set(p[0], p[1], p[2]);
+    this.scene.add(marker);
+    this.vertexMarker = marker;
+  }
+
+  private clearVertexMarker(): void {
+    if (this.vertexMarker) {
+      this.scene.remove(this.vertexMarker);
+      this.vertexMarker.geometry.dispose();
+      this.vertexMarker = null;
+    }
+  }
+
+  // setEdges — the topology's sampled polylines as a pickable overlay, plus
+  // the vertex cloud (deduped endpoints) for 顶点 mode.
   setEdges(edges: Array<{ id: number; points: number[][] }> | null): void {
     this.edgeLines.forEach((l) => {
       this.scene.remove(l);
@@ -190,17 +282,45 @@ export class Viewer {
       (l.material as THREE.Material).dispose();
     });
     this.edgeLines = [];
+    if (this.vertexCloud) {
+      this.scene.remove(this.vertexCloud);
+      this.vertexCloud.geometry.dispose();
+      (this.vertexCloud.material as THREE.Material).dispose();
+      this.vertexCloud = null;
+    }
+    this.vertexPositions = [];
     if (!edges) return;
+    // dedupe endpoints (rounded to 0.01mm) → stable vertex ids by first sight
+    const seen = new Map<string, number>();
+    const verts: THREE.Vector3[] = [];
     for (const e of edges) {
       if (!e.points || e.points.length < 2) continue;
+      for (const endpoint of [e.points[0], e.points[e.points.length - 1]]) {
+        const key = endpoint.map((v) => Math.round(v * 100)).join(",");
+        if (!seen.has(key)) {
+          seen.set(key, verts.length);
+          this.vertexPositions.push([endpoint[0], endpoint[1], endpoint[2]]);
+          verts.push(new THREE.Vector3(endpoint[0], endpoint[1], endpoint[2]));
+        }
+      }
       const geom = new THREE.BufferGeometry().setFromPoints(
         e.points.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
       );
-      const mat = new THREE.LineBasicMaterial({ color: 0x222831 });
+      // bright enough to AIM at on the dark faces (the near-black base made
+      // edges effectively invisible — unselectable because unseeable)
+      const mat = new THREE.LineBasicMaterial({ color: 0x9aa8bc });
       const line = new THREE.Line(geom, mat);
       line.userData.edgeId = e.id;
       this.edgeLines.push(line);
       this.scene.add(line);
+    }
+    if (verts.length) {
+      const geom = new THREE.BufferGeometry().setFromPoints(verts);
+      const mat = new THREE.PointsMaterial({
+        color: 0xd8e2f0, size: 6, sizeAttenuation: false, visible: this.selectMode === "vertex",
+      });
+      this.vertexCloud = new THREE.Points(geom, mat);
+      this.scene.add(this.vertexCloud);
     }
   }
 
@@ -209,7 +329,7 @@ export class Viewer {
   highlightEdges(selectedEdgeIds: Set<number>): void {
     this.edgeLines.forEach((l) => {
       (l.material as THREE.LineBasicMaterial).color.set(
-        selectedEdgeIds.has(l.userData.edgeId as number) ? 0xff8830 : 0x222831,
+        selectedEdgeIds.has(l.userData.edgeId as number) ? 0xff8830 : 0x9aa8bc,
       );
     });
   }
@@ -555,6 +675,27 @@ export class Viewer {
     measure.onclick = () => this.toggleMeasure();
     this.measureBtn = measure;
     bar.appendChild(measure);
+    // selection modes: disjoint picking (the mixed edge/face capture was
+    // unusable — faces stole edge clicks). Keys 1/2/3.
+    const mkMode = (label: string, mode: "vertex" | "edge" | "face", key: string) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.title = `${label}选中（快捷键 ${key}）`;
+      b.onclick = () => this.setSelectMode(mode);
+      this.selectButtons[mode] = b;
+      bar.appendChild(b);
+      return b;
+    };
+    mkMode("点", "vertex", "1");
+    mkMode("边", "edge", "2");
+    mkMode("面", "face", "3").classList.add("active");
+    window.addEventListener("keydown", (ev) => {
+      const t = ev.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (ev.key === "1") this.setSelectMode("vertex");
+      else if (ev.key === "2") this.setSelectMode("edge");
+      else if (ev.key === "3") this.setSelectMode("face");
+    });
     const measureTip = document.createElement("div");
     measureTip.className = "viewer-measure-tip";
     // hover/name tip for the view cube

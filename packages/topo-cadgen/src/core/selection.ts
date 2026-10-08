@@ -4,12 +4,17 @@ export interface Selection {
   featureId: string;
   sketchId?: string;
   faceId?: number;
-  /** kind defaults to "face" for face picks; "edge" for edge picks. */
-  kind?: "face" | "edge";
+  /** kind defaults to "face" for face picks; "edge" / "vertex" for the
+   * other two selection modes. A vertex is local-only (no server semantics):
+   * featureId stays "" and position carries the readout. */
+  kind?: "face" | "edge" | "vertex";
   /** edgeId in the run's topology index (the render/pick address). */
   edgeId?: number;
   /** The stable edge reference (byFaces + index) — survives rebuilds. */
   edgeRef?: { byFaces?: Array<{ min: number[]; max: number[] }>; index: number };
+  /** vertex mode: the topology vertex's pick id and world position. */
+  vertexId?: number;
+  position?: [number, number, number];
   sourceRange?: { featureId: string; start: number; end: number };
 }
 

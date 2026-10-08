@@ -92,7 +92,21 @@ export class EditorApp {
     });
     this.viewer.onFacePick((faceId) => void this.pick(faceId));
     this.viewer.onEdgePick((edgeId) => void this.pickEdge(edgeId));
+    this.viewer.onVertexPick((vertexId) => this.pickVertex(vertexId));
     this.registerBuiltinCommands();
+  }
+
+  // pickVertex — the vertex mode's local selection: no server semantics
+  // exist for vertices, so the readout (coordinates) is the product.
+  private pickVertex(vertexId: number): void {
+    const v = this.viewer.getVertex(vertexId);
+    if (!v) return;
+    this.selection.set({ featureId: "", kind: "vertex", vertexId, position: v.position });
+    this.viewer.highlightVertex(vertexId);
+    this.viewer.highlight(new Set());
+    this.viewer.highlightEdges(new Set());
+    const [x, y, z] = v.position.map((n) => n.toFixed(2));
+    this.log("done", `选中顶点 #${vertexId} (${x}, ${y}, ${z})`);
   }
 
   // registerPanel — the features/ extension point (duplicate ids throw:

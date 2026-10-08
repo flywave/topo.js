@@ -223,9 +223,24 @@ export function createParamsPanel(app: EditorApp) {
             }
           }
         } else {
-          const hint = document.createElement("div");
-          hint.textContent = "（点选面后可编辑对应特征）";
-          table.appendChild(hint);
+          // vertex selection (顶点模式): the readout IS the product — world
+          // coordinates a dimension can be measured against
+          const selObj = app.selection.get();
+          if (selObj?.kind === "vertex" && selObj.position) {
+            const head = document.createElement("div");
+            head.textContent = `顶点 #${selObj.vertexId ?? "?"}`;
+            head.className = "panel-section-title";
+            table.appendChild(head);
+            const row = document.createElement("div");
+            row.className = "panel-row";
+            const [x, y, z] = selObj.position;
+            row.textContent = `(${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}) mm`;
+            table.appendChild(row);
+          } else {
+            const hint = document.createElement("div");
+            hint.textContent = "（点/边/面模式：工具条切换；点选面后可编辑对应特征）";
+            table.appendChild(hint);
+          }
         }
 
         // Edge selection → the fillet/chamfer authoring surface: a radius
