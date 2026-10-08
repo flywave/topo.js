@@ -33,6 +33,12 @@ const app = new EditorApp({
 registerBuiltinPanels(app);
 (window as any).cadgenApp = app;
 
+// Lifecycle display rule (同屏困扰修复): 创建面板只在**无运行**时显示,
+// 运行面板 (特征树/参数/编辑对话/属性/导出/装配) 只在**有运行**时显示 —
+// 两种输入语义不同时可见, 不再互相干扰。
+const runPanels = new Set(["featureTree", "params", "editChat", "properties", "exports", "assembly"]);
+const panelSections: Record<string, HTMLElement> = {};
+
 for (const id of app.panelIDs()) {
   const box = document.createElement("section");
   box.className = "panel";
@@ -41,6 +47,7 @@ for (const id of app.panelIDs()) {
   const body = document.createElement("div");
   box.appendChild(body);
   panelsHost.appendChild(box);
+  panelSections[id] = box;
   app.mountPanel(id, body);
   // Panels set their own section titles via .panel-section-title; derive the
   // header from the registered id.
@@ -53,6 +60,15 @@ for (const id of app.panelIDs()) {
     : id === "assembly" ? "装配"
     : id;
 }
+
+const applyPanelVisibility = (hasRun: boolean) => {
+  for (const [id, section] of Object.entries(panelSections)) {
+    const isRunPanel = runPanels.has(id);
+    section.style.display = isRunPanel === hasRun ? "" : "none";
+  }
+};
+app.store.subscribe((s) => applyPanelVisibility(Boolean(s.runId)));
+applyPanelVisibility(Boolean(app.store.get().runId));
 
 const load = async () => {
   const runId = (document.getElementById("runId") as HTMLInputElement).value.trim()
@@ -71,6 +87,18 @@ const load = async () => {
     logEl.appendChild(logLine);
   }
 };
+
+// 新建 — 回到创建模式 (运行仍在服务端, runId 输入 + 加载 可随时回来)
+const newBtn = document.createElement("button");
+newBtn.textContent = "新建";
+newBtn.title = "回到创建模式，开始一个新的图/文运行";
+newBtn.onclick = () => {
+  (document.getElementById("runId") as HTMLInputElement).value = "";
+  app.store.set({ runId: null, sessionId: null, selection: null, properties: undefined, assembly: undefined });
+  app.showPart();
+  statusEl.textContent = "新建：输入描述或附上图纸";
+};
+(document.getElementById("undo") as HTMLButtonElement).before(newBtn);
 
 (document.getElementById("load") as HTMLButtonElement).onclick = () => void load();
 (document.getElementById("undo") as HTMLButtonElement).onclick = () => void app.commands.execute("edit.undo");
