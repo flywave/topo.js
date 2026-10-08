@@ -129,6 +129,34 @@ export function createParamsPanel(app: EditorApp) {
               shead.className = "panel-section-title";
               table.appendChild(shead);
               for (const e of sk.entities) {
+                // spline fit points: per-point x/y inputs, the whole array
+                // crosses the setSketchEntity patch (sweep paths only)
+                const pts = (e as Record<string, any>).points;
+                if (Array.isArray(pts)) {
+                  pts.forEach((pt, pi) => {
+                    if (!Array.isArray(pt)) return;
+                    pt.forEach((coord, axis) => {
+                      if (typeof coord !== "number") return;
+                      const row = document.createElement("div");
+                      row.className = "panel-row";
+                      const label = document.createElement("label");
+                      label.textContent = `${e.tag}.points[${pi}][${axis}]=`;
+                      const input = document.createElement("input");
+                      input.value = String(coord);
+                      input.disabled = busy;
+                      wireCommit(input, String(coord), () => {
+                        const parsed = Number(input.value);
+                        if (!Number.isFinite(parsed)) return;
+                        const next = pts.map((q) => [...q]);
+                        next[pi][axis] = parsed;
+                        void commit({ kind: "setSketchEntity", sketchId, tag: String(e.tag), field: "points", value: next });
+                      });
+                      row.append(label, input);
+                      table.appendChild(row);
+                    });
+                  });
+                  continue;
+                }
                 for (const field of ["center", "start", "end", "radius"]) {
                   const v = (e as Record<string, any>)[field];
                   if (v === undefined) continue;

@@ -24,6 +24,10 @@ function ensureChromeStyle() {
 .viewer-axis-tip { position:absolute; z-index:5; background:rgba(28,32,39,.88); color:#d8dde5;
   border:1px solid #2a3038; border-radius:4px; padding:1px 6px; font:11px system-ui,sans-serif;
   pointer-events:none; display:none; }
+.viewer-measure-tip { position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+  z-index:5; background:rgba(28,32,39,.92); color:#ffe2a8; border:1px solid #4f8cff;
+  border-radius:4px; padding:2px 10px; font:12px system-ui,sans-serif; pointer-events:none;
+  display:none; white-space:nowrap; }
 `;
   document.head.appendChild(st);
 }
@@ -61,6 +65,11 @@ export class Viewer {
   private cubeHover = -1; // materialIndex, −1 = none
   private cubeFaceNames = ["右", "左", "后", "前", "上", "下"];
   private cubePresets = ["right", "left", "back", "front", "top", "bottom"];
+  // ---- measure mode: click two points on the model, read the distance ----
+  private measuring = false;
+  private measurePts: THREE.Vector3[] = [];
+  private measureMarks: THREE.Object3D[] = [];
+  private measureBtn: HTMLButtonElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -104,7 +113,12 @@ export class Viewer {
     this.scene.add(sun);
 
     this.renderer.domElement.addEventListener("pointerdown", (ev) => {
-      if (ev.button !== 0 || !this.pickHandler) return;
+      if (ev.button !== 0) return;
+      if (this.measuring) {
+        this.measureClick(ev.clientX, ev.clientY);
+        return;
+      }
+      if (!this.pickHandler) return;
       const rect = this.renderer.domElement.getBoundingClientRect();
       const p = new THREE.Vector2(
         ((ev.clientX - rect.left) / rect.width) * 2 - 1,
@@ -312,6 +326,77 @@ export class Viewer {
   }
 
   // ------------------------------------------------------------------
+  // Measure: two picked surface points and their world distance — the CAD
+  // viewer's verification staple ("is this plate really 120 wide?").
+  // ------------------------------------------------------------------
+
+  toggleMeasure(): boolean {
+    this.measuring = !this.measuring;
+    if (!this.measuring) this.clearMeasure();
+    const tip = this.container.querySelector(".viewer-measure-tip") as HTMLElement | null;
+    if (tip) {
+      tip.style.display = this.measuring ? "block" : "none";
+      tip.textContent = "测量：在模型上点两个点";
+    }
+    this.renderer.domElement.style.cursor = this.measuring ? "crosshair" : "";
+    if (this.measureBtn) this.measureBtn.classList.toggle("active", this.measuring);
+    return this.measuring;
+  }
+
+  get isMeasuring(): boolean {
+    return this.measuring;
+  }
+
+  private clearMeasure(): void {
+    this.measureMarks.forEach((m) => {
+      this.scene.remove(m);
+      const mesh = m as THREE.Mesh;
+      mesh.geometry?.dispose?.();
+    });
+    this.measureMarks = [];
+    this.measurePts = [];
+    const tip = this.container.querySelector(".viewer-measure-tip") as HTMLElement | null;
+    if (tip) tip.style.display = "none";
+  }
+
+  private measureClick(clientX: number, clientY: number): void {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const p = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(p, this.camera);
+    const targets: THREE.Mesh[] = this.assemblyObjects.length
+      ? []
+      : this.faceMeshes;
+    const hits = ray.intersectObjects(targets, false);
+    if (!hits.length) return;
+    this.measurePts.push(hits[0].point.clone());
+    const marker = new THREE.Mesh(
+      new THREE.SphereGeometry(Math.max(this.camera.position.distanceTo(this.controls.target) * 0.006, 0.4)),
+      new THREE.MeshBasicMaterial({ color: 0xffd27a }),
+    );
+    marker.position.copy(hits[0].point);
+    this.scene.add(marker);
+    this.measureMarks.push(marker);
+    if (this.measurePts.length === 2) {
+      const [a, b] = this.measurePts;
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([a, b]),
+        new THREE.LineBasicMaterial({ color: 0xffd27a }),
+      );
+      this.scene.add(line);
+      this.measureMarks.push(line);
+      const d = a.distanceTo(b);
+      const tip = this.container.querySelector(".viewer-measure-tip") as HTMLElement | null;
+      if (tip) tip.textContent = `距离 ${d.toFixed(2)} mm（再点一点重新测量）`;
+      // restart on the next click
+      this.measurePts = [];
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Viewer chrome: grid, axis gizmo, view presets (iTwin-style standard
   // viewport features).
   // ------------------------------------------------------------------
@@ -464,11 +549,20 @@ export class Viewer {
     iso.title = "等轴测视图";
     iso.onclick = () => this.setViewPreset("iso");
     bar.appendChild(iso);
+    const measure = document.createElement("button");
+    measure.textContent = "测量";
+    measure.title = "点两点测距离";
+    measure.onclick = () => this.toggleMeasure();
+    this.measureBtn = measure;
+    bar.appendChild(measure);
+    const measureTip = document.createElement("div");
+    measureTip.className = "viewer-measure-tip";
     // hover/name tip for the view cube
     const tip = document.createElement("div");
     tip.className = "viewer-axis-tip";
     container.appendChild(bar);
     container.appendChild(tip);
+    container.appendChild(measureTip);
   }
 
   private resize(container: HTMLElement): void {
