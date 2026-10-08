@@ -28,6 +28,10 @@ function ensureChromeStyle() {
   z-index:5; background:rgba(28,32,39,.92); color:#ffe2a8; border:1px solid #4f8cff;
   border-radius:4px; padding:2px 10px; font:12px system-ui,sans-serif; pointer-events:none;
   display:none; white-space:nowrap; }
+.viewer-measure-label { position:absolute; z-index:6; transform:translate(-50%,-130%);
+  background:rgba(24,27,33,.95); color:#ffd24a; border:1px solid #ffd24a;
+  border-radius:3px; padding:1px 7px; font:bold 12px ui-monospace,SFMono-Regular,Consolas,monospace;
+  pointer-events:none; display:none; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.5); }
 `;
   document.head.appendChild(st);
 }
@@ -70,6 +74,10 @@ export class Viewer {
   private measurePts: THREE.Vector3[] = [];
   private measureMarks: THREE.Object3D[] = [];
   private measureBtn: HTMLButtonElement | null = null;
+  // the CAD dimension display: dashed helper line + the value chip riding
+  // its midpoint (screen-projected every frame, so it tracks orbit/zoom)
+  private measureLabel: HTMLDivElement | null = null;
+  private measureAnchor: THREE.Vector3 | null = null;
   // ---- selection mode: 点/边/面 are picked in DISJOINT modes — the mixed
   // edge-first capture made faces steal edge clicks and neither reliable.
   private selectMode: "vertex" | "edge" | "face" = "face";
@@ -171,6 +179,19 @@ export class Viewer {
       this.controls.update();
       const w = container.clientWidth || 1;
       const h = container.clientHeight || 1;
+      // dimension terminators stay camera-facing
+      for (const ring of this.measureRingFaces) ring.lookAt(this.camera.position);
+      // the measure chip rides the helper line's midpoint in screen space
+      if (this.measureLabel && this.measureAnchor) {
+        const v = this.measureAnchor.clone().project(this.camera);
+        if (v.z < 1) {
+          this.measureLabel.style.display = "block";
+          this.measureLabel.style.left = ((v.x + 1) / 2) * w + "px";
+          this.measureLabel.style.top = ((-v.y + 1) / 2) * h + "px";
+        } else {
+          this.measureLabel.style.display = "none";
+        }
+      }
       this.renderer.setViewport(0, 0, w, h);
       this.renderer.setScissorTest(false);
       this.renderer.render(this.scene, this.camera);
@@ -479,10 +500,41 @@ export class Viewer {
       mesh.geometry?.dispose?.();
     });
     this.measureMarks = [];
+    this.measureRingFaces = [];
     this.measurePts = [];
+    if (this.measureLabel) {
+      this.measureLabel.remove();
+      this.measureLabel = null;
+    }
+    this.measureAnchor = null;
     const tip = this.container.querySelector(".viewer-measure-tip") as HTMLElement | null;
     if (tip) tip.style.display = "none";
   }
+
+  // measureMarkAt — the endpoint marker: a small solid dot inside a ring,
+  // the classic dimension terminator, sized in pixels (screen-consistent).
+  private measureMarkAt(p: THREE.Vector3): THREE.Group {
+    const g = new THREE.Group();
+    const dist = this.camera.position.distanceTo(this.controls.target);
+    const r = Math.max(dist * 0.008, 0.5);
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(r * 0.55),
+      new THREE.MeshBasicMaterial({ color: 0xffd24a }),
+    );
+    dot.position.copy(p);
+    g.add(dot);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(r * 0.9, r * 1.25, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffd24a, side: THREE.DoubleSide }),
+    );
+    ring.position.copy(p);
+    ring.lookAt(this.camera.position);
+    this.measureRingFaces.push(ring);
+    g.add(ring);
+    return g;
+  }
+
+  private measureRingFaces: THREE.Mesh[] = [];
 
   private measureClick(clientX: number, clientY: number): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
@@ -498,24 +550,30 @@ export class Viewer {
     const hits = ray.intersectObjects(targets, false);
     if (!hits.length) return;
     this.measurePts.push(hits[0].point.clone());
-    const marker = new THREE.Mesh(
-      new THREE.SphereGeometry(Math.max(this.camera.position.distanceTo(this.controls.target) * 0.006, 0.4)),
-      new THREE.MeshBasicMaterial({ color: 0xffd27a }),
-    );
-    marker.position.copy(hits[0].point);
+    const marker = this.measureMarkAt(hits[0].point);
     this.scene.add(marker);
     this.measureMarks.push(marker);
     if (this.measurePts.length === 2) {
       const [a, b] = this.measurePts;
+      // the helper line: dashed, the CAD dimension convention
+      const geom = new THREE.BufferGeometry().setFromPoints([a, b]);
       const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([a, b]),
-        new THREE.LineBasicMaterial({ color: 0xffd27a }),
+        geom,
+        new THREE.LineDashedMaterial({ color: 0xffd24a, dashSize: 3, gapSize: 2, depthTest: false }),
       );
+      line.computeLineDistances();
+      line.renderOrder = 5;
       this.scene.add(line);
       this.measureMarks.push(line);
-      const d = a.distanceTo(b);
+      // the value chip rides the line's midpoint (projected per frame)
+      const label = this.container.querySelector(".viewer-measure-label") as HTMLDivElement | null;
+      if (label) {
+        this.measureLabel = label;
+        this.measureAnchor = a.clone().add(b).multiplyScalar(0.5);
+        this.measureLabel.textContent = `${a.distanceTo(b).toFixed(2)} mm`;
+      }
       const tip = this.container.querySelector(".viewer-measure-tip") as HTMLElement | null;
-      if (tip) tip.textContent = `距离 ${d.toFixed(2)} mm（再点一点重新测量）`;
+      if (tip) tip.textContent = "再点一点重新测量";
       // restart on the next click
       this.measurePts = [];
     }
@@ -703,12 +761,15 @@ export class Viewer {
     });
     const measureTip = document.createElement("div");
     measureTip.className = "viewer-measure-tip";
+    const measureLabel = document.createElement("div");
+    measureLabel.className = "viewer-measure-label";
     // hover/name tip for the view cube
     const tip = document.createElement("div");
     tip.className = "viewer-axis-tip";
     container.appendChild(bar);
     container.appendChild(tip);
     container.appendChild(measureTip);
+    container.appendChild(measureLabel);
   }
 
   private resize(container: HTMLElement): void {
