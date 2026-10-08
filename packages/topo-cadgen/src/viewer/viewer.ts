@@ -48,13 +48,19 @@ export class Viewer {
   /** The assembly view's objects (GLB scene), kept apart from the part
    * mesh so the two views can replace each other cleanly. */
   private assemblyObjects: THREE.Object3D[] = [];
-  // ---- viewer chrome: grid + corner axis gizmo + view presets ----
+  // ---- viewer chrome: grid + view cube + view presets ----
   private grid: THREE.GridHelper | null = null;
   private gridVisible = true;
   private gizmoScene = new THREE.Scene();
   private gizmoCamera = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 20);
   private gizmoSize = 92; // px
   private gizmoOn = true;
+  private viewCube: THREE.Mesh | null = null;
+  /** The gizmo viewport's screen rect (top-right), for pointer mapping. */
+  private cubeRect = { left: 0, top: 0, size: 92 };
+  private cubeHover = -1; // materialIndex, −1 = none
+  private cubeFaceNames = ["右", "左", "后", "前", "上", "下"];
+  private cubePresets = ["right", "left", "back", "front", "top", "bottom"];
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -70,8 +76,26 @@ export class Viewer {
     this.controls.enableDamping = true;
     ensureChromeStyle();
     this.buildGrid();
-    this.buildGizmo();
+    this.buildViewCube();
     this.buildToolbar(container);
+    // Cube interaction: hover highlight + click-to-snap (a clean click on a
+    // face; anything that moved is an orbit drag owned by OrbitControls).
+    let downAt: { x: number; y: number; face: number } | null = null;
+    this.renderer.domElement.addEventListener("pointermove", (ev) => {
+      this.cubeHoverUpdate(ev.clientX, ev.clientY);
+    });
+    this.renderer.domElement.addEventListener("pointerdown", (ev) => {
+      downAt = { x: ev.clientX, y: ev.clientY, face: this.hitCube(ev.clientX, ev.clientY) };
+    });
+    this.renderer.domElement.addEventListener("pointerup", (ev) => {
+      if (!downAt) return;
+      const moved = Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y);
+      if (moved < 6 && downAt.face >= 0) {
+        const preset = this.cubePresets[downAt.face] as ViewPreset;
+        if (preset) this.setViewPreset(preset);
+      }
+      downAt = null;
+    });
     // Lights: MeshStandardMaterial is black without any — hemisphere for the
     // base tone, a directional for shape-defining shading.
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.1));
@@ -115,16 +139,18 @@ export class Viewer {
       this.renderer.setScissorTest(false);
       this.renderer.render(this.scene, this.camera);
       if (this.gizmoOn) {
-        // The gizmo camera rides the main camera's direction: the corner
-        // axes always read the CURRENT view orientation (iTwin-style).
+        // The gizmo camera rides the main camera's direction: the view cube
+        // always reads the CURRENT view orientation (ViewCube-style).
         const dir = this.camera.position.clone().sub(this.controls.target).normalize();
         this.gizmoCamera.position.copy(dir.multiplyScalar(8));
         this.gizmoCamera.up.copy(this.camera.up);
         this.gizmoCamera.lookAt(0, 0, 0);
         const gs = this.gizmoSize;
+        const left = w - gs - 14, top = 40;
+        this.cubeRect = { left, top, size: gs };
         this.renderer.clearDepth();
-        this.renderer.setViewport(10, h - gs - 34, gs, gs);
-        this.renderer.setScissor(10, h - gs - 34, gs, gs);
+        this.renderer.setViewport(left, h - top - gs, gs, gs);
+        this.renderer.setScissor(left, h - top - gs, gs, gs);
         this.renderer.setScissorTest(true);
         this.renderer.render(this.gizmoScene, this.gizmoCamera);
         this.renderer.setScissorTest(false);
@@ -308,41 +334,87 @@ export class Viewer {
     return this.gridVisible;
   }
 
-  // buildGizmo — the corner orientation gizmo: three positive axis arrows
-  // with letter sprites, mirrored by dimmer negative stubs.
-  private buildGizmo(): void {
-    const mkLabel = (text: string, color: string) => {
+  // buildViewCube — the ViewCube: a labeled cube (前/后/左/右/上/下 canvas
+  // textures) with the three colored axis lines running through it. Clicking
+  // a face snaps that standard view (the pointer handlers below); dragging
+  // over it still orbits via OrbitControls.
+  private buildViewCube(): void {
+    const mkFace = (label: string) => {
       const c = document.createElement("canvas");
-      c.width = c.height = 64;
+      c.width = c.height = 128;
       const g = c.getContext("2d")!;
-      g.fillStyle = color;
-      g.font = "bold 44px system-ui, sans-serif";
+      g.fillStyle = "#2b3b57";
+      g.fillRect(0, 0, 128, 128);
+      g.strokeStyle = "rgba(216,221,229,0.35)";
+      g.lineWidth = 3;
+      g.strokeRect(5, 5, 118, 118);
+      g.fillStyle = "#e8edf5";
+      g.font = "bold 46px system-ui, sans-serif";
       g.textAlign = "center";
       g.textBaseline = "middle";
-      g.fillText(text, 32, 34);
-      const tex = new THREE.CanvasTexture(c);
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-      sprite.scale.setScalar(0.62);
-      return sprite;
+      g.fillText(label, 64, 66);
+      return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), depthTest: false });
     };
-    const axis = (dir: [number, number, number], color: number, label: string, neg: boolean) => {
+    // Box material order: +X 右, −X 左, +Y 后, −Y 前, +Z 上, −Z 下.
+    const mats = [mkFace("右"), mkFace("左"), mkFace("后"), mkFace("前"), mkFace("上"), mkFace("下")];
+    this.viewCube = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.35, 1.35), mats);
+    this.gizmoScene.add(this.viewCube);
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.36, 1.36, 1.36)),
+      new THREE.LineBasicMaterial({ color: 0x9aa4b2, depthTest: false }),
+    );
+    this.gizmoScene.add(edges);
+    const axisLine = (dir: [number, number, number], color: number) => {
       const v = new THREE.Vector3(dir[0], dir[1], dir[2]);
-      const mat = new THREE.LineBasicMaterial({ color: neg ? 0x555f6e : color, depthTest: false });
       const geom = new THREE.BufferGeometry().setFromPoints([
-        neg ? v.clone().multiplyScalar(0.32) : new THREE.Vector3(),
-        v.clone().multiplyScalar(neg ? 0.85 : 0.78),
+        v.clone().multiplyScalar(-1.9), v.clone().multiplyScalar(1.9),
       ]);
-      this.gizmoScene.add(new THREE.Line(geom, mat));
-      const tip = mkLabel(label, neg ? "#6b7686" : "#" + color.toString(16).padStart(6, "0"));
-      tip.position.copy(v.clone().multiplyScalar(1.05));
-      this.gizmoScene.add(tip);
+      this.gizmoScene.add(new THREE.Line(geom, new THREE.LineBasicMaterial({ color, depthTest: false })));
     };
-    axis([1, 0, 0], 0xe0554d, "X", false);
-    axis([0, 1, 0], 0x51b06a, "Y", false);
-    axis([0, 0, 1], 0x4f8cff, "Z", false);
-    axis([-1, 0, 0], 0x888888, "X", true);
-    axis([0, -1, 0], 0x888888, "Y", true);
-    axis([0, 0, -1], 0x888888, "Z", true);
+    axisLine([1, 0, 0], 0xe0554d);
+    axisLine([0, 1, 0], 0x51b06a);
+    axisLine([0, 0, 1], 0x4f8cff);
+  }
+
+  // hitCube — the hovered cube face's materialIndex, or −1: the pointer maps
+  // into the gizmo viewport rect (top-right) and raycasts the cube with the
+  // gizmo camera. Only when the cube is on.
+  private hitCube(clientX: number, clientY: number): number {
+    if (!this.gizmoOn || !this.viewCube) return -1;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const mx = clientX - rect.left, my = clientY - rect.top;
+    const { left, top, size } = this.cubeRect;
+    if (mx < left || mx > left + size || my < top || my > top + size) return -1;
+    const p = new THREE.Vector2(
+      ((mx - left) / size) * 2 - 1,
+      -(((my - top) / size) * 2 - 1),
+    );
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(p, this.gizmoCamera);
+    const hits = ray.intersectObject(this.viewCube, false);
+    return hits.length && hits[0].face ? hits[0].face.materialIndex : -1;
+  }
+
+  // cubeHoverUpdate — highlight the hovered face + cursor + name tip.
+  private cubeHoverUpdate(clientX: number, clientY: number): void {
+    const face = this.hitCube(clientX, clientY);
+    if (face !== this.cubeHover && this.viewCube) {
+      const mats = this.viewCube.material as THREE.MeshBasicMaterial[];
+      mats.forEach((m, i) => (m.color.set(i === face ? 0xbfd4ff : 0xffffff)));
+      this.cubeHover = face;
+      this.renderer.domElement.style.cursor = face >= 0 ? "pointer" : "";
+    }
+    const tip = this.container.querySelector(".viewer-axis-tip") as HTMLElement | null;
+    if (tip) {
+      if (face >= 0) {
+        tip.textContent = this.cubeFaceNames[face] + "视图";
+        tip.style.display = "block";
+        tip.style.left = this.cubeRect.left + this.cubeRect.size / 2 - 24 + "px";
+        tip.style.top = this.cubeRect.top + this.cubeRect.size + 6 + "px";
+      } else {
+        tip.style.display = "none";
+      }
+    }
   }
 
   toggleGizmo(): boolean {
@@ -387,18 +459,12 @@ export class Viewer {
       gridBtn.classList.toggle("active", this.gridVisible);
     };
     bar.appendChild(gridBtn);
-    const presets: Array<[ViewPreset, string, string]> = [
-      ["iso", "轴测", "等轴测视图"], ["front", "前", "前视图"], ["top", "上", "俯视图"],
-      ["right", "右", "右视图"], ["left", "左", "左视图"], ["back", "后", "后视图"],
-    ];
-    for (const [preset, label, title] of presets) {
-      const b = document.createElement("button");
-      b.textContent = label;
-      b.title = title;
-      b.onclick = () => this.setViewPreset(preset);
-      bar.appendChild(b);
-    }
-    // hover tip for the gizmo (which corner object am I pointing at)
+    const iso = document.createElement("button");
+    iso.textContent = "轴测";
+    iso.title = "等轴测视图";
+    iso.onclick = () => this.setViewPreset("iso");
+    bar.appendChild(iso);
+    // hover/name tip for the view cube
     const tip = document.createElement("div");
     tip.className = "viewer-axis-tip";
     container.appendChild(bar);
