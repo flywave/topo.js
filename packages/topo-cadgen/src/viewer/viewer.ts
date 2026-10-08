@@ -8,6 +8,28 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
+// Viewer-chrome styles (grid/axes/viewbar), injected once — the glue layer
+// owns the viewport's own overlay chrome.
+let chromeStyled = false;
+function ensureChromeStyle() {
+  if (chromeStyled) return;
+  chromeStyled = true;
+  const st = document.createElement("style");
+  st.textContent = `
+.viewer-toolbar { position:absolute; top:8px; left:8px; display:flex; gap:4px; z-index:5; }
+.viewer-toolbar button { background:rgba(28,32,39,.88); color:#d8dde5; border:1px solid #2a3038;
+  border-radius:4px; padding:2px 8px; font:12px system-ui,sans-serif; cursor:pointer; }
+.viewer-toolbar button:hover { border-color:#4f8cff; }
+.viewer-toolbar button.active { background:#2b3b57; border-color:#4f8cff; color:#fff; }
+.viewer-axis-tip { position:absolute; z-index:5; background:rgba(28,32,39,.88); color:#d8dde5;
+  border:1px solid #2a3038; border-radius:4px; padding:1px 6px; font:11px system-ui,sans-serif;
+  pointer-events:none; display:none; }
+`;
+  document.head.appendChild(st);
+}
+
+export type ViewPreset = "iso" | "front" | "back" | "left" | "right" | "top" | "bottom";
+
 export interface MeshData {
   vertices: number[][];
   triangles: number[][];
@@ -26,6 +48,13 @@ export class Viewer {
   /** The assembly view's objects (GLB scene), kept apart from the part
    * mesh so the two views can replace each other cleanly. */
   private assemblyObjects: THREE.Object3D[] = [];
+  // ---- viewer chrome: grid + corner axis gizmo + view presets ----
+  private grid: THREE.GridHelper | null = null;
+  private gridVisible = true;
+  private gizmoScene = new THREE.Scene();
+  private gizmoCamera = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 20);
+  private gizmoSize = 92; // px
+  private gizmoOn = true;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -33,8 +62,16 @@ export class Viewer {
     container.appendChild(this.renderer.domElement);
     this.scene.background = new THREE.Color(0x14171c);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100000);
+    // CAD convention: Z is up (sketches on XY extrude +Z) — the view presets
+    // and the axis gizmo read this.
+    this.camera.up.set(0, 0, 1);
+    this.camera.position.set(140, -140, 110);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
+    ensureChromeStyle();
+    this.buildGrid();
+    this.buildGizmo();
+    this.buildToolbar(container);
     // Lights: MeshStandardMaterial is black without any — hemisphere for the
     // base tone, a directional for shape-defining shading.
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.1));
@@ -72,7 +109,27 @@ export class Viewer {
     const animate = () => {
       requestAnimationFrame(animate);
       this.controls.update();
+      const w = container.clientWidth || 1;
+      const h = container.clientHeight || 1;
+      this.renderer.setViewport(0, 0, w, h);
+      this.renderer.setScissorTest(false);
       this.renderer.render(this.scene, this.camera);
+      if (this.gizmoOn) {
+        // The gizmo camera rides the main camera's direction: the corner
+        // axes always read the CURRENT view orientation (iTwin-style).
+        const dir = this.camera.position.clone().sub(this.controls.target).normalize();
+        this.gizmoCamera.position.copy(dir.multiplyScalar(8));
+        this.gizmoCamera.up.copy(this.camera.up);
+        this.gizmoCamera.lookAt(0, 0, 0);
+        const gs = this.gizmoSize;
+        this.renderer.clearDepth();
+        this.renderer.setViewport(10, h - gs - 34, gs, gs);
+        this.renderer.setScissor(10, h - gs - 34, gs, gs);
+        this.renderer.setScissorTest(true);
+        this.renderer.render(this.gizmoScene, this.gizmoCamera);
+        this.renderer.setScissorTest(false);
+        this.renderer.setViewport(0, 0, w, h);
+      }
     };
     animate();
   }
@@ -154,6 +211,12 @@ export class Viewer {
       this.camera.near = size / 1000;
       this.camera.far = size * 100;
       this.camera.updateProjectionMatrix();
+      // The grid sits under the model and spans ~2× its reach.
+      if (this.grid) {
+        const span = Math.max(size * 2, 40);
+        this.grid.scale.setScalar(span / 240);
+        this.grid.position.set(center.x, center.y, box.min.z);
+      }
     }
     this.resize(this.container);
   }
@@ -220,6 +283,126 @@ export class Viewer {
         selectedFaceIds.has(i) ? 0x4f8cff : 0x8fa3bf,
       );
     });
+  }
+
+  // ------------------------------------------------------------------
+  // Viewer chrome: grid, axis gizmo, view presets (iTwin-style standard
+  // viewport features).
+  // ------------------------------------------------------------------
+
+  private buildGrid(): void {
+    const grid = new THREE.GridHelper(240, 24, 0x3a424e, 0x242a33);
+    // GridHelper lies in XZ; the CAD floor is XY (extrude +Z) — stand it up.
+    grid.rotation.x = Math.PI / 2;
+    grid.visible = this.gridVisible;
+    this.grid = grid;
+    this.scene.add(grid);
+  }
+
+  setGridVisible(visible: boolean): void {
+    this.gridVisible = visible;
+    if (this.grid) this.grid.visible = visible;
+  }
+
+  get isGridVisible(): boolean {
+    return this.gridVisible;
+  }
+
+  // buildGizmo — the corner orientation gizmo: three positive axis arrows
+  // with letter sprites, mirrored by dimmer negative stubs.
+  private buildGizmo(): void {
+    const mkLabel = (text: string, color: string) => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 64;
+      const g = c.getContext("2d")!;
+      g.fillStyle = color;
+      g.font = "bold 44px system-ui, sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(text, 32, 34);
+      const tex = new THREE.CanvasTexture(c);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+      sprite.scale.setScalar(0.62);
+      return sprite;
+    };
+    const axis = (dir: [number, number, number], color: number, label: string, neg: boolean) => {
+      const v = new THREE.Vector3(dir[0], dir[1], dir[2]);
+      const mat = new THREE.LineBasicMaterial({ color: neg ? 0x555f6e : color, depthTest: false });
+      const geom = new THREE.BufferGeometry().setFromPoints([
+        neg ? v.clone().multiplyScalar(0.32) : new THREE.Vector3(),
+        v.clone().multiplyScalar(neg ? 0.85 : 0.78),
+      ]);
+      this.gizmoScene.add(new THREE.Line(geom, mat));
+      const tip = mkLabel(label, neg ? "#6b7686" : "#" + color.toString(16).padStart(6, "0"));
+      tip.position.copy(v.clone().multiplyScalar(1.05));
+      this.gizmoScene.add(tip);
+    };
+    axis([1, 0, 0], 0xe0554d, "X", false);
+    axis([0, 1, 0], 0x51b06a, "Y", false);
+    axis([0, 0, 1], 0x4f8cff, "Z", false);
+    axis([-1, 0, 0], 0x888888, "X", true);
+    axis([0, -1, 0], 0x888888, "Y", true);
+    axis([0, 0, -1], 0x888888, "Z", true);
+  }
+
+  toggleGizmo(): boolean {
+    this.gizmoOn = !this.gizmoOn;
+    return this.gizmoOn;
+  }
+
+  // setViewPreset — snap the camera to a standard view, keeping the current
+  // target and distance. Z-up presets: front looks from −Y, top from +Z.
+  setViewPreset(preset: ViewPreset): void {
+    const dirs: Record<ViewPreset, [number, number, number]> = {
+      iso: [1, -1, 1], front: [0, -1, 0], back: [0, 1, 0],
+      right: [1, 0, 0], left: [-1, 0, 0], top: [0, 0, 1], bottom: [0, 0, -1],
+    };
+    const ups: Record<ViewPreset, [number, number, number]> = {
+      iso: [0, 0, 1], front: [0, 0, 1], back: [0, 0, 1],
+      right: [0, 0, 1], left: [0, 0, 1], top: [0, 1, 0], bottom: [0, 1, 0],
+    };
+    const d = dirs[preset];
+    const dist = Math.max(
+      this.camera.position.distanceTo(this.controls.target),
+      this.scene.children.length ? 120 : 120,
+    );
+    this.camera.up.set(ups[preset][0], ups[preset][1], ups[preset][2]);
+    const v = new THREE.Vector3(d[0], d[1], d[2]).normalize().multiplyScalar(dist);
+    this.camera.position.copy(this.controls.target).add(v);
+    this.camera.lookAt(this.controls.target);
+    this.controls.update();
+  }
+
+  // buildToolbar — the viewport's own overlay chrome: grid toggle + view
+  // preset buttons (the CAD-standard quick switches).
+  private buildToolbar(container: HTMLElement): void {
+    const bar = document.createElement("div");
+    bar.className = "viewer-toolbar";
+    const gridBtn = document.createElement("button");
+    gridBtn.textContent = "网格";
+    gridBtn.title = "显示/关闭网格平面";
+    gridBtn.classList.add("active");
+    gridBtn.onclick = () => {
+      this.setGridVisible(!this.gridVisible);
+      gridBtn.classList.toggle("active", this.gridVisible);
+    };
+    bar.appendChild(gridBtn);
+    const presets: Array<[ViewPreset, string, string]> = [
+      ["iso", "轴测", "等轴测视图"], ["front", "前", "前视图"], ["top", "上", "俯视图"],
+      ["right", "右", "右视图"], ["left", "左", "左视图"], ["back", "后", "后视图"],
+    ];
+    for (const [preset, label, title] of presets) {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.title = title;
+      b.onclick = () => this.setViewPreset(preset);
+      bar.appendChild(b);
+    }
+    // hover tip for the gizmo (which corner object am I pointing at)
+    const tip = document.createElement("div");
+    tip.className = "viewer-axis-tip";
+    container.appendChild(bar);
+    container.appendChild(tip);
   }
 
   private resize(container: HTMLElement): void {
