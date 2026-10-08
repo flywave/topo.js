@@ -7,7 +7,7 @@ import { TreeInterpreter, registerBuiltinOps } from "./engine/interpreter.js";
 import { Store } from "./core/store.js";
 import { Commands } from "./core/commands.js";
 import { Transport } from "./core/transport.js";
-import { ArtifactService } from "./core/artifacts.js";
+import { ArtifactService, ownedFaces } from "./core/artifacts.js";
 import { SelectionService } from "./core/selection.js";
 import { LocalEditService } from "./core/edits.js";
 import { Viewer } from "./viewer/viewer.js";
@@ -50,6 +50,10 @@ export interface EditorState {
   properties?: RunProperties;
   /** The loaded assembly view (undefined: the part view is showing). */
   assembly?: AssemblyInventory;
+  /** A panel-visible notice (Zoo 的错误横幅经验): authoritative failures —
+   * an edit the pipeline refused — surface on the feature tree, not just in
+   * the log overlay. Cleared by the next successful load/apply. */
+  notice?: { kind: "error" | "warn"; text: string };
 }
 
 export interface EditorOptions {
@@ -139,15 +143,20 @@ export class EditorApp {
       if (!result.ok) {
         this.log("warning", `编辑被拒绝: ${result.error}`);
         // The rejection is authoritative: resync from the server so the
-        // panels never keep showing an edit the pipeline refused.
+        // panels never keep showing an edit the pipeline refused, then
+        // surface the refusal where the tree lives (Zoo 的错误横幅 — set
+        // after the resync: loadRun opens with a clean slate).
         await this.loadRun(runId);
+        this.store.set({ notice: { kind: "error", text: `编辑被拒绝: ${result.error}` } });
         return false;
       }
       this.log("done", `已落版 ${result.version ? `v${result.version.index}` : ""} — 变更: ${result.changed.map((c) => `${c.featureId}(${c.kind})`).join(", ")}`);
       await this.loadRun(runId);
       return true;
     } catch (e) {
-      this.log("warning", `编辑失败: ${e instanceof Error ? e.message : String(e)}`);
+      const msg = e instanceof Error ? e.message : String(e);
+      this.log("warning", `编辑失败: ${msg}`);
+      this.store.set({ notice: { kind: "error", text: `编辑失败: ${msg}` } });
       return false;
     } finally {
       this.store.set({ busy: false });
@@ -190,6 +199,48 @@ export class EditorApp {
     return this.interpreter;
   }
 
+  // ownedFacesOf — the feature→geometry lookup (the local artifact map;
+  // null when the map is absent, e.g. the server-mesh fallback).
+  private ownedFacesOf(featureId: string): Set<number> | null {
+    const am = (this.artifacts as any).cache?.map;
+    if (!am) return null;
+    return ownedFaces(am, featureId);
+  }
+
+  // announceSelection — the ONE tail every selection path lands at (Zoo 的
+  // Set selection 单入口经验): store + viewport paint stay consistent no
+  // matter whether selection started from a face, an edge, or a tree row.
+  announceSelection(featureId: string, opts: { faceId?: number; edgeId?: number } = {}): void {
+    this.store.set({ selection: featureId || null });
+    if (opts.edgeId !== undefined) {
+      this.viewer.highlightEdges(new Set([opts.edgeId]));
+      this.viewer.highlight(new Set());
+      return;
+    }
+    const owned = this.ownedFacesOf(featureId);
+    if (owned) this.viewer.highlight(owned, opts.faceId);
+    else this.viewer.highlight(new Set(), opts.faceId);
+    this.viewer.highlightEdges(new Set());
+  }
+
+  // previewFeature — the tree-row hover's quiet tint (Zoo 的 hover 高亮):
+  // paint the hovered feature's faces without touching the selection.
+  previewFeature(featureId: string): void {
+    const owned = this.ownedFacesOf(featureId);
+    if (owned) this.viewer.highlight(owned);
+  }
+
+  // clearPreview — restore the viewport to the current selection's paint.
+  clearPreview(): void {
+    const { selection } = this.store.get();
+    const sel = this.selection.get();
+    if (sel?.kind === "edge") {
+      this.announceSelection(selection ?? "", { edgeId: sel.edgeId });
+      return;
+    }
+    this.announceSelection(selection ?? "", { faceId: sel?.faceId });
+  }
+
   // pick — viewer → attribution → highlight → store.
   private async pick(faceId: number): Promise<void> {
     if (!this.store.get().runId) return;
@@ -198,21 +249,11 @@ export class EditorApp {
     this.selection.set({
       featureId: data.featureId, sketchId: data.sketchId, faceId, sourceRange: data.sourceRange,
     });
-    this.store.set({ selection: data.featureId });
-    const feat = (this.store.get().tree?.features ?? []).find((f) => f.id === data.featureId);
-    void feat;
     // Two-tier highlight: the clicked face loud, its owning feature's other
     // faces in the quiet attribution tint. The artifact map carries the
     // ownership; without it (server-mesh fallback) the picked face still
     // answers — before, that path stayed completely unhighlighted.
-    const am = (this.artifacts as any).cache?.map;
-    if (am) {
-      const owned = new Set<number>(am.faces.filter((f: any) => f.featureId === data.featureId).map((f: any) => f.faceId));
-      this.viewer.highlight(owned, faceId);
-    } else {
-      this.viewer.highlight(new Set(), faceId);
-    }
-    this.viewer.highlightEdges(new Set());
+    this.announceSelection(data.featureId, { faceId });
   }
 
   // pickEdge — the edge half of selection: server resolves the ref (the
@@ -231,15 +272,15 @@ export class EditorApp {
       featureId: data.featureId, kind: "edge",
       edgeId: data.edgeId ?? edgeId, edgeRef: edge.ref as any,
     });
-    this.store.set({ selection: data.featureId });
-    this.viewer.highlightEdges(new Set([data.edgeId ?? edgeId]));
-    this.viewer.highlight(new Set());
+    this.announceSelection(data.featureId, { edgeId: data.edgeId ?? edgeId });
     this.log("done", `选中 edge#${data.edgeId ?? edgeId} (${data.resolvedBy}) → ${data.featureId}`);
   }
 
-  // loadRun — pull tree/mesh/artifacts/versions and display.
+  // loadRun — pull tree/mesh/artifacts/versions and display. A fresh load
+  // opens with a clean slate: no stale rejection banner from the previous
+  // state.
   async loadRun(runId: string): Promise<void> {
-    this.store.set({ runId });
+    this.store.set({ runId, notice: undefined });
     const { data: tree } = await this.transport.runTree(runId);
     this.store.set({ tree, params: resolveParams(tree) });
     // Local build first (instant, browser kernel); server mesh as fallback

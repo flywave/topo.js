@@ -14,6 +14,12 @@ export interface ArtifactMap {
   features: Array<{ featureId: string; faceIds: number[] }>;
 }
 
+/** ownedFaces — the feature→geometry half of the selection bridge, shared by
+ * every panel that paints attribution (tree rows, hover preview, picks). */
+export function ownedFaces(map: ArtifactMap | undefined, featureId: string): Set<number> {
+  return new Set((map?.faces ?? []).filter((f) => f.featureId === featureId).map((f) => f.faceId));
+}
+
 export interface InterpPort {
   interpret(tree: FeatureTreeLike, params?: Record<string, number>): Promise<{
     mesh: { vertices: number[][]; triangles: number[][] } | null;
