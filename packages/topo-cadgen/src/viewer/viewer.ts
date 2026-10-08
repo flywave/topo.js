@@ -436,12 +436,17 @@ export class Viewer {
     this.camera.updateProjectionMatrix();
   }
 
-  // highlight — paint the faces of the selected feature; the rest base.
-  highlight(selectedFaceIds: Set<number>): void {
+  // highlight — two tiers: the CLICKED face is the loud one (orange, the
+  // "you are here" colour shared with edge selection), the owning feature's
+  // other faces take a quiet attribution tint. One uniform wash over every
+  // face of the feature read as "nothing in particular happened" — on a
+  // single-feature part all six faces lit identically.
+  highlight(selectedFaceIds: Set<number>, pickedFaceId?: number): void {
     this.faceMeshes.forEach((m, i) => {
-      (m.material as THREE.MeshStandardMaterial).color.set(
-        selectedFaceIds.has(i) ? 0x4f8cff : 0x8fa3bf,
-      );
+      const mat = m.material as THREE.MeshStandardMaterial;
+      if (pickedFaceId !== undefined && i === pickedFaceId) mat.color.set(0xffa042);
+      else if (selectedFaceIds.has(i)) mat.color.set(0x5e82c4);
+      else mat.color.set(0x8fa3bf);
     });
   }
 

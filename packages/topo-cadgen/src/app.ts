@@ -201,11 +201,16 @@ export class EditorApp {
     this.store.set({ selection: data.featureId });
     const feat = (this.store.get().tree?.features ?? []).find((f) => f.id === data.featureId);
     void feat;
-    // Highlight the owned faces from the local artifact map when present.
+    // Two-tier highlight: the clicked face loud, its owning feature's other
+    // faces in the quiet attribution tint. The artifact map carries the
+    // ownership; without it (server-mesh fallback) the picked face still
+    // answers — before, that path stayed completely unhighlighted.
     const am = (this.artifacts as any).cache?.map;
     if (am) {
       const owned = new Set<number>(am.faces.filter((f: any) => f.featureId === data.featureId).map((f: any) => f.faceId));
-      this.viewer.highlight(owned);
+      this.viewer.highlight(owned, faceId);
+    } else {
+      this.viewer.highlight(new Set(), faceId);
     }
     this.viewer.highlightEdges(new Set());
   }
