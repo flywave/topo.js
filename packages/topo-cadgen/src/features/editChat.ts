@@ -1,9 +1,12 @@
 // Edit-chat panel — the prompt half of the loop: the user describes an edit
 // in natural language, optionally against the current selection; the session
 // pipeline (LLM structured edit → full gate chain → repair loop) runs on the
-// server and the panel just narrates the SSE stream. On done the app reloads
-// the run: the server's version is the editor's state.
+// server and the panel narrates the SSE stream as STAGE CARDS (Zoo 的流式
+// 经验: 事件聚合进少量可折叠卡片而非逐行刷屏 — 聚合/折叠策略在 StreamFeed).
+// On done the app reloads the run: the server's version is the editor's
+// state. A running turn can be cancelled (POST /sessions/:id/cancel).
 import type { EditorApp } from "../app.js";
+import { StreamFeed, type StreamCard } from "../core/stream.js";
 
 export function createEditChatPanel(app: EditorApp) {
   return {
@@ -54,18 +57,74 @@ export function createEditChatPanel(app: EditorApp) {
       const send = document.createElement("button");
       send.textContent = "发送";
       send.disabled = true;
-      el.append(feed, input, el.ownerDocument!.createElement("div") /* spacer row appended below */, send);
-      const row = el.lastChild as HTMLElement;
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "■ 取消";
+      cancelBtn.title = "取消正在运行的回合";
+      cancelBtn.style.display = "none";
+      const row = document.createElement("div");
       row.className = "chat-input-row";
-      row.style.cssText = "display:flex;gap:6px;align-items:center";
-      row.append(attach, mark);
+      row.append(attach, mark, send, cancelBtn);
+      el.append(feed, input, row);
+
+      // Auto-scroll etiquette (Zoo): programmatic follow ONLY while the user
+      // hasn't scrolled away; scrolling back to the bottom re-arms it.
+      let stick = true;
+      feed.addEventListener("scroll", () => {
+        stick = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 24;
+      });
+      const follow = () => {
+        if (stick) feed.scrollTop = feed.scrollHeight;
+      };
 
       const say = (kind: string, text: string) => {
         const line = document.createElement("div");
         line.className = `chat-line chat-${kind}`;
         line.textContent = text;
         feed.appendChild(line);
-        feed.scrollTop = feed.scrollHeight;
+        follow();
+      };
+
+      // renderCards — the card list IS the StreamFeed; this only paints it.
+      let panelNonce = 0;
+      const renderCards = (sf: StreamFeed) => {
+        document.getElementById(`cards-${panelNonce}`)?.remove();
+        const cardsEl = document.createElement("div");
+        cardsEl.id = `cards-${panelNonce}`;
+        for (const card of sf.cards) {
+          cardsEl.appendChild(renderCard(sf, card));
+        }
+        if (sf.halted) {
+          const h = document.createElement("div");
+          h.className = "chat-line chat-warning";
+          h.textContent = `⏸ 需要人工介入: ${sf.halted}`;
+          cardsEl.appendChild(h);
+        }
+        feed.appendChild(cardsEl);
+        follow();
+      };
+
+      const renderCard = (sf: StreamFeed, card: StreamCard): HTMLElement => {
+        const box = document.createElement("div");
+        box.className = `stream-card stream-${card.status}`;
+        const head = document.createElement("div");
+        head.className = "stream-head";
+        const icon = card.status === "active" ? "◐" : card.status === "warned" ? "▲" : "✓";
+        head.textContent = `${icon} ${card.title}${card.lines.length ? ` (${card.lines.length})` : ""}`;
+        head.onclick = () => {
+          sf.toggle(card.id);
+          renderCards(sf);
+        };
+        head.style.cursor = "pointer";
+        box.appendChild(head);
+        if (card.open) {
+          for (const l of card.lines) {
+            const ln = document.createElement("div");
+            ln.className = `stream-line stream-${l.kind}`;
+            ln.textContent = l.text;
+            box.appendChild(ln);
+          }
+        }
+        return box;
       };
 
       const sendPrompt = async () => {
@@ -98,17 +157,21 @@ export function createEditChatPanel(app: EditorApp) {
           }
           const sid = data.id ?? data.sessionId;
           app.store.set({ sessionId: sid, busy: true });
+          panelNonce += 1;
+          const sf = new StreamFeed();
           const es = app.transport.sessionEvents(sid, (type, payload) => {
-            if (type === "reasoning") say("reasoning", payload?.message ?? JSON.stringify(payload).slice(0, 200));
-            else if (type === "warning") say("warning", payload?.message ?? "");
-            else if (type === "halted") say("warning", `修环停机: ${payload?.message ?? ""}`);
-            else if (type === "done") {
-              say("done", `完成 verdict=${payload?.verdict ?? "?"}`);
+            if (type === "done") {
+              sf.ingest(type, payload);
+              renderCards(sf);
+              say(sf.verdict === "failed" ? "warning" : "done", `完成 verdict=${payload?.verdict ?? "?"}`);
               es.close();
               app.store.set({ busy: false });
               void app.loadRun(runId);
               send.disabled = false;
+              return;
             }
+            sf.ingest(type, payload);
+            renderCards(sf);
           });
         } catch (e) {
           say("warning", e instanceof Error ? e.message : String(e));
@@ -119,8 +182,17 @@ export function createEditChatPanel(app: EditorApp) {
       };
 
       send.onclick = () => void sendPrompt();
+      // Cancel — the server unwinds the turn through ctx cancellation; the
+      // stream then delivers the "cancelled" warning and settles.
+      cancelBtn.onclick = () => {
+        const sid = app.store.get().sessionId;
+        if (!sid) return;
+        void app.transport.cancelSession(sid);
+        say("done", "已请求取消…");
+      };
       app.store.subscribe((s) => {
         send.disabled = s.busy || !s.runId;
+        cancelBtn.style.display = s.busy ? "" : "none";
       });
     },
   };

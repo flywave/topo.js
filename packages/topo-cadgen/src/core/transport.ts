@@ -98,6 +98,16 @@ export class Transport {
     return this.req("POST", `/runs/${runId}/redo`);
   }
 
+  /** cancelRun — DELETE /runs/:id: queued 直接取消, running 转入取消中. */
+  cancelRun(runId: string) {
+    return this.req("DELETE", `/runs/${runId}`);
+  }
+
+  /** cancelSession — 取消在飞回合; 空闲会话幂等返回 idle. */
+  cancelSession(sessionId: string) {
+    return this.req("POST", `/sessions/${sessionId}/cancel`, {});
+  }
+
   feedback(runId: string, feedback: "accepted" | "rejected") {
     return this.req("POST", `/runs/${runId}/feedback`, { feedback });
   }
@@ -149,9 +159,19 @@ export class Transport {
     return resp.arrayBuffer();
   }
 
-  // sessionEvents — an EventSource the caller closes when done arrives.
+  // sessionEvents / runEvents — EventSources the caller closes when done
+  // arrives. Both resources speak the same pipeline event vocabulary.
   sessionEvents(sessionId: string, onEvent: (type: string, data: any) => void): EventSource {
-    const es = new EventSource(`${this.base}/sessions/${sessionId}/events`);
+    return this.events(`/sessions/${sessionId}/events`, onEvent);
+  }
+
+  /** runEvents — the creation run's live stage stream (创建面板的进度来源). */
+  runEvents(runId: string, onEvent: (type: string, data: any) => void): EventSource {
+    return this.events(`/runs/${runId}/events`, onEvent);
+  }
+
+  private events(path: string, onEvent: (type: string, data: any) => void): EventSource {
+    const es = new EventSource(`${this.base}${path}`);
     const types = ["reasoning", "warning", "halted", "done", "refinement_round", "stage_begin", "stage_end"];
     types.forEach((t) =>
       es.addEventListener(t, (ev) => {
