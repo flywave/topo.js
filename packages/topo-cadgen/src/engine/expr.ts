@@ -1,9 +1,11 @@
 // Expression evaluation over tree parameters — the editor's copy of the
-// contract the Go side enforces (interp evalParam semantics): numbers,
-// parameter identifiers, + - * / % ( ) parentheses, unary minus, and nothing
-// else. An unknown identifier is an ERROR (never silently 0): an expression
-// that references nothing real must fail loudly, matching the Go side's
-// fail-closed read of parameters.
+// contract the Go side enforces (cad/expr.go semantics): numbers, parameter
+// identifiers, + - * / % ( ) parentheses, unary minus, COMPARISONS (< <= >
+// >= == != → 1/0) and the lazy conditional cond(c, a, b) — the吸收①
+// vocabulary the Go evaluator grew for enabledExpr switches. An unknown
+// identifier is an ERROR (never silently 0): an expression that references
+// nothing real must fail loudly, matching the Go side's fail-closed read of
+// parameters.
 
 export interface EvalScope {
   params: Record<string, number>;
@@ -51,10 +53,25 @@ function tokenize(expr: string): Token[] {
       i = j;
       continue;
     }
-    if ("+-*/%()".includes(ch)) {
+    if ("+-*/%(),".includes(ch)) {
       tokens.push({ t: "op", v: ch });
       i++;
       continue;
+    }
+    // Comparisons: two-character forms merge here so the parser sees one
+    // operator token (a bare `=` or `!` alone is not an operator).
+    if ("<>=!".includes(ch)) {
+      if (i + 1 < expr.length && expr[i + 1] === "=") {
+        tokens.push({ t: "op", v: ch + "=" });
+        i += 2;
+        continue;
+      }
+      if (ch === "<" || ch === ">") {
+        tokens.push({ t: "op", v: ch });
+        i++;
+        continue;
+      }
+      throw new Error(`unexpected character ${JSON.stringify(ch)} at ${i}`);
     }
     throw new Error(`unexpected character ${JSON.stringify(ch)} at ${i}`);
   }
@@ -70,7 +87,28 @@ class Parser {
   constructor(private tokens: Token[], private scope: EvalScope) {}
 
   parseExpression(): number {
-    return this.parseAdd();
+    return this.parseComparison();
+  }
+
+  // parseComparison — the top arithmetic result is comparable: `boltCount >
+  // 4` evaluates to 1 or 0, the value an enabledExpr switch reads. Chained
+  // comparisons are refused (the Go evaluator's rule).
+  parseComparison(): number {
+    const left = this.parseAdd();
+    const t = this.peek();
+    if (t && t.t === "op" && ["<=", ">=", "==", "!=", "<", ">"].includes(t.v)) {
+      this.next();
+      const right = this.parseAdd();
+      switch (t.v) {
+        case "<=": return left <= right ? 1 : 0;
+        case ">=": return left >= right ? 1 : 0;
+        case "==": return left === right ? 1 : 0;
+        case "!=": return left !== right ? 1 : 0;
+        case "<": return left < right ? 1 : 0;
+        default: return left > right ? 1 : 0;
+      }
+    }
+    return left;
   }
 
   expectEnd(): void {
@@ -131,6 +169,64 @@ class Parser {
   }
 
   private parsePrimary(): number {
+    const t = this.peek();
+    // cond(c, a, b) — the lazy conditional: only the taken branch is
+    // EVALUATED (the Go evaluator's discipline), so cond(ok, 1/b, 0) never
+    // divides by zero on the untaken branch.
+    if (t && t.t === "id" && t.v === "cond") {
+      this.next();
+      const open = this.next();
+      if (open.t !== "op" || open.v !== "(") throw new Error("expected ( after cond");
+      const c = this.parseComparison();
+      this.expectOp(",");
+      if (c !== 0) {
+        const a = this.parseComparison();
+        this.expectOp(",");
+        this.parseComparison(); // the untaken branch still has to PARSE
+        this.expectOp(")");
+        return a;
+      }
+      this.parseComparison(); // skipped value, parsed for well-formedness
+      this.expectOp(",");
+      const b = this.parseComparison();
+      this.expectOp(")");
+      return b;
+    }
+    const t2 = this.next();
+    if (t2.t === "num") return t2.v;
+    if (t2.t === "id") {
+      const v = this.scope.params[t2.v];
+      if (v === undefined || Number.isNaN(v)) {
+        throw new Error(`unknown parameter "${t2.v}"`);
+      }
+      return v;
+    }
+    if (t2.t === "op" && t2.v === "(") {
+      const v = this.parseComparison();
+      const close = this.next();
+      if (close.t !== "op" || close.v !== ")") {
+        throw new Error("expected )");
+      }
+      return v;
+    }
+    throw new Error(`unexpected token ${JSON.stringify(t2)}`);
+  }
+
+  private expectOp(v: string): void {
+    const t = this.next();
+    if (t.t !== "op" || t.v !== v) {
+      throw new Error(`expected ${JSON.stringify(v)}, got ${JSON.stringify(t)}`);
+    }
+  }
+
+  private expectOp(v: string): void {
+    const t = this.next();
+    if (t.t !== "op" || t.v !== v) {
+      throw new Error(`expected ${JSON.stringify(v)}, got ${JSON.stringify(t)}`);
+    }
+  }
+
+  private parsePrimaryDead(): number {
     const t = this.next();
     if (t.t === "num") return t.v;
     if (t.t === "id") {

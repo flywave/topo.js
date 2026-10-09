@@ -64,3 +64,35 @@ describe("phase4 patches", () => {
     expect(op.op).toBe("hole");
   });
 });
+
+// 点选加约束 (M3): addSketchConstraint — the picked endpoints' declared
+// relation joins the tree's constraint list.
+import { applyPatch as applyPatchAdd } from "../src/core/patch.js";
+
+describe("addSketchConstraint (点选加约束)", () => {
+  it("appends the constraint and leaves the rest byte-equal", () => {
+    const tree = {
+      name: "t", units: { length: "mm", toMillimeter: 1 }, datums: {},
+      sketches: {
+        s: {
+          id: "s", plane: { kind: "XY", origin: [0, 0, 0] },
+          entities: [
+            { tag: "e1", type: "line", start: [0, 0], end: [100, 0] },
+            { tag: "e2", type: "line", start: [100, 0], end: [100, 60] },
+          ],
+          constraints: [{ kind: "LENGTH", tags: ["e1"], value: 100 }],
+        },
+      },
+      features: [], parameters: [],
+    } as any;
+    const out = applyPatchAdd(tree, {
+      kind: "addSketchConstraint", sketchId: "s",
+      constraint: { kind: "COINCIDENT", tags: ["e1", "e2"] },
+    } as any);
+    expect(out.sketches.s.constraints).toHaveLength(2);
+    expect(out.sketches.s.constraints[1]).toEqual({ kind: "COINCIDENT", tags: ["e1", "e2"] });
+    // untouched entities stay byte-equal (the patch discipline)
+    expect(out.sketches.s.entities).toEqual(tree.sketches.s.entities);
+    expect(out.sketches.s.constraints[0]).toEqual(tree.sketches.s.constraints[0]);
+  });
+});

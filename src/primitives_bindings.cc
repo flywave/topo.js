@@ -1,6 +1,7 @@
 #include "binding.hh"
 #include "primitives.hh"
 #include "primitives_railway.hh"
+#include "primitives_mine.hh"
 #include "binding_guard.hh"
 
 using namespace flywave;
@@ -1937,6 +1938,49 @@ static void
 set_ballast_from_sleepers_sleepers(ballast_from_sleepers_params &params,
                                    emscripten::val val) {
   params.sleepers = val_to_vec<sleeper_line_params>(val);
+}
+
+// ---- 矿山图元向量字段助手 ----
+// vector<gp_Pnt> 字段通用 get/set (mine 图元族)
+#define MINE_PNT_FIELD(T, FIELD, NAME)                                             \
+  static emscripten::val get_mine_##NAME(const T &p) {                             \
+    return vec_to_val(p.FIELD);                                                    \
+  }                                                                                \
+  static void set_mine_##NAME(T &p, emscripten::val v) {                           \
+    p.FIELD = val_to_vec<gp_Pnt>(v);                                               \
+  }
+
+MINE_PNT_FIELD(mine_roadway_params, path, roadway_path)
+MINE_PNT_FIELD(mine_lining_params, section, lining_section)
+MINE_PNT_FIELD(mine_area_body_params, boundary, area_boundary)
+MINE_PNT_FIELD(mine_vent_duct_params, path, vent_duct_path)
+MINE_PNT_FIELD(mine_rail_track_params, path, rail_path)
+MINE_PNT_FIELD(mine_belt_params, path, belt_path)
+MINE_PNT_FIELD(mine_scraper_params, path, scraper_path)
+MINE_PNT_FIELD(mine_monorail_params, path, monorail_path)
+MINE_PNT_FIELD(mine_pipe_run_params, path, pipe_path)
+MINE_PNT_FIELD(mine_cable_run_params, path, cable_path)
+MINE_PNT_FIELD(mine_trench_params, path, trench_path)
+
+static emscripten::val get_mine_orepass_stations(const mine_orepass_params &p) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &st : p.stations) arr.set(arr["length"].as<size_t>(), st);
+  return arr;
+}
+static void set_mine_orepass_stations(mine_orepass_params &p, emscripten::val v) {
+  p.stations.clear();
+  for (size_t i = 0; i < v["length"].as<size_t>(); ++i)
+    p.stations.push_back(v[i].as<mine_orepass_station>());
+}
+static emscripten::val get_mine_borehole_layers(const mine_borehole_params &p) {
+  emscripten::val arr = emscripten::val::array();
+  for (const auto &ly : p.layers) arr.set(arr["length"].as<size_t>(), ly);
+  return arr;
+}
+static void set_mine_borehole_layers(mine_borehole_params &p, emscripten::val v) {
+  p.layers.clear();
+  for (size_t i = 0; i < v["length"].as<size_t>(); ++i)
+    p.layers.push_back(v[i].as<mine_borehole_layer>());
 }
 
 } // namespace
@@ -6041,4 +6085,415 @@ EMSCRIPTEN_BINDINGS(Primitive) {
   function("createBallastFromSleepers",
            select_overload<TopoDS_Shape(const ballast_from_sleepers_params &)>(
                &create_ballast_from_sleepers));
+
+  // ================= 矿山专业图元 (minebim P 线, Q/SHJ 0035.3-2012) =================
+  // 守卫注册: C++ ConstructionError → 可读 JS Error (binding_guard 设施),
+  // 避免 WASM 异常对象逃逸成无法诊断的裸数字。
+
+#define MINE_FN(JS, CPP, P)                                                        \
+  function(                                                                        \
+      JS,                                                                          \
+      emscripten::optional_override([](const P &p) -> TopoDS_Shape {               \
+        try {                                                                      \
+          return CPP(p);                                                           \
+        }                                                                          \
+        catch (const Standard_Failure &f) {                                        \
+          topo_bindings::rethrowAsJsError(JS, f);                                  \
+        }                                                                          \
+        catch (const std::exception &e) {                                          \
+          topo_bindings::rethrowAsJsError(JS, e);                                  \
+        }                                                                          \
+        catch (...) {                                                              \
+          topo_bindings::rethrowAsJsError(JS);                                     \
+        }                                                                          \
+      }));
+
+#define MINE_FN2(JS, CPP, P)                                                       \
+  function(                                                                        \
+      JS,                                                                          \
+      emscripten::optional_override([](const P &p, const gp_Pnt &anchor)           \
+                                        -> TopoDS_Shape {                          \
+        try {                                                                      \
+          return CPP(p, anchor);                                                   \
+        }                                                                          \
+        catch (const Standard_Failure &f) {                                        \
+          topo_bindings::rethrowAsJsError(JS, f);                                  \
+        }                                                                          \
+        catch (const std::exception &e) {                                          \
+          topo_bindings::rethrowAsJsError(JS, e);                                  \
+        }                                                                          \
+        catch (...) {                                                              \
+          topo_bindings::rethrowAsJsError(JS);                                     \
+        }                                                                          \
+      }));
+
+  // 单位 m; 断面枚举 MineSection: RECT/TRAP/ARCH/ARC_ARCH/HORSESHOE/CIRCLE/ELLIPSE
+
+  enum_<mine_section>("MineSection")
+      .value("RECT", mine_section::rect)
+      .value("TRAP", mine_section::trap)
+      .value("ARCH", mine_section::arch)
+      .value("ARC_ARCH", mine_section::arc_arch)
+      .value("HORSESHOE", mine_section::horseshoe)
+      .value("CIRCLE", mine_section::circle)
+      .value("ELLIPSE", mine_section::ellipse);
+
+  value_object<mine_orepass_station>("MineOrepassStation")
+      .field("depth", &mine_orepass_station::depth)
+      .field("radius", &mine_orepass_station::radius);
+
+  value_object<mine_borehole_layer>("MineBoreholeLayer")
+      .field("from", &mine_borehole_layer::from)
+      .field("to", &mine_borehole_layer::to);
+
+  // --- 立井井筒 (图例 2/3/4/5/9) ---
+  value_object<mine_shaft_params>("MineShaftParams")
+      .field("shape", &mine_shaft_params::shape)
+      .field("innerRadius", &mine_shaft_params::innerRadius)
+      .field("outerRadius", &mine_shaft_params::outerRadius)
+      .field("innerLength", &mine_shaft_params::innerLength)
+      .field("innerWidth", &mine_shaft_params::innerWidth)
+      .field("outerLength", &mine_shaft_params::outerLength)
+      .field("outerWidth", &mine_shaft_params::outerWidth)
+      .field("depth", &mine_shaft_params::depth);
+  MINE_FN("createMineShaft", create_mine_shaft, mine_shaft_params);
+  MINE_FN2("createMineShaftAt", create_mine_shaft, mine_shaft_params);
+
+  // --- 煤仓/溜煤眼 (16, 站位变径放样) ---
+  value_object<mine_orepass_params>("MineOrepassParams")
+      .field("center", &mine_orepass_params::center)
+      .field("stations", &get_mine_orepass_stations, &set_mine_orepass_stations);
+  MINE_FN("createMineOrepass", create_mine_orepass, mine_orepass_params);
+
+  // --- 断层破碎带透镜体 (345-355) ---
+  value_object<mine_fault_lens_params>("MineFaultLensParams")
+      .field("center", &mine_fault_lens_params::center)
+      .field("strike", &mine_fault_lens_params::strike)
+      .field("dipAzimuth", &mine_fault_lens_params::dipAzimuth)
+      .field("dipAngle", &mine_fault_lens_params::dipAngle)
+      .field("zoneWidth", &mine_fault_lens_params::zoneWidth)
+      .field("zoneLength", &mine_fault_lens_params::zoneLength)
+      .field("topElev", &mine_fault_lens_params::topElev)
+      .field("bottomElev", &mine_fault_lens_params::bottomElev);
+  MINE_FN("createMineFaultLens", create_mine_fault_lens, mine_fault_lens_params);
+
+  // --- 支护衬砌壳 (喷浆/砌碹/U型钢环) ---
+  value_object<mine_lining_params>("MineLiningParams")
+      .field("section", &get_mine_lining_section, &set_mine_lining_section)
+      .field("thickness", &mine_lining_params::thickness)
+      .field("length", &mine_lining_params::length)
+      .field("dir", &mine_lining_params::dir);
+  MINE_FN("createMineLining", create_mine_lining, mine_lining_params);
+
+  // --- 喷浆壳 (断面枚举式) ---
+  value_object<mine_shotcrete_params>("MineShotcreteParams")
+      .field("origin", &mine_shotcrete_params::origin)
+      .field("axis", &mine_shotcrete_params::axis)
+      .field("section", &mine_shotcrete_params::section)
+      .field("width", &mine_shotcrete_params::width)
+      .field("height", &mine_shotcrete_params::height)
+      .field("thickness", &mine_shotcrete_params::thickness)
+      .field("length", &mine_shotcrete_params::length);
+  MINE_FN("createMineShotcrete", create_mine_shotcrete, mine_shotcrete_params);
+
+  // --- 巷道 (断面沿折线扫掠 + 拐角楔补) ---
+  value_object<mine_roadway_params>("MineRoadwayParams")
+      .field("section", &mine_roadway_params::section)
+      .field("width", &mine_roadway_params::width)
+      .field("height", &mine_roadway_params::height)
+      .field("path", &get_mine_roadway_path, &set_mine_roadway_path);
+  MINE_FN("createMineRoadway", create_mine_roadway, mine_roadway_params);
+
+  // --- 硐室 ---
+  value_object<mine_chamber_params>("MineChamberParams")
+      .field("center", &mine_chamber_params::center)
+      .field("length", &mine_chamber_params::length)
+      .field("width", &mine_chamber_params::width)
+      .field("height", &mine_chamber_params::height);
+  MINE_FN("createMineChamber", create_mine_chamber, mine_chamber_params);
+
+  // --- 长壁工作面 ---
+  value_object<mine_workingface_params>("MineWorkingfaceParams")
+      .field("origin", &mine_workingface_params::origin)
+      .field("dir", &mine_workingface_params::dir)
+      .field("faceLength", &mine_workingface_params::faceLength)
+      .field("advance", &mine_workingface_params::advance)
+      .field("seamThickness", &mine_workingface_params::seamThickness);
+  MINE_FN("createMineWorkingface", create_mine_workingface, mine_workingface_params);
+
+  // --- 掘进迎头 ---
+  value_object<mine_heading_params>("MineHeadingParams")
+      .field("center", &mine_heading_params::center)
+      .field("dir", &mine_heading_params::dir)
+      .field("section", &mine_heading_params::section)
+      .field("width", &mine_heading_params::width)
+      .field("height", &mine_heading_params::height);
+  MINE_FN("createMineHeading", create_mine_heading, mine_heading_params);
+
+  // --- 面状体 (采空区/水仓/积水区) ---
+  value_object<mine_area_body_params>("MineAreaBodyParams")
+      .field("boundary", &get_mine_area_boundary, &set_mine_area_boundary)
+      .field("baseZ", &mine_area_body_params::baseZ)
+      .field("height", &mine_area_body_params::height);
+  MINE_FN("createMineAreaBody", create_mine_area_body, mine_area_body_params);
+
+  // --- 锚杆/锚索排 ---
+  value_object<mine_bolt_row_params>("MineBoltRowParams")
+      .field("origin", &mine_bolt_row_params::origin)
+      .field("axis", &mine_bolt_row_params::axis)
+      .field("section", &mine_bolt_row_params::section)
+      .field("width", &mine_bolt_row_params::width)
+      .field("height", &mine_bolt_row_params::height)
+      .field("rowCount", &mine_bolt_row_params::rowCount)
+      .field("perRow", &mine_bolt_row_params::perRow)
+      .field("spacing", &mine_bolt_row_params::spacing)
+      .field("boltLength", &mine_bolt_row_params::boltLength)
+      .field("diameter", &mine_bolt_row_params::diameter)
+      .field("cable", &mine_bolt_row_params::cable);
+  MINE_FN("createMineBoltRow", create_mine_bolt_row, mine_bolt_row_params);
+
+  // --- U型钢支架排 ---
+  value_object<mine_usteel_row_params>("MineUsteelRowParams")
+      .field("origin", &mine_usteel_row_params::origin)
+      .field("axis", &mine_usteel_row_params::axis)
+      .field("section", &mine_usteel_row_params::section)
+      .field("width", &mine_usteel_row_params::width)
+      .field("height", &mine_usteel_row_params::height)
+      .field("thickness", &mine_usteel_row_params::thickness)
+      .field("spacing", &mine_usteel_row_params::spacing)
+      .field("count", &mine_usteel_row_params::count);
+  MINE_FN("createMineUsteelRow", create_mine_usteel_row, mine_usteel_row_params);
+
+  // --- 液压支架排 ---
+  value_object<mine_shield_row_params>("MineShieldRowParams")
+      .field("origin", &mine_shield_row_params::origin)
+      .field("dir", &mine_shield_row_params::dir)
+      .field("count", &mine_shield_row_params::count)
+      .field("centerDist", &mine_shield_row_params::centerDist)
+      .field("beamWidth", &mine_shield_row_params::beamWidth)
+      .field("beamThick", &mine_shield_row_params::beamThick)
+      .field("height", &mine_shield_row_params::height)
+      .field("maxLegPairs", &mine_shield_row_params::maxLegPairs);
+  MINE_FN("createMineShieldRow", create_mine_shield_row, mine_shield_row_params);
+
+  // --- 风墙/密闭 ---
+  value_object<mine_vent_wall_params>("MineVentWallParams")
+      .field("section", &mine_vent_wall_params::section)
+      .field("width", &mine_vent_wall_params::width)
+      .field("height", &mine_vent_wall_params::height)
+      .field("thickness", &mine_vent_wall_params::thickness)
+      .field("center", &mine_vent_wall_params::center)
+      .field("axis", &mine_vent_wall_params::axis);
+  MINE_FN("createMineVentWall", create_mine_vent_wall, mine_vent_wall_params);
+
+  // --- 矩形墙体 (防爆/防火/防水墙) ---
+  value_object<mine_box_wall_params>("MineBoxWallParams")
+      .field("width", &mine_box_wall_params::width)
+      .field("height", &mine_box_wall_params::height)
+      .field("thickness", &mine_box_wall_params::thickness)
+      .field("center", &mine_box_wall_params::center)
+      .field("axis", &mine_box_wall_params::axis);
+  MINE_FN("createMineBoxWall", create_mine_box_wall, mine_box_wall_params);
+
+  // --- 风门 (开闭角) ---
+  value_object<mine_vent_door_params>("MineVentDoorParams")
+      .field("width", &mine_vent_door_params::width)
+      .field("height", &mine_vent_door_params::height)
+      .field("doorWidth", &mine_vent_door_params::doorWidth)
+      .field("doorHeight", &mine_vent_door_params::doorHeight)
+      .field("doorThick", &mine_vent_door_params::doorThick)
+      .field("frameWidth", &mine_vent_door_params::frameWidth)
+      .field("openAngleDeg", &mine_vent_door_params::openAngleDeg)
+      .field("center", &mine_vent_door_params::center)
+      .field("axis", &mine_vent_door_params::axis);
+  MINE_FN("createMineVentDoor", create_mine_vent_door, mine_vent_door_params);
+
+  // --- 调节风窗 ---
+  value_object<mine_vent_window_params>("MineVentWindowParams")
+      .field("width", &mine_vent_window_params::width)
+      .field("height", &mine_vent_window_params::height)
+      .field("thickness", &mine_vent_window_params::thickness)
+      .field("winWidth", &mine_vent_window_params::winWidth)
+      .field("winHeight", &mine_vent_window_params::winHeight)
+      .field("winSill", &mine_vent_window_params::winSill)
+      .field("bars", &mine_vent_window_params::bars)
+      .field("center", &mine_vent_window_params::center)
+      .field("axis", &mine_vent_window_params::axis);
+  MINE_FN("createMineVentWindow", create_mine_vent_window, mine_vent_window_params);
+
+  // --- 风桥 ---
+  value_object<mine_vent_bridge_params>("MineVentBridgeParams")
+      .field("span", &mine_vent_bridge_params::span)
+      .field("width", &mine_vent_bridge_params::width)
+      .field("thickness", &mine_vent_bridge_params::thickness)
+      .field("apex", &mine_vent_bridge_params::apex)
+      .field("center", &mine_vent_bridge_params::center)
+      .field("axis", &mine_vent_bridge_params::axis);
+  MINE_FN("createMineVentBridge", create_mine_vent_bridge, mine_vent_bridge_params);
+
+  // --- 风筒 ---
+  value_object<mine_vent_duct_params>("MineVentDuctParams")
+      .field("path", &get_mine_vent_duct_path, &set_mine_vent_duct_path)
+      .field("diameter", &mine_vent_duct_params::diameter);
+  MINE_FN("createMineVentDuct", create_mine_vent_duct, mine_vent_duct_params);
+
+  // --- 测风站 ---
+  value_object<mine_vent_station_params>("MineVentStationParams")
+      .field("section", &mine_vent_station_params::section)
+      .field("width", &mine_vent_station_params::width)
+      .field("height", &mine_vent_station_params::height)
+      .field("postWidth", &mine_vent_station_params::postWidth)
+      .field("depth", &mine_vent_station_params::depth)
+      .field("center", &mine_vent_station_params::center)
+      .field("axis", &mine_vent_station_params::axis);
+  MINE_FN("createMineVentStation", create_mine_vent_station, mine_vent_station_params);
+
+  // --- 陷落柱 (双椭圆放样) ---
+  value_object<mine_collapse_pillar_params>("MineCollapsePillarParams")
+      .field("bottomCenter", &mine_collapse_pillar_params::bottomCenter)
+      .field("bottomLong", &mine_collapse_pillar_params::bottomLong)
+      .field("bottomShort", &mine_collapse_pillar_params::bottomShort)
+      .field("topLong", &mine_collapse_pillar_params::topLong)
+      .field("topShort", &mine_collapse_pillar_params::topShort)
+      .field("height", &mine_collapse_pillar_params::height);
+  MINE_FN("createMineCollapsePillar", create_mine_collapse_pillar, mine_collapse_pillar_params);
+
+  // --- 水闸墙 ---
+  value_object<mine_water_gate_wall_params>("MineWaterGateWallParams")
+      .field("width", &mine_water_gate_wall_params::width)
+      .field("height", &mine_water_gate_wall_params::height)
+      .field("thickness", &mine_water_gate_wall_params::thickness)
+      .field("doorWidth", &mine_water_gate_wall_params::doorWidth)
+      .field("doorHeight", &mine_water_gate_wall_params::doorHeight)
+      .field("center", &mine_water_gate_wall_params::center)
+      .field("axis", &mine_water_gate_wall_params::axis);
+  MINE_FN("createMineWaterGateWall", create_mine_water_gate_wall, mine_water_gate_wall_params);
+
+  // --- 水闸门 ---
+  value_object<mine_water_gate_params>("MineWaterGateParams")
+      .field("width", &mine_water_gate_params::width)
+      .field("height", &mine_water_gate_params::height)
+      .field("doorWidth", &mine_water_gate_params::doorWidth)
+      .field("doorHeight", &mine_water_gate_params::doorHeight)
+      .field("doorThick", &mine_water_gate_params::doorThick)
+      .field("frameWidth", &mine_water_gate_params::frameWidth)
+      .field("center", &mine_water_gate_params::center)
+      .field("axis", &mine_water_gate_params::axis);
+  MINE_FN("createMineWaterGate", create_mine_water_gate, mine_water_gate_params);
+
+  // --- 钻孔 (分层定向) ---
+  value_object<mine_borehole_params>("MineBoreholeParams")
+      .field("collar", &mine_borehole_params::collar)
+      .field("axis", &mine_borehole_params::axis)
+      .field("diameter", &mine_borehole_params::diameter)
+      .field("layers", &get_mine_borehole_layers, &set_mine_borehole_layers);
+  MINE_FN("createMineBorehole", create_mine_borehole, mine_borehole_params);
+
+  // --- 轨道 (复用铁路轨排 + 轨枕) ---
+  value_object<mine_rail_track_params>("MineRailTrackParams")
+      .field("path", &get_mine_rail_path, &set_mine_rail_path)
+      .field("gauge", &mine_rail_track_params::gauge)
+      .field("doubleTrack", &mine_rail_track_params::doubleTrack)
+      .field("centerDistance", &mine_rail_track_params::centerDistance)
+      .field("sleeperSpacing", &mine_rail_track_params::sleeperSpacing)
+      .field("sleeperMax", &mine_rail_track_params::sleeperMax);
+  MINE_FN("createMineRailTrack", create_mine_rail_track, mine_rail_track_params);
+
+  // --- 道岔 (骨架) ---
+  value_object<mine_turnout_params>("MineTurnoutParams")
+      .field("origin", &mine_turnout_params::origin)
+      .field("axis", &mine_turnout_params::axis)
+      .field("gauge", &mine_turnout_params::gauge)
+      .field("frogNo", &mine_turnout_params::frogNo)
+      .field("length", &mine_turnout_params::length);
+  MINE_FN("createMineTurnout", create_mine_turnout, mine_turnout_params);
+
+  // --- 带式输送机 ---
+  value_object<mine_belt_params>("MineBeltParams")
+      .field("path", &get_mine_belt_path, &set_mine_belt_path)
+      .field("beltWidth", &mine_belt_params::beltWidth)
+      .field("frameHeight", &mine_belt_params::frameHeight);
+  MINE_FN("createMineBelt", create_mine_belt, mine_belt_params);
+
+  // --- 刮板输送机 ---
+  value_object<mine_scraper_params>("MineScraperParams")
+      .field("path", &get_mine_scraper_path, &set_mine_scraper_path)
+      .field("panWidth", &mine_scraper_params::panWidth)
+      .field("panHeight", &mine_scraper_params::panHeight);
+  MINE_FN("createMineScraper", create_mine_scraper, mine_scraper_params);
+
+  // --- 单轨吊 ---
+  value_object<mine_monorail_params>("MineMonorailParams")
+      .field("path", &get_mine_monorail_path, &set_mine_monorail_path)
+      .field("railHeight", &mine_monorail_params::railHeight)
+      .field("flangeWidth", &mine_monorail_params::flangeWidth);
+  MINE_FN("createMineMonorail", create_mine_monorail, mine_monorail_params);
+
+  // --- 管路 (托架环) ---
+  value_object<mine_pipe_run_params>("MinePipeRunParams")
+      .field("path", &get_mine_pipe_path, &set_mine_pipe_path)
+      .field("diameter", &mine_pipe_run_params::diameter)
+      .field("bracketSpacing", &mine_pipe_run_params::bracketSpacing);
+  MINE_FN("createMinePipeRun", create_mine_pipe_run, mine_pipe_run_params);
+
+  // --- 三通管件 ---
+  value_object<mine_pipe_fitting_params>("MinePipeFittingParams")
+      .field("center", &mine_pipe_fitting_params::center)
+      .field("mainAxis", &mine_pipe_fitting_params::mainAxis)
+      .field("branchAngleDeg", &mine_pipe_fitting_params::branchAngleDeg)
+      .field("mainLength", &mine_pipe_fitting_params::mainLength)
+      .field("branchLength", &mine_pipe_fitting_params::branchLength)
+      .field("diameter", &mine_pipe_fitting_params::diameter);
+  MINE_FN("createMinePipeFitting", create_mine_pipe_fitting, mine_pipe_fitting_params);
+
+  // --- 电缆/通讯线 ---
+  value_object<mine_cable_run_params>("MineCableRunParams")
+      .field("path", &get_mine_cable_path, &set_mine_cable_path)
+      .field("diameter", &mine_cable_run_params::diameter)
+      .field("lines", &mine_cable_run_params::lines);
+  MINE_FN("createMineCableRun", create_mine_cable_run, mine_cable_run_params);
+
+  // --- 栅栏/栅栏门 ---
+  value_object<mine_fence_params>("MineFenceParams")
+      .field("width", &mine_fence_params::width)
+      .field("height", &mine_fence_params::height)
+      .field("postWidth", &mine_fence_params::postWidth)
+      .field("barWidth", &mine_fence_params::barWidth)
+      .field("thickness", &mine_fence_params::thickness)
+      .field("bars", &mine_fence_params::bars)
+      .field("center", &mine_fence_params::center)
+      .field("axis", &mine_fence_params::axis);
+  MINE_FN("createMineFence", create_mine_fence, mine_fence_params);
+
+  // --- 水沟 ---
+  value_object<mine_trench_params>("MineTrenchParams")
+      .field("path", &get_mine_trench_path, &set_mine_trench_path)
+      .field("section", &mine_trench_params::section)
+      .field("width", &mine_trench_params::width)
+      .field("height", &mine_trench_params::height)
+      .field("sideOffset", &mine_trench_params::sideOffset);
+  MINE_FN("createMineTrench", create_mine_trench, mine_trench_params);
+
+  // --- 交岔点 ---
+  value_object<mine_junction_params>("MineJunctionParams")
+      .field("center", &mine_junction_params::center)
+      .field("mainAxis", &mine_junction_params::mainAxis)
+      .field("branchAngleDeg", &mine_junction_params::branchAngleDeg)
+      .field("section", &mine_junction_params::section)
+      .field("width", &mine_junction_params::width)
+      .field("height", &mine_junction_params::height)
+      .field("mainLength", &mine_junction_params::mainLength)
+      .field("branchLength", &mine_junction_params::branchLength)
+      .field("reinforceLength", &mine_junction_params::reinforceLength);
+  MINE_FN("createMineJunction", create_mine_junction, mine_junction_params);
+
+  // --- 钢带/W钢带 ---
+  value_object<mine_steel_band_params>("MineSteelBandParams")
+      .field("length", &mine_steel_band_params::length)
+      .field("width", &mine_steel_band_params::width)
+      .field("thickness", &mine_steel_band_params::thickness)
+      .field("holeCount", &mine_steel_band_params::holeCount)
+      .field("holeDia", &mine_steel_band_params::holeDia)
+      .field("holeEdge", &mine_steel_band_params::holeEdge);
+  MINE_FN("createMineSteelBand", create_mine_steel_band, mine_steel_band_params);
 }

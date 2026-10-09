@@ -89,6 +89,22 @@ export class Viewer {
   private vertexPositions: Array<[number, number, number]> = [];
   private vertexPickHandler: ((vertexId: number) => void) | null = null;
   private vertexMarker: THREE.Mesh | null = null;
+  // drag loop (docs/drag-loop.md M2): a grabbed vertex follows the pointer
+  // projected onto its sketch plane; release hands the (u, v) target back.
+  private dragStartHandler: ((vertexId: number) => boolean) | null = null;
+  private dragActive = false;
+  private dragPlaneFrame: { origin: [number, number, number]; ex: number[]; ey: number[]; n: number[] } | null = null;
+  private dragPlaneHelper: THREE.Mesh | null = null;
+  private dragMarker: THREE.Mesh | null = null;
+  private dragMoveHandler: ((u: number, v: number) => void) | null = null;
+  private dragEndHandler: ((u: number, v: number) => void) | null = null;
+  private dragPreview: THREE.LineSegments | null = null;
+  // 拾取抢占修复: when a sketch is the drag context, the cloud shows ONLY
+  // that sketch's endpoints (the z-mirror topology corners stop stealing
+  // the pick). null = all topology corners (previous behaviour).
+  private vertexFilterPoints: Array<[number, number, number]> | null = null;
+  private activeVertexPositions: Array<[number, number, number]> = [];
+  private meshReframe = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -100,8 +116,6 @@ export class Viewer {
     // and the axis gizmo read this.
     this.camera.up.set(0, 0, 1);
     this.camera.position.set(140, -140, 110);
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
     ensureChromeStyle();
     this.buildGrid();
     this.buildViewCube();
@@ -109,13 +123,33 @@ export class Viewer {
     // Cube interaction: hover highlight + click-to-snap (a clean click on a
     // face; anything that moved is an orbit drag owned by OrbitControls).
     let downAt: { x: number; y: number; face: number } | null = null;
-    this.renderer.domElement.addEventListener("pointermove", (ev) => {
+    this.renderer.domElement.addEventListener("mousemove", (ev) => {
+      this.lastPointer = { x: ev.clientX, y: ev.clientY };
+      if (this.dragActive) {
+        const uv = this.screenToSketch(ev.clientX, ev.clientY);
+        if (uv) {
+          this.dragMoveHandler?.(uv[0], uv[1]);
+          if (this.dragMarker) this.dragMarker.position.set(
+            this.dragPlaneFrame!.origin[0] + this.dragPlaneFrame!.ex[0] * uv[0] + this.dragPlaneFrame!.ey[0] * uv[1],
+            this.dragPlaneFrame!.origin[1] + this.dragPlaneFrame!.ex[1] * uv[0] + this.dragPlaneFrame!.ey[1] * uv[1],
+            this.dragPlaneFrame!.origin[2] + this.dragPlaneFrame!.ex[2] * uv[0] + this.dragPlaneFrame!.ey[2] * uv[1],
+          );
+        }
+        return;
+      }
       this.cubeHoverUpdate(ev.clientX, ev.clientY);
     });
-    this.renderer.domElement.addEventListener("pointerdown", (ev) => {
+    this.renderer.domElement.addEventListener("mousedown", (ev) => {
       downAt = { x: ev.clientX, y: ev.clientY, face: this.hitCube(ev.clientX, ev.clientY) };
     });
-    this.renderer.domElement.addEventListener("pointerup", (ev) => {
+    this.renderer.domElement.addEventListener("mouseup", (ev) => {
+      if (this.dragActive) {
+        const uv = this.screenToSketch(ev.clientX, ev.clientY);
+        const handler = this.dragEndHandler;
+        this.endVertexDrag();
+        if (uv && handler) handler(uv[0], uv[1]);
+        return;
+      }
       if (!downAt) return;
       const moved = Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y);
       if (moved < 6 && downAt.face >= 0) {
@@ -131,7 +165,7 @@ export class Viewer {
     sun.position.set(1, 1.6, 0.8);
     this.scene.add(sun);
 
-    this.renderer.domElement.addEventListener("pointerdown", (ev) => {
+    this.renderer.domElement.addEventListener("mousedown", (ev) => {
       if (ev.button !== 0) return;
       if (this.measuring) {
         this.measureClick(ev.clientX, ev.clientY);
@@ -156,12 +190,16 @@ export class Viewer {
         return;
       }
       if (this.selectMode === "vertex") {
-        ray.params.Points = { threshold: Math.max(5, dist * 0.035) };
-        if (this.vertexCloud) {
-          const vHits = ray.intersectObject(this.vertexCloud, false);
-          if (vHits.length && vHits[0].index !== undefined) {
-            this.vertexPickHandler?.(vHits[0].index);
-          }
+        // 屏幕空间拾取 (最终修复): three 的 Points raycast 曾在手工距离
+        // 0.000 处返回 0 命中 (黑盒失灵, drag-loop e2e 实测)——投影距离
+        // 14px 窗口取最近顶点, 同一 math as the measure label。
+        const hit = this.nearestVertexScreen(ev.clientX, ev.clientY, 14);
+        if (hit) {
+          // The drag owner decides: a vertex it can address starts a drag
+          // (orbit suppressed for the gesture), anything else falls through
+          // to the plain pick readout.
+          if (this.dragStartHandler && this.dragStartHandler(hit.id)) return;
+          this.vertexPickHandler?.(hit.id);
         }
         return;
       }
@@ -171,6 +209,14 @@ export class Viewer {
         this.pickHandler(hits[0].object.userData.faceId as number);
       }
     });
+
+    // OrbitControls LAST: same-element pointerdown listeners fire in
+    // registration order, so the vertex-drag gate above can disable the
+    // controls inside the SAME event before OrbitControls' own handler
+    // starts an orbit (measured e2e: grabbing a vertex rotated the camera
+    // and the drag never reached the solver).
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
 
     new ResizeObserver(() => this.resize(container)).observe(container);
     this.resize(container);
@@ -232,8 +278,194 @@ export class Viewer {
   // getVertex — the deduped topology vertex's world position (pick address
   // → readout; vertices have no server-side semantics, selection is local).
   getVertex(id: number): { id: number; position: [number, number, number] } | null {
-    const p = this.vertexPositions[id];
+    const p = this.activeVertexPositions[id];
     return p ? { id, position: p } : null;
+  }
+
+  // ---------------------------------------------------------------------
+  // drag loop (docs/drag-loop.md M2)
+  // ---------------------------------------------------------------------
+
+  /** vertexScreen — the vertex's viewport pixel (e2e aiming helper; the
+   * same projection the measure label uses every frame). */
+  vertexScreen(id: number): { x: number; y: number } | null {
+    const p = this.vertexPositions[id];
+    if (!p) return null;
+    const v = new THREE.Vector3(p[0], p[1], p[2]).project(this.camera);
+    const w = this.container.clientWidth || 1;
+    const h = this.container.clientHeight || 1;
+    return { x: ((v.x + 1) / 2) * w, y: ((-v.y + 1) / 2) * h };
+  }
+
+  /** vertexCount — the ACTIVE (filter-aware) vertex cloud size. */
+  vertexCount(): number {
+    return this.activeVertexPositions.length;
+  }
+
+  /** nearestVertexScreen — screen-space vertex pick: the active cloud's
+   * vertex closest to the pointer pixel, within maxPx. Replaces the three
+   * Points raycast, whose threshold/params behaviour silently dropped hits
+   * even at MANUAL distance 0.000 (measured in the drag-loop e2e) — screen
+   * projection is the same math the measure label uses, zero black box. */
+  nearestVertexScreen(clientX: number, clientY: number, maxPx = 14): { id: number; position: [number, number, number]; screen: { x: number; y: number }; distPx: number } | null {
+    let best: { id: number; position: [number, number, number]; screen: { x: number; y: number }; distPx: number } | null = null;
+    for (let i = 0; i < this.activeVertexPositions.length; i++) {
+      const s = this.vertexScreen(i);
+      if (!s) continue;
+      const d = Math.hypot(s.x - clientX, s.y - clientY);
+      if (d <= maxPx && (!best || d < best.distPx)) {
+        best = { id: i, position: this.activeVertexPositions[i], screen: s, distPx: d };
+      }
+    }
+    return best;
+  }
+
+  /** debugState — e2e/诊断只读快照（cloud 生命周期排查用）。 */
+  debugState(): { cloud: boolean; vpLen: number; filter: number | null; mode: string; measuring: boolean } {
+    return {
+      cloud: !!this.vertexCloud,
+      vpLen: this.vertexPositions.length,
+      filter: this.vertexFilterPoints ? this.vertexFilterPoints.length : null,
+      mode: this.selectMode,
+      measuring: this.measuring,
+    };
+  }
+
+  /** onVertexDragStart — return true from the handler to own the gesture:
+   * the vertex becomes a drag handle (orbit suppressed until release). */
+  onVertexDragStart(handler: (vertexId: number) => boolean): void {
+    this.dragStartHandler = handler;
+  }
+
+  /** beginVertexDrag — lock the sketch frame, show the plane + the grabbed
+   * point, suppress orbit, and route pointer moves to onMove (sketch u, v)
+   * and the release to onEnd. */
+  beginVertexDrag(
+    world: [number, number, number],
+    frame: { origin: [number, number, number]; ex: number[]; ey: number[]; n: number[] },
+    onMove: (u: number, v: number) => void,
+    onEnd: (u: number, v: number) => void,
+  ): void {
+    this.dragPlaneFrame = frame;
+    this.dragMoveHandler = onMove;
+    this.dragEndHandler = onEnd;
+    this.dragActive = true;
+    this.controls.enabled = false;
+    // the sketch plane, faintly — the drag surface made visible
+    if (!this.dragPlaneHelper) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0x3a5c8c, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false });
+      this.dragPlaneHelper = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+      this.scene.add(this.dragPlaneHelper);
+    }
+    const size = Math.max(80, this.camera.position.distanceTo(this.controls.target));
+    this.dragPlaneHelper.scale.set(size, size, 1);
+    this.dragPlaneHelper.position.set(frame.origin[0], frame.origin[1], frame.origin[2]);
+    const normal = new THREE.Vector3(frame.n[0], frame.n[1], frame.n[2]);
+    this.dragPlaneHelper.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+    this.dragPlaneHelper.visible = true;
+    // the grabbed point marker
+    if (!this.dragMarker) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffa042 });
+      this.dragMarker = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), mat);
+      this.scene.add(this.dragMarker);
+    }
+    this.dragMarker.scale.setScalar(Math.max(1.2, size * 0.012));
+    this.dragMarker.position.set(world[0], world[1], world[2]);
+    this.dragMarker.visible = true;
+    // keep the marker under the pointer from the very first move
+    const first = this.screenToSketch(this.lastPointer.x, this.lastPointer.y);
+    if (first) this.dragMoveHandler?.(first[0], first[1]);
+  }
+
+  endVertexDrag(): void {
+    this.dragActive = false;
+    this.controls.enabled = true;
+    if (this.dragPlaneHelper) this.dragPlaneHelper.visible = false;
+    if (this.dragMarker) this.dragMarker.visible = false;
+    this.clearSketchPreview();
+    this.dragMoveHandler = null;
+    this.dragEndHandler = null;
+  }
+
+  /** drawSketchPreview — the solved entities as a bright overlay on the
+   * drag plane (M3: the drag stream's per-frame answer, rendered). Entities
+   * are sketch (u, v): lines join their ends, circles sample 64 points,
+   * arcs sweep their authored ends, splines walk their fit points. */
+  drawSketchPreview(
+    frame: { origin: [number, number, number]; ex: number[]; ey: number[]; n: number[] },
+    entities: Array<Record<string, any>>,
+  ): void {
+    this.clearSketchPreview();
+    const toWorld = (u: number, v: number): THREE.Vector3 =>
+      new THREE.Vector3(
+        frame.origin[0] + frame.ex[0] * u + frame.ey[0] * v,
+        frame.origin[1] + frame.ex[1] * u + frame.ey[1] * v,
+        frame.origin[2] + frame.ex[2] * u + frame.ey[2] * v,
+      );
+    const pts: THREE.Vector3[] = [];
+    const push = (u: number, v: number) => pts.push(toWorld(u, v));
+    for (const e of entities) {
+      if (e.construction) continue;
+      if (e.type === "line" && e.start && e.end) {
+        push(e.start[0], e.start[1]);
+        push(e.end[0], e.end[1]);
+      } else if (e.type === "circle" && e.center && typeof e.radius === "number") {
+        const N = 64;
+        for (let i = 0; i <= N; i++) {
+          const a = (2 * Math.PI * i) / N;
+          push(e.center[0] + e.radius * Math.cos(a), e.center[1] + e.radius * Math.sin(a));
+        }
+      } else if (e.type === "arc" && e.center && e.start && e.end) {
+        const a0 = Math.atan2(e.start[1] - e.center[1], e.start[0] - e.center[0]);
+        const a1 = Math.atan2(e.end[1] - e.center[1], e.end[0] - e.center[0]);
+        let sweep = a1 - a0;
+        while (sweep <= 0) sweep += 2 * Math.PI;
+        const N = 24;
+        for (let i = 0; i <= N; i++) {
+          const a = a0 + sweep * (i / N);
+          push(e.center[0] + (e.radius ?? 0) * Math.cos(a), e.center[1] + (e.radius ?? 0) * Math.sin(a));
+        }
+      } else if (e.type === "spline" && e.points) {
+        for (const p of e.points) push(p[0], p[1]);
+      }
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({ color: 0x7ec8ff, transparent: true, opacity: 0.95 });
+    this.dragPreview = new THREE.LineSegments(geo, mat);
+    this.scene.add(this.dragPreview);
+  }
+
+  clearSketchPreview(): void {
+    if (this.dragPreview) {
+      this.scene.remove(this.dragPreview);
+      this.dragPreview.geometry.dispose();
+      (this.dragPreview.material as THREE.Material).dispose();
+      this.dragPreview = null;
+    }
+  }
+
+  private lastPointer = { x: 0, y: 0 };
+
+  /** screenToSketch — the pointer ray onto the drag plane, in sketch (u, v).
+   * null when the ray runs parallel or no drag is active. */
+  screenToSketch(clientX: number, clientY: number): [number, number] | null {
+    if (!this.dragPlaneFrame) return null;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const p = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(p, this.camera);
+    const f = this.dragPlaneFrame;
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      new THREE.Vector3(f.n[0], f.n[1], f.n[2]),
+      new THREE.Vector3(f.origin[0], f.origin[1], f.origin[2]),
+    );
+    const hit = new THREE.Vector3();
+    if (!ray.ray.intersectPlane(plane, hit)) return null;
+    const rel = hit.clone().sub(new THREE.Vector3(f.origin[0], f.origin[1], f.origin[2]));
+    return [rel.dot(new THREE.Vector3(f.ex[0], f.ex[1], f.ex[2])), rel.dot(new THREE.Vector3(f.ey[0], f.ey[1], f.ey[2]))];
   }
 
   get selectModeValue(): "vertex" | "edge" | "face" {
@@ -274,7 +506,7 @@ export class Viewer {
   highlightVertex(id: number | null): void {
     this.clearVertexMarker();
     if (id === null) return;
-    const p = this.vertexPositions[id];
+    const p = this.activeVertexPositions[id] ?? this.vertexPositions[id];
     if (!p) return;
     const size = Math.max(this.camera.position.distanceTo(this.controls.target) * 0.012, 1.2);
     const marker = new THREE.Mesh(
@@ -310,7 +542,7 @@ export class Viewer {
       this.vertexCloud = null;
     }
     this.vertexPositions = [];
-    if (!edges) return;
+    if (!edges) { this.rebuildVertexCloud(); document.title = "setEdges(NULL)"; return; }
     // dedupe endpoints (rounded to 0.01mm) → stable vertex ids by first sight
     const seen = new Map<string, number>();
     const verts: THREE.Vector3[] = [];
@@ -335,14 +567,37 @@ export class Viewer {
       this.edgeLines.push(line);
       this.scene.add(line);
     }
-    if (verts.length) {
-      const geom = new THREE.BufferGeometry().setFromPoints(verts);
-      const mat = new THREE.PointsMaterial({
-        color: 0xd8e2f0, size: 6, sizeAttenuation: false, visible: this.selectMode === "vertex",
-      });
-      this.vertexCloud = new THREE.Points(geom, mat);
-      this.scene.add(this.vertexCloud);
+    this.rebuildVertexCloud();
+  }
+
+  // setVertexFilter — restrict the pickable/visible vertex cloud to the
+  // given world points (a sketch's entity endpoints while that sketch is
+  // the drag context); null restores every topology corner.
+  setVertexFilter(points: Array<[number, number, number]> | null): void {
+    this.vertexFilterPoints = points && points.length > 0 ? points : null;
+    this.rebuildVertexCloud();
+  }
+
+  // rebuildVertexCloud — the pickable Points cloud over the ACTIVE vertex
+  // set: the sketch filter when armed, else every topology corner.
+  private rebuildVertexCloud(): void {
+    if (this.vertexCloud) {
+      this.scene.remove(this.vertexCloud);
+      this.vertexCloud.geometry.dispose();
+      (this.vertexCloud.material as THREE.Material).dispose();
+      this.vertexCloud = null;
     }
+    const source = this.vertexFilterPoints ?? this.vertexPositions;
+    this.activeVertexPositions = source.map((p) => [p[0], p[1], p[2]]);
+    if (this.activeVertexPositions.length === 0) return;
+    const geom = new THREE.BufferGeometry().setFromPoints(
+      this.activeVertexPositions.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
+    );
+    const mat = new THREE.PointsMaterial({
+      color: 0xd8e2f0, size: 6, sizeAttenuation: false, visible: this.selectMode === "vertex",
+    });
+    this.vertexCloud = new THREE.Points(geom, mat);
+    this.scene.add(this.vertexCloud);
   }
 
   // highlightEdges — paint the picked edge(s); called with an empty set to
@@ -355,7 +610,10 @@ export class Viewer {
     });
   }
 
-  setMesh(mesh: MeshData | null): void {
+  setMesh(mesh: MeshData | null, opts?: { noReframe?: boolean }): void {
+    // 拖拽回路: a post-drag refresh must NOT yank the camera — the user is
+    // mid-conversation with the model (M2's noReframe path).
+    this.meshReframe = opts?.noReframe === true;
     this.faceMeshes.forEach((m) => {
       this.scene.remove(m);
       m.geometry.dispose();
@@ -384,7 +642,7 @@ export class Viewer {
       this.scene.add(m);
       box.expandByObject(m);
     });
-    if (!box.isEmpty()) {
+    if (!box.isEmpty() && !this.meshReframe) {
       const size = box.getSize(new THREE.Vector3()).length();
       const center = box.getCenter(new THREE.Vector3());
       this.camera.position.set(center.x + size, center.y + size * 0.6, center.z + size);

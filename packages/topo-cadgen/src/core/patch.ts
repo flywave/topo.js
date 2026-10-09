@@ -11,6 +11,7 @@ export type Patch =
   | { kind: "removeFeature"; featureId: string }
   | { kind: "setSketchEntity"; sketchId: string; tag: string; field: string; value: unknown }
   | { kind: "setSketchConstraint"; sketchId: string; index: number; value: number }
+  | { kind: "addSketchConstraint"; sketchId: string; constraint: Record<string, unknown> }
   // Whole-object edits — the same six ops the prompt-to-edit path's
   // TreePatch carries (session/edit.go ApplyTreePatch), mirrored so the
   // editor can express anything an LLM edit can. Wire form is unchanged:
@@ -80,6 +81,19 @@ export function applyPatch(tree: FeatureTreeLike, patch: Patch): FeatureTreeLike
         e.tag === patch.tag ? { ...e, [patch.field]: patch.value } : e,
       );
       sketches[patch.sketchId] = { ...sk, entities };
+      return { ...tree, sketches };
+    }
+    case "addSketchConstraint": {
+      // 点选加约束 (M3): the picked endpoints' declared relation joins the
+      // tree's constraint list — the drag solver and the reconciler both
+      // read it from here on.
+      const sketches = { ...tree.sketches };
+      const sk = sketches[patch.sketchId];
+      if (!sk) throw new Error(`sketch ${patch.sketchId} missing`);
+      sketches[patch.sketchId] = {
+        ...sk,
+        constraints: [...(sk.constraints ?? []), patch.constraint],
+      };
       return { ...tree, sketches };
     }
     case "setSketchConstraint": {

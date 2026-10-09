@@ -71,6 +71,7 @@ func GenSourceTypescriptDefs(workDir string) {
 	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "assembly")
 	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "sketch")
 	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "workplane")
+	writeTypescriptDefs(workDir, "build/src", topoBindingsBasePath, "primitives_mine")
 }
 
 func BuildTopoBindingsSource(workDir string, args map[string]string) error {

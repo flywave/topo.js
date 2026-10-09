@@ -95,6 +95,14 @@ export class Transport {
     return this.req("PUT", `/runs/${runId}/edits`, patch);
   }
 
+  // dragSketch — the drag loop's server face (docs/drag-loop.md M1/M2):
+  // the solved sketch replacement replays through the same gate chain as
+  // PUT tree / PUT edits; 200 carries the new version + sketch, 422 the
+  // standard gaps (SKT_DRAG_REFUSED / SKT_*).
+  dragSketch(runId: string, sketchId: string, body: { tag: string; which?: string; target: [number, number]; preview?: boolean }) {
+    return this.req("POST", `/runs/${runId}/sketches/${sketchId}/drag`, body);
+  }
+
   undo(runId: string) {
     return this.req("POST", `/runs/${runId}/undo`);
   }
